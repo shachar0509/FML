@@ -13,7 +13,7 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - [x] 6. Progress — DONE (see log)
 - [x] 7. Ingestion — DONE (see log)
 - [x] 8. Rendering — DONE (see log)
-- [ ] 9. Learn
+- [x] 9. Learn — DONE (see log)
 - [ ] 10. Practice
 - [ ] 11. Settings + Ask panel
 - [ ] 12. Sync
@@ -89,3 +89,11 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - Tests: 92 pass; typecheck/lint/build clean. NOT exercised: mermaid/function-plot/jsxgraph/wavedrom/Shiki in a real browser (jsdom can't), KaTeX fonts bundling check.
 - Caveats: plot per-datum `label` parsed but not drawn; Thumb not used yet (Practice, Step 10).
 - Next: Step 9 — Learn (lesson flow, tutor chat, retrieval, advance).
+
+### Step 9 — Learn (done)
+- Retrieval (`domain/retrieval/`): `bm25.ts` (Hebrew niqqud/prefix aware), `retrieve.ts` (`pagesFor`, `consult` incl. web-search fallback that is skipped on any error, `getLessonBrief` cached at `.shalav/briefs/<stage>-<hash12>.json`), prompts in `claude/prompts/retrieval.ts`. `domain/boundary/boundary.ts` = `buildKnowledgeBoundary` (6.8).
+- Tutor: `claude/tutorTools.ts` (6 tools, `BLOCKING`), `claude/prompts/tutor.ts` (10.2 system + `[STATUS]`, wired to `FIGURE_FORMATS`), `prompts/summary.ts`. `domain/learn/session.ts` (merged per-device jsonl), `context.ts` (`buildMessages`: images only newest, ephemeral->stub, status only on newest, `resumePrefix`, `compactIfNeeded` at 40k), `engine.ts` (`Lesson` class: open/send/answerMcq/answerOpen/skipExercise/stop/retry/complete/reopen; every tool outcome is a `ui` session line keyed by tool_use id so resume is exact; events: stage_started, check_answered, mistake_tag_defined, mistake_observed, assessment_updated, stage_completed, stage_reopened).
+- UI: `screens/Learn/` (header, mastery bar, objectives, advance + override confirm, mastery banner, streaming + Stop, composer + chips + image attach, MCQ/open/exercise widgets, read-only completed view), `lib/attachments.ts`. i18n `learn.*`.
+- `newId` is now monotonic ULID (same-ms ids must sort in creation order for the (ts,id) merge).
+- Not done / caveats: `assign_exercise` cards can only be skipped (Upload/Hint/Show solution + Grade Card + 7.6 grading pipeline arrive with Step 10, then also return the grade JSON to the tutor); PDF attachments in chat throw; teaching language = UI language (no separate setting); nothing run against the real API or in Tauri; web-search tool type `web_search_20250305` unverified.
+- Next: Step 10 — Practice (selection, generation, grading pipeline shared with Learn, hints, solutions).

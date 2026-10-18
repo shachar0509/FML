@@ -27,3 +27,11 @@
 - `plan_replaced.idMap` includes identity entries for unchanged stages; all parts of a split stage (including the one keeping the id) get fresh Pass B details.
 - Indexing progress counts request batches, not pages.
 - >60-page confirmation uses the native `ask` dialog; declining leaves the record `pending` until Retry.
+
+## Step 9 — Learn
+- Tool outcomes (MCQ choice, open answer, skip, consult result, assessment result) are stored as `ui` session lines whose `widgetId` is the tool_use id; the follow-up user message of `tool_result`s is built from them. A turn with non-blocking tools only is continued automatically; blocking widgets pause it.
+- Hidden control texts (`[START_LESSON]`, `[RECAP]`, `[REOPENED...]`) are stored as ordinary user messages and hidden in the UI; `[RESUME ...]` is added per request only, never stored.
+- A Stop leaves an assistant text `<partial>\n\n[stopped]` in the transcript.
+- Tutor teaching language = UI language (Settings has no separate field yet).
+- Web fallback in retrieval uses the 10.10 addendum as the system prompt (not the "answer only from pages" prompt).
+- Brief for a course with no indexed material files is stored with coverage "none" and no API call.

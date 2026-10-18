@@ -1,7 +1,8 @@
-import { Navigate, Route, Routes, useParams } from "react-router";
+import { Navigate, Route, Routes } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Placeholder } from "@/screens/Placeholder";
 import { CourseHome } from "@/screens/CourseHome";
+import { Learn } from "@/screens/Learn";
 import { HomeScreen } from "@/screens/Home";
 import { Onboarding } from "@/screens/Onboarding";
 import { SettingsScreen } from "@/screens/Settings";
@@ -11,12 +12,6 @@ function Page({ k }: { k: "practice" }) {
   const { t } = useTranslation();
   return <Placeholder title={t(`screens.${k}`)} />;
 }
-function Learn() {
-  const { stageId } = useParams();
-  const { t } = useTranslation();
-  return <Placeholder title={t("screens.learn", { stageId })} />;
-}
-
 export function AppRoutes() {
   const done = useSettings((s) => s.settings.onboardingCompleted);
   // Until onboarding completes the app always opens the wizard (spec 15.1).
