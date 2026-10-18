@@ -127,3 +127,9 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - `.github/workflows/release.yml` (17.2: tag `v*`, macOS universal + Windows, tests, tauri-action with updater json), `README.md` (17.3), `INSTALL.en.md` / `INSTALL.he.md` (17.4). Added `@tauri-apps/cli` devDependency and the `tauri` script (it was missing, so `pnpm tauri dev` now works once Rust exists). Dev server port is 1420 (not 5173).
 - Still manual (needs the owner): generate updater keys and paste the pubkey, replace `<owner>/<repo>`, create the Google OAuth client, real icons (`pnpm tauri icon`), fill `pricing.json`, GitHub secrets. Workflow never run; Rust never compiled.
 - Next: Step 14 — Hardening (18.2 acceptance checklist, a11y/RTL pass, error paths, Rust compile fixes once installed).
+
+### Post-install validation (Rust installed)
+- `cargo check`, `cargo clippy`, `cargo test` (2 tests) pass: the Rust code and capability ids compile (tauri-build validates them). `pnpm typecheck/lint/test (144)/build` pass.
+- `pnpm tauri build --debug --bundles app` produces `Shalav.app`; the binary launches, the frontend loads and the startup keyring lookup (`il.shalav.app`/`anthropic_api_key`) runs. Not verified visually (no screenshot).
+- Gotchas: a pip `xattr` in `/Library/Frameworks/Python.framework/.../bin` shadows `/usr/bin/xattr` and breaks bundling; build with `PATH="/usr/bin:$PATH"`. Updater artifacts need `TAURI_SIGNING_PRIVATE_KEY` (pubkey is a placeholder), so the final updater-signing step fails locally.
+- Still unverified: real Anthropic/Google calls, plugin-fs scopes at runtime, drag-drop, HEIC, trash, OAuth, UI in RTL.
