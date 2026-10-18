@@ -189,5 +189,13 @@
     "chooser": "What are these files?",
     "rejected": "{{name}}: {{error}}",
     "largeConfirm": "{{name}} has {{pages}} pages. Indexing will use about {{tokens}} input tokens. Continue?"
+  },
+  "render": {
+    "copy": "Copy",
+    "copied": "Copied",
+    "figureFailed": "The figure could not be drawn",
+    "showSource": "Show source",
+    "zoom": "Click to enlarge",
+    "close": "Close"
   }
 }

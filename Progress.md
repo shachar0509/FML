@@ -12,7 +12,7 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - [x] 5. Courses — DONE (see log)
 - [x] 6. Progress — DONE (see log)
 - [x] 7. Ingestion — DONE (see log)
-- [ ] 8. Rendering
+- [x] 8. Rendering — DONE (see log)
 - [ ] 9. Learn
 - [ ] 10. Practice
 - [ ] 11. Settings + Ask panel
@@ -81,3 +81,11 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - Tests: 83 pass; typecheck/lint/build clean. NOT exercised: pdfjs/canvas/worker, Tauri drag-drop and fs watch, native commands, real API.
 - Caveats: HEIC copy keeps sips' temp name (`shalav-<pid>-<stem>.jpg`); `watch` permission/scope for course folders to verify with Rust; 'New' badge is lost on reload; Practice still disabled (Step 10).
 - Next: Step 8 — Rendering (Markdown + KaTeX, code, figure blocks 11.x).
+
+### Step 8 — Rendering (done)
+- `src/render/Markdown.tsx` (the one renderer: react-markdown + gfm + math + rehype-katex, KaTeX macros \R\N\Z\Q\C, raw HTML ignored, `dir="auto"` blocks, math/inline code isolated LTR via CSS, tables scroll), `CodeBlock.tsx` (lazy Shiki github-light/dark, 12 langs + aliases, language label, Copy; unknown = plain), `Figure.tsx` (lazy dispatch on the 5 tags, error boundary -> "figure could not be drawn" + collapsed source), `Lightbox.tsx` (`Thumb` for exercise crops, Esc closes), `useDark.ts`.
+- `render/figures/` (subagent): `specs.ts` (`parsePlot`, `parseGeometry`, `sanitizeSvg`), Mermaid/Plot/Geometry/Wavedrom/Svg components via `useDraw.ts`, `libs.d.ts` (wavedrom types).
+- `claude/prompts/figures.ts`: `FIGURE_FORMATS` verbatim; Step 9 passes it to `formatRules`. i18n `render.*`.
+- Tests: 92 pass; typecheck/lint/build clean. NOT exercised: mermaid/function-plot/jsxgraph/wavedrom/Shiki in a real browser (jsdom can't), KaTeX fonts bundling check.
+- Caveats: plot per-datum `label` parsed but not drawn; Thumb not used yet (Practice, Step 10).
+- Next: Step 9 — Learn (lesson flow, tutor chat, retrieval, advance).
