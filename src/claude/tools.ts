@@ -77,3 +77,41 @@ export const submitUnitDetails = defineTool(
   }),
 );
 export type UnitDetails = z.infer<typeof submitUnitDetails.schema>;
+
+// 5.5 / 5.6 / 10.4
+export const submitMaterialPages = defineTool(
+  "submit_material_pages",
+  "Submit the index entry of every page in the batch.",
+  z.object({
+    pages: z.array(
+      z.object({
+        page: z.number().int(),
+        stageIds: z.array(z.string()),
+        summary: z.string(),
+        hasFigure: z.boolean(),
+        hasExercises: z.boolean(),
+      }),
+    ),
+  }),
+);
+export const submitExercises = defineTool(
+  "submit_exercises",
+  "Submit the exercises whose beginning is in this batch of pages.",
+  z.object({
+    exercises: z.array(
+      z.object({
+        label: z.string(),
+        pages: z.array(z.number().int()),
+        statementMd: z.string(),
+        figures: z.array(z.object({ page: z.number().int(), bbox: z.tuple([z.number(), z.number(), z.number(), z.number()]) })),
+        referenceSolutionMd: z.string().nullable(),
+        requiredStageIds: z.array(z.string()),
+        difficulty: z.number().int().min(1).max(5),
+        type: z.enum(["proof", "computation", "multiple_choice", "true_false", "short_answer", "coding", "design"]),
+        estimatedMinutes: z.number(),
+        edgeCaseFocus: z.array(z.string()),
+        gist: z.string(),
+      }),
+    ),
+  }),
+);

@@ -11,7 +11,7 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - [x] 4. Onboarding — DONE (see log)
 - [x] 5. Courses — DONE (see log)
 - [x] 6. Progress — DONE (see log)
-- [ ] 7. Ingestion
+- [x] 7. Ingestion — DONE (see log)
 - [ ] 8. Rendering
 - [ ] 9. Learn
 - [ ] 10. Practice
@@ -70,3 +70,14 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - Tests: 64 pass (17 new); typecheck/lint/build clean. Not run in Tauri.
 - Not wired yet (later steps): nothing calls `appendEvent` until Learn (9); recompute after sync pull (12); override-completed ×1.5 weak-spot weighting (Practice, 10); decisions in DECISIONS.md.
 - Next: Step 7 — Ingestion (import pipeline, watcher, PDF prep, indexing queue, material/exercise indexing, file lists, plan improvement). Large step: consider splitting into subagent-built parts.
+
+### Step 7 — Ingestion (done)
+- Foundation: `Fs` port gained `readBytes/writeBytes` (+ memfs); `pdfjs-dist` added; `domain/ingest/types.ts` (`PageSource`, `OpenSource`, `PasswordProtectedError`, `TooManyPagesError`); `indexStore.ts` (read/write/list `index/files/<sha>.json`).
+- PDF/images (subagent): `lib/images.ts` (fit/crop/encode, `cropBox` pure), `lib/pdf.ts` (lazy pdfjs, text/paint-op/render), `ingest/pageSource.ts` (`openSource`: pdf/image/txt/md, page-JPEG disk cache in `appCacheDir()/pages/<sha>`).
+- Indexing (subagent): tools `submit_material_pages`/`submit_exercises`, `claude/prompts/index.ts` (10.4), `ingest/index.ts` (`indexMaterial`/`indexExercises`: batches 8 / 6+1 overlap, dedupe, ids `${sha8}-${n}`, stage validation, figure crops), `ingest/queue.ts` (persistent via records; 1 per course, 2 global; >60 pages confirm; subscribe/retry/resume).
+- Import (me): `ingest/import.ts` (`importFiles` 5.2 rules, `scanCourse` for watcher/sync arrivals incl. renames and deletions, `removeFile`, `reindex`), `ingest/runtime.ts` (native invoke wrappers, singleton queue, `resumeAll` at startup from `main.tsx`).
+- Plan improvement (subagent): `plan/refine.ts` `refinePlan` (4.6: split/insert, ids, Pass B only for new stages, history, `plan_replaced`, index remap), `refineTool.ts`, `prompts/refine.ts`; `newStageIds` drives the "New" badge (session-only).
+- UI: `screens/CourseHome/Files.tsx` (two drop-zone cards, Tauri drag-drop role by position + chooser dialog, picker, status chips with N/M, row menu Open/Re-index/Remove, "N exercises found", fs watcher -> rescan), "Improve plan" in the course menu once a material is indexed. i18n `files.*`, `courseHome.improve*`.
+- Tests: 83 pass; typecheck/lint/build clean. NOT exercised: pdfjs/canvas/worker, Tauri drag-drop and fs watch, native commands, real API.
+- Caveats: HEIC copy keeps sips' temp name (`shalav-<pid>-<stem>.jpg`); `watch` permission/scope for course folders to verify with Rust; 'New' badge is lost on reload; Practice still disabled (Step 10).
+- Next: Step 8 — Rendering (Markdown + KaTeX, code, figure blocks 11.x).

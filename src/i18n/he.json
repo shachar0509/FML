@@ -162,6 +162,32 @@
     "watch": "שימו לב לטעויות האלה",
     "watchCount": "{{count}} פעמים",
     "watchLast": "נראתה לאחרונה",
-    "again": "ללמוד שוב"
+    "again": "ללמוד שוב",
+    "improve": "שיפור התוכנית לפי החומרים שלי",
+    "improved": "התוכנית עודכנה לפי החומרים שלך.",
+    "improveFailed": "לא הצלחנו לשפר את התוכנית. דבר לא שונה.",
+    "new": "חדש"
+  },
+  "files": {
+    "materials": "חומרי לימוד",
+    "exercises": "תרגילים לדוגמה",
+    "addMaterials": "הוספת חומרי לימוד",
+    "addExercises": "הוספת תרגילים לדוגמה",
+    "dropHint": "גררו קבצים לכאן או השתמשו בכפתור.",
+    "exercisesFound": "נמצאו {{count}} תרגילים",
+    "pages": "{{count}} עמודים",
+    "waiting": "ממתין",
+    "indexing": "מאנדקס",
+    "indexingN": "מאנדקס {{done}}/{{total}}",
+    "ready": "מוכן",
+    "failed": "נכשל — נסו שוב",
+    "open": "פתיחה",
+    "reindex": "אינדוקס מחדש",
+    "retry": "נסו שוב",
+    "remove": "הסרה",
+    "filter": "קבצי לימוד",
+    "chooser": "מה הקבצים האלה?",
+    "rejected": "{{name}}: {{error}}",
+    "largeConfirm": "בקובץ {{name}} יש {{pages}} עמודים. האינדוקס ישתמש בכ-{{tokens}} אסימוני קלט. להמשיך?"
   }
 }

@@ -11,7 +11,7 @@ import { outlineText, SLACK, stageRange, validatePlan } from "./plan";
 
 type Head = Pick<CourseJson, "courseNumber" | "nameHe" | "credits" | "faculty" | "syllabusHe" | "prerequisitesRaw">;
 export type PlanProgress = { step: "plan" | "validate"; unit?: { k: number; n: number } };
-type Opts = { gw: ClaudeGateway; course: Head; lang: "he" | "en"; onProgress?: (p: PlanProgress) => void; signal?: AbortSignal };
+export type Opts = { gw: ClaudeGateway; course: Head; lang: "he" | "en"; onProgress?: (p: PlanProgress) => void; signal?: AbortSignal };
 
 const langName = (l: "he" | "en") => (l === "he" ? "Hebrew" : "English");
 const count = (o: PlanOutline) => o.units.reduce((n, u) => n + u.stages.length, 0);
@@ -58,7 +58,7 @@ export function outlineToSkeleton(o: PlanOutline) {
 }
 
 /** Pass B for one unit: exactly the unit's ids, one retry with the errors. */
-async function detailUnit(opts: Opts, outline: string, unit: Unit): Promise<Map<string, UnitDetails>> {
+export async function detailUnit(opts: Opts, outline: string, unit: Unit): Promise<Map<string, UnitDetails>> {
   const { gw, course, lang, signal } = opts;
   let messages: Message[] = [{ role: "user", content: detailsPrompt(course, outline, unit, langName(lang)) }];
   for (let attempt = 0; ; attempt++) {
@@ -78,7 +78,7 @@ async function detailUnit(opts: Opts, outline: string, unit: Unit): Promise<Map<
     ];
   }
 }
-type UnitDetails = z.infer<typeof submitUnitDetails.schema>["stages"][number];
+export type UnitDetails = z.infer<typeof submitUnitDetails.schema>["stages"][number];
 
 /** Two-pass plan generation (4.5). Throws on failure; callers keep the course and offer "Try again". */
 export async function generatePlan(opts: Opts): Promise<PlanJson> {

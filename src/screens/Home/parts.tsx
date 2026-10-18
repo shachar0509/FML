@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Check, FolderOpen, Loader2, MoreVertical, Trash2 } from "lucide-react";
+import { Check, FolderOpen, Loader2, MoreVertical, Sparkles, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -32,7 +32,7 @@ export function useOpenFolder(n: string) {
 }
 
 /** Kebab menu (native <details>) with Open folder + Delete (typed-number confirmation, §4.7). */
-export function CourseMenu({ number, onDeleted }: { number: string; onDeleted: () => void }) {
+export function CourseMenu({ number, onDeleted, onImprove }: { number: string; onDeleted: () => void; onImprove?: () => void }) {
   const { t } = useTranslation();
   const openFolder = useOpenFolder(number);
   const [askDelete, setAsk] = useState(false);
@@ -60,6 +60,11 @@ export function CourseMenu({ number, onDeleted }: { number: string; onDeleted: (
           <Button variant="ghost" className="justify-start" onClick={() => void openFolder()}>
             <FolderOpen className="size-4" /> {t("home.openFolder")}
           </Button>
+          {onImprove && (
+            <Button variant="ghost" className="justify-start" onClick={onImprove}>
+              <Sparkles className="size-4" /> {t("courseHome.improve")}
+            </Button>
+          )}
           <Button variant="ghost" className="justify-start text-danger" onClick={() => setAsk(true)}>
             <Trash2 className="size-4" /> {t("home.delete")}
           </Button>

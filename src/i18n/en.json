@@ -162,6 +162,32 @@
     "watch": "Watch out for",
     "watchCount": "{{count}} times",
     "watchLast": "last seen",
-    "again": "Learn again"
+    "again": "Learn again",
+    "improve": "Improve plan using my materials",
+    "improved": "The plan was updated from your materials.",
+    "improveFailed": "Couldn't improve the plan. Nothing was changed.",
+    "new": "New"
+  },
+  "files": {
+    "materials": "Study materials",
+    "exercises": "Sample exercises",
+    "addMaterials": "Add study materials",
+    "addExercises": "Add sample exercises",
+    "dropHint": "Drop files here or use the button.",
+    "exercisesFound": "{{count}} exercises found",
+    "pages": "{{count}} pages",
+    "waiting": "Waiting",
+    "indexing": "Indexing",
+    "indexingN": "Indexing {{done}}/{{total}}",
+    "ready": "Ready",
+    "failed": "Failed — Retry",
+    "open": "Open",
+    "reindex": "Re-index",
+    "retry": "Retry",
+    "remove": "Remove",
+    "filter": "Study files",
+    "chooser": "What are these files?",
+    "rejected": "{{name}}: {{error}}",
+    "largeConfirm": "{{name}} has {{pages}} pages. Indexing will use about {{tokens}} input tokens. Continue?"
   }
 }

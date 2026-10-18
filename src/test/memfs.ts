@@ -1,13 +1,14 @@
 import type { Fs } from "@/lib/fs/fs";
 
 /** In-memory Fs for tests. Directories are implicit from file paths + explicit mkdir. */
-export function memFs(): Fs & { files: Map<string, string> } {
+export function memFs(): Fs & { files: Map<string, string>; bytes: Map<string, Uint8Array> } {
   const files = new Map<string, string>();
+  const bytes = new Map<string, Uint8Array>();
   const dirs = new Set<string>();
   const children = (p: string) => {
     const pre = p.replace(/\/$/, "") + "/";
     const out = new Map<string, boolean>();
-    for (const k of [...files.keys(), ...dirs]) {
+    for (const k of [...files.keys(), ...bytes.keys(), ...dirs]) {
       if (!k.startsWith(pre)) continue;
       const rest = k.slice(pre.length);
       const i = rest.indexOf("/");
@@ -17,6 +18,15 @@ export function memFs(): Fs & { files: Map<string, string> } {
   };
   return {
     files,
+    bytes,
+    async readBytes(p) {
+      const v = bytes.get(p);
+      if (!v) throw new Error(`ENOENT ${p}`);
+      return v;
+    },
+    async writeBytes(p, d) {
+      bytes.set(p, d);
+    },
     async readText(p) {
       const v = files.get(p);
       if (v === undefined) throw new Error(`ENOENT ${p}`);
@@ -30,7 +40,7 @@ export function memFs(): Fs & { files: Map<string, string> } {
       files.delete(a);
     },
     async exists(p) {
-      return files.has(p) || dirs.has(p) || children(p).size > 0;
+      return files.has(p) || bytes.has(p) || dirs.has(p) || children(p).size > 0;
     },
     async mkdir(p) {
       dirs.add(p);
@@ -40,6 +50,7 @@ export function memFs(): Fs & { files: Map<string, string> } {
     },
     async remove(p) {
       for (const k of [...files.keys()]) if (k === p || k.startsWith(p + "/")) files.delete(k);
+      for (const k of [...bytes.keys()]) if (k === p || k.startsWith(p + "/")) bytes.delete(k);
       dirs.delete(p);
     },
   };

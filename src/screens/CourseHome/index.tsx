@@ -2,10 +2,15 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { Check, ChevronDown, Circle, Contrast, Lock } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { claude } from "@/claude/runtime";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { buildPlan, loadCourse, type CourseSummary, type CreateProgress } from "@/domain/courses/courses";
 import type { Stage } from "@/domain/dataSchemas";
+import { refinePlan, newStageIds } from "@/domain/plan/refine";
+import { listFileIndexes } from "@/domain/ingest/indexStore";
+import { toast } from "@/components/ui/toaster";
+import { Files } from "./Files";
 import { BuildChecklist, CourseMenu, relTime } from "@/screens/Home/parts";
 
 type Status = "locked" | "available" | "in_progress" | "completed" | "completed_override";
@@ -30,8 +35,13 @@ export function CourseHome() {
   const [building, setBuilding] = useState<CreateProgress | "start" | null>(null);
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [sel, setSel] = useState<Stage | null>(null);
+  const [canImprove, setCanImprove] = useState(false);
+  const [improving, setImproving] = useState(false);
+  const [fresh, setFresh] = useState<Set<string>>(new Set());
   const reload = useCallback(() => void loadCourse(number).then(setS), [number]);
   useEffect(reload, [reload]);
+  const checkImprove = useCallback(() => void listFileIndexes(number).then((r) => setCanImprove(r.some((x) => x.role === "material" && x.status === "indexed"))), [number]);
+  useEffect(checkImprove, [checkImprove]);
 
   if (s === undefined) return null;
   if (s === null) return <p className="p-8 text-muted">{t("courseHome.missing")}</p>;
@@ -43,6 +53,21 @@ export function CourseHome() {
   const curMastery = cur ? Math.round((progress?.stages[cur]?.mastery ?? 0) * 100) : 0;
   const watch = (progress?.mistakes ?? []).filter((m) => !m.resolved).slice(0, 5);
   const learnTo = (id: string) => `/course/${number}/learn/${id}`;
+
+  async function improve() {
+    if (!plan || improving) return;
+    setImproving(true);
+    try {
+      const next = await refinePlan({ gw: claude(), course, lang: i18n.language === "en" ? "en" : "he" });
+      setFresh(newStageIds(plan, next));
+      toast({ kind: "success", message: t("courseHome.improved") });
+    } catch {
+      toast({ kind: "error", message: t("courseHome.improveFailed") });
+    }
+    setImproving(false);
+    reload();
+    checkImprove();
+  }
 
   async function retry() {
     setBuilding("start");
@@ -62,7 +87,7 @@ export function CourseHome() {
               <span dir="ltr">{course.courseNumber}</span> · {t("home.credits", { count: course.credits })}
             </p>
           </div>
-          <CourseMenu number={number} onDeleted={() => void navigate("/")} />
+          <CourseMenu number={number} onDeleted={() => void navigate("/")} onImprove={canImprove && plan && !improving ? () => void improve() : undefined} />
         </div>
         {tot && (
           <div className="flex flex-col gap-1">
@@ -102,6 +127,8 @@ export function CourseHome() {
           <span className="text-sm text-muted">{t("courseHome.practiceLocked")}</span>
         </button>
       </div>
+
+      <Files course={number} onIndexed={checkImprove} />
 
       {watch.length > 0 && (
         <section className="flex flex-col gap-2">
@@ -143,6 +170,7 @@ export function CourseHome() {
                         <StatusIcon s={p?.status ?? "locked"} />
                         <span className="w-12 text-muted" dir="ltr">{id}</span>
                         <span className="flex-1">{st.title}</span>
+                        {fresh.has(id) && <span className="rounded bg-primary px-1.5 text-xs text-white">{t("courseHome.new")}</span>}
                         <span className="text-muted">{Math.round((p?.mastery ?? 0) * 100)}%</span>
                       </button>
                     );

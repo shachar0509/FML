@@ -7,6 +7,8 @@ export interface Fs {
   rename(from: string, to: string): Promise<void>;
   exists(path: string): Promise<boolean>;
   mkdir(path: string): Promise<void>; // recursive
+  readBytes(path: string): Promise<Uint8Array>;
+  writeBytes(path: string, data: Uint8Array): Promise<void>;
   readDir(path: string): Promise<DirEntry[]>;
   remove(path: string): Promise<void>;
 }
@@ -26,6 +28,12 @@ const tauriFs: Fs = {
   },
   async mkdir(p) {
     await (await import("@tauri-apps/plugin-fs")).mkdir(p, { recursive: true });
+  },
+  async readBytes(p) {
+    return (await import("@tauri-apps/plugin-fs")).readFile(p);
+  },
+  async writeBytes(p, data) {
+    await (await import("@tauri-apps/plugin-fs")).writeFile(p, data);
   },
   async readDir(p) {
     return (await import("@tauri-apps/plugin-fs")).readDir(p);

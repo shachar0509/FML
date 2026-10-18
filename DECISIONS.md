@@ -20,3 +20,10 @@
 - `computedAt` is ignored when deciding whether `progress.json` changed; mistake `weight` decays with time, so it can still trigger a rewrite on recompute (rounded to 3 decimals).
 - `progress.md` has no timestamps so unchanged content is not rewritten.
 - Events with a stage id mapped to `null` by `plan_replaced` are dropped; unknown stage ids (not in the plan) are ignored.
+
+## Step 7 — Ingestion
+- Files the user drops that are HEIC on macOS are converted to a temp JPEG and imported under the temp name (Rust `heic_to_jpeg` returns a temp path; spec silent).
+- `scanCourse` treats a file with an already-known hash but a missing old path as a rename (updates the record) rather than a duplicate; a same-hash second copy is ignored.
+- `plan_replaced.idMap` includes identity entries for unchanged stages; all parts of a split stage (including the one keeping the id) get fresh Pass B details.
+- Indexing progress counts request batches, not pages.
+- >60-page confirmation uses the native `ask` dialog; declining leaves the record `pending` until Retry.
