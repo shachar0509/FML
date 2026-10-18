@@ -7,7 +7,7 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 ## Steps (spec §19)
 - [x] 1. Scaffold — DONE (see log)
 - [x] 2. Data layer — DONE (see log)
-- [ ] 3. Claude layer
+- [x] 3. Claude layer — DONE (see log)
 - [ ] 4. Onboarding
 - [ ] 5. Courses (catalog, plan generation)
 - [ ] 6. Progress
@@ -37,3 +37,11 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - `src/lib/firstRun.ts` (§15.1): device.json in appConfigDir, data root + shalav.json (reused if present); runs in `main.tsx` after settings load, no-op outside Tauri.
 - Tests: 18 pass; typecheck/lint/build clean. Not exercised against real plugin-fs (needs Tauri/Rust).
 - Next: Step 3 — Claude layer (`src/claude/`: client, models, tools, cache, prompts; usage accounting).
+
+### Step 3 — Claude layer (done)
+- `src/claude/`: `types.ts` (ClaudeRequest/Response, `ClaudeGateway` port), `models.ts` (9.2 task table, `resolveModel`, dev-model override, `pickAvailable` family fallback, 24 h `modelCatalog`), `cache.ts` (9.5 breakpoints: last tool, system, last assistant block; 1 h TTL for tutor; `stripTtl`), `errors.ts` (`ClaudeError` kinds + status classification), `gateway.ts` (`createGateway`: 3-slot FIFO queue with tutor fast lane, retries 1/2/4/8 s + jitter + retry-after, 60 s idle / 10 min plan / 4 min hard timeouts, abort, thinking-rejected and ttl-rejected session memory, 413 image shrink hook, cap gate hook, usage callback), `sdk.ts` (SDK client via plugin-http in Tauri, streaming transport, `listModelIds`), `tools.ts` (`defineTool` = JSON schema + zod mirror; `submit_retrieval`, `submit_lesson_brief` only), `structured.ts` (`callStructured`: forced tool, zod validate, 2 same-conversation corrections, thinking → auto + fallback to forced w/o thinking), `fake.ts` (`FakeClaudeGateway`, `toolCall`), `runtime.ts` (`initClaude`, `initClaudeFromKeyring`, `claude()`), `prompts/shared.ts` (10.1 fragments), `pricing.json`.
+- `src/domain/usage/usage.ts`: device-local `usage.jsonl` (append/read), `costUsd`, `summarizeMonth` (per task/course, cache share), `capState` (80 %/100 %).
+- `src/lib/secrets.ts`: invoke wrappers for `secret_get/set/delete`. `src/vite-env.d.ts` for `VITE_SHALAV_DEV_MODEL`.
+- Tests: 35 pass total (17 new, fake transport — no network). Typecheck/lint/build clean.
+- **TODO / caveats**: `pricing.json` is `{}` — spec 9.7 says fill from Anthropic's pricing page (not verified offline); until then UI shows tokens only. Other tool schemas (tutor, plan, index, grading...) are added by the step that owns them. `initClaude` is not yet called anywhere: Onboarding (Step 4) must call it after key check; `onUsage` should be `logUsage(appConfigDir, e)`; monthly-cap dialog (`beforeRequest`) lands in Step 11. Web-search server tool pass-through is supported via `tools` (`ServerToolDef`).
+- Next: Step 4 — Onboarding (12.2) incl. key check + credential storage.
