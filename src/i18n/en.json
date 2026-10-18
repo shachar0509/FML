@@ -1,0 +1,31 @@
+{
+  "nav": {
+    "home": "Home",
+    "course": "Course {{number}}",
+    "learn": "Learn",
+    "practice": "Practice",
+    "settings": "Settings",
+    "sync": "Sync status",
+    "ask": "Ask"
+  },
+  "screens": {
+    "onboarding": "Welcome",
+    "home": "My courses",
+    "courseHome": "Course {{number}}",
+    "learn": "Stage {{stageId}}",
+    "practice": "Practice",
+    "settings": "Settings",
+    "comingSoon": "Coming soon"
+  },
+  "settings": {
+    "general": "General",
+    "claude": "Claude",
+    "learning": "Learning",
+    "sync": "Sync",
+    "usage": "Usage",
+    "about": "About"
+  },
+  "ask": { "title": "Quick questions", "placeholder": "The Ask panel will appear here." },
+  "toast": { "close": "Close" },
+  "common": { "close": "Close" }
+}

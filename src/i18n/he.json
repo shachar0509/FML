@@ -1,0 +1,31 @@
+{
+  "nav": {
+    "home": "בית",
+    "course": "קורס {{number}}",
+    "learn": "לימוד",
+    "practice": "תרגול",
+    "settings": "הגדרות",
+    "sync": "מצב סנכרון",
+    "ask": "שאלה"
+  },
+  "screens": {
+    "onboarding": "ברוכים הבאים",
+    "home": "הקורסים שלי",
+    "courseHome": "קורס {{number}}",
+    "learn": "שלב {{stageId}}",
+    "practice": "תרגול",
+    "settings": "הגדרות",
+    "comingSoon": "בקרוב"
+  },
+  "settings": {
+    "general": "כללי",
+    "claude": "Claude",
+    "learning": "למידה",
+    "sync": "סנכרון",
+    "usage": "שימוש",
+    "about": "אודות"
+  },
+  "ask": { "title": "שאלות קצרות", "placeholder": "חלונית השאלות תופיע כאן." },
+  "toast": { "close": "סגירה" },
+  "common": { "close": "סגירה" }
+}
