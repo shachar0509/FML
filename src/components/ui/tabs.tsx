@@ -1,8 +1,10 @@
 import * as T from "@radix-ui/react-tabs";
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
+import { useSettings } from "@/stores/settings";
 
-export const Tabs = T.Root;
+// Radix defaults to dir="ltr", which would flip the whole panel in Hebrew.
+export const Tabs = (p: ComponentProps<typeof T.Root>) => <T.Root dir={useSettings((s) => s.settings.language) === "he" ? "rtl" : "ltr"} {...p} />;
 export const TabsContent = T.Content;
 export const TabsList = ({ className, ...p }: ComponentProps<typeof T.List>) => (
   <T.List className={cn("flex gap-1 border-b border-border", className)} {...p} />
