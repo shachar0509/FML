@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
+    "e2e": "playwright test",
     "tauri": "tauri"
   },
   "dependencies": {
@@ -58,6 +59,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/cli": "^2.12.3",
     "@testing-library/jest-dom": "^7.0.1",
