@@ -17,7 +17,7 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - [x] 10. Practice — DONE (see log)
 - [x] 11. Settings + Ask panel — DONE (see log)
 - [x] 12. Sync — DONE (see log)
-- [ ] 13. Release
+- [x] 13. Release — DONE (see log)
 - [ ] 14. Hardening
 
 ## Log
@@ -122,3 +122,8 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - Tests: 144 pass (engine two-device test with fake Drive: push/pull/conflict copy/delete->trash; auth PKCE/token cache). NOT run: real Google OAuth/Drive, Tauri watch, oauth plugin.
 - Caveats: needs `VITE_GOOGLE_CLIENT_ID/SECRET` at build (else Sync is hidden); capability ids `oauth:allow-start/cancel`, `os:allow-hostname` unverified until Rust compiles; resumable upload is a single PUT (no chunk resume); `pageToken` is taken before the initial listing (safer than after); moving the data root restarts the watcher only (entries keep relative paths); shalav.json conflicts keep no history copy; folders are not mirrored when empty; `useDataVersion` is bumped but screens do not yet subscribe (only progress recompute runs after a pull); a pull of a new course shows on next Home visit.
 - Next: Step 13 — Release (README/INSTALL docs, CI build, updater keys, icons).
+
+### Step 13 — Release (done)
+- `.github/workflows/release.yml` (17.2: tag `v*`, macOS universal + Windows, tests, tauri-action with updater json), `README.md` (17.3), `INSTALL.en.md` / `INSTALL.he.md` (17.4). Added `@tauri-apps/cli` devDependency and the `tauri` script (it was missing, so `pnpm tauri dev` now works once Rust exists). Dev server port is 1420 (not 5173).
+- Still manual (needs the owner): generate updater keys and paste the pubkey, replace `<owner>/<repo>`, create the Google OAuth client, real icons (`pnpm tauri icon`), fill `pricing.json`, GitHub secrets. Workflow never run; Rust never compiled.
+- Next: Step 14 — Hardening (18.2 acceptance checklist, a11y/RTL pass, error paths, Rust compile fixes once installed).
