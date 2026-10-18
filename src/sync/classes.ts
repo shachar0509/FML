@@ -23,3 +23,16 @@ export function syncClass(rel: string): SyncClass {
 export const ownerDevice = (rel: string): string => (rel.split("/").pop() ?? "").replace(/\.[^.]+$/, "");
 
 export const courseOf = (rel: string): string | null => /^courses\/([^/]+)\//.exec(rel)?.[1] ?? null;
+
+export type SyncAction = "download" | "link" | "copy" | "keep-local" | "newest";
+
+/** 14.5 pull rule for one path. `local` is null when there is no local file. `owned`: the file belongs to this device. */
+export function decideSyncAction(local: { sha: string } | null, entrySha: string | undefined, remoteSha: string | undefined, cls: SyncClass, owned: boolean): SyncAction {
+  if (!local) return "download";
+  if (entrySha !== undefined && local.sha === entrySha) return "download";
+  if (entrySha === undefined && remoteSha === local.sha) return "link";
+  if (cls === "user-file") return "copy";
+  if (cls === "per-device-append") return owned ? "keep-local" : "download";
+  if (cls === "shared-config") return "newest";
+  return "download";
+}

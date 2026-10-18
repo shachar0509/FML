@@ -60,3 +60,4 @@
 - Remote-deleted + locally unchanged goes to OS trash via `trash_path`; local-edited re-uploads as new file.
 - Per-device-append conflicts: owner id is the file basename; `shalav.json` compares `updatedAt ?? createdAt`.
 - Unknown paths default to user-file (keep-both).
+- Spec 18.1 fixtures: tests build fake tool responses inline (typed, zod-validated at use) instead of reading tests/fixtures/claude/*.json.

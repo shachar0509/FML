@@ -2,7 +2,7 @@
 import type { Fs } from "@/lib/fs/fs";
 import { sha256Hex } from "@/lib/hash";
 import { dirname, join, nfc } from "@/lib/fs/paths";
-import { courseOf, isIgnored, ownerDevice, syncClass } from "./classes";
+import { courseOf, decideSyncAction, isIgnored, ownerDevice, syncClass, type SyncAction } from "./classes";
 import { OfflineError, ReconnectError, type DriveItem, type DrivePort, type SyncKind, type SyncState, type SyncStatus } from "./types";
 
 export type EngineDeps = {
@@ -174,9 +174,9 @@ export class SyncEngine {
   }
 
   /** Both sides differ (or no common ancestor): 14.5 conflict rule by sync class. */
-  private async conflict(rel: string, item: DriveItem, l: Extract<Local, { kind: "file" }>) {
-    switch (syncClass(rel)) {
-      case "user-file": {
+  private async conflict(rel: string, item: DriveItem, l: Extract<Local, { kind: "file" }>, action: SyncAction) {
+    switch (action) {
+      case "copy": {
         const dot = base(rel).lastIndexOf(".");
         const name = base(rel);
         const stem = dot > 0 ? name.slice(0, dot) : name;
@@ -191,13 +191,11 @@ export class SyncEngine {
         this.d.onConflict?.(copy);
         return;
       }
-      case "per-device-append":
-        if (ownerDevice(rel) === this.d.deviceId) {
-          this.link(rel, item, item.appProperties.sha256 ?? "");
-          this.enqueue("upload", rel);
-        } else await this.download(rel, item);
+      case "keep-local":
+        this.link(rel, item, item.appProperties.sha256 ?? "");
+        this.enqueue("upload", rel);
         return;
-      case "shared-config": {
+      case "newest": {
         const remote = await this.d.drive.download(item.id);
         const stamp = (b: Uint8Array) => {
           try {
@@ -217,19 +215,18 @@ export class SyncEngine {
         }
         return;
       }
-      default: // content-addressed, derived: remote wins
+      default:
         await this.download(rel, item);
     }
   }
 
   private async applyRemote(rel: string, item: DriveItem) {
     const l = await this.local(rel);
-    const entry = this.state.entries[rel];
-    const remoteSha = item.appProperties.sha256;
-    if (l.kind !== "file") return this.download(rel, item);
-    if (entry && l.sha === entry.sha256) return this.download(rel, item);
-    if (!entry && remoteSha === l.sha) return this.link(rel, item, l.sha);
-    return this.conflict(rel, item, l);
+    const cls = syncClass(rel);
+    const action = decideSyncAction(l.kind === "file" ? l : null, this.state.entries[rel]?.sha256, item.appProperties.sha256, cls, ownerDevice(rel) === this.d.deviceId);
+    if (action === "download") return this.download(rel, item);
+    if (action === "link") return this.link(rel, item, item.appProperties.sha256 ?? "");
+    return this.conflict(rel, item, l as Extract<Local, { kind: "file" }>, action);
   }
 
   private async pullOnce() {
