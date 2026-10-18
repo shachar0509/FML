@@ -47,3 +47,9 @@
 - Check grading (open answers) uses the grading model without extended thinking; MCQ results record no mistake tags.
 - PDF solution uploads are rendered to page JPEGs at upload; more than 12 pages throws `grade.tooManyPages`.
 - "Learn again" in the practice summary only appends `stage_reopened` and navigates to the stage (no tutor message is sent until the student writes).
+
+## Step 11 — Settings + Ask
+- Tab label keys moved from `settings.<tab>` to `settings.tabs.<tab>` (nested sections needed the names).
+- Cap dialog is the native plugin-dialog `ask` with custom labels; "Continue anyway" lasts until restart; month spend is read from usage.jsonl on first request, then accumulated in memory.
+- Ask outside a course has no boundary and no tools; inside a course (not Learn) the boundary has no current stage; consult uses the Learn stage, else the first plan stage.
+- Remove API key has no confirm dialog (spec silent).

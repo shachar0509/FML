@@ -18,16 +18,108 @@
     "comingSoon": "Coming soon"
   },
   "settings": {
-    "general": "General",
-    "claude": "Claude",
-    "learning": "Learning",
-    "sync": "Sync",
-    "usage": "Usage",
-    "about": "About"
+    "tabs": {
+      "general": "General",
+      "claude": "Claude",
+      "learning": "Learning",
+      "sync": "Sync",
+      "usage": "Usage",
+      "about": "About"
+    },
+    "restoreDefaults": "Restore defaults",
+    "default": "Default: {{v}}",
+    "on": "On",
+    "off": "Off",
+    "general": {
+      "language": "Language",
+      "theme": "Theme",
+      "system": "Follow system",
+      "light": "Light",
+      "dark": "Dark",
+      "dataFolder": "Data folder",
+      "change": "Change",
+      "open": "Open in file manager"
+    },
+    "claude": {
+      "apiKey": "API key",
+      "noKey": "No key. AI features are off until you add one.",
+      "check": "Check",
+      "keyOk": "The key works.",
+      "replace": "Replace",
+      "remove": "Remove",
+      "removed": "Key removed. AI features are off.",
+      "newKey": "New API key",
+      "save": "Check and save",
+      "cancel": "Cancel",
+      "models": "Models per task",
+      "recommended": "(recommended)",
+      "changed": "Changed",
+      "reset": "Reset to default",
+      "gradingTitle": "Grading quality",
+      "thinking": "Think carefully before grading",
+      "budget": "Thinking budget: {{n}}",
+      "webLookup": "Search reliable websites when my materials don't cover something",
+      "restoreAll": "Restore all defaults",
+      "tasks": {
+        "tutor": "Teaching",
+        "grading": "Checking solutions",
+        "generation": "Creating exercises",
+        "hint": "Hints",
+        "plan": "Building study plans",
+        "index": "Reading your files",
+        "summary": "Summarizing long lessons",
+        "retrieval": "Looking up course materials",
+        "ask": "Quick questions"
+      }
+    },
+    "learning": {
+      "intro": "When a stage counts as learned.",
+      "minExercises": "Minimum exercises per stage",
+      "minExerciseScore": "Minimum exercise score",
+      "masteryThreshold": "Mastery threshold",
+      "requireAllObjectives": "Require all objectives",
+      "hintsBeforeSolution": "Hints before the full solution"
+    },
+    "sync": {
+      "soon": "Google Drive sync will be available in the next update."
+    },
+    "usage": {
+      "month": "This month",
+      "tokens": "{{n}} tokens",
+      "cost": "Estimated cost: {{usd}}",
+      "noPricing": "Cost estimate isn't available yet; showing tokens only.",
+      "perTask": "By task",
+      "perCourse": "By course",
+      "task": "Task",
+      "course": "Course",
+      "input": "Input",
+      "output": "Output",
+      "cached": "Cached",
+      "noCourse": "No course",
+      "empty": "No usage yet this month.",
+      "cap": "Monthly spending limit (USD)",
+      "capHint": "Leave empty for no limit."
+    },
+    "about": {
+      "version": "Version {{v}}",
+      "check": "Check for updates",
+      "autoCheck": "Check for updates automatically",
+      "upToDate": "You're up to date.",
+      "available": "Version {{v}} is available.",
+      "install": "Install and restart",
+      "unavailable": "Updates are only available in the installed app.",
+      "github": "GitHub repository",
+      "logs": "Open logs folder"
+    }
   },
   "ask": {
-    "title": "Quick questions",
-    "placeholder": "The Ask panel will appear here."
+    "button": "Quick question",
+    "title": "Quick question",
+    "placeholder": "Ask anything small. It won't be added to your lesson.",
+    "new": "New question",
+    "ex1": "What does this notation mean?",
+    "ex2": "Remind me what … is",
+    "ex3": "What's the English term for this?"
   },
   "toast": {
     "close": "Close"
@@ -108,7 +200,11 @@
     "failed": "Something went wrong with this request."
   },
   "usage": {
-    "capTitle": "You've reached your monthly spending limit"
+    "capTitle": "You've reached your monthly spending limit",
+    "capBody": "Continue anyway to keep using AI features this session, or stop.",
+    "continue": "Continue anyway",
+    "stop": "Stop",
+    "warn80": "You've used 80% of your monthly limit."
   },
   "sync": {
     "conflict": "Two versions of a file were found. We kept both."

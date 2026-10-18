@@ -12,6 +12,7 @@
     "window-state:default",
     "updater:default",
     "process:allow-restart",
+    "opener:allow-reveal-item-in-dir",
     "fs:allow-read-text-file",
     "fs:allow-read-file",
     "fs:allow-write-text-file",
@@ -59,7 +60,8 @@
     {
       "identifier": "opener:allow-open-path",
       "allow": [
-        { "path": "$DOCUMENT/Shalav/**" }
+        { "path": "$DOCUMENT/Shalav/**" },
+        { "path": "$APPLOG" }
       ]
     }
   ]

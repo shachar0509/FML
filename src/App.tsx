@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { ChevronRight, Cloud, MessageCircleQuestion, Settings as Gear } from "lucide-react";
+import { ChevronRight, Cloud, CircleHelp, Settings as Gear } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { APP_NAME } from "@/constants";
 import { applyLanguage, applyTheme } from "@/lib/dom";
 import { useSettings } from "@/stores/settings";
 import { AppRoutes } from "@/routes";
+import { AskPanel } from "@/screens/Ask/AskPanel";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -88,18 +89,14 @@ export function App() {
       {onboardingCompleted && (
         <>
           <button
-            aria-label={t("nav.ask")}
+            aria-label={t("ask.button")}
             onClick={() => setAskOpen((o) => !o)}
-            className="fixed end-0 top-1/2 flex items-center gap-1 rounded-s-lg bg-primary p-2 text-primary-fg"
+            className="fixed end-0 top-1/2 z-30 flex -translate-y-1/2 flex-col items-center gap-1 rounded-s-lg bg-primary px-2 py-3 text-xs text-primary-fg"
           >
-            <MessageCircleQuestion className="size-5" />
+            <CircleHelp className="size-5" />
+            {t("ask.button")}
           </button>
-          {askOpen && (
-            <aside className="fixed inset-y-12 end-10 w-80 rounded-card border border-border bg-card p-4">
-              <h2 className="font-semibold">{t("ask.title")}</h2>
-              <p className="text-muted">{t("ask.placeholder")}</p>
-            </aside>
-          )}
+          {askOpen && <AskPanel onClose={() => setAskOpen(false)} />}
         </>
       )}
       <Toaster />

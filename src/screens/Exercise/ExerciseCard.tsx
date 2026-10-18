@@ -7,6 +7,7 @@ import { Markdown } from "@/render/Markdown";
 import { Thumb } from "@/render/Lightbox";
 import { Chips } from "@/screens/Learn/Attach";
 import { GradeCard, readable } from "./GradeCard";
+import { useOpenExercise } from "@/screens/Ask/useAskContext";
 import { PickButton, useAnswerFiles, useCropUrl, useSub } from "./parts";
 
 function Figure({ course, file, n }: { course: string; file: string; n: number }) {
@@ -25,6 +26,10 @@ export function ExerciseCard({ run, courseNumber, onGraded }: { run: ExerciseRun
   const [drag, setDrag] = useState(false);
   const { ex, state: s } = run;
   const done = readable(s.grade);
+  useEffect(() => {
+    useOpenExercise.setState({ statement: ex.statementMd });
+    return () => useOpenExercise.setState({ statement: "" });
+  }, [ex.statementMd]);
   const attempts = useRef(s.attempts);
   useEffect(() => {
     if (s.attempts > attempts.current && s.grade) onGraded?.();

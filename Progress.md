@@ -15,7 +15,7 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - [x] 8. Rendering — DONE (see log)
 - [x] 9. Learn — DONE (see log)
 - [x] 10. Practice — DONE (see log)
-- [ ] 11. Settings + Ask panel
+- [x] 11. Settings + Ask panel — DONE (see log)
 - [ ] 12. Sync
 - [ ] 13. Release
 - [ ] 14. Hardening
@@ -107,3 +107,11 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - Tests: 128 pass; typecheck/lint/build clean. NOT run: real API, Tauri, PDF rendering of answers, UI in a browser.
 - Caveats: scope fixed during a session; est. minutes not shown on card; Practice screen has no render test; if Learn reloads after grading but before Continue, no Continue button (sending a chat message continues); decisions in DECISIONS.md.
 - Next: Step 11 — Settings + Ask panel.
+
+### Step 11 — Settings + Ask panel (done)
+- Settings (`screens/Settings/`): General (language/theme/data folder), Claude (masked key + Check/Replace/Remove, per-task models from models.list, thinking + budget, web lookups; `model.warn*` dialog before risky changes, Changed badge/reset/Restore all), Learning (8.3 criteria + restore), Sync (placeholder until Step 12), Usage (month totals per task/course, cap field), About (version, updater, repo link, logs folder). `runtime.ts` gained `availableModelIds()` / `disconnectClaude()`; capability gained reveal-item-in-dir + $APPLOG.
+- Cap: `claude/cap.ts` `makeCapGate` (toast once at 80 %, native dialog Continue anyway/Stop at 100 %, parallel requests share one dialog) wired as `beforeRequest` + `onUsage` in `claude/connect.ts`.
+- Ask panel: `domain/ask/ask.ts` `AskThread` (in-memory, last 6 messages, one image, consult_materials loop, no disk/events), `prompts/ask.ts` (10.12), `screens/Ask/` drawer (400 px, end side, Cmd/Ctrl+K, chips, New question), `useOpenExercise` published by ExerciseCard.
+- Tests: 135 pass; typecheck/lint/build clean. NOT run: Tauri (key ops, dialogs, updater), real API, UI in browser/RTL.
+- Caveats: pricing.json still `{}` (Usage shows tokens only); GitHub link is the `<owner>/<repo>` placeholder; slider warn-on-release untested; no-key error in Ask shows raw text; screen-context strings are English.
+- Next: Step 12 — Sync (Google Drive).
