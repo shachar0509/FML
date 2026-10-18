@@ -8,9 +8,11 @@ import { checkApiKey, type KeyCheckError } from "@/claude/keyCheck";
 import { saveAndConnect } from "@/claude/connect";
 import { ensureDataRoot } from "@/lib/firstRun";
 import { useSettings } from "@/stores/settings";
+import { toast } from "@/components/ui/toaster";
+import { connectSync, syncAvailable } from "@/sync/runtime";
 
 const CONSOLE_URL = "https://console.anthropic.com/settings/keys";
-const TOTAL = 4;
+const TOTAL = syncAvailable ? 4 : 3; // step 4 (Drive) is skipped when the build has no Google client id
 const inTauri = () => "__TAURI_INTERNALS__" in window;
 
 // Spec 12.2: 4-step wizard. Steps 1 and 4 are plain; 2 verifies the key, 3 picks the data folder.
@@ -60,6 +62,15 @@ export function Onboarding() {
     if (typeof dir !== "string") return;
     await ensureDataRoot(dir);
     update({ dataRoot: dir });
+  }
+
+  async function connect() {
+    try {
+      await connectSync();
+      finish();
+    } catch (e) {
+      toast({ kind: "error", message: e instanceof Error ? e.message : String(e) });
+    }
   }
 
   function finish() {
@@ -149,7 +160,7 @@ export function Onboarding() {
           </Button>
           <div className="flex gap-2">
             {back}
-            <Button onClick={next}>{t("onboarding.next")}</Button>
+            <Button onClick={syncAvailable ? next : finish}>{t(syncAvailable ? "onboarding.next" : "onboarding.finish")}</Button>
           </div>
         </section>
       )}
@@ -158,8 +169,7 @@ export function Onboarding() {
         <section className="flex flex-col gap-4">
           <h1 className="text-xl font-semibold">{t("onboarding.syncTitle")}</h1>
           <p>{t("onboarding.syncText")}</p>
-          {/* Google Drive connect lands with Step 12. */}
-          <Button variant="outline" className="self-start" disabled title={t("onboarding.driveLater")}>
+          <Button variant="outline" className="self-start" onClick={() => void connect()}>
             {t("onboarding.connectDrive")}
           </Button>
           <div className="flex gap-2">

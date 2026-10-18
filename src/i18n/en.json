@@ -81,7 +81,18 @@
       "hintsBeforeSolution": "Hints before the full solution"
     },
     "sync": {
-      "soon": "Google Drive sync will be available in the next update."
+      "unavailable": "Sync is not available in this build",
+      "status": "Status",
+      "account": "Google account",
+      "notConnected": "Not connected",
+      "lastSync": "Last successful sync",
+      "connect": "Connect Google Drive",
+      "disconnect": "Disconnect",
+      "now": "Sync now",
+      "conflicts": "Recent conflict copies",
+      "show": "Show in folder",
+      "limitScope": "Only files created by this app are synced. Files added through the Google Drive website are not seen.",
+      "limitLessons": "If the same lesson stage is open on two computers at once, messages are interleaved by timestamp."
     },
     "usage": {
       "month": "This month",
@@ -207,7 +218,14 @@
     "warn80": "You've used 80% of your monthly limit."
   },
   "sync": {
-    "conflict": "Two versions of a file were found. We kept both."
+    "conflict": "Two versions of a file were found. We kept both.",
+    "off": "Sync is off",
+    "synced": "Synced · {{when}}",
+    "syncing_one": "Syncing 1 file…",
+    "syncing_other": "Syncing {{count}} files…",
+    "offline": "Offline · changes will sync later",
+    "error": "Sync failed. Click to retry",
+    "reconnect": "Sign in to Google again to resume sync"
   },
   "quick": {
     "gotIt": "Got it, continue",
@@ -241,7 +259,6 @@
     "syncTitle": "Sync between computers (optional)",
     "syncText": "Sync through Google Drive to study from another computer.",
     "connectDrive": "Connect Google Drive",
-    "driveLater": "Connecting will be available later",
     "skip": "Skip for now",
     "finish": "Finish"
   },

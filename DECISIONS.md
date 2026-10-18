@@ -53,3 +53,10 @@
 - Cap dialog is the native plugin-dialog `ask` with custom labels; "Continue anyway" lasts until restart; month spend is read from usage.jsonl on first request, then accumulated in memory.
 - Ask outside a course has no boundary and no tools; inside a course (not Learn) the boundary has no current stage; consult uses the Learn stage, else the first plan stage.
 - Remove API key has no confirm dialog (spec silent).
+
+## Step 12 — Sync
+- Initial connect takes `startPageToken` before listing, not after (duplicates are no-ops by sha; avoids a missed-change window).
+- `conflicts` (last 20 conflict copies) added to sync-state.json for the Sync tab.
+- Remote-deleted + locally unchanged goes to OS trash via `trash_path`; local-edited re-uploads as new file.
+- Per-device-append conflicts: owner id is the file basename; `shalav.json` compares `updatedAt ?? createdAt`.
+- Unknown paths default to user-file (keep-both).

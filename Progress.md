@@ -16,7 +16,7 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - [x] 9. Learn — DONE (see log)
 - [x] 10. Practice — DONE (see log)
 - [x] 11. Settings + Ask panel — DONE (see log)
-- [ ] 12. Sync
+- [x] 12. Sync — DONE (see log)
 - [ ] 13. Release
 - [ ] 14. Hardening
 
@@ -115,3 +115,10 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - Tests: 135 pass; typecheck/lint/build clean. NOT run: Tauri (key ops, dialogs, updater), real API, UI in browser/RTL.
 - Caveats: pricing.json still `{}` (Usage shows tokens only); GitHub link is the `<owner>/<repo>` placeholder; slider warn-on-release untested; no-key error in Ask shows raw text; screen-context strings are English.
 - Next: Step 12 — Sync (Google Drive).
+
+### Step 12 — Sync / Google Drive (done)
+- `src/sync/`: `types.ts` (SyncState zod + `conflicts`, `DrivePort`, Offline/Reconnect errors), `classes.ts` (3.3 class table, ignore patterns), `drive.ts` (Drive REST: root discovery, folders, multipart/resumable upload, changes paging, 14.7 backoff), `auth.ts` (loopback PKCE via `@fabianlars/tauri-plugin-oauth`, token source refreshing 60 s early, revoke), `engine.ts` (`SyncEngine`: initial connect, localChanged -> persisted queue, 3-way parallel drain, pull via changes, conflict rule per class, echo suppression by sha), `runtime.ts` (watch data root with 2.5 s per-path debounce, 45 s poll, focus pull, connect/disconnect/syncNow, `useSyncStatus`, `useDataVersion`; started from `main.tsx`).
+- UI (subagent): Settings Sync tab, header `SyncIndicator` (14.6 states), Onboarding step 4 Connect (step skipped without client id). i18n `settings.sync.*`, `sync.*`.
+- Tests: 144 pass (engine two-device test with fake Drive: push/pull/conflict copy/delete->trash; auth PKCE/token cache). NOT run: real Google OAuth/Drive, Tauri watch, oauth plugin.
+- Caveats: needs `VITE_GOOGLE_CLIENT_ID/SECRET` at build (else Sync is hidden); capability ids `oauth:allow-start/cancel`, `os:allow-hostname` unverified until Rust compiles; resumable upload is a single PUT (no chunk resume); `pageToken` is taken before the initial listing (safer than after); moving the data root restarts the watcher only (entries keep relative paths); shalav.json conflicts keep no history copy; folders are not mirrored when empty; `useDataVersion` is bumped but screens do not yet subscribe (only progress recompute runs after a pull); a pull of a new course shows on next Home visit.
+- Next: Step 13 — Release (README/INSTALL docs, CI build, updater keys, icons).

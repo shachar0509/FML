@@ -20,7 +20,7 @@ export function memFs(): Fs & { files: Map<string, string>; bytes: Map<string, U
     files,
     bytes,
     async readBytes(p) {
-      const v = bytes.get(p);
+      const v = bytes.get(p) ?? (files.has(p) ? new TextEncoder().encode(files.get(p)) : undefined);
       if (!v) throw new Error(`ENOENT ${p}`);
       return v;
     },
@@ -28,7 +28,7 @@ export function memFs(): Fs & { files: Map<string, string>; bytes: Map<string, U
       bytes.set(p, d);
     },
     async readText(p) {
-      const v = files.get(p);
+      const v = files.get(p) ?? (bytes.has(p) ? new TextDecoder().decode(bytes.get(p)) : undefined);
       if (v === undefined) throw new Error(`ENOENT ${p}`);
       return v;
     },
@@ -36,8 +36,14 @@ export function memFs(): Fs & { files: Map<string, string>; bytes: Map<string, U
       files.set(p, o?.append ? (files.get(p) ?? "") + d : d);
     },
     async rename(a, b) {
-      files.set(b, await this.readText(a));
-      files.delete(a);
+      const v = bytes.get(a);
+      if (v) {
+        bytes.set(b, v);
+        bytes.delete(a);
+      } else {
+        files.set(b, await this.readText(a));
+        files.delete(a);
+      }
     },
     async exists(p) {
       return files.has(p) || bytes.has(p) || dirs.has(p) || children(p).size > 0;

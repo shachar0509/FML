@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { ChevronRight, Cloud, CircleHelp, Settings as Gear } from "lucide-react";
+import { ChevronRight, CircleHelp, Settings as Gear } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { APP_NAME } from "@/constants";
 import { applyLanguage, applyTheme } from "@/lib/dom";
 import { useSettings } from "@/stores/settings";
 import { AppRoutes } from "@/routes";
 import { AskPanel } from "@/screens/Ask/AskPanel";
+import { SyncIndicator } from "@/sync/SyncIndicator";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -73,9 +74,7 @@ export function App() {
         </Link>
         <Breadcrumbs />
         <div className="ms-auto flex items-center gap-1">
-          <Button variant="ghost" size="icon" aria-label={t("nav.sync")}>
-            <Cloud className="size-[14px]" />
-          </Button>
+          <SyncIndicator />
           <Button variant="ghost" size="icon" aria-label={t("nav.settings")} asChild>
             <Link to="/settings">
               <Gear className="size-4" />

@@ -4,6 +4,7 @@ import i18n from "@/i18n";
 import { DEFAULT_SETTINGS } from "@/domain/schemas";
 import { useSettings } from "@/stores/settings";
 import { SettingsScreen } from "./index";
+import { MemoryRouter } from "react-router";
 
 vi.mock("@/lib/storage", () => ({ defaultDataRoot: async () => "/d", readJson: async () => null, writeJson: async () => undefined }));
 vi.mock("@tauri-apps/api/path", () => ({ appConfigDir: async () => "/cfg" }));
@@ -20,7 +21,7 @@ vi.mock("@/domain/usage/usage", async (orig) => ({
 }));
 
 const open = (tab: string) => {
-  render(<SettingsScreen />);
+  render(<MemoryRouter><SettingsScreen /></MemoryRouter>);
   fireEvent.mouseDown(screen.getByRole("tab", { name: tab }), { button: 0 });
   fireEvent.click(screen.getByRole("tab", { name: tab }));
 };
