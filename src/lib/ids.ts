@@ -1,0 +1,5 @@
+import { ulid } from "ulid";
+
+export const newId = (): string => ulid();
+export const stageId = (n: number): string => `S${String(n).padStart(3, "0")}`;
+export const unitId = (n: number): string => `U${String(n).padStart(2, "0")}`;

@@ -8,11 +8,13 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { HashRouter } from "react-router";
 import { App } from "./App";
+import { firstRun } from "./lib/firstRun";
 import { useSettings } from "./stores/settings";
 
 void useSettings
   .getState()
   .load()
+  .then(() => firstRun().catch((e) => console.error("first run failed", e)))
   .then(() => {
     createRoot(document.getElementById("root") as HTMLElement).render(
       <StrictMode>

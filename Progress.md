@@ -6,7 +6,7 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 
 ## Steps (spec §19)
 - [x] 1. Scaffold — DONE (see log)
-- [ ] 2. Data layer
+- [x] 2. Data layer — DONE (see log)
 - [ ] 3. Claude layer
 - [ ] 4. Onboarding
 - [ ] 5. Courses (catalog, plan generation)
@@ -29,3 +29,11 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - Placeholders: updater pubkey (`pnpm tauri signer generate`), `<owner>/<repo>` in updater endpoint + opener scope, real icons (`pnpm tauri icon`).
 - Not yet done (later steps): device.json/shalav.json first-run (§15.1, step 2), real onboarding, README/INSTALL docs (step 13).
 - Next: Step 2 — Data layer.
+
+### Step 2 — Data layer (done)
+- `src/domain/dataSchemas.ts`: zod schemas + types for every §3 file (course, plan, events union, progress, session lines, file index, generated, shalav.json, device.json). Settings schema stays in `schemas.ts`.
+- `src/lib/fs/`: `fs.ts` (Fs port; plugin-fs impl, `setFs()` for tests), `paths.ts` (NFC, join, `coursePaths()` for the whole §3.2 tree), `atomicWrite.ts` (tmp+rename, `readJsonFile` w/ schema), `jsonl.ts` (append, partial-line-tolerant read, dir merge by (ts,id) + dedup). `watch.ts` deferred to Sync/Ingestion.
+- `src/lib/{ids,hash,time}.ts`; `ulid` dependency added. `src/test/memfs.ts` in-memory Fs for tests.
+- `src/lib/firstRun.ts` (§15.1): device.json in appConfigDir, data root + shalav.json (reused if present); runs in `main.tsx` after settings load, no-op outside Tauri.
+- Tests: 18 pass; typecheck/lint/build clean. Not exercised against real plugin-fs (needs Tauri/Rust).
+- Next: Step 3 — Claude layer (`src/claude/`: client, models, tools, cache, prompts; usage accounting).
