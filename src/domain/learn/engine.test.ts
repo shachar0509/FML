@@ -84,4 +84,24 @@ describe("Lesson", () => {
     expect(JSON.stringify(gw.calls[1]!.messages)).toContain("studentInterjected");
     expect(l.pending()).toEqual([]);
   });
+
+  it("grades an assigned exercise through the shared pipeline and answers the tutor", async () => {
+    const grade = {
+      legibility: "clear", illegibleParts: [], verdict: "correct", score: 95, summaryMd: "s", steps: [], missingForFullCredit: [], mistakes: [],
+      edgeCasesMissed: [], correctedKeyStepMd: "", usesMaterialBeyondCompleted: [], stageIds: ["S001"],
+    };
+    gw = new FakeClaudeGateway([
+      use("x1", "assign_exercise", { stageIds: ["S001"], source: "new", statementMd: "Solve", referenceSolutionMd: "R", difficulty: 2, edgeCaseFocus: [] }),
+      use("g", "submit_grade", grade),
+      text("Great."),
+    ]);
+    const l = lesson();
+    await l.open();
+    const run = (await l.exerciseRun("x1"))!;
+    expect((await run.submit([]))?.score).toBe(95);
+    expect(JSON.parse(l.stateOf("x1")!.content)).toMatchObject({ score: 95, hintsUsed: 0 });
+    await l.continueAfterExercise();
+    expect(JSON.stringify(gw.calls[2]!.messages)).toContain('\\"score\\":95');
+    expect((await events()).map((e) => (e as unknown as { type: string }).type)).toContain("attempt_graded");
+  });
 });

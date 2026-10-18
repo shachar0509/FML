@@ -74,7 +74,29 @@
   },
   "grade": {
     "unreadable": "We couldn't read the solution. Try another photo in good light, taken straight from above.",
-    "tooManyPages": "You can upload up to 12 pages per solution."
+    "tooManyPages": "You can upload up to 12 pages per solution.",
+    "verdict": {
+      "correct": "Correct",
+      "partially_correct": "Partly correct",
+      "incorrect": "Incorrect",
+      "incomplete": "Incomplete",
+      "unreadable": "Unreadable"
+    },
+    "score": "Score",
+    "steps": "Steps",
+    "missing": "Missing for full credit",
+    "mistakes": "Mistakes",
+    "severity": {
+      "minor": "Minor",
+      "major": "Major",
+      "critical": "Critical"
+    },
+    "edgeCases": "Edge cases you missed",
+    "correctedKey": "The key step, corrected",
+    "beyond": "Your solution used material you haven't completed yet:",
+    "hintsUsed": "Hints used: {{n}}",
+    "solutionRevealed": "The full solution was revealed",
+    "illegibleParts": "Hard to read:"
   },
   "net": {
     "offline": "No internet connection. We'll continue when you're back online."
@@ -230,5 +252,61 @@
     "hint": "Hint",
     "soon": "available in the next update",
     "interjected": "Moved on without answering"
+  },
+  "practice": {
+    "locked": "Complete your first stage to unlock practice",
+    "cta": "Review what you've learned",
+    "chooseTitle": "What do you want to practice?",
+    "scope": {
+      "all": "Everything I've learned",
+      "unit": "One unit",
+      "weak": "Weak spots",
+      "stage": "One stage"
+    },
+    "pickUnit": "Choose a unit",
+    "pickStage": "Choose a stage",
+    "start": "Start",
+    "answered": "Answered",
+    "correct": "Correct",
+    "avg": "Average score",
+    "end": "End session",
+    "preparing": "Preparing your next question…",
+    "tryAgain": "Try again",
+    "next": "Next question",
+    "submit": "Submit answer",
+    "answerPlaceholder": "Write your answer here…",
+    "score": "Score {{n}}",
+    "noItems": "We couldn't find a question for this scope yet. Try another scope.",
+    "retry": "Retry",
+    "back": "Back to course",
+    "again": "Practice again",
+    "correctAnswer": "Correct",
+    "wrongAnswer": "Not quite",
+    "summary": {
+      "title": "Session summary",
+      "items": "Questions",
+      "avg": "Average score",
+      "newMistakes": "New mistakes",
+      "weak": "Stages to strengthen",
+      "none": "None",
+      "learnAgain": "Learn again"
+    }
+  },
+  "exercise": {
+    "minutes": "about {{n}} min",
+    "difficulty": "Difficulty {{n}}/5",
+    "upload": "Upload solution",
+    "submit": "Submit for grading",
+    "grading": "Grading…",
+    "hintN": "Hint {{n}}/3",
+    "hintBody": "Attach what you've written so far (optional)",
+    "getHint": "Get hint",
+    "hints": "Hints",
+    "showSolution": "Show full solution",
+    "solution": "Full solution",
+    "drop": "Drop your solution here (images or PDF)",
+    "continue": "Continue",
+    "figure": "Figure {{n}}",
+    "failed": "Something went wrong. Try again."
   }
 }

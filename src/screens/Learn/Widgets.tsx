@@ -1,11 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { askOpenQuestion, assignExercise, presentMcq } from "@/claude/tutorTools";
 import type { ToolUseBlock } from "@/claude/types";
+import type { Grade } from "@/claude/practiceTools";
 import { Button } from "@/components/ui/button";
 import type { Lesson } from "@/domain/learn/engine";
+import type { ExerciseRun } from "@/domain/practice/run";
 import { Markdown } from "@/render/Markdown";
+import { ExerciseCard } from "@/screens/Exercise/ExerciseCard";
+import { GradeCard } from "@/screens/Exercise/GradeCard";
 import { AttachButton, Chips } from "./Attach";
 import { useAttachments } from "./useAttachments";
 
@@ -95,27 +99,44 @@ function Open({ u, lesson }: { u: ToolUseBlock; lesson: Lesson }) {
 
 function Exercise({ u, lesson }: { u: ToolUseBlock; lesson: Lesson }) {
   const { t } = useTranslation();
+  const [run, setRun] = useState<ExerciseRun | null>(null);
+  const [done, setDone] = useState(false);
   const q = assignExercise.schema.safeParse(u.input);
-  if (!q.success) return null;
   const st = lesson.stateOf(u.id);
   const open = !st && lesson.pending().some((p) => p.id === u.id);
-  const soon = t("learn.soon");
+  useEffect(() => {
+    if (open) void lesson.exerciseRun(u.id).then(setRun).catch(() => null);
+  }, [open, lesson, u.id]);
+  if (!q.success) return null;
+  const r = parse(st?.content);
+  const graded = st && typeof r.verdict === "string" ? (r as unknown as Grade & { hintsUsed?: number; solutionRevealed?: boolean }) : null;
+  const skip = (
+    <Button variant="ghost" className="ms-auto" disabled={lesson.busy} onClick={() => void lesson.skipExercise(u.id)}>{t("learn.skip")}</Button>
+  );
+  if (run && (open || (graded && !done)))
+    return (
+      <div className="flex flex-col gap-3">
+        <ExerciseCard run={run} courseNumber={lesson.courseNumber} />
+        <div className="flex">
+          {open && skip}
+          {graded && (
+            <Button className="ms-auto" disabled={lesson.busy} onClick={() => { setDone(true); void lesson.continueAfterExercise(); }}>{t("exercise.continue")}</Button>
+          )}
+        </div>
+      </div>
+    );
   return (
     <div className={card}>
       <p className="text-sm font-bold">{t("learn.exercise")}</p>
-      <Markdown>{q.data.statementMd ?? `exercise ${q.data.exerciseId ?? ""}`}</Markdown>
-      {st && parse(st.content).skipped ? (
-        <p className="text-sm text-muted">{t("learn.skipped")}</p>
-      ) : st ? (
-        <p className="text-sm text-muted">{t("learn.interjected")}</p>
+      {graded ? (
+        <GradeCard grade={graded} hintsUsed={graded.hintsUsed ?? 0} solutionRevealed={!!graded.solutionRevealed} />
       ) : (
-        open && (
-          <div className="flex gap-2">
-            <Button disabled title={soon}>{t("learn.upload")}</Button>
-            <Button variant="outline" disabled title={soon}>{t("learn.hint")}</Button>
-            <Button variant="ghost" className="ms-auto" disabled={lesson.busy} onClick={() => void lesson.skipExercise(u.id)}>{t("learn.skip")}</Button>
-          </div>
-        )
+        <>
+          <Markdown>{q.data.statementMd ?? `exercise ${q.data.exerciseId ?? ""}`}</Markdown>
+          {st && r.skipped ? <p className="text-sm text-muted">{t("learn.skipped")}</p>
+            : st ? <p className="text-sm text-muted">{t("learn.interjected")}</p>
+            : open && <div className="flex">{skip}</div>}
+        </>
       )}
     </div>
   );

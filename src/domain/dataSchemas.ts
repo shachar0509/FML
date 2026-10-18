@@ -208,8 +208,11 @@ export const GeneratedExerciseSchema = IndexedExerciseSchema.extend({
   styleRefIds: z.array(z.string()),
   referenceSolutionMd: z.string(),
   verified: z.boolean(),
+  gradingNotes: z.string().default(""),
   createdAt: ts,
 });
 export type GeneratedExercise = z.infer<typeof GeneratedExerciseSchema>;
-export const GeneratedFileSchema = z.object({ schema: z.literal(1), items: z.array(GeneratedExerciseSchema) });
+export const GeneratedFileSchema = z.object({
+  schema: z.literal(1), items: z.array(GeneratedExerciseSchema), solutions: z.record(z.string(), z.string()).default({}),
+});
 export type GeneratedFile = z.infer<typeof GeneratedFileSchema>;

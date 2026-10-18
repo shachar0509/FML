@@ -122,10 +122,17 @@ export function CourseHome() {
             <span className="text-lg font-bold">{t("nav.learn")}</span>
           </button>
         )}
-        <button disabled className={big + " opacity-50"}>
-          <span className="text-lg font-bold">{t("nav.practice")}</span>
-          <span className="text-sm text-muted">{t("courseHome.practiceLocked")}</span>
-        </button>
+        {Object.values(progress?.stages ?? {}).some((x) => x.status === "completed" || x.status === "completed_override") ? (
+          <Link to={`/course/${number}/practice`} className={big + " hover:border-primary"}>
+            <span className="text-lg font-bold">{t("nav.practice")}</span>
+            <span className="text-sm text-muted">{t("practice.cta")}</span>
+          </Link>
+        ) : (
+          <button disabled className={big + " opacity-50"}>
+            <span className="text-lg font-bold">{t("nav.practice")}</span>
+            <span className="text-sm text-muted">{t("practice.locked")}</span>
+          </button>
+        )}
       </div>
 
       <Files course={number} onIndexed={checkImprove} />

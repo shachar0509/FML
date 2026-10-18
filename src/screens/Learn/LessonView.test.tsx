@@ -45,7 +45,20 @@ beforeEach(async () => {
   await writeJsonAtomic(p.planJson, plan);
 });
 
+const exUse = {
+  content: [{ type: "tool_use" as const, id: "t2", name: "assign_exercise", input: { stageIds: ["S001"], source: "new", statementMd: "PROVE-IT", referenceSolutionMd: "R", difficulty: 2, edgeCaseFocus: [] } }],
+  stopReason: "tool_use", usage: usage0,
+};
+
 describe("LessonView", () => {
+  it("renders the exercise card with upload, hint and skip", async () => {
+    await open(exUse);
+    expect(await screen.findByText("Submit for grading")).toBeTruthy();
+    expect(screen.getByText("PROVE-IT")).toBeTruthy();
+    expect(screen.getByText("Hint 1/3")).toBeTruthy();
+    expect(screen.getByText("Skip")).toBeTruthy();
+  });
+
   it("hides the MCQ explanation until answered", async () => {
     await open(mcqUse, text("Good."));
     expect(screen.getByText("QQQ")).toBeTruthy();

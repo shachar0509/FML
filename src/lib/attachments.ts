@@ -2,7 +2,7 @@ import type { LoadImage } from "@/domain/learn/context";
 import { fs } from "@/lib/fs/fs";
 import { coursePaths } from "@/lib/fs/paths";
 import { sha256Hex } from "@/lib/hash";
-import { bytesToBase64, fitImageFile } from "@/lib/images";
+import { bytesToBase64, fitImageFile, fitJpeg } from "@/lib/images";
 import { useSettings } from "@/stores/settings";
 
 const dir = (n: string) => coursePaths(useSettings.getState().settings.dataRoot, n).attachments;
@@ -24,3 +24,28 @@ export const loadImageB64 = (courseNumber: string): LoadImage => async (sha) => 
   }
   throw new Error(`attachment ${sha} not found`);
 };
+
+const ANSWER_MAX_PAGES = 12;
+export type Saved = Awaited<ReturnType<typeof saveAttachment>>;
+
+async function store(courseNumber: string, bytes: Uint8Array): Promise<Saved> {
+  const sha256 = await sha256Hex(bytes);
+  await fs().mkdir(dir(courseNumber));
+  await fs().writeBytes(`${dir(courseNumber)}/${sha256}.jpg`, bytes);
+  return { type: "image_ref", sha256, mediaType: "image/jpeg" };
+}
+
+/** Solution upload (7.6): images, or a PDF rendered page by page. Throws "grade.tooManyPages" above 12 pages. */
+export async function saveAnswerFile(courseNumber: string, file: File): Promise<Saved[]> {
+  if (file.type !== "application/pdf") return [await saveAttachment(courseNumber, file)];
+  const { openPdf, renderPage } = await import("@/lib/pdf");
+  const doc = await openPdf(new Uint8Array(await file.arrayBuffer()));
+  try {
+    if (doc.numPages > ANSWER_MAX_PAGES) throw new Error("grade.tooManyPages");
+    const out: Saved[] = [];
+    for (let i = 1; i <= doc.numPages; i++) out.push(await store(courseNumber, await fitJpeg(await renderPage(await doc.getPage(i), 1568))));
+    return out;
+  } finally {
+    void doc.loadingTask.destroy();
+  }
+}

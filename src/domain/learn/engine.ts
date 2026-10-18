@@ -8,6 +8,9 @@ import { checkAdvanceCriteria } from "@/domain/progress/criteria";
 import { normalizeTag, reduceProgress } from "@/domain/progress/reduce";
 import { appendEvent } from "@/domain/progress/store";
 import { consult, getLessonBrief } from "@/domain/retrieval/retrieve";
+import { ExerciseRun, emptyRun, type RunState } from "@/domain/practice/run";
+import { resolveExercise, type Ex } from "@/domain/practice/exercises";
+import { assignExercise } from "@/claude/tutorTools";
 import { readJsonFile } from "@/lib/fs/atomicWrite";
 import { readJsonlDir } from "@/lib/fs/jsonl";
 import { coursePaths } from "@/lib/fs/paths";
@@ -149,11 +152,44 @@ export class Lesson {
     await this.setState(id, { content: JSON.stringify({ answerText }), images });
     if (!this.pending().length) await this.flush();
   }
-  /** Step 10 adds grading; until then an exercise can only be skipped. */
   async skipExercise(id: string) {
     if (!this.pending().some((x) => x.id === id)) return;
     await this.setState(id, { content: JSON.stringify({ skipped: true }) });
     if (!this.pending().length) await this.flush();
+  }
+
+  /** The exercise card of a pending assign_exercise (7.6/7.7, shared with Practice). Null while its exercise cannot be resolved. */
+  private runs = new Map<string, ExerciseRun>();
+  async exerciseRun(id: string): Promise<ExerciseRun | null> {
+    const have = this.runs.get(id);
+    if (have) return have;
+    const u = this.pending().find((x) => x.id === id);
+    if (!u) return null;
+    const i = assignExercise.schema.parse(u.input);
+    let ex: Ex | null = null;
+    if (i.source === "index" && i.exerciseId) ex = await resolveExercise(this.courseNumber, { source: "index", id: i.exerciseId });
+    if (!ex && i.statementMd)
+      ex = {
+        ref: { source: "tutor", id }, statementMd: i.statementMd, referenceSolutionMd: i.referenceSolutionMd ?? null, gradingNotes: "",
+        requiredStageIds: i.stageIds.length ? i.stageIds : [this.stageId], stageIds: i.stageIds.length ? i.stageIds : [this.stageId],
+        difficulty: i.difficulty, edgeCaseFocus: i.edgeCaseFocus, figures: [],
+      };
+    if (!ex) return null;
+    const saved = this.lines.findLast((l) => l.kind === "ui" && l.widgetId === `ex:${id}`);
+    const init = saved?.kind === "ui" ? (saved.state as RunState) : emptyRun();
+    const run = new ExerciseRun(this.courseNumber, ex, "learn", this.env, init, async (st) => {
+      await this.add({ kind: "ui", widgetId: `ex:${id}`, state: st });
+      // a readable graded attempt answers the tutor's tool call with the grade JSON
+      if (st.grade && st.grade.verdict !== "unreadable" && st.grade.legibility !== "illegible" && !this.stateOf(id)) {
+        await this.setState(id, { content: JSON.stringify({ ...st.grade, hintsUsed: st.hints.length, solutionRevealed: !!st.solutionMd }) });
+      }
+    });
+    this.runs.set(id, run);
+    return run;
+  }
+  /** Continue the lesson after the Grade Card was read. */
+  async continueAfterExercise() {
+    if (!this.busy && !this.pending().length && this.unresolved()?.every((u) => this.stateOf(u.id))) await this.flush();
   }
   stop() {
     this.ac?.abort();

@@ -14,7 +14,7 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - [x] 7. Ingestion — DONE (see log)
 - [x] 8. Rendering — DONE (see log)
 - [x] 9. Learn — DONE (see log)
-- [ ] 10. Practice
+- [x] 10. Practice — DONE (see log)
 - [ ] 11. Settings + Ask panel
 - [ ] 12. Sync
 - [ ] 13. Release
@@ -97,3 +97,13 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - `newId` is now monotonic ULID (same-ms ids must sort in creation order for the (ts,id) merge).
 - Not done / caveats: `assign_exercise` cards can only be skipped (Upload/Hint/Show solution + Grade Card + 7.6 grading pipeline arrive with Step 10, then also return the grade JSON to the tutor); PDF attachments in chat throw; teaching language = UI language (no separate setting); nothing run against the real API or in Tauri; web-search tool type `web_search_20250305` unverified.
 - Next: Step 10 — Practice (selection, generation, grading pipeline shared with Learn, hints, solutions).
+
+### Step 10 — Practice (done)
+- Pure selection (`domain/practice/select.ts`: cycle E,E,M,E,O…, eligibility 7.3, scoring/draw 7.4, `focusStage`, `requiredSet`, `targetDifficulty`).
+- Claude: `claude/practiceTools.ts` (submit_grade, submit_check_grade, submit_hint, submit_solution, submit_generated_exercise, submit_verification, submit_practice_check), `claude/prompts/practice.ts` (10.5-10.8).
+- `domain/practice/`: `exercises.ts` (Ctx, `Ex`, generated store + solutions cache, figure crops), `grade.ts` (`gradeAttempt` 7.6 with thinking 8000, tag definitions, `attempt_graded`; `gradeCheck` for open answers), `assist.ts` (hint levels 1-3, solution/solve mode + `solution_revealed`), `run.ts` (`ExerciseRun`: shared card state for Learn and Practice), `generate.ts` (generate + verify with one regeneration, 4-question batches), `engine.ts` (`Practice` session: snapshot state, prefetch, queue, counters, summary, relearn).
+- Learn: `Lesson.exerciseRun(id)` / `continueAfterExercise()`; a graded attempt answers `assign_exercise` with the grade JSON. `lib/attachments.ts` `saveAnswerFile` (PDF → page images, max 12).
+- UI (subagent): `screens/Exercise/` (ExerciseCard with upload/hint dialog/solution, GradeCard), `screens/Practice/` (scope chooser, item cards, summary), CourseHome Practice button enabled after first completed stage. i18n `practice.*`, `exercise.*`, `grade.*`.
+- Tests: 128 pass; typecheck/lint/build clean. NOT run: real API, Tauri, PDF rendering of answers, UI in a browser.
+- Caveats: scope fixed during a session; est. minutes not shown on card; Practice screen has no render test; if Learn reloads after grading but before Continue, no Continue button (sending a chat message continues); decisions in DECISIONS.md.
+- Next: Step 11 — Settings + Ask panel.
