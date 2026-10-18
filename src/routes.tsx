@@ -1,18 +1,15 @@
 import { Navigate, Route, Routes, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Placeholder } from "@/screens/Placeholder";
+import { CourseHome } from "@/screens/CourseHome";
+import { HomeScreen } from "@/screens/Home";
 import { Onboarding } from "@/screens/Onboarding";
 import { SettingsScreen } from "@/screens/Settings";
 import { useSettings } from "@/stores/settings";
 
-function Page({ k }: { k: "home" | "practice" }) {
+function Page({ k }: { k: "practice" }) {
   const { t } = useTranslation();
   return <Placeholder title={t(`screens.${k}`)} />;
-}
-function CourseHome() {
-  const { number } = useParams();
-  const { t } = useTranslation();
-  return <Placeholder title={t("screens.courseHome", { number })} />;
 }
 function Learn() {
   const { stageId } = useParams();
@@ -32,7 +29,7 @@ export function AppRoutes() {
     );
   return (
     <Routes>
-      <Route path="/" element={<Page k="home" />} />
+      <Route path="/" element={<HomeScreen />} />
       <Route path="/course/:number" element={<CourseHome />} />
       <Route path="/course/:number/learn/:stageId" element={<Learn />} />
       <Route path="/course/:number/practice" element={<Page k="practice" />} />

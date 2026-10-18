@@ -41,7 +41,14 @@
   },
   "plan": {
     "building": "Building a detailed study plan… this can take a few minutes.",
-    "failed": "The study plan could not be built."
+    "failed": "The study plan could not be built.",
+    "detailing": "Detailing unit {{k}} of {{n}}",
+    "step": {
+      "folders": "Creating folders",
+      "plan": "Building the study plan",
+      "validate": "Validating and saving the plan",
+      "progress": "Preparing progress tracking"
+    }
   },
   "advance": {
     "title": "Move to the next stage?",
@@ -116,5 +123,39 @@
     "driveLater": "Connecting will be available later",
     "skip": "Skip for now",
     "finish": "Finish"
+  },
+  "home": {
+    "add": "Add course",
+    "addDesc": "Add a new course by its number",
+    "empty": "Add your first course to start",
+    "credits_one": "{{count}} credit",
+    "credits_other": "{{count}} credits",
+    "lastActivity": "Last activity: {{when}}",
+    "continue": "Continue learning",
+    "menu": "Menu",
+    "openFolder": "Open course folder",
+    "delete": "Delete course",
+    "deleteTitle": "Delete this course?",
+    "deleteBody": "The folder will be moved to the trash. To confirm, type the course number ({{number}}).",
+    "cancel": "Cancel",
+    "search": "Search",
+    "searching": "Searching…",
+    "more": "Show all",
+    "less": "Show less",
+    "name": "Course name",
+    "creditsLabel": "Credits",
+    "syllabus": "Syllabus",
+    "syllabusHint": "At least 100 characters ({{n}})"
+  },
+  "courseHome": {
+    "missing": "Course not found.",
+    "stagesOf": "{{k}} of {{n}} stages",
+    "tryAgain": "Try again",
+    "practiceLocked": "Practice will open soon",
+    "plan": "Study plan",
+    "objectives": "Objectives",
+    "prereqs": "Prerequisites",
+    "continue": "Continue",
+    "again": "Learn again"
   }
 }

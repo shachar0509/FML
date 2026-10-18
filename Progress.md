@@ -9,7 +9,7 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - [x] 2. Data layer — DONE (see log)
 - [x] 3. Claude layer — DONE (see log)
 - [x] 4. Onboarding — DONE (see log)
-- [ ] 5. Courses (catalog, plan generation)
+- [x] 5. Courses — DONE (see log)
 - [ ] 6. Progress
 - [ ] 7. Ingestion
 - [ ] 8. Rendering
@@ -53,3 +53,12 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - Tests: 36 pass (1 new: error mapping). Typecheck/lint/build clean. Wizard UI not run in a browser/Tauri; key check never hit the real API.
 - Caveats: opener scope must allow `https://console.anthropic.com/*` (check capabilities when Rust exists); Hebrew welcome copy should get a native-speaker pass.
 - Next: Step 5 — Courses (catalog lookup, add course, plan generation).
+
+### Step 5 — Courses (done)
+- `src/domain/catalog/catalog.ts`: `normalizeCourseNumber` (4.1), `technionSource` (4.2: newest-first semester walk, two hosts, 7-day cache in `appCacheDir()/catalog`, stale cache when offline), `defaultCatalog()` (plugin-http, Tauri only).
+- `src/domain/plan/`: `plan.ts` (`stageRange`, `validatePlan` 3.5, `renderPlanMd`), `generate.ts` (`generatePlan`: Pass A with count corrections, Pass B per unit, 3 parallel, one retry on wrong ids). Tools `submit_plan_outline`/`submit_unit_details` in `claude/tools.ts`; prompts in `claude/prompts/plan.ts` (10.3).
+- `src/domain/courses/courses.ts`: `createCourse`, `buildPlan` (also "Try again"), `loadCourse`, `listCourses`, `courseExists`, `deleteCourse` (Rust `trash_path`). `domain/progress/initial.ts`: stand-in initial `progress.json`.
+- UI (subagent): `screens/Home` (cards, empty state, `AddCourseDialog` with checklist, `parts.tsx`), `screens/CourseHome` (header, plan-failed banner, Learn/Practice buttons, units + stage drawer). i18n `home.*`, `courseHome.*`, `plan.step.*`.
+- Tests: 47 pass; typecheck/lint/build clean. UI never run in browser/Tauri; real catalog/API never hit.
+- Caveats: card menus use native `<details>` (no outside-click close); Hebrew copy needs native review; `progress.md` not written yet (Step 6); "Improve plan" (4.6), Files cards and Watch-out are later steps; decisions in DECISIONS.md.
+- Next: Step 6 — Progress (`reduceProgress`, events append, `renderProgressMd`, debounced recompute).
