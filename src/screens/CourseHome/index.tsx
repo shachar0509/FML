@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { buildPlan, loadCourse, type CourseSummary, type CreateProgress } from "@/domain/courses/courses";
 import type { Stage } from "@/domain/dataSchemas";
-import { BuildChecklist, CourseMenu } from "@/screens/Home/parts";
+import { BuildChecklist, CourseMenu, relTime } from "@/screens/Home/parts";
 
 type Status = "locked" | "available" | "in_progress" | "completed" | "completed_override";
 
@@ -24,7 +24,7 @@ const Bar = ({ pct }: { pct: number }) => (
 
 export function CourseHome() {
   const { number = "" } = useParams();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [s, setS] = useState<CourseSummary | null | undefined>(undefined);
   const [building, setBuilding] = useState<CreateProgress | "start" | null>(null);
@@ -41,6 +41,7 @@ export function CourseHome() {
   const cur = progress?.currentStageId ?? null;
   const curStage = plan?.stages.find((x) => x.id === cur);
   const curMastery = cur ? Math.round((progress?.stages[cur]?.mastery ?? 0) * 100) : 0;
+  const watch = (progress?.mistakes ?? []).filter((m) => !m.resolved).slice(0, 5);
   const learnTo = (id: string) => `/course/${number}/learn/${id}`;
 
   async function retry() {
@@ -101,6 +102,25 @@ export function CourseHome() {
           <span className="text-sm text-muted">{t("courseHome.practiceLocked")}</span>
         </button>
       </div>
+
+      {watch.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-lg font-bold">{t("courseHome.watch")}</h2>
+          {watch.map((m) => (
+            <div key={m.tag} className="flex flex-col gap-1 rounded-card border border-border bg-card p-3 text-sm">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium">{i18n.language === "he" ? m.labelHe : m.labelEn}</span>
+                <span className="text-muted">
+                  {t("courseHome.watchCount", { count: m.count })} · {t("courseHome.watchLast")} {relTime(m.lastSeenAt, i18n.language)}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {m.stageIds.map((id) => <span key={id} dir="ltr" className="rounded bg-border px-1.5 text-xs">{id}</span>)}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
 
       {plan && (
         <section className="flex flex-col gap-2">

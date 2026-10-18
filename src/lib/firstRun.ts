@@ -2,6 +2,7 @@ import { DeviceJsonSchema, ShalavJsonSchema } from "@/domain/dataSchemas";
 import { readJsonFile, writeJsonAtomic } from "@/lib/fs/atomicWrite";
 import { fs } from "@/lib/fs/fs";
 import { coursesDir, join, shalavJsonPath } from "@/lib/fs/paths";
+import { setDeviceId } from "@/lib/device";
 import { newId } from "@/lib/ids";
 import { nowIso } from "@/lib/time";
 import { useSettings } from "@/stores/settings";
@@ -29,6 +30,7 @@ export async function firstRun(): Promise<{ deviceId: string; dataRoot: string }
   if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) return null;
   const { appConfigDir } = await import("@tauri-apps/api/path");
   const deviceId = await ensureDevice(await appConfigDir());
+  setDeviceId(deviceId);
   const dataRoot = useSettings.getState().settings.dataRoot;
   await ensureDataRoot(dataRoot);
   return { deviceId, dataRoot };

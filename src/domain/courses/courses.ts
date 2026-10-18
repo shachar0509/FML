@@ -3,7 +3,8 @@ import type { CatalogEntry } from "@/domain/catalog/catalog";
 import { CourseJsonSchema, PlanJsonSchema, ProgressJsonSchema, type CourseJson, type PlanJson, type ProgressJson } from "@/domain/dataSchemas";
 import { generatePlan, type PlanProgress } from "@/domain/plan/generate";
 import { renderPlanMd } from "@/domain/plan/plan";
-import { initialProgress } from "@/domain/progress/initial";
+import { reduceProgress } from "@/domain/progress/reduce";
+import { renderProgressMd } from "@/domain/progress/render";
 import { readJsonFile, writeJsonAtomic, writeTextAtomic } from "@/lib/fs/atomicWrite";
 import { fs } from "@/lib/fs/fs";
 import { coursePaths, coursesDir } from "@/lib/fs/paths";
@@ -83,8 +84,9 @@ export async function buildPlan(n: string, onProgress: (p: CreateProgress) => vo
     await writeTextAtomic(p.planMd, renderPlanMd(course, plan));
     await writeJsonAtomic(p.courseJson, { ...course, courseKind: plan.courseKind, planVersion: 1, updatedAt: nowIso() });
     onProgress({ step: "progress" });
-    const progress = initialProgress(plan, nowIso());
+    const progress = reduceProgress(plan, [], nowIso());
     await writeJsonAtomic(p.progressJson, progress);
+    await writeTextAtomic(p.progressMd, renderProgressMd(course, plan, progress, useSettings.getState().settings.language));
     return { planError: null };
   } catch (e) {
     return { planError: e instanceof Error ? e.message : String(e) };

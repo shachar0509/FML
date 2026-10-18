@@ -10,7 +10,7 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - [x] 3. Claude layer — DONE (see log)
 - [x] 4. Onboarding — DONE (see log)
 - [x] 5. Courses — DONE (see log)
-- [ ] 6. Progress
+- [x] 6. Progress — DONE (see log)
 - [ ] 7. Ingestion
 - [ ] 8. Rendering
 - [ ] 9. Learn
@@ -62,3 +62,11 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - Tests: 47 pass; typecheck/lint/build clean. UI never run in browser/Tauri; real catalog/API never hit.
 - Caveats: card menus use native `<details>` (no outside-click close); Hebrew copy needs native review; `progress.md` not written yet (Step 6); "Improve plan" (4.6), Files cards and Watch-out are later steps; decisions in DECISIONS.md.
 - Next: Step 6 — Progress (`reduceProgress`, events append, `renderProgressMd`, debounced recompute).
+
+### Step 6 — Progress (done)
+- `src/domain/progress/`: `reduce.ts` (`reduceProgress` pure: statuses 8.1, mastery EMA 8.2, mistakes 8.4, `plan_replaced` id chain via `mapEvents`, `normalizeTag`), `criteria.ts` (`checkAdvanceCriteria({plan,events,stageId,cfg,lang,now})` -> `{met, missing[]}` he/en sentences, 8.3), `render.ts` (`renderProgressMd`, UI language), `store.ts` (`appendEvent(course, event)` -> this device's jsonl + schedule; `recomputeProgress` writes progress.json/md only if changed; `scheduleRecompute` 500 ms debounce, also to call after a sync pull). `initial.ts` removed; `createCourse` uses `reduceProgress(plan, [])` and writes progress.md.
+- `src/lib/device.ts`: `setDeviceId/getDeviceId`, set by `firstRun` (events need it).
+- Course Home: "Watch out for" panel (top 5 unresolved). Status icons/amber override already existed.
+- Tests: 64 pass (17 new); typecheck/lint/build clean. Not run in Tauri.
+- Not wired yet (later steps): nothing calls `appendEvent` until Learn (9); recompute after sync pull (12); override-completed ×1.5 weak-spot weighting (Practice, 10); decisions in DECISIONS.md.
+- Next: Step 7 — Ingestion (import pipeline, watcher, PDF prep, indexing queue, material/exercise indexing, file lists, plan improvement). Large step: consider splitting into subagent-built parts.

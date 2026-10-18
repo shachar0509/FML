@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FakeClaudeGateway, toolCall } from "@/claude/fake";
-import { initialProgress } from "@/domain/progress/initial";
+import { reduceProgress } from "@/domain/progress/reduce";
 import { generatePlan } from "./generate";
 import { renderPlanMd, stageRange, validatePlan } from "./plan";
 
@@ -43,7 +43,7 @@ describe("plan", () => {
     expect(plan.units[2]?.stageIds[0]).toBe("S025");
     expect(validatePlan(plan, 2)).toEqual([]);
     expect(renderPlanMd(course, plan)).toContain("**S002 — t0.1**");
-    const p = initialProgress(plan, "now");
+    const p = reduceProgress(plan, [], "2026-01-01T00:00:00Z");
     expect(p.currentStageId).toBe("S001");
     expect(p.stages["S002"]?.status).toBe("locked");
   });
