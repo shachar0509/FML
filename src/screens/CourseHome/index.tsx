@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { claude } from "@/claude/runtime";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { useDataVersion } from "@/sync/runtime";
 import { buildPlan, loadCourse, type CourseSummary, type CreateProgress } from "@/domain/courses/courses";
 import type { Stage } from "@/domain/dataSchemas";
 import { refinePlan, newStageIds } from "@/domain/plan/refine";
@@ -39,7 +40,8 @@ export function CourseHome() {
   const [improving, setImproving] = useState(false);
   const [fresh, setFresh] = useState<Set<string>>(new Set());
   const reload = useCallback(() => void loadCourse(number).then(setS), [number]);
-  useEffect(reload, [reload]);
+  const dataVersion = useDataVersion((d) => d.version);
+  useEffect(reload, [reload, dataVersion]);
   const checkImprove = useCallback(() => void listFileIndexes(number).then((r) => setCanImprove(r.some((x) => x.role === "material" && x.status === "indexed"))), [number]);
   useEffect(checkImprove, [checkImprove]);
 

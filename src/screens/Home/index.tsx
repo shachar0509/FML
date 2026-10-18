@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { useDataVersion } from "@/sync/runtime";
 import { listCourses, type CourseSummary } from "@/domain/courses/courses";
 import { AddCourseDialog } from "./AddCourseDialog";
 import { CourseMenu, relTime } from "./parts";
@@ -72,7 +73,8 @@ export function HomeScreen() {
   const [courses, setCourses] = useState<CourseSummary[] | null>(null);
   const [adding, setAdding] = useState(false);
   const reload = useCallback(() => void listCourses().then(setCourses).catch(() => setCourses([])), []);
-  useEffect(reload, [reload]);
+  const dataVersion = useDataVersion((d) => d.version);
+  useEffect(reload, [reload, dataVersion]);
   const addBtn = (
     <Button onClick={() => setAdding(true)}>
       <Plus className="size-4" /> {t("home.add")}

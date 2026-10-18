@@ -18,7 +18,7 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - [x] 11. Settings + Ask panel — DONE (see log)
 - [x] 12. Sync — DONE (see log)
 - [x] 13. Release — DONE (see log)
-- [ ] 14. Hardening
+- [~] 14. Hardening — IN PROGRESS (see log)
 
 ## Log
 
@@ -133,3 +133,7 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - `pnpm tauri build --debug --bundles app` produces `Shalav.app`; the binary launches, the frontend loads and the startup keyring lookup (`il.shalav.app`/`anthropic_api_key`) runs. Not verified visually (no screenshot).
 - Gotchas: a pip `xattr` in `/Library/Frameworks/Python.framework/.../bin` shadows `/usr/bin/xattr` and breaks bundling; build with `PATH="/usr/bin:$PATH"`. Updater artifacts need `TAURI_SIGNING_PRIVATE_KEY` (pubkey is a placeholder), so the final updater-signing step fails locally.
 - Still unverified: real Anthropic/Google calls, plugin-fs scopes at runtime, drag-drop, HEIC, trash, OAuth, UI in RTL.
+
+### Step 14 — Hardening (in progress)
+- Done: `useDataVersion` now has subscribers (Home and Course Home reload after a sync pull); `sync/runtime` imported statically from `main.tsx` (removes the INEFFECTIVE_DYNAMIC_IMPORT build warning). Verified: corrupt/invalid JSON files already degrade to "missing" (`readJsonFile` returns null), `shalav.json`-class conflicts do save a history copy for course-scoped files (the Step 12 caveat only applies to the root `shalav.json`). `reduceProgress` requires (ts,id)-sorted input by contract, so no shuffle test.
+- Still open: §18.1 fixtures dir `tests/fixtures/claude/` (tests use inline fake responses), table-driven `decideSyncAction` (logic is inside `SyncEngine.conflict`), Playwright/RTL visual pass, §18.2 manual checklist, real-API pass, resumable upload, empty folders, `pricing.json`.

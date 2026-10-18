@@ -10,6 +10,7 @@ import { HashRouter } from "react-router";
 import { App } from "./App";
 import { connectFromKeyring } from "./claude/connect";
 import { firstRun } from "./lib/firstRun";
+import { startSyncIfConnected } from "./sync/runtime";
 import { useSettings } from "./stores/settings";
 
 void useSettings
@@ -26,7 +27,7 @@ void useSettings
       </StrictMode>,
     );
     if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
-      void import("./sync/runtime").then((m) => m.startSyncIfConnected()).catch((e) => console.error("sync start failed", e));
+      void startSyncIfConnected().catch((e) => console.error("sync start failed", e));
       void Promise.all([import("./domain/courses/courses"), import("./domain/ingest/runtime")]).then(async ([c, r]) =>
         r.resumeAll((await c.listCourses()).map((x) => x.course.courseNumber)),
       ).catch((e) => console.error("ingest resume failed", e));
