@@ -25,7 +25,96 @@
     "usage": "Usage",
     "about": "About"
   },
-  "ask": { "title": "Quick questions", "placeholder": "The Ask panel will appear here." },
-  "toast": { "close": "Close" },
-  "common": { "close": "Close" }
+  "ask": {
+    "title": "Quick questions",
+    "placeholder": "The Ask panel will appear here."
+  },
+  "toast": {
+    "close": "Close"
+  },
+  "common": {
+    "close": "Close"
+  },
+  "course": {
+    "invalidNumber": "A course number has 8 digits (e.g. 01040195)",
+    "notFound": "We couldn't find this course in the Technion catalog. You can enter the details manually."
+  },
+  "plan": {
+    "building": "Building a detailed study plan… this can take a few minutes.",
+    "failed": "The study plan could not be built."
+  },
+  "advance": {
+    "title": "Move to the next stage?",
+    "body": "You haven't finished learning and practicing this stage yet. Still missing:",
+    "note": "You can continue anyway. The stage will be marked \"skipped ahead\" and will come back in practice.",
+    "confirm": "Yes, continue",
+    "cancel": "Stay on this stage"
+  },
+  "stage": {
+    "mastered": "You've mastered this stage!"
+  },
+  "model": {
+    "warnTitle": "Change the model?",
+    "warnBody": "Changing from the default may reduce the app's accuracy, especially when checking solutions and creating exercises.",
+    "warnConfirm": "Change anyway",
+    "warnCancel": "Cancel"
+  },
+  "file": {
+    "unsupported": "This file type isn't supported. Use PDF, images (JPG, PNG, WEBP, HEIC), TXT or MD.",
+    "tooLarge": "The file is too large (over 200 MB).",
+    "heicWindows": "HEIC files aren't supported on Windows. Save the photo as JPG and try again.",
+    "duplicate": "This file was already added."
+  },
+  "grade": {
+    "unreadable": "We couldn't read the solution. Try another photo in good light, taken straight from above.",
+    "tooManyPages": "You can upload up to 12 pages per solution."
+  },
+  "net": {
+    "offline": "No internet connection. We'll continue when you're back online."
+  },
+  "api": {
+    "invalidKey": "The API key is invalid or was revoked. Please enter a new key.",
+    "noCredit": "Your Anthropic credit balance is empty. Add credit in the Console.",
+    "busy": "Claude is busy right now. Retrying…",
+    "failed": "Something went wrong with this request."
+  },
+  "usage": {
+    "capTitle": "You've reached your monthly spending limit"
+  },
+  "sync": {
+    "conflict": "Two versions of a file were found. We kept both."
+  },
+  "quick": {
+    "gotIt": "Got it, continue",
+    "again": "Explain it differently",
+    "example": "Another example",
+    "exercise": "Give me an exercise",
+    "summary": "Summarize what we covered"
+  },
+  "onboarding": {
+    "step": "Step {{n}} of {{total}}",
+    "welcomeText": "Shalav helps you study Technion courses: a study plan, explanations and practice, with Claude as your private tutor.",
+    "start": "Start",
+    "next": "Next",
+    "back": "Back",
+    "connectTitle": "Connect Claude",
+    "connectText": "Shalav uses your own Claude account; you pay Anthropic only for what you use.",
+    "s1": "Create an account in the Anthropic Console",
+    "s2": "Add credit under Billing and set a monthly spend limit",
+    "s3": "Create an API key",
+    "s4": "Paste it here",
+    "openConsole": "Open Anthropic Console",
+    "keyLabel": "API key",
+    "check": "Check key",
+    "keyOk": "Key works",
+    "whereTitle": "Where to save",
+    "whereText": "Your courses, materials and progress will be saved here.",
+    "change": "Change",
+    "syncTitle": "Sync between computers (optional)",
+    "syncText": "Sync through Google Drive to study from another computer.",
+    "connectDrive": "Connect Google Drive",
+    "driveLater": "Connecting will be available later",
+    "skip": "Skip for now",
+    "finish": "Finish"
+  }
 }

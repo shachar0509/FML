@@ -1,10 +1,11 @@
 import { Navigate, Route, Routes, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Placeholder } from "@/screens/Placeholder";
+import { Onboarding } from "@/screens/Onboarding";
 import { SettingsScreen } from "@/screens/Settings";
 import { useSettings } from "@/stores/settings";
 
-function Page({ k }: { k: "onboarding" | "home" | "practice" }) {
+function Page({ k }: { k: "home" | "practice" }) {
   const { t } = useTranslation();
   return <Placeholder title={t(`screens.${k}`)} />;
 }
@@ -25,7 +26,7 @@ export function AppRoutes() {
   if (!done)
     return (
       <Routes>
-        <Route path="/onboarding" element={<Page k="onboarding" />} />
+        <Route path="/onboarding" element={<Onboarding />} />
         <Route path="*" element={<Navigate to="/onboarding" replace />} />
       </Routes>
     );

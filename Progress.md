@@ -8,7 +8,7 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - [x] 1. Scaffold — DONE (see log)
 - [x] 2. Data layer — DONE (see log)
 - [x] 3. Claude layer — DONE (see log)
-- [ ] 4. Onboarding
+- [x] 4. Onboarding — DONE (see log)
 - [ ] 5. Courses (catalog, plan generation)
 - [ ] 6. Progress
 - [ ] 7. Ingestion
@@ -45,3 +45,11 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - Tests: 35 pass total (17 new, fake transport — no network). Typecheck/lint/build clean.
 - **TODO / caveats**: `pricing.json` is `{}` — spec 9.7 says fill from Anthropic's pricing page (not verified offline); until then UI shows tokens only. Other tool schemas (tutor, plan, index, grading...) are added by the step that owns them. `initClaude` is not yet called anywhere: Onboarding (Step 4) must call it after key check; `onUsage` should be `logUsage(appConfigDir, e)`; monthly-cap dialog (`beforeRequest`) lands in Step 11. Web-search server tool pass-through is supported via `tools` (`ServerToolDef`).
 - Next: Step 4 — Onboarding (12.2) incl. key check + credential storage.
+
+### Step 4 — Onboarding (done)
+- `src/screens/Onboarding/index.tsx`: 4-step wizard (12.2) with step indicator; routed in `routes.tsx` while `onboardingCompleted` is false. Step 1 language toggle (live RTL), step 2 console button (plugin-opener) + password field + **Check key**, step 3 data folder with **Change** (plugin-dialog; runs `ensureDataRoot`), step 4 **Connect Google Drive** (disabled until Step 12) / **Skip** which sets `onboardingCompleted`.
+- `src/claude/keyCheck.ts`: `checkApiKey` (= `models.list`) + `keyErrorKey` mapping to `api.invalidKey` / `api.noCredit` / `net.offline` / `api.failed`. `src/claude/connect.ts`: `saveAndConnect` (secretSet only after a successful check, then `initClaude` with `onUsage` -> `logUsage(appConfigDir)`) and `connectFromKeyring`, called at startup in `main.tsx` (Tauri only).
+- i18n: all 12.8 required strings added in he/en (nested, e.g. `t("api.invalidKey")`), plus `onboarding.*`.
+- Tests: 36 pass (1 new: error mapping). Typecheck/lint/build clean. Wizard UI not run in a browser/Tauri; key check never hit the real API.
+- Caveats: opener scope must allow `https://console.anthropic.com/*` (check capabilities when Rust exists); Hebrew welcome copy should get a native-speaker pass.
+- Next: Step 5 — Courses (catalog lookup, add course, plan generation).
