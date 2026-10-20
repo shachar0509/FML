@@ -43,6 +43,7 @@
     }
   },
   "plugins": {
+    "fs": { "requireLiteralLeadingDot": false },
     "updater": {
       "pubkey": "PLACEHOLDER_REPLACE_WITH_OUTPUT_OF__pnpm_tauri_signer_generate",
       "endpoints": ["https://github.com/<owner>/<repo>/releases/latest/download/latest.json"],

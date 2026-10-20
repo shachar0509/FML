@@ -42,8 +42,9 @@ export function AddCourseDialog({ onClose }: { onClose: () => void }) {
     try {
       await createCourse(e, setProg);
       go(e.courseNumber);
-    } catch {
-      setError(t("api.failed"));
+    } catch (err) {
+      console.error("createCourse failed", err);
+      setError(`${t("api.failed")} (${err instanceof Error ? err.message : String(err)})`);
       setPhase("input");
     }
   }
