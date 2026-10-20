@@ -5,7 +5,7 @@ import "@/index.css";
 import "@/i18n";
 import { createRoot } from "react-dom/client";
 import { Cards } from "./Cards";
-import type { CourseData, FilesData, HomeData, Host, LookupResult } from "./types";
+import type { CardData, CourseData, FilesData, HomeData, Host, LessonData, LookupResult, McqData, OpenData } from "./types";
 
 /** Playwright test host: a fake bridge instead of Claude Desktop. ?lang=&theme=&empty=1 ; sent messages land in window.__said. */
 const q = new URLSearchParams(location.search);
@@ -34,14 +34,23 @@ const files: FilesData = {
   materials: [{ sha: "a1", name: "lecture1.pdf", pages: 12, status: "indexed", error: null, exercises: 0 }, { sha: "a2", name: "lecture2.pdf", pages: 9, status: "pending", error: null, exercises: 0 }],
   exercises: [{ sha: "b1", name: "hw1.pdf", pages: 3, status: "indexed", error: null, exercises: 5 }],
 };
+const base = { language: lang, theme: "system" } as const;
+const lesson: LessonData = {
+  ...base, view: "lesson", number: "01040195", stageId: "S002", title: "Limits of sequences", status: "in_progress", mastery: 40, next: { id: "S003", title: "Squeeze" },
+  objectives: [{ text: "State the $\\varepsilon$-$N$ definition", covered: true }, { text: "Prove a limit from the definition", covered: false }],
+  criteria: { met: false, missing: ["Solve 2 more exercises with score ≥ 85"] },
+};
+const mcq: McqData = { ...base, view: "mcq", checkId: "c1", questionMd: "Which holds for $a_n = 1/n$?", options: ["$a_n \\to 0$", "$a_n \\to 1$", "diverges"] };
+const open: OpenData = { ...base, view: "open", checkId: "c2", questionMd: "Explain why $\\lim 1/n = 0$." };
+const initial: CardData = ({ lesson, mcq, open } as Record<string, CardData>)[q.get("view") ?? ""] ?? home;
 const said: string[] = [];
 (window as unknown as { __said: string[] }).__said = said;
 const host: Host = {
   callTool: async (name) => ({
-    structuredContent: name === "course_lookup" ? found : name === "shalav_course" ? course : name === "files_list" ? files : name === "course_status" ? { state: "running", step: "plan", unit: { k: 1, n: 4 }, pending: 1 } : { ok: true },
+    structuredContent: name === "course_lookup" ? found : name === "shalav_course" ? course : name === "files_list" ? files : name === "lesson_state" ? lesson : name === "stage_complete" ? { ...lesson, status: "completed_override" } : name === "stage_reopen" ? lesson : name === "check_answer" ? { selectedIndex: 1, correct: false, correctIndex: 0, explanationMd: "Since $1/n \\to 0$." } : name === "course_status" ? { state: "running", step: "plan", unit: { k: 1, n: 4 }, pending: 1 } : { ok: true },
   }),
   say: async (t) => void said.push(t),
   context: () => ({ theme: q.get("theme") ?? undefined }),
-  subscribe: (onData) => (onData(home), () => undefined),
+  subscribe: (onData) => (onData(initial), () => undefined),
 };
 createRoot(document.getElementById("root") as HTMLElement).render(<Cards host={host} />);

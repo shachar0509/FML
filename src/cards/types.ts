@@ -41,7 +41,22 @@ export type FilesData = Base & {
   canImprove: boolean;
   improving: { state: "running" | "failed"; error: string | null } | null;
 };
-export type CardData = HomeData | AddData | CourseData;
+/** Lesson card (shalav_start_lesson / app-only lesson_state). */
+export type LessonData = Base & {
+  view: "lesson";
+  number: string;
+  stageId: string;
+  title: string;
+  status: Stage["status"];
+  objectives: { text: string; covered: boolean }[];
+  mastery: number;
+  criteria: { met: boolean; missing: string[] };
+  next: { id: string; title: string } | null;
+};
+/** Question cards of present_mcq / ask_open_question; the answer key stays on the server. */
+export type McqData = Base & { view: "mcq"; checkId: string; questionMd: string; options: string[] };
+export type OpenData = Base & { view: "open"; checkId: string; questionMd: string };
+export type CardData = HomeData | AddData | CourseData | LessonData | McqData | OpenData;
 
 export type Host = {
   callTool(name: string, args?: Record<string, unknown>): Promise<{ structuredContent?: unknown; isError?: boolean }>;

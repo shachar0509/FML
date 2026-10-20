@@ -373,7 +373,10 @@
     "upload": "Upload solution",
     "hint": "Hint",
     "soon": "available in the next update",
-    "interjected": "Moved on without answering"
+    "interjected": "Moved on without answering",
+    "completeStage": "Complete stage",
+    "completeAnyway": "Complete anyway",
+    "loading": "Loading…"
   },
   "practice": {
     "locked": "Complete your first stage to unlock practice",
@@ -439,6 +442,9 @@
     "learn": "▶️ Let's learn {{stage}}",
     "waiting": "Waiting for Claude to work on it… if nothing happens, write “continue” in the chat.",
     "index": "📚 Please index my files now",
-    "improve": "✨ Please improve my study plan from my materials"
+    "improve": "✨ Please improve my study plan from my materials",
+    "relearn": "🔁 Let's learn {{stage}} again",
+    "answer": "My answer: {{a}}",
+    "answerOpen": "My answer:\n{{a}}"
   }
 }

@@ -62,3 +62,41 @@ for (const lang of ["he", "en"] as const)
       await expect(page.getByText("Limits summary")).toBeVisible();
       expect(errors).toEqual([]);
     });
+
+for (const lang of ["he", "en"] as const)
+  for (const theme of ["light", "dark"] as const)
+    test(`lesson cards (${lang}/${theme})`, async ({ page }) => {
+      const errors: string[] = [];
+      page.on("pageerror", (e) => errors.push(e.message));
+      const said = () => page.evaluate(() => (window as unknown as { __said: string[] }).__said);
+      const axe = async () => expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations.filter((v) => v.impact === "serious" || v.impact === "critical")).toEqual([]);
+      const url = (v: string) => `/src/cards/test-host.html?view=${v}&lang=${lang}&theme=${theme}`;
+
+      await page.goto(url("lesson"));
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText("Limits of sequences");
+      await expect(page.locator(".katex").first()).toBeVisible(); // objectives render math
+      await axe();
+      await page.screenshot({ path: `e2e/shots/card-lesson-${lang}-${theme}.png` });
+      await page.getByRole("button", { name: lang === "he" ? "להשלים בכל זאת" : "Complete anyway" }).click();
+      await expect(page.getByText("Solve 2 more exercises")).toBeVisible();
+      await page.getByRole("button", { name: lang === "he" ? "כן, להמשיך" : "Yes, continue" }).click();
+      await expect(page.getByText(lang === "he" ? "השלב הושלם" : "Stage completed")).toBeVisible();
+      await page.getByRole("button", { name: lang === "he" ? "לשלב הבא" : "Next stage" }).click();
+      expect((await said()).at(-1)).toContain("S003 · Squeeze");
+
+      await page.goto(url("mcq"));
+      await page.getByRole("button", { name: /diverges|מתבדרת/ }).click();
+      await expect(page.getByRole("status")).toContainText(lang === "he" ? "לא נכון" : "Not quite");
+      expect((await said()).at(-1)).toContain("C) diverges");
+      await axe();
+      await page.screenshot({ path: `e2e/shots/card-mcq-${lang}-${theme}.png` });
+
+      await page.goto(url("open"));
+      const send = page.getByRole("button", { name: lang === "he" ? "שליחת התשובה" : "Send answer" });
+      await expect(send).toBeDisabled();
+      await page.getByRole("textbox").fill("Because $1/n$ is below $\\varepsilon$ for large $n$.");
+      await axe();
+      await send.click();
+      expect((await said()).at(-1)).toContain("Because");
+      expect(errors).toEqual([]);
+    });

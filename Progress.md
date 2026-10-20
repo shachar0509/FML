@@ -12,7 +12,7 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - [x] M4. Cards pipeline (MCP Apps single-file UI) — DONE (see M-log; 🧪 check pending)
 - [x] M5. Courses and plan — DONE (see M-log; 🧪 real plan build pending)
 - [x] M6. Files and indexing — DONE (see M-log; real PDF in the bundle not yet checked)
-- [ ] M7. Learn (🧪)
+- [x] M7. Learn — DONE (see M-log; 🧪 full lesson pending)
 - [ ] M8. Exercises and grading
 - [ ] M9. Practice
 - [ ] M10. Settings and context
@@ -78,6 +78,14 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - 🧪 **User check in Claude Desktop** (after M11): in a course card drop a lecture PDF into Study materials (and a homework PDF into Sample exercises); chips show Waiting; press Start indexing; Claude should work through the page jobs (text pages first, images only when needed); chips become Ready with "N exercises found"; then Improve plan updates the plan. Report time/tool calls, and whether the drag-and-drop inside the card works (the host iframe may block it; the picker button is the fallback).
 - Not done / not verified: a real PDF through the esbuild bundle (pdfjs worker + canvas), drag-drop in a real host iframe, HEIC, the `files_open_folder` call (no test, spawns the OS opener), Windows paths.
 - Next: M7 — Learn (🧪).
+
+### M7 — Learn (done; 🧪 pending)
+- `src/server/learnTools.ts` (`registerLearnTools`): model+card `shalav_start_lesson` (returns v1 tutor instructions with `mcp` rule 10, `[STATUS]`, raw BM25 materials excerpt, boundary, RECAP block; appends `stage_started` once; locked/completed handled), `shalav_lesson_status`, and the tutor tools under their v1 names/schemas: `present_mcq`, `ask_open_question` (cards), `record_check_result`, `update_assessment` (events + criteria result), `consult_materials` (raw pages). App-only: `check_answer`, `lesson_state`, `stage_complete` (mastery needs criteria; `user_override`), `stage_reopen`. `domain/learn/recap.ts`, `tutorSystem({mcp:true})`.
+- Cards: `views/Lesson.tsx` (objectives, mastery bar, Complete stage / Complete anyway + confirm listing missing items, Next stage, Learn again; polls `lesson_state`), `views/Question.tsx` (MCQ marking + explanation, open answer form). Both answers go to the chat through `say()`. Markdown+KaTeX in cards (code/figures stubbed; cards 1.77 MB).
+- Tests: `learnTools.test.ts` (full event sequence over MCP: start, MCQ once-only recording, tag define/observe, open check, assessment/criteria/status, override, reopen + recap); e2e lesson/mcq/open cards he/en × light/dark with axe + screenshots inspected. 170 unit + 22 e2e green; typecheck/lint clean.
+- 🧪 **User check in Claude Desktop** (after M11): press Learn in a course card (or say "Let's learn S001"); Claude should call shalav_start_lesson, show the lesson card and teach one idea per message, then ask via question cards; MCQ buttons mark right/wrong with the explanation and a chat line "My answer: …" appears; open answers go back as a chat line; Claude calls update_assessment/record_check_result; the lesson card's mastery/objective ticks update within ~4 s; Complete anyway lists what is missing; Next stage starts the next lesson; in a new chat, "continue" resumes with a recap. Report whether Claude ends its message after a question card, whether math renders in cards and chat, and how many tool calls a lesson step needs.
+- Not done / known: `assign_exercise` + graded exercises (M8; criteria cannot be met until then, use Complete anyway); open-question attachments (M8); active lesson and MCQ answer keys are in memory only (lost on server restart); figure blocks are not drawn in cards; locked-stage refusal untested (test plan has no prerequisites); real host behaviour of `sendMessage` untested.
+- Next: M8 — Exercises and grading.
 
 ## Phase 1 — Desktop app (v1, frozen)
 

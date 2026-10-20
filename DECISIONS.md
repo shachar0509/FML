@@ -88,3 +88,16 @@
 - Improve plan = app-only `plan_improve_request` running v1 `refinePlan` as a bridge op; failure is shown in the card (`improving.state = failed`), the old plan stays.
 - Passing `text-success` as text colour fails WCAG contrast on light; status "Ready" uses a check icon + normal text.
 - `dist/server.mjs` grew to 3.6 MB (pdfjs legacy now reachable through `openSource`).
+
+## M7 — Learn
+- The host chat is the lesson; `Lesson` engine/session files/compaction stay untouched (desktop v1, deleted in M12). Event logic was ported into `src/server/learnTools.ts` handlers (same events, same tag normalisation, same criteria).
+- The tutor tools keep their v1 schemas, which carry a `stageId` but **no course number**, so the server keeps one in-memory *active lesson* `{course, stage}` set by `shalav_start_lesson`. After a server restart tutor tools answer "No lesson is open. Call shalav_start_lesson first."
+- Question cards are not blocking tool calls: `present_mcq`/`ask_open_question` return at once with a card and a server-generated `checkId` (ULID, also the `checkToolUseId` for `record_check_result`); the answer key (`correctIndex`, explanation) stays on the server and is returned only by app-only `check_answer`. The `checkId → key` map is in memory (lost on restart; the card then shows an error). A second press on an answered MCQ returns the stored result and records nothing.
+- The student's answer goes to the model as a chat line ("My answer: B) …" / the open text), sent by the card with `say()`; no `<student_answer>` tags in the visible line.
+- `consult_materials` and the lesson brief: always raw BM25 pages (≤ 6,000 chars, wrapped in `<materials>`), never a bridge retrieval job. The host model is the tutor, so an extra summarising job only costs subscription and a round trip; web fallback is dropped (the host can search). `getLessonBrief`/`consult` stay for desktop v1.
+- `tutorSystem` got an `mcp` flag: rule 10 is replaced as in plan §6.3 plus card/Complete-button wording, and the figure-format block is omitted (chat and cards cannot draw them). v1 text is unchanged when the flag is off.
+- `shalav_lesson_status` returns the v1 `[STATUS]` block (idle minutes = 0) plus "criteria met: yes/no". `shalav_start_lesson` appends `stage_started` only for an `available` stage, refuses locked stages, and for a completed stage returns the review card without tutor instructions. Recap (`domain/learn/recap.ts`) comes from the stage's last assessment, check counts, graded scores and a reopen flag.
+- Until M8 `assign_exercise` is not registered; the start text tells the model to use `ask_open_question` for written problems. Without graded attempts the criteria cannot be met, so students finish with **Complete anyway** for now.
+- Cards: `Next stage` / `Learn this stage again` are chat lines (`mcp.learn` / `mcp.relearn`); the model then calls `shalav_start_lesson`. The lesson card polls app-only `lesson_state` every 4 s so it follows the tutor's progress updates.
+- Cards bundle now renders Markdown + KaTeX: `./CodeBlock` and `./Figure` are aliased to stubs in `vite.cards.config.ts` (no Shiki/mermaid; fences show as plain code), and KaTeX CSS is trimmed to woff2 only. `dist/cards.html` 0.97 → 1.77 MB.
+- Open-question attachments are not offered yet (`attachment_upload` arrives in M8).

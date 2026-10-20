@@ -3,6 +3,8 @@ import { applyLanguage, applyTheme } from "@/lib/dom";
 import { AddCourse } from "./views/AddCourse";
 import { Course } from "./views/Course";
 import { Home } from "./views/Home";
+import { Lesson } from "./views/Lesson";
+import { Mcq, OpenQ } from "./views/Question";
 import type { CardData, Host } from "./types";
 import { useShalav } from "./useShalav";
 
@@ -29,5 +31,8 @@ export function Cards({ host }: { host: Host }) {
   if (!shown || !data) return <p className="p-4 text-muted" role="status">…</p>;
   if (shown.view === "add") return <AddCourse callTool={callTool} say={say} open={open} back={home} />;
   if (shown.view === "course") return <Course data={shown} callTool={callTool} say={say} reload={() => open(shown.number)} back={home} />;
+  if (shown.view === "lesson") return <Lesson data={shown} callTool={callTool} say={say} />;
+  if (shown.view === "mcq") return <Mcq data={shown} callTool={callTool} say={say} />;
+  if (shown.view === "open") return <OpenQ data={shown} say={say} />;
   return <Home data={shown} add={() => setNav({ view: "add", language: data.language, theme: data.theme })} open={open} />;
 }
