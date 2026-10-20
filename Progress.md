@@ -1,10 +1,34 @@
 # Progress
 
-Spec: `Shalav — Product & Technical Specification v1.md` (section 19 = implementation order).
-Rules: work only on branch `dev`; update this file after every step; stop after each step so the user can compact.
-The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environment: Node 22, pnpm; **Rust/cargo is NOT installed** on this machine (Rust code is written but not compiled until it is).
+**CURRENT PHASE: v2 — MCP connector transition.** Governing doc: `Shalav — MCP Connector Transition Plan v2.md` (its §9 = step order M0–M13). v1 spec `Shalav — Product & Technical Specification v1.md` stays normative where v2 does not override it.
+Rules: work only on branch `dev`; one commit per step with tests; update this file after every step; record silent-spec choices in `DECISIONS.md`; stop after each step so the user can compact. Steps marked 🧪 in the plan need a manual Claude Desktop check by the user; list what to check.
+Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12), Playwright chromium. Live API checks (`vitest.live.config.ts`) are v1-only and need API credit; never store keys in files.
 
-## Steps (spec §19)
+## Phase 2 — MCP connector (plan v2 §9)
+- [ ] M0. Freeze v1 + dependencies
+- [ ] M1. Node platform layer
+- [ ] M2. MCP server skeleton
+- [ ] M3. Host Bridge (BridgeGateway, jobs)
+- [ ] M4. Cards pipeline (MCP Apps single-file UI)
+- [ ] M5. Courses and plan (🧪 real plan build)
+- [ ] M6. Files and indexing
+- [ ] M7. Learn (🧪)
+- [ ] M8. Exercises and grading
+- [ ] M9. Practice
+- [ ] M10. Settings and context
+- [ ] M11. Packaging (MCPB) and docs (🧪)
+- [ ] M12. Cleanup (delete Tauri/sync/API code, move to src/core)
+- [ ] M13. Hardening + acceptance checklist v2
+
+### Handoff notes for M0 (start here)
+- v1 is complete through Step 13, plus partial Step 14 (see the log below). Step 14 is **superseded** by M13; do not continue it.
+- User-reported v1 issues already understood: (1) dot-folder fs scope (fixed in 01640cb); (2) the add-course preview shows the raw catalog syllabus, which starts with admission requirements ("קדם: …"), and looked like the plan. The fix is in plan v2 §6.2 (label + note), done in M5; (3) API keys with no credit pass `models.list` but fail every request; irrelevant in v2 (no API key).
+- The real plan output for 01040195 has never been seen (no API credit). The first real check is the M5 🧪 step in Claude Desktop.
+- `live/` + `vitest.live.config.ts` = v1 real-API harness (catalog lookup verified live: 01040195 → "חשבון אינפיניטסימלי 1", 5.5 credits). Delete in M12.
+
+## Phase 1 — Desktop app (v1, frozen)
+
+### Steps (v1 spec §19)
 - [x] 1. Scaffold — DONE (see log)
 - [x] 2. Data layer — DONE (see log)
 - [x] 3. Claude layer — DONE (see log)
@@ -18,9 +42,9 @@ The app lives in the repo root (spec layout: `src/`, `src-tauri/`, ...). Environ
 - [x] 11. Settings + Ask panel — DONE (see log)
 - [x] 12. Sync — DONE (see log)
 - [x] 13. Release — DONE (see log)
-- [~] 14. Hardening — IN PROGRESS (see log)
+- [~] 14. Hardening — partial; superseded by v2 M13
 
-## Log
+### Log
 
 ### Step 1 — Scaffold (done)
 - Frontend: Vite/React 19/TS strict/Tailwind v4, i18n he (default)/en with live RTL, app shell (top bar, breadcrumbs, Ask tab placeholder), placeholder routes + Settings 6 tabs, zod Settings schema (`src/domain/schemas.ts`) + zustand store (`src/stores/settings.ts`, storage in `src/lib/storage.ts`), toasts, shortcuts. Scripts: dev/build/typecheck/lint/test (all pass, 4 tests).

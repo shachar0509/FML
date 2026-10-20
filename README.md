@@ -1,6 +1,6 @@
 # Shalav
 
-Desktop study app for Technion courses (Tauri 2 + React). Spec: `Shalav — Product & Technical Specification v1.md`. Progress log: `Progress.md`.
+Study app for Technion courses. **Transitioning (v2) from a Tauri desktop app to an MCP connector for Claude Desktop**: see `Shalav — MCP Connector Transition Plan v2.md`. The instructions below describe the v1 desktop build and will be rewritten in step M11. v1 spec: `Shalav — Product & Technical Specification v1.md`. Progress log: `Progress.md`.
 
 ## 1. Prerequisites
 Rust stable, Node 22, pnpm. macOS: Xcode Command Line Tools. Windows: Visual Studio Build Tools (C++) and WebView2.

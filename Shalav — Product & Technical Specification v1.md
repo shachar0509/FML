@@ -2,6 +2,8 @@
 
 Oct 18, 2026 · @Shachar Tzarfaty
 
+> **Superseded in part (2026-10-20).** Shalav is moving from a Tauri desktop app to an MCP connector for Claude Desktop. `Shalav — MCP Connector Transition Plan v2.md` governs where the two conflict (shell, API key, models, usage, sync, updater, onboarding, Learn/Ask UI). Data layout, plan rules, progress model, prompts and figure formats in this document stay normative.
+
 Shalav is a free, standalone Mac + Windows desktop app that teaches a Technion course stage by stage with Claude, grades photographed handwritten solutions, tracks progress and mistakes, and optionally syncs to the user's own Google Drive. The UI defaults to Hebrew.
 
 ## 0. How to use this spec
