@@ -1,7 +1,8 @@
 // Real OpenSource (spec 5.4, 5.6, 9.8): PDF, image and txt/md files as numbered pages.
 import { fs } from "@/lib/fs/fs";
 import { join } from "@/lib/fs/paths";
-import { bytesToBase64, cropBox, drawTo, encodeCrop, fitImageFile, fitJpeg } from "@/lib/images";
+import { nodeDirs } from "@/lib/platform";
+import { bytesToBase64, cropBox, decodeImage, drawTo, encodeCrop, fitImageFile, fitJpeg } from "@/lib/images";
 import { collapseWs, hasImagePaint, openPdf, pageText, renderPage } from "@/lib/pdf";
 import type { OpenSource, PageSource, Rendered } from "./types";
 
@@ -9,6 +10,7 @@ const jpeg = (b: Uint8Array): Rendered => ({ base64: bytesToBase64(b), mediaType
 
 /** Page JPEG cache file; null outside Tauri (no caching). */
 export async function cachePath(sha256: string, page: number): Promise<string | null> {
+  if (nodeDirs.cache) return join(nodeDirs.cache, "pages", sha256, `p${page}.jpg`);
   try {
     const { appCacheDir } = await import("@tauri-apps/api/path");
     return join(await appCacheDir(), "pages", sha256, `p${page}.jpg`);
@@ -38,7 +40,7 @@ export const openSource: OpenSource = async ({ path, mediaType, sha256 }) => {
       imageNeeded: async () => true,
       image: () => cached(sha256, 1, () => fitImageFile(bytes, mediaType)),
       async crop(_p, bbox) {
-        const bmp = await createImageBitmap(new Blob([bytes as BlobPart], { type: mediaType }));
+        const bmp = await decodeImage(bytes, mediaType);
         const b = cropBox(bmp.width, bmp.height, bbox);
         return encodeCrop(drawTo(bmp, b.w, b.h, b));
       },

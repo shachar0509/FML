@@ -6,7 +6,7 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 
 ## Phase 2 — MCP connector (plan v2 §9)
 - [x] M0. Freeze v1 + dependencies — DONE (see M-log)
-- [ ] M1. Node platform layer
+- [x] M1. Node platform layer — DONE (see M-log)
 - [ ] M2. MCP server skeleton
 - [ ] M3. Host Bridge (BridgeGateway, jobs)
 - [ ] M4. Cards pipeline (MCP Apps single-file UI)
@@ -34,6 +34,13 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - `pnpm-workspace.yaml` added (pnpm 11 `allowBuilds: esbuild: true`). Verified: `@napi-rs/canvas` loads and encodes JPEG in Node 22; esbuild CLI + JS API work.
 - typecheck/lint clean; 154 tests pass (1 live skipped).
 - Next: M1 — Node platform layer.
+
+### M1 — Node platform layer (done)
+- `src/server/`: `nodeFs.ts` (`nodeFs()` = `Fs` port), `native.ts` (ports of the Rust commands: `sha256`, `importCopy` with `name  (2).ext` — two spaces, as in Rust/spec 5.2, `heicToJpeg` via sips, `trash`, `openFolder`; exported as `native: Native`), `canvas.ts` (`enableNodeCanvas()` routes `lib/images` + `lib/pdf` through `@napi-rs/canvas`), `platform.ts` (`initNode()`: setFs, canvas, dirs, settings load, device.json, data root; `nodeCatalog()` with global `fetch`). Env overrides: `SHALAV_CONFIG_DIR`, `SHALAV_CACHE_DIR`, `SHALAV_DOCUMENTS_DIR`.
+- Seams added to shared code (browser/Tauri behaviour unchanged): `lib/platform.ts` (`nodeDirs`), `lib/images.ts` (`setNodeCanvas`, `newCanvas`, `decodeImage`), `lib/pdf.ts` (uses `pdfjs-dist/legacy` when there is no `document`), `lib/storage.ts` (JSON files under `nodeDirs.config`), `ingest/pageSource.ts` (page cache under `nodeDirs.cache`).
+- Tests: `src/server/node.test.ts` (node env): nodeFs temp dir, sha vector, importCopy collisions, settings storage, `initNode`, a real PDF → text + JPEG in Node. Existing domain tests unchanged. 160 pass; typecheck/lint clean.
+- Caveats: `trash` on macOS moves into `~/.Trash` (no Finder "Put Back"; Windows uses Recycle Bin via PowerShell, untested); `openFolder`/HEIC/Windows paths untested here. Server bundling (esbuild, `@napi-rs/canvas` external, pdfjs legacy worker resolution) is checked in M2/M11.
+- Next: M2 — MCP server skeleton.
 
 ## Phase 1 — Desktop app (v1, frozen)
 

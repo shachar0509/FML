@@ -25,16 +25,35 @@ export function bytesToBase64(b: Uint8Array): string {
 }
 export const base64ToBytes = (s: string): Uint8Array => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
+/** Node server hook (server/canvas.ts): @napi-rs/canvas instead of the DOM. */
+export type NodeCanvas = {
+  create(w: number, h: number): HTMLCanvasElement;
+  encode(c: HTMLCanvasElement, type: string, q?: number): Promise<Uint8Array>;
+  decode(bytes: Uint8Array): Promise<Src>;
+};
+let node: NodeCanvas | null = null;
+export const setNodeCanvas = (n: NodeCanvas): void => {
+  node = n;
+};
+export const newCanvas = (w: number, h: number): HTMLCanvasElement => {
+  if (node) return node.create(w, h);
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  return c;
+};
+/** Decode image bytes to something drawImage accepts (browser: ImageBitmap). */
+export const decodeImage = async (bytes: Uint8Array, mediaType: string): Promise<Src> =>
+  node ? node.decode(bytes) : createImageBitmap(new Blob([bytes as BlobPart], { type: mediaType }));
+
 const toBytes = (c: HTMLCanvasElement, type: string, q?: number) =>
-  new Promise<Uint8Array>((res, rej) =>
+  node ? node.encode(c, type, q) : new Promise<Uint8Array>((res, rej) =>
     c.toBlob((b) => (b ? b.arrayBuffer().then((a) => res(new Uint8Array(a)), rej) : rej(new Error("encode failed"))), type, q),
   );
 
 /** Draw `src` (optionally a sub-rect) to a new canvas of the given size. */
 export function drawTo(src: Src, w: number, h: number, from?: Px): HTMLCanvasElement {
-  const c = document.createElement("canvas");
-  c.width = w;
-  c.height = h;
+  const c = newCanvas(w, h);
   const g = c.getContext("2d");
   if (!g) throw new Error("no 2d context");
   if (from) g.drawImage(src, from.x, from.y, from.w, from.h, 0, 0, w, h);
@@ -57,10 +76,10 @@ export async function encodeCrop(c: HTMLCanvasElement): Promise<{ bytes: Uint8Ar
 }
 
 export async function fitImageFile(bytes: Uint8Array, mediaType: string, longEdge = 1568): Promise<Uint8Array> {
-  const bmp = await createImageBitmap(new Blob([bytes as BlobPart], { type: mediaType }));
+  const bmp = await decodeImage(bytes, mediaType);
   try {
     return await fitJpeg(bmp, longEdge);
   } finally {
-    bmp.close();
+    (bmp as Partial<ImageBitmap>).close?.();
   }
 }

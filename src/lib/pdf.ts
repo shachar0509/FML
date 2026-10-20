@@ -1,5 +1,6 @@
 // Thin pdfjs-dist wrappers (spec 5.4). Browser-only; pdfjs is imported lazily so jsdom tests never load it.
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
+import { newCanvas } from "@/lib/images";
 import { PasswordProtectedError, TooManyPagesError } from "@/domain/ingest/types";
 
 export const MAX_PAGES = 500;
@@ -7,6 +8,8 @@ export const MAX_PAGES = 500;
 export const collapseWs = (s: string): string => s.replace(/\s+/g, " ").trim();
 
 const pdfjs = async () => {
+  // Node (no DOM): the legacy build runs there and finds its own worker.
+  if (typeof document === "undefined") return (await import("pdfjs-dist/legacy/build/pdf.mjs")) as unknown as typeof import("pdfjs-dist");
   const m = await import("pdfjs-dist");
   m.GlobalWorkerOptions.workerSrc ||= new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
   return m;
@@ -60,9 +63,7 @@ export async function hasImagePaint(page: PDFPageProxy): Promise<boolean> {
 export async function renderPage(page: PDFPageProxy, longEdge: number): Promise<HTMLCanvasElement> {
   const v1 = page.getViewport({ scale: 1 });
   const viewport = page.getViewport({ scale: longEdge / Math.max(v1.width, v1.height) });
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(viewport.width);
-  canvas.height = Math.round(viewport.height);
+  const canvas = newCanvas(Math.round(viewport.width), Math.round(viewport.height));
   await page.render({ canvas, viewport }).promise;
   return canvas;
 }
