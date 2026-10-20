@@ -12,8 +12,9 @@
     "test": "vitest run",
     "e2e": "playwright test",
     "tauri": "tauri",
+    "build:cards": "vite build -c vite.cards.config.ts",
     "build:server": "node scripts/build-server.mjs",
-    "mcp:dev": "pnpm build:server && npx @modelcontextprotocol/inspector node dist/server.mjs"
+    "mcp:dev": "pnpm build:cards && pnpm build:server && npx @modelcontextprotocol/inspector node dist/server.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",

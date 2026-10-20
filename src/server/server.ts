@@ -1,22 +1,48 @@
+import { registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 import { McpServer } from "@modelcontextprotocol/server";
 import { listCourses } from "@/domain/courses/courses";
 import * as z from "zod";
 import { BridgeGateway } from "./bridge";
+import type { HomeData } from "@/cards/types";
+import { useSettings } from "@/stores/settings";
 import { INSTRUCTIONS } from "./instructions";
+import { CARDS_URI, readCards } from "./resources";
 
 /** Transport-agnostic: tests connect it to an in-memory transport, main.ts to stdio. */
 export function createServer(bridge = new BridgeGateway()): McpServer {
   const server = new McpServer({ name: "shalav", version: "2.0.0" }, { instructions: INSTRUCTIONS });
 
-  server.registerTool(
+  registerAppResource(server, "Shalav cards", CARDS_URI, { description: "Shalav study cards" }, async () => ({
+    contents: [{ uri: CARDS_URI, mimeType: RESOURCE_MIME_TYPE, text: await readCards() }],
+  }));
+
+  registerAppTool(
+    server,
     "shalav_home",
-    { title: "My courses", description: "Show the student's Shalav courses and what to do next." },
+    { title: "My courses", description: "Show the student's Shalav courses and what to do next.", _meta: { ui: { resourceUri: CARDS_URI } } },
     async () => {
       const courses = await listCourses();
       const text = courses.length
         ? courses.map((c, i) => `${i + 1}. ${c.course.courseNumber} — ${c.course.nameHe}`).join("\n")
         : "No courses yet. Ask the student which Technion course number to add.";
-      return { content: [{ type: "text", text }], structuredContent: { courses: courses.map((c) => c.course) } };
+      const { language, theme } = useSettings.getState().settings;
+      const data: HomeData = {
+        view: "home",
+        language,
+        theme,
+        courses: courses.map(({ course, plan, progress }) => {
+          const t = progress?.totals;
+          const stage = plan?.stages.find((x) => x.id === progress?.currentStageId);
+          return {
+            number: course.courseNumber,
+            name: course.nameHe,
+            credits: course.credits,
+            pct: t && t.stagesTotal ? Math.round((100 * t.stagesCompleted) / t.stagesTotal) : 0,
+            stage: stage ? `${stage.id} · ${stage.title}` : null,
+          };
+        }),
+      };
+      return { content: [{ type: "text", text }], structuredContent: data };
     },
   );
 

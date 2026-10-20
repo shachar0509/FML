@@ -421,5 +421,9 @@
     "continue": "Continue",
     "figure": "Figure {{n}}",
     "failed": "Something went wrong. Try again."
+  },
+  "mcp": {
+    "addCourse": "➕ I'd like to add a course",
+    "openCourse": "▶️ Let's continue with {{name}}"
   }
 }

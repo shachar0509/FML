@@ -9,7 +9,7 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - [x] M1. Node platform layer — DONE (see M-log)
 - [x] M2. MCP server skeleton — DONE (see M-log)
 - [x] M3. Host Bridge (BridgeGateway, jobs) — DONE (see M-log)
-- [ ] M4. Cards pipeline (MCP Apps single-file UI)
+- [x] M4. Cards pipeline (MCP Apps single-file UI) — DONE (see M-log; 🧪 check pending)
 - [ ] M5. Courses and plan (🧪 real plan build)
 - [ ] M6. Files and indexing
 - [ ] M7. Learn (🧪)
@@ -54,6 +54,13 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - Tests: `bridge.test.ts` (correction round via `callStructured`, parallel jobs + dedupe, cancel, request-signal abort, text job, op error, image job) + MCP-level check in `server.test.ts`.
 - Not done (deliberate): persisting `jobs.json` for display (no consumer; add with the M4+ cards if wanted); sampling fast path (§5.3, optional); the singleton bridge is created per `createServer()` — domain code in M5+ must receive it via `setClaude(bridge)` (`claude/runtime.ts`) or equivalent.
 - Next: M4 — Cards pipeline (🧪 Claude Desktop check).
+
+### M4 — Cards pipeline (done; 🧪 pending)
+- `src/cards/`: `host.ts` (the only MCP Apps bridge code: `App` + `PostMessageTransport`, `connectHost()`), `types.ts` (`Host`, `HomeData`/`CardData`, `view` picks the view), `useShalav.ts`, `Cards.tsx` (language/theme/RTL, view switch), `views/Home.tsx`, `main.tsx` + `cards.html`. `pnpm build:cards` (`vite.cards.config.ts`, singlefile) → `dist/cards.html`; `mcp:dev` builds cards first.
+- Server: `resources.ts` (`readCards`), `shalav_home` is now `registerAppTool` with `_meta.ui.resourceUri = ui://shalav/cards.html` and `structuredContent` `HomeData` (courses with pct/current stage, language, theme); text fallback unchanged. Buttons (Add course / Continue) send a chat line via `say()`; real actions arrive with M5+.
+- Tests: `server.test.ts` (resource list/read with the MCP App mime type, tool `_meta`, structuredContent); `e2e/cards.spec.ts` (fake-host page, he/en × light/dark: dir, theme class, axe A/AA, screenshot, button → message, empty state). Screenshots inspected (RTL + dark fine). typecheck/lint/test green.
+- 🧪 **User check in Claude Desktop** (after M11 packaging, or now with `pnpm mcp:dev`-style manual config): the "Shalav: my courses" prompt shows the Home card; Hebrew RTL; theme follows Claude's light/dark; "Add course" puts a line in the chat. Not verified: a real host (iframe sandbox/CSP with the inlined fonts, resize), `app.sendMessage` behaviour.
+- Next: M5 — Courses and plan (🧪 real plan build). Domain code needs the bridge: `setClaude(bridge)` and `bridge.run(...)` for course creation.
 
 ## Phase 1 — Desktop app (v1, frozen)
 
