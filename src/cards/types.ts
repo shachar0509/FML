@@ -1,3 +1,4 @@
+import type { Grade } from "@/claude/practiceTools";
 /** What the server puts in `structuredContent`; `view` picks the card view (plan v2 §8). */
 export type HomeData = {
   view: "home";
@@ -56,7 +57,23 @@ export type LessonData = Base & {
 /** Question cards of present_mcq / ask_open_question; the answer key stays on the server. */
 export type McqData = Base & { view: "mcq"; checkId: string; questionMd: string; options: string[] };
 export type OpenData = Base & { view: "open"; checkId: string; questionMd: string };
-export type CardData = HomeData | AddData | CourseData | LessonData | McqData | OpenData;
+/** Exercise card (assign_exercise / app-only exercise_state). */
+export type ExerciseData = Base & {
+  view: "exercise";
+  number: string;
+  runId: string;
+  difficulty: number;
+  statementMd: string;
+  /** data: URIs of the figure crops */
+  figures: string[];
+  hints: { level: number; hintMd: string }[];
+  solutionMd: string | null;
+  grade: Grade | null;
+  canReveal: boolean;
+  busy: "grade" | "hint" | "solution" | null;
+  error: string | null;
+};
+export type CardData = HomeData | AddData | CourseData | LessonData | McqData | OpenData | ExerciseData;
 
 export type Host = {
   callTool(name: string, args?: Record<string, unknown>): Promise<{ structuredContent?: unknown; isError?: boolean }>;

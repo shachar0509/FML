@@ -3,7 +3,7 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod";
 import type { LessonData, McqData, OpenData } from "@/cards/types";
 import { statusBlock, tutorSystem } from "@/claude/prompts/tutor";
-import { askOpenQuestion, consultMaterials, presentMcq, recordCheckResult, updateAssessment } from "@/claude/tutorTools";
+import { askOpenQuestion, assignExercise, consultMaterials, presentMcq, recordCheckResult, updateAssessment } from "@/claude/tutorTools";
 import { buildKnowledgeBoundary } from "@/domain/boundary/boundary";
 import { CourseJsonSchema, EventSchema, PlanJsonSchema } from "@/domain/dataSchemas";
 import { listFileIndexes } from "@/domain/ingest/indexStore";
@@ -11,6 +11,7 @@ import { buildRecap } from "@/domain/learn/recap";
 import { checkAdvanceCriteria } from "@/domain/progress/criteria";
 import { normalizeTag, reduceProgress } from "@/domain/progress/reduce";
 import { appendEvent } from "@/domain/progress/store";
+import { resolveExercise, type Ex } from "@/domain/practice/exercises";
 import { pagesFor } from "@/domain/retrieval/retrieve";
 import { readJsonFile } from "@/lib/fs/atomicWrite";
 import { readJsonlDir } from "@/lib/fs/jsonl";
@@ -19,6 +20,7 @@ import { newId } from "@/lib/ids";
 import { nowIso } from "@/lib/time";
 import { useSettings } from "@/stores/settings";
 import type { BridgeGateway } from "./bridge";
+import { registerExerciseTools } from "./exerciseTools";
 import { CARDS_URI } from "./resources";
 
 const appOnly = { ui: { resourceUri: CARDS_URI, visibility: ["app" as const] } };
@@ -90,6 +92,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway) {
     return { s, n: active.n, stageId: stageId && s.plan.stages.some((x) => x.id === stageId) ? stageId : active.stageId };
   }
   const NO_LESSON = "No lesson is open. Call shalav_start_lesson first.";
+  const exercises = registerExerciseTools(server, bridge);
 
   registerAppTool(
     server,
@@ -133,7 +136,6 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway) {
       const recap = buildRecap(s.plan, s.events, stage.id);
       const text = [
         system,
-        "Note: assign_exercise is not available in this version; use ask_open_question for written problems instead.",
         status(s, stage.id),
         recap,
         "The lesson card is shown. Begin the lesson now as the instructions say.",
@@ -172,6 +174,19 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway) {
     const { language, theme } = sets();
     const data: OpenData = { view: "open", language, theme, checkId, questionMd: i.questionMd };
     return out(`Question shown (check id ${checkId}). The student's written answer arrives as their next message; evaluate it, then call record_check_result with checkToolUseId "${checkId}".`, data);
+  });
+
+  registerAppTool(server, assignExercise.def.name, { title: "Exercise", description: assignExercise.def.description + hint, inputSchema: assignExercise.schema, _meta: withCard }, async (i) => {
+    const c = await ctx(i.stageIds[0]);
+    if (!c) return fail(NO_LESSON);
+    let ex: Ex | null = i.source === "index" && i.exerciseId ? await resolveExercise(c.n, { source: "index", id: i.exerciseId }) : null;
+    if (!ex && i.statementMd) {
+      const ids = i.stageIds.length ? i.stageIds : [c.stageId];
+      ex = { ref: { source: "tutor", id: newId() }, statementMd: i.statementMd, referenceSolutionMd: i.referenceSolutionMd ?? null, gradingNotes: "", requiredStageIds: ids, stageIds: ids, difficulty: i.difficulty, edgeCaseFocus: i.edgeCaseFocus, figures: [] };
+    }
+    if (!ex) return fail('Unknown exerciseId and no statementMd. Use an id from the exercise list, or source "new" with statementMd and referenceSolutionMd.');
+    const data = await exercises.open(c.n, ex, "learn");
+    return out("Exercise card shown. The student works on paper, uploads a photo and presses Grade; the graded result then comes back to you through the chat. Do not describe the solution.", data);
   });
 
   registerAppTool(

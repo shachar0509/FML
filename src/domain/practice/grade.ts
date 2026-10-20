@@ -13,7 +13,8 @@ import { figureImages, type Ctx, type Ex } from "./exercises";
 
 export type Attachment = Extract<StoredBlock, { type: "image_ref" }>;
 export type LoadImage = (sha256: string, mediaType: "image/jpeg" | "image/png") => Promise<string>;
-export type Env = { gw: ClaudeGateway; loadImage: LoadImage; signal?: AbortSignal };
+/** `digest` lets a host without a cheap model call (the MCP bridge) supply the stage material itself; hints and solutions use it instead of a lesson-brief call. */
+export type Env = { gw: ClaudeGateway; loadImage: LoadImage; signal?: AbortSignal; digest?: (ctx: Ctx, stageId: string) => Promise<string> };
 export type Context = "learn" | "practice";
 export const MAX_PAGES = 12;
 export class TooManyPages extends Error {

@@ -5,7 +5,7 @@ import "@/index.css";
 import "@/i18n";
 import { createRoot } from "react-dom/client";
 import { Cards } from "./Cards";
-import type { CardData, CourseData, FilesData, HomeData, Host, LessonData, LookupResult, McqData, OpenData } from "./types";
+import type { CardData, CourseData, FilesData, HomeData, Host, ExerciseData, LessonData, LookupResult, McqData, OpenData } from "./types";
 
 /** Playwright test host: a fake bridge instead of Claude Desktop. ?lang=&theme=&empty=1 ; sent messages land in window.__said. */
 const q = new URLSearchParams(location.search);
@@ -42,12 +42,23 @@ const lesson: LessonData = {
 };
 const mcq: McqData = { ...base, view: "mcq", checkId: "c1", questionMd: "Which holds for $a_n = 1/n$?", options: ["$a_n \\to 0$", "$a_n \\to 1$", "diverges"] };
 const open: OpenData = { ...base, view: "open", checkId: "c2", questionMd: "Explain why $\\lim 1/n = 0$." };
-const initial: CardData = ({ lesson, mcq, open } as Record<string, CardData>)[q.get("view") ?? ""] ?? home;
+const exercise: ExerciseData = {
+  ...base, view: "exercise", number: "01040195", runId: "r1", difficulty: 3, statementMd: "Prove that $\\lim 1/n = 0$.", figures: [], hints: [], solutionMd: null, grade: null, canReveal: false, busy: null, error: null,
+};
+const graded: ExerciseData = {
+  ...exercise, canReveal: true,
+  grade: {
+    legibility: "clear", illegibleParts: [], verdict: "partially_correct", score: 70, summaryMd: "Good start, the choice of $N$ is missing.",
+    steps: [{ label: "Setup", status: "correct", commentMd: "Fine." }, { label: "Choose $N$", status: "missing", commentMd: "No $N$ given." }],
+    missingForFullCredit: ["explicit N"], mistakes: [], edgeCasesMissed: [], correctedKeyStepMd: "Take $N > 1/\\varepsilon$.", usesMaterialBeyondCompleted: [], stageIds: ["S002"],
+  },
+};
+const initial: CardData = ({ lesson, mcq, open, exercise } as Record<string, CardData>)[q.get("view") ?? ""] ?? home;
 const said: string[] = [];
 (window as unknown as { __said: string[] }).__said = said;
 const host: Host = {
   callTool: async (name) => ({
-    structuredContent: name === "course_lookup" ? found : name === "shalav_course" ? course : name === "files_list" ? files : name === "lesson_state" ? lesson : name === "stage_complete" ? { ...lesson, status: "completed_override" } : name === "stage_reopen" ? lesson : name === "check_answer" ? { selectedIndex: 1, correct: false, correctIndex: 0, explanationMd: "Since $1/n \\to 0$." } : name === "course_status" ? { state: "running", step: "plan", unit: { k: 1, n: 4 }, pending: 1 } : { ok: true },
+    structuredContent: name === "course_lookup" ? found : name === "shalav_course" ? course : name === "files_list" ? files : name === "lesson_state" ? lesson : name === "stage_complete" ? { ...lesson, status: "completed_override" } : name === "stage_reopen" ? lesson : name === "check_answer" ? { selectedIndex: 1, correct: false, correctIndex: 0, explanationMd: "Since $1/n \\to 0$." } : name === "attachment_upload" ? { files: [{ sha256: "a".repeat(64), mediaType: "image/jpeg" }] } : name === "exercise_grade_request" || name === "exercise_state" ? graded : name === "course_status" ? { state: "running", step: "plan", unit: { k: 1, n: 4 }, pending: 1 } : { ok: true },
   }),
   say: async (t) => void said.push(t),
   context: () => ({ theme: q.get("theme") ?? undefined }),

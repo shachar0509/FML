@@ -100,3 +100,24 @@ for (const lang of ["he", "en"] as const)
       expect((await said()).at(-1)).toContain("Because");
       expect(errors).toEqual([]);
     });
+
+for (const lang of ["he", "en"] as const)
+  for (const theme of ["light", "dark"] as const)
+    test(`exercise card (${lang}/${theme})`, async ({ page }) => {
+      const errors: string[] = [];
+      page.on("pageerror", (e) => errors.push(e.message));
+      await page.goto(`/src/cards/test-host.html?view=exercise&lang=${lang}&theme=${theme}`);
+      await expect(page.locator(".katex").first()).toBeVisible();
+      const grade = page.getByRole("button", { name: lang === "he" ? "שליחה לבדיקה" : "Submit for grading" });
+      await expect(grade).toBeDisabled();
+      await page.locator("input[type=file]").setInputFiles({ name: "work.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64") });
+      await expect(page.getByText("work.png")).toBeVisible();
+      await grade.click();
+      await expect(page.getByText(lang === "he" ? "נכון חלקית" : "Partly correct")).toBeVisible(); // the stub answers with a graded card
+      expect((await page.evaluate(() => (window as unknown as { __said: string[] }).__said)).at(-1)).toContain(lang === "he" ? "בדקו" : "grade");
+      await expect(page.getByRole("button", { name: lang === "he" ? "הצגת פתרון מלא" : "Show full solution" })).toBeVisible();
+      const bad = (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations.filter((v) => v.impact === "serious" || v.impact === "critical");
+      expect(bad).toEqual([]);
+      await page.screenshot({ path: `e2e/shots/card-exercise-${lang}-${theme}.png` });
+      expect(errors).toEqual([]);
+    });

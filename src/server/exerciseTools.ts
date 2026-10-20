@@ -1,0 +1,133 @@
+import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
+import type { McpServer } from "@modelcontextprotocol/server";
+import * as z from "zod";
+import type { ExerciseData } from "@/cards/types";
+import { pagesFor } from "@/domain/retrieval/retrieve";
+import { saveAnswerFile, loadImageB64 } from "@/lib/attachments";
+import { canReveal, ExerciseRun, emptyRun } from "@/domain/practice/run";
+import { figureImages, type Ctx, type Ex } from "@/domain/practice/exercises";
+import type { Attachment, Context } from "@/domain/practice/grade";
+import { newId } from "@/lib/ids";
+import { useSettings } from "@/stores/settings";
+import type { BridgeGateway, Content } from "./bridge";
+import { CARDS_URI } from "./resources";
+
+const appOnly = { ui: { resourceUri: CARDS_URI, visibility: ["app" as const] } };
+const num = z.string().regex(/^\d{8}$/);
+const run_ = z.object({ runId: z.string() });
+const files = z.array(z.object({ sha256: z.string().regex(/^[0-9a-f]{64}$/), mediaType: z.enum(["image/jpeg", "image/png"]) })).max(12);
+const out = (text: string, structuredContent?: object) => ({ content: [{ type: "text" as const, text }], ...(structuredContent ? { structuredContent: structuredContent as Record<string, unknown> } : {}) });
+const fail = (text: string) => ({ ...out(text), isError: true as const });
+const text = (t: string): Content[] => [{ type: "text", text: t }];
+const readable = (g: { verdict: string; legibility: string } | null) => !!g && g.verdict !== "unreadable" && g.legibility !== "illegible";
+const toAtt = (f: z.infer<typeof files>): Attachment[] => f.map((x) => ({ type: "image_ref", ...x }));
+
+type R = { run: ExerciseRun; n: string; context: Context; busy: "grade" | "hint" | "solution" | null; figures: string[] };
+
+/** Exercise card (plan v2 §6.4): Grade / Hint / Show solution run the v1 pipeline as bridge ops; state lives in memory (lost on a restart). */
+export function registerExerciseTools(server: McpServer, bridge: BridgeGateway) {
+  const runs = new Map<string, R>();
+  // Raw BM25 pages instead of a lesson-brief job: one host round trip less per hint (DECISIONS.md, as in M7).
+  const digest = async (ctx: Ctx, stageId: string) => {
+    const stage = ctx.plan.stages.find((x) => x.id === stageId);
+    const pages = await pagesFor({ gw: bridge }, ctx.course, [stageId], [...(stage?.objectives ?? []), ...(stage?.newConcepts ?? [])].join(" "));
+    let body = "";
+    for (const p of pages) {
+      const t = `[${p.fileName} p.${p.page}]\n${p.text}\n\n`;
+      if (body && body.length + t.length > 4000) break;
+      body += t;
+    }
+    return body.trim();
+  };
+
+  function data(runId: string): ExerciseData {
+    const x = runs.get(runId) as R;
+    const { state: s, ex } = x.run;
+    const { language, theme } = useSettings.getState().settings;
+    return {
+      view: "exercise", language, theme, number: x.n, runId, difficulty: ex.difficulty, statementMd: ex.statementMd, figures: x.figures,
+      hints: s.hints.map(({ level, hintMd }) => ({ level, hintMd })), solutionMd: s.solutionMd, grade: s.grade, canReveal: canReveal(s), busy: x.busy, error: x.run.error,
+    };
+  }
+
+  /** Called by assign_exercise (Learn) and later by Practice. */
+  async function open(n: string, ex: Ex, context: Context): Promise<ExerciseData> {
+    const runId = newId();
+    const run = new ExerciseRun(n, ex, context, { gw: bridge, loadImage: loadImageB64(n), digest }, emptyRun(), async () => undefined);
+    const figures = (await figureImages(n, ex)).map((f) => `data:${f.mediaType};base64,${f.base64}`);
+    runs.set(runId, { run, n, context, busy: null, figures });
+    return data(runId);
+  }
+
+  const get = (runId: string) => runs.get(runId);
+  const gone = () => fail("This exercise expired (Shalav was restarted). Ask the tutor for it again.");
+  function start(x: R, kind: NonNullable<R["busy"]>, work: () => Promise<unknown>, summary: () => string) {
+    x.busy = kind;
+    bridge.run(`${kind} for exercise ${x.run.ex.ref.id}`, async () => {
+      try {
+        await work();
+      } finally {
+        x.busy = null;
+      }
+    }, () => text(summary())).done.catch(() => undefined);
+  }
+  const wait = "Call shalav_next_job now.";
+
+  registerAppTool(server, "exercise_state", { title: "Exercise state", description: "Card-only: current data of the exercise card.", inputSchema: run_, _meta: appOnly }, async ({ runId }) => (get(runId) ? out("ok", data(runId)) : gone()));
+
+  registerAppTool(server, "exercise_grade_request", { title: "Grade a solution", description: "Card-only: grade the uploaded solution pages (an AI job).", inputSchema: run_.extend({ files: files.min(1) }), _meta: appOnly }, async ({ runId, files: f }) => {
+    const x = get(runId);
+    if (!x) return gone();
+    if (x.busy) return out("Already working.", data(runId));
+    start(x, "grade", () => x.run.submit(toAtt(f)), () => {
+      const g = x.run.state.grade;
+      if (x.run.error) return `Grading failed: ${x.run.error}. Tell the student; they can press Grade again.`;
+      if (!g || !readable(g)) return "The solution was not readable. The card asks the student for a clearer photo; wait for their next message.";
+      const res = JSON.stringify({ ...g, hintsUsed: x.run.state.hints.length, solutionRevealed: !!x.run.state.solutionMd });
+      return `Graded; the Grade card is shown. Result: ${res}\n${x.context === "learn" ? "Continue the lesson: react in 2-3 sentences without repeating the card, then call update_assessment." : ""}`;
+    });
+    return out(`Grading started. ${wait}`, data(runId));
+  });
+
+  registerAppTool(server, "exercise_hint_request", { title: "Get a hint", description: "Card-only: the next hint level (an AI job).", inputSchema: run_.extend({ files }), _meta: appOnly }, async ({ runId, files: f }) => {
+    const x = get(runId);
+    if (!x) return gone();
+    if (x.busy) return out("Already working.", data(runId));
+    if (x.run.state.hints.length >= 3) return fail("All three hints were used.");
+    start(x, "hint", () => x.run.hint(toAtt(f)), () => (x.run.error ? `The hint failed: ${x.run.error}. The student can press Hint again.` : "The hint is shown in the card. Nothing else to do; wait for the student."));
+    return out(`Hint started. ${wait}`, data(runId));
+  });
+
+  registerAppTool(server, "exercise_solution_request", { title: "Show the solution", description: "Card-only: the full solution (an AI job if it does not exist yet).", inputSchema: run_, _meta: appOnly }, async ({ runId }) => {
+    const x = get(runId);
+    if (!x) return gone();
+    if (x.busy) return out("Already working.", data(runId));
+    if (!canReveal(x.run.state)) return fail("The solution unlocks after hint 3 or a graded attempt.");
+    start(x, "solution", () => x.run.reveal(), () => (x.run.error ? `The solution failed: ${x.run.error}. The student can press Show solution again.` : "The solution is shown in the card. Nothing else to do; wait for the student."));
+    return out(`Solution started. ${wait}`, data(runId));
+  });
+
+  registerAppTool(server, "exercise_retry", { title: "Try again", description: "Card-only: drop the grade and attempt the same exercise again.", inputSchema: run_, _meta: appOnly }, async ({ runId }) => {
+    const x = get(runId);
+    if (!x) return gone();
+    await x.run.retry();
+    return out("ok", data(runId));
+  });
+
+  registerAppTool(
+    server,
+    "attachment_upload",
+    { title: "Upload a solution file", description: "Card-only: store an image or PDF (PDF pages become JPEGs, max 12).", inputSchema: z.object({ number: num, name: z.string().max(200), mime: z.string(), base64: z.string().max(40_000_000) }), _meta: appOnly },
+    async ({ number, name, mime, base64 }) => {
+      if (!mime.startsWith("image/") && mime !== "application/pdf") return fail("Only images and PDFs.");
+      try {
+        const saved = await saveAnswerFile(number, new File([Buffer.from(base64, "base64")], name, { type: mime }));
+        return out("stored", { files: saved.map((a) => ({ sha256: a.sha256, mediaType: a.mediaType })) });
+      } catch (e) {
+        return fail(e instanceof Error ? e.message : String(e));
+      }
+    },
+  );
+
+  return { open };
+}

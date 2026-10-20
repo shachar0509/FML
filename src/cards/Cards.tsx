@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { applyLanguage, applyTheme } from "@/lib/dom";
 import { AddCourse } from "./views/AddCourse";
 import { Course } from "./views/Course";
+import { Exercise } from "./views/Exercise";
 import { Home } from "./views/Home";
 import { Lesson } from "./views/Lesson";
 import { Mcq, OpenQ } from "./views/Question";
@@ -33,6 +34,7 @@ export function Cards({ host }: { host: Host }) {
   if (shown.view === "course") return <Course data={shown} callTool={callTool} say={say} reload={() => open(shown.number)} back={home} />;
   if (shown.view === "lesson") return <Lesson data={shown} callTool={callTool} say={say} />;
   if (shown.view === "mcq") return <Mcq data={shown} callTool={callTool} say={say} />;
+  if (shown.view === "exercise") return <Exercise data={shown} callTool={callTool} say={say} />;
   if (shown.view === "open") return <OpenQ data={shown} say={say} />;
   return <Home data={shown} add={() => setNav({ view: "add", language: data.language, theme: data.theme })} open={open} />;
 }

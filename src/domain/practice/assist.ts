@@ -12,6 +12,7 @@ async function digest(env: Env, ctx: Ctx, ex: Ex): Promise<string> {
   try {
     const stageId = ex.requiredStageIds[0] ?? ex.stageIds[0];
     if (!stageId) return "";
+    if (env.digest) return await env.digest(ctx, stageId);
     return (await getLessonBrief({ gw: env.gw, signal: env.signal }, { course: ctx.course, plan: ctx.plan, stageId, lang: langName() })).briefMd;
   } catch {
     return "";

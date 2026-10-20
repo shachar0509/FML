@@ -432,7 +432,8 @@
     "drop": "Drop your solution here (images or PDF)",
     "continue": "Continue",
     "figure": "Figure {{n}}",
-    "failed": "Something went wrong. Try again."
+    "failed": "Something went wrong. Try again.",
+    "retry": "Try again"
   },
   "mcp": {
     "addCourse": "➕ I'd like to add a course",
@@ -445,6 +446,9 @@
     "improve": "✨ Please improve my study plan from my materials",
     "relearn": "🔁 Let's learn {{stage}} again",
     "answer": "My answer: {{a}}",
-    "answerOpen": "My answer:\n{{a}}"
+    "answerOpen": "My answer:\n{{a}}",
+    "grade": "📝 Please grade my solution now",
+    "hint": "💡 Please give me hint {{n}}",
+    "solution": "📖 Please show me the full solution"
   }
 }

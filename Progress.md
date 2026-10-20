@@ -13,7 +13,7 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - [x] M5. Courses and plan — DONE (see M-log; 🧪 real plan build pending)
 - [x] M6. Files and indexing — DONE (see M-log; real PDF in the bundle not yet checked)
 - [x] M7. Learn — DONE (see M-log; 🧪 full lesson pending)
-- [ ] M8. Exercises and grading
+- [x] M8. Exercises and grading — DONE (see M-log; 🧪 check pending)
 - [ ] M9. Practice
 - [ ] M10. Settings and context
 - [ ] M11. Packaging (MCPB) and docs (🧪)
@@ -86,6 +86,14 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - 🧪 **User check in Claude Desktop** (after M11): press Learn in a course card (or say "Let's learn S001"); Claude should call shalav_start_lesson, show the lesson card and teach one idea per message, then ask via question cards; MCQ buttons mark right/wrong with the explanation and a chat line "My answer: …" appears; open answers go back as a chat line; Claude calls update_assessment/record_check_result; the lesson card's mastery/objective ticks update within ~4 s; Complete anyway lists what is missing; Next stage starts the next lesson; in a new chat, "continue" resumes with a recap. Report whether Claude ends its message after a question card, whether math renders in cards and chat, and how many tool calls a lesson step needs.
 - Not done / known: `assign_exercise` + graded exercises (M8; criteria cannot be met until then, use Complete anyway); open-question attachments (M8); active lesson and MCQ answer keys are in memory only (lost on server restart); figure blocks are not drawn in cards; locked-stage refusal untested (test plan has no prerequisites); real host behaviour of `sendMessage` untested.
 - Next: M8 — Exercises and grading.
+
+### M8 — Exercises and grading (done; 🧪 pending)
+- `src/server/exerciseTools.ts` (`registerExerciseTools`, called from `registerLearnTools`, which also registers the model tool `assign_exercise` with the v1 schema): app-only `exercise_state`, `exercise_grade_request`, `exercise_hint_request`, `exercise_solution_request`, `exercise_retry`, `attachment_upload`. Requests run v1 `ExerciseRun` (`gradeAttempt`/`getHint`/`getSolution`) as bridge ops; the grade JSON is returned to the model by the final `shalav_submit_job`. `Env.digest` (optional) feeds hints/solutions raw BM25 pages. The interim "assign_exercise not available" note is gone from `shalav_start_lesson`.
+- Card `views/Exercise.tsx` (statement, figure crops as data URIs, hints, upload with in-card photo shrink, Grade / Hint N/3 / Show full solution / Try again, v1 `GradeCard`, polls `exercise_state` while Claude works). Chat lines `mcp.grade/hint/solution`.
+- Tests: `exerciseTools.test.ts` (over MCP: visibility, hints 1-3 and a refused 4th, upload, grade through a bridge job with the page image, `attempt_graded` with hintsUsed 3, tag defined, solution reveal event, retry, expired id, key not leaked); e2e exercise card he/en × light/dark (axe, screenshot inspected). 26 e2e; typecheck/lint clean.
+- 🧪 **User check in Claude Desktop** (after M11): in a lesson Claude calls `assign_exercise`; the Exercise card shows the statement; Upload a photo of a handwritten solution (also try a PDF); Grade puts a chat line, Claude fetches the job (sees the photo) and answers; the Grade card appears in the card (steps, missing, mistakes) and Claude continues the lesson. Hint 1/2/3 and Show full solution (unlocks after hint 3 or a grade). Report: does Claude actually read the handwriting from the job image, time and tool calls per grade, whether the file picker works in the card iframe, and whether a phone photo uploads fast.
+- Not done: open-question attachments (decision: paste in chat); run state not persisted across a server restart; Practice reuse of the card comes with M9 (`exercises.open(n, ex, "practice")`).
+- Next: M9 — Practice.
 
 ## Phase 1 — Desktop app (v1, frozen)
 
