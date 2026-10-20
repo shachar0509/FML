@@ -5,7 +5,31 @@ export type HomeData = {
   theme: "system" | "light" | "dark";
   courses: { number: string; name: string; credits: number; pct: number; stage: string | null }[];
 };
-export type CardData = HomeData;
+export type Base = { language: "he" | "en"; theme: "system" | "light" | "dark" };
+export type AddData = Base & { view: "add" };
+export type Stage = { id: string; title: string; summary: string; status: "locked" | "available" | "in_progress" | "completed" | "completed_override"; mastery: number };
+export type CourseData = Base & {
+  view: "course";
+  number: string;
+  name: string;
+  credits: number;
+  pct: number;
+  stagesDone: number;
+  stagesTotal: number;
+  current: string | null;
+  hasPlan: boolean;
+  /** Set while a plan build is running or after it failed. */
+  build: BuildStatus | null;
+  canPractice: boolean;
+  watch: { label: string; count: number; stageIds: string[] }[];
+  units: { id: string; title: string; stages: Stage[] }[];
+};
+export type BuildStatus = { state: "none" | "running" | "done" | "failed"; step?: "folders" | "plan" | "validate" | "progress"; unit?: { k: number; n: number }; error?: string | null; pending?: number };
+export type LookupResult =
+  | { status: "invalid" | "notfound" | "offline" }
+  | { status: "exists"; number: string }
+  | { status: "found"; entry: { courseNumber: string; nameHe: string; credits: number; faculty: string; syllabusHe: string } };
+export type CardData = HomeData | AddData | CourseData;
 
 export type Host = {
   callTool(name: string, args?: Record<string, unknown>): Promise<{ structuredContent?: unknown; isError?: boolean }>;

@@ -15,13 +15,13 @@ function Ring({ pct }: { pct: number }) {
   );
 }
 
-export function Home({ data, say }: { data: HomeData; say: (t: string) => Promise<void> }) {
+export function Home({ data, add, open }: { data: HomeData; add: () => void; open: (n: string) => void }) {
   const { t } = useTranslation();
   return (
     <section className="flex flex-col gap-4 p-4" aria-label={t("screens.home")}>
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-xl font-bold">{t("screens.home")}</h1>
-        <Button onClick={() => void say(t("mcp.addCourse"))}>
+        <Button onClick={add}>
           <Plus className="size-4" aria-hidden /> {t("home.add")}
         </Button>
       </div>
@@ -39,7 +39,7 @@ export function Home({ data, say }: { data: HomeData; say: (t: string) => Promis
               </div>
             </div>
             {c.stage && <p className="truncate text-sm">{c.stage}</p>}
-            <Button onClick={() => void say(t("mcp.openCourse", { name: c.name }))}>{t("home.continue")}</Button>
+            <Button onClick={() => open(c.number)}>{t("home.continue")}</Button>
           </li>
         ))}
       </ul>

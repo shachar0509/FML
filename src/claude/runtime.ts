@@ -33,6 +33,11 @@ export async function initClaudeFromKeyring(hooks?: Parameters<typeof initClaude
   return key ? initClaude(key, hooks) : undefined;
 }
 
+/** Node server: the Host Bridge is the gateway (no API key). */
+export function setClaude(g: ClaudeGateway) {
+  gateway = g;
+}
+
 export function claude(): ClaudeGateway {
   if (!gateway) throw new ClaudeError("auth", "No API key configured");
   return gateway;

@@ -10,7 +10,7 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - [x] M2. MCP server skeleton — DONE (see M-log)
 - [x] M3. Host Bridge (BridgeGateway, jobs) — DONE (see M-log)
 - [x] M4. Cards pipeline (MCP Apps single-file UI) — DONE (see M-log; 🧪 check pending)
-- [ ] M5. Courses and plan (🧪 real plan build)
+- [x] M5. Courses and plan — DONE (see M-log; 🧪 real plan build pending)
 - [ ] M6. Files and indexing
 - [ ] M7. Learn (🧪)
 - [ ] M8. Exercises and grading
@@ -61,6 +61,15 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - Tests: `server.test.ts` (resource list/read with the MCP App mime type, tool `_meta`, structuredContent); `e2e/cards.spec.ts` (fake-host page, he/en × light/dark: dir, theme class, axe A/AA, screenshot, button → message, empty state). Screenshots inspected (RTL + dark fine). typecheck/lint/test green.
 - 🧪 **User check in Claude Desktop** (after M11 packaging, or now with `pnpm mcp:dev`-style manual config): the "Shalav: my courses" prompt shows the Home card; Hebrew RTL; theme follows Claude's light/dark; "Add course" puts a line in the chat. Not verified: a real host (iframe sandbox/CSP with the inlined fonts, resize), `app.sendMessage` behaviour.
 - Next: M5 — Courses and plan (🧪 real plan build). Domain code needs the bridge: `setClaude(bridge)` and `bridge.run(...)` for course creation.
+
+### M5 — Courses and plan (done; 🧪 pending)
+- Server `src/server/courseTools.ts` (`registerCourseTools`, called from `createServer(bridge, catalog?)`): app-only tools `course_lookup` (catalog via `nodeCatalog()`: invalid/exists/found/notfound/offline), `course_create_request` (catalog entry or `manual`; starts `createCourse` as a `bridge.run` op and returns at once), `plan_retry_request` (`buildPlan`), `course_status` (state + step + unit k/n + pending job count; polled by the card), and model+app `shalav_course` (`CourseData`: header, progress, units/stages with status+mastery, Watch out for, build state). `setClaude(bridge)` added to `claude/runtime.ts`; domain code (`createCourse`/`buildPlan`/`generatePlan`) is unchanged. In-memory `builds` map tracks running/failed builds (lost on server restart; a course without plan.json then shows Try again).
+- Bridge: new `nextWait()` used by `shalav_next_job` waits up to 20 s for a running op's first request (race: the model could call it before the op parked its first job).
+- Cards: `Cards.tsx` has card-side navigation over the model's last result (`go(tool,args)`; a new model result replaces it). New views `AddCourse` (input → lookup → preview with "תיאור הקורס מהקטלוג/Catalog description" label and the "builds a detailed plan (a few minutes)" note → manual form when not found/offline → build checklist with polling `useBuild`), `Course` (plan accordion, status icons, stage summary on click, Watch out for, Learn button = chat line, Practice disabled until M9, Try again), `Checklist`. Home: Add course opens the form; Continue opens the course (no chat line).
+- Tests: `courseTools.test.ts` (MCP in-memory: visibility app-only, lookup states, create → fake host answers outline + unit-detail jobs → plan.json validates with 70 stages, status done, `shalav_course` data, exists/errors); `bridge.test.ts` nextWait; e2e `cards.spec.ts` now 11 (home, add flow with the catalog-label fix, course card he/en × light/dark, axe, screenshots inspected). typecheck/lint green; 168 unit tests.
+- 🧪 **User check in Claude Desktop** (after M11 packaging): from "Shalav: my courses" press Add course, enter 01040195, Search → preview must say "תיאור הקורס מהקטלוג" + the plan note; Add → a chat line asks Claude to build the plan; Claude should call shalav_next_job and work through the jobs (outline, then units, up to 3 in parallel); the card checklist advances and then shows the course. Check the plan has 66–121 stages and the granularity rules; if not, tune `claude/prompts/plan.ts` and record it in DECISIONS.md. Also report how many tool calls/minutes it took and whether Claude needed reminders.
+- Not done: `plan_improve_request` (needs indexed materials, M6), Learn/Practice buttons (M7/M9), delete course (`deleteCourse` is Tauri-only; Node trash port exists in `native.ts`, wire when needed), Files card (M6).
+- Next: M6 — Files and indexing.
 
 ## Phase 1 — Desktop app (v1, frozen)
 

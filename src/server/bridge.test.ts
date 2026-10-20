@@ -93,3 +93,15 @@ describe("BridgeGateway", () => {
     expect(text(c)).toContain("look");
   });
 });
+
+it("nextWait waits for a running operation's first request", async () => {
+  const b = new BridgeGateway();
+  expect(text(await b.nextWait())).toContain("No Shalav job");
+  const { done } = b.run("op", async () => {
+    await new Promise((r) => setTimeout(r, 30));
+    return b.send(req);
+  });
+  expect(text(await b.nextWait())).toContain("do it");
+  await b.submit({ jobId: 1, text: "ok" });
+  await done;
+});

@@ -140,7 +140,12 @@
   },
   "course": {
     "invalidNumber": "A course number has 8 digits (e.g. 01040195)",
-    "notFound": "We couldn't find this course in the Technion catalog. You can enter the details manually."
+    "notFound": "We couldn't find this course in the Technion catalog. You can enter the details manually.",
+    "catalogLabel": "Catalog description",
+    "afterAdd": "After you add the course, Shalav builds a detailed step-by-step study plan (a few minutes).",
+    "back": "Back to courses",
+    "checking": "Checking the number…",
+    "exists": "This course was already added."
   },
   "plan": {
     "building": "Building a detailed study plan… this can take a few minutes.",
@@ -424,6 +429,10 @@
   },
   "mcp": {
     "addCourse": "➕ I'd like to add a course",
-    "openCourse": "▶️ Let's continue with {{name}}"
+    "openCourse": "▶️ Let's continue with {{name}}",
+    "buildPlan": "🛠️ Please build my study plan now",
+    "back": "Courses",
+    "learn": "▶️ Let's learn {{stage}}",
+    "waiting": "Waiting for Claude to work on it… if nothing happens, write “continue” in the chat."
   }
 }

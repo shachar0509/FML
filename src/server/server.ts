@@ -5,11 +5,13 @@ import * as z from "zod";
 import { BridgeGateway } from "./bridge";
 import type { HomeData } from "@/cards/types";
 import { useSettings } from "@/stores/settings";
+import type { CatalogSource } from "@/domain/catalog/catalog";
+import { registerCourseTools } from "./courseTools";
 import { INSTRUCTIONS } from "./instructions";
 import { CARDS_URI, readCards } from "./resources";
 
 /** Transport-agnostic: tests connect it to an in-memory transport, main.ts to stdio. */
-export function createServer(bridge = new BridgeGateway()): McpServer {
+export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSource): McpServer {
   const server = new McpServer({ name: "shalav", version: "2.0.0" }, { instructions: INSTRUCTIONS });
 
   registerAppResource(server, "Shalav cards", CARDS_URI, { description: "Shalav study cards" }, async () => ({
@@ -46,10 +48,12 @@ export function createServer(bridge = new BridgeGateway()): McpServer {
     },
   );
 
+  registerCourseTools(server, bridge, catalog);
+
   server.registerTool(
     "shalav_next_job",
     { title: "Next Shalav job", description: "Fetch the next pending Shalav AI job (instructions and the answer format). Call it whenever a Shalav card says work is pending." },
-    async () => ({ content: bridge.next() }),
+    async () => ({ content: await bridge.nextWait() }),
   );
   server.registerTool(
     "shalav_submit_job",

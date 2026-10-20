@@ -112,6 +112,18 @@ export class BridgeGateway implements ClaudeGateway {
     return this.render(job);
   }
 
+  /** shalav_next_job: like next(), but if an operation is still running (its first request not parked yet) wait for it, up to 20 s. */
+  async nextWait(): Promise<Content[]> {
+    const deadline = Date.now() + 20_000;
+    while (this.pending() === 0 && [...this.ops.values()].some((o) => !o.settled) && Date.now() < deadline) {
+      await new Promise<void>((resolve) => {
+        const t = setTimeout(resolve, deadline - Date.now());
+        this.listeners.add(() => (clearTimeout(t), resolve()));
+      });
+    }
+    return this.next();
+  }
+
   /** shalav_submit_job: resolve the parked promise, then wait for the next job / the final result / an error. */
   async submit(a: { jobId: number; input?: unknown; text?: string }): Promise<{ content: Content[]; isError?: boolean }> {
     const job = this.jobs.get(a.jobId);
