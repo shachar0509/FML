@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import type { CourseData, Stage } from "../types";
 import { Checklist } from "./Checklist";
+import { Files } from "./Files";
 import { useBuild } from "./useBuild";
 
 type Tool = (name: string, args?: Record<string, unknown>) => Promise<{ structuredContent?: unknown }>;
@@ -112,6 +113,7 @@ export function Course({ data, callTool, say, reload, back }: { data: CourseData
           })}
         </section>
       )}
+      {!running && <Files number={data.number} callTool={callTool} say={say} reload={reload} />}
     </section>
   );
 }

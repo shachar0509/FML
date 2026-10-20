@@ -7,6 +7,7 @@ import type { HomeData } from "@/cards/types";
 import { useSettings } from "@/stores/settings";
 import type { CatalogSource } from "@/domain/catalog/catalog";
 import { registerCourseTools } from "./courseTools";
+import { registerFileTools } from "./fileTools";
 import { INSTRUCTIONS } from "./instructions";
 import { CARDS_URI, readCards } from "./resources";
 
@@ -49,6 +50,7 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
   );
 
   registerCourseTools(server, bridge, catalog);
+  registerFileTools(server, bridge);
 
   server.registerTool(
     "shalav_next_job",

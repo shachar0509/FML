@@ -328,7 +328,11 @@
     "filter": "Study files",
     "chooser": "What are these files?",
     "rejected": "{{name}}: {{error}}",
-    "largeConfirm": "{{name}} has {{pages}} pages. Indexing will use about {{tokens}} input tokens. Continue?"
+    "largeConfirm": "{{name}} has {{pages}} pages. Indexing will use about {{tokens}} input tokens. Continue?",
+    "uploading": "Adding files…",
+    "needPlan": "Indexing starts once the study plan is ready.",
+    "start": "Start indexing",
+    "openFolder": "Open folder"
   },
   "render": {
     "copy": "Copy",
@@ -433,6 +437,8 @@
     "buildPlan": "🛠️ Please build my study plan now",
     "back": "Courses",
     "learn": "▶️ Let's learn {{stage}}",
-    "waiting": "Waiting for Claude to work on it… if nothing happens, write “continue” in the chat."
+    "waiting": "Waiting for Claude to work on it… if nothing happens, write “continue” in the chat.",
+    "index": "📚 Please index my files now",
+    "improve": "✨ Please improve my study plan from my materials"
   }
 }

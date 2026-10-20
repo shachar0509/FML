@@ -50,6 +50,10 @@ for (const lang of ["he", "en"] as const)
       await expect(page.getByRole("heading", { level: 1 })).toContainText(lang === "he" ? "חשבון" : "Infinitesimal");
       await expect(page.getByText(lang === "he" ? "שכחו את תנאי ההתכנסות" : "Forgot the convergence condition")).toBeVisible();
       await expect(page.getByText("S002").first()).toBeVisible(); // current unit is expanded
+      await expect(page.getByText("lecture2.pdf")).toBeVisible(); // Files section
+      await expect(page.getByText(lang === "he" ? "5 תרגילים" : "5 exercises found")).toBeVisible();
+      await page.getByRole("button", { name: lang === "he" ? "התחל אינדוקס" : "Start indexing" }).click();
+      expect((await page.evaluate(() => (window as unknown as { __said: string[] }).__said)).at(-1)).toContain(lang === "he" ? "אנדקס" : "index");
       await page.waitForTimeout(400);
       await page.screenshot({ path: `e2e/shots/card-course-${lang}-${theme}.png` });
       const bad = (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations.filter((v) => v.impact === "serious" || v.impact === "critical");

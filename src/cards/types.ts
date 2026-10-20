@@ -29,6 +29,18 @@ export type LookupResult =
   | { status: "invalid" | "notfound" | "offline" }
   | { status: "exists"; number: string }
   | { status: "found"; entry: { courseNumber: string; nameHe: string; credits: number; faculty: string; syllabusHe: string } };
+export type FileRow = { sha: string; name: string; pages: number; status: "pending" | "indexing" | "indexed" | "failed"; error: string | null; exercises: number; done?: number; total?: number };
+/** Files section of the course card (app-only `files_list`). */
+export type FilesData = Base & {
+  view: "files";
+  number: string;
+  materials: FileRow[];
+  exercises: FileRow[];
+  hasPlan: boolean;
+  canIndex: boolean;
+  canImprove: boolean;
+  improving: { state: "running" | "failed"; error: string | null } | null;
+};
 export type CardData = HomeData | AddData | CourseData;
 
 export type Host = {

@@ -11,7 +11,7 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - [x] M3. Host Bridge (BridgeGateway, jobs) — DONE (see M-log)
 - [x] M4. Cards pipeline (MCP Apps single-file UI) — DONE (see M-log; 🧪 check pending)
 - [x] M5. Courses and plan — DONE (see M-log; 🧪 real plan build pending)
-- [ ] M6. Files and indexing
+- [x] M6. Files and indexing — DONE (see M-log; real PDF in the bundle not yet checked)
 - [ ] M7. Learn (🧪)
 - [ ] M8. Exercises and grading
 - [ ] M9. Practice
@@ -70,6 +70,14 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - 🧪 **User check in Claude Desktop** (after M11 packaging): from "Shalav: my courses" press Add course, enter 01040195, Search → preview must say "תיאור הקורס מהקטלוג" + the plan note; Add → a chat line asks Claude to build the plan; Claude should call shalav_next_job and work through the jobs (outline, then units, up to 3 in parallel); the card checklist advances and then shows the course. Check the plan has 66–121 stages and the granularity rules; if not, tune `claude/prompts/plan.ts` and record it in DECISIONS.md. Also report how many tool calls/minutes it took and whether Claude needed reminders.
 - Not done: `plan_improve_request` (needs indexed materials, M6), Learn/Practice buttons (M7/M9), delete course (`deleteCourse` is Tauri-only; Node trash port exists in `native.ts`, wire when needed), Files card (M6).
 - Next: M6 — Files and indexing.
+
+### M6 — Files and indexing (done)
+- Server `src/server/fileTools.ts` (`registerFileTools`, called from `createServer`): app-only `files_list` (runs `scanCourse`, returns `FilesData`: rows with status/progress/exercise counts, `canIndex`, `canImprove`, improve state), `file_upload_chunk` (ordered base64 chunks → temp file → `importFiles`), `files_open_folder` (Finder/Explorer), `files_start_indexing` (queue as one bridge op; the model then calls `shalav_next_job`), `file_remove` (trash + drop index), `plan_improve_request` (`refinePlan` as a bridge op). The v1 index queue is reused unchanged (gateway = bridge via `claude()`).
+- Card `views/Files.tsx` inside the course card: two drop zones + file picker, per-file status chips (Waiting/Indexing N/M/Ready/Failed), exercises found, Remove, Open folder, Start indexing (chat line `mcp.index`), Improve plan (`mcp.improve`); polls `files_list` while busy and reloads the course when work ends.
+- Tests: `fileTools.test.ts` (visibility, chunk order/duplicate, list, indexing round trip via bridge job with a txt file, remove); e2e course card now checks the Files section (he/en × light/dark, axe). 169 unit + 14 e2e green; typecheck/lint clean; cards 966 KB, server 3.6 MB.
+- 🧪 **User check in Claude Desktop** (after M11): in a course card drop a lecture PDF into Study materials (and a homework PDF into Sample exercises); chips show Waiting; press Start indexing; Claude should work through the page jobs (text pages first, images only when needed); chips become Ready with "N exercises found"; then Improve plan updates the plan. Report time/tool calls, and whether the drag-and-drop inside the card works (the host iframe may block it; the picker button is the fallback).
+- Not done / not verified: a real PDF through the esbuild bundle (pdfjs worker + canvas), drag-drop in a real host iframe, HEIC, the `files_open_folder` call (no test, spawns the OS opener), Windows paths.
+- Next: M7 — Learn (🧪).
 
 ## Phase 1 — Desktop app (v1, frozen)
 

@@ -79,3 +79,12 @@
 - `shalav_next_job` waits up to 20 s for a running operation to park its first request (the card-line → model → tool call can outrun the server's first fs work).
 - `course_create_request` re-looks the entry up server-side (7-day cache) rather than trusting card-supplied catalog text; manual entries come from the form.
 - Catalog preview shows the label "Catalog description" and the "plan is built after adding" note (plan v2 §6.2); the stage detail drawer of v1 became inline expansion of the stage summary.
+
+## M6 — Files and indexing
+- Import never enqueues indexing; the card's **Start indexing** (`files_start_indexing`) does, as one `bridge.run` op that waits for the queue to go idle, so `shalav_submit_job` keeps returning the next job. Reason: indexing spends the student's subscription (plan §6.6). Failed files are retried by the same button. No separate Re-index of an already indexed file (YAGNI; Remove + add again).
+- The >60-page confirmation dialog of v1 is dropped (Start indexing is the confirmation).
+- No server-side `fs.watch`: `files_list` runs `scanCourse` on every call (card open, and each 2.5 s poll while indexing/improving), so files dropped into the folder show when the card is opened/refreshed. Add `fs.watch` only if the delay annoys.
+- Upload: raw 2 MiB slices (base64 stays under the 4 MB tool-arg cap), appended in order to a temp file named after the original file, then v1 `importFiles`; an out-of-order chunk is an error and the card shows the status.
+- Improve plan = app-only `plan_improve_request` running v1 `refinePlan` as a bridge op; failure is shown in the card (`improving.state = failed`), the old plan stays.
+- Passing `text-success` as text colour fails WCAG contrast on light; status "Ready" uses a check icon + normal text.
+- `dist/server.mjs` grew to 3.6 MB (pdfjs legacy now reachable through `openSource`).
