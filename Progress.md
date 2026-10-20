@@ -7,7 +7,7 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 ## Phase 2 — MCP connector (plan v2 §9)
 - [x] M0. Freeze v1 + dependencies — DONE (see M-log)
 - [x] M1. Node platform layer — DONE (see M-log)
-- [ ] M2. MCP server skeleton
+- [x] M2. MCP server skeleton — DONE (see M-log)
 - [ ] M3. Host Bridge (BridgeGateway, jobs)
 - [ ] M4. Cards pipeline (MCP Apps single-file UI)
 - [ ] M5. Courses and plan (🧪 real plan build)
@@ -41,6 +41,12 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - Tests: `src/server/node.test.ts` (node env): nodeFs temp dir, sha vector, importCopy collisions, settings storage, `initNode`, a real PDF → text + JPEG in Node. Existing domain tests unchanged. 160 pass; typecheck/lint clean.
 - Caveats: `trash` on macOS moves into `~/.Trash` (no Finder "Put Back"; Windows uses Recycle Bin via PowerShell, untested); `openFolder`/HEIC/Windows paths untested here. Server bundling (esbuild, `@napi-rs/canvas` external, pdfjs legacy worker resolution) is checked in M2/M11.
 - Next: M2 — MCP server skeleton.
+
+### M2 — MCP server skeleton (done)
+- `src/server/server.ts` `createServer()` (instructions from `instructions.ts`, tool `shalav_home` text + `structuredContent.courses`, prompts "Shalav: my courses" / "Shalav: continue learning"), `main.ts` (initNode + stdio). `scripts/build-server.mjs` → `dist/server.mjs` (ESM, esbuild, external `@napi-rs/canvas`, require shim banner); `pnpm build:server`, `pnpm mcp:dev` (Inspector).
+- Tests: `server.test.ts` via in-memory transport + `@modelcontextprotocol/client`. Bundle smoke-tested by hand over stdio (initialize + tool call OK). The bundle is `.mjs`, not `.js`, so ESM works without a package.json in the MCPB.
+- Not yet checked: the bundle rendering a PDF (pdfjs legacy worker + canvas external) — check in M6/M11.
+- Next: M3 — Host Bridge.
 
 ## Phase 1 — Desktop app (v1, frozen)
 
