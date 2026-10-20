@@ -1,9 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { listCourses } from "@/domain/courses/courses";
+import * as z from "zod";
+import { BridgeGateway } from "./bridge";
 import { INSTRUCTIONS } from "./instructions";
 
 /** Transport-agnostic: tests connect it to an in-memory transport, main.ts to stdio. */
-export function createServer(): McpServer {
+export function createServer(bridge = new BridgeGateway()): McpServer {
   const server = new McpServer({ name: "shalav", version: "2.0.0" }, { instructions: INSTRUCTIONS });
 
   server.registerTool(
@@ -16,6 +18,21 @@ export function createServer(): McpServer {
         : "No courses yet. Ask the student which Technion course number to add.";
       return { content: [{ type: "text", text }], structuredContent: { courses: courses.map((c) => c.course) } };
     },
+  );
+
+  server.registerTool(
+    "shalav_next_job",
+    { title: "Next Shalav job", description: "Fetch the next pending Shalav AI job (instructions and the answer format). Call it whenever a Shalav card says work is pending." },
+    async () => ({ content: bridge.next() }),
+  );
+  server.registerTool(
+    "shalav_submit_job",
+    {
+      title: "Submit Shalav job",
+      description: "Answer a Shalav job. Pass `input` (matching the job's schema) or `text`. Returns the next job or the final result.",
+      inputSchema: z.object({ jobId: z.number(), input: z.record(z.string(), z.unknown()).optional(), text: z.string().optional() }),
+    },
+    (a) => bridge.submit(a),
   );
 
   const prompt = (name: string, title: string, text: string) =>

@@ -8,7 +8,7 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - [x] M0. Freeze v1 + dependencies — DONE (see M-log)
 - [x] M1. Node platform layer — DONE (see M-log)
 - [x] M2. MCP server skeleton — DONE (see M-log)
-- [ ] M3. Host Bridge (BridgeGateway, jobs)
+- [x] M3. Host Bridge (BridgeGateway, jobs) — DONE (see M-log)
 - [ ] M4. Cards pipeline (MCP Apps single-file UI)
 - [ ] M5. Courses and plan (🧪 real plan build)
 - [ ] M6. Files and indexing
@@ -47,6 +47,13 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - Tests: `server.test.ts` via in-memory transport + `@modelcontextprotocol/client`. Bundle smoke-tested by hand over stdio (initialize + tool call OK). The bundle is `.mjs`, not `.js`, so ESM works without a package.json in the MCPB.
 - Not yet checked: the bundle rendering a PDF (pdfjs legacy worker + canvas external) — check in M6/M11.
 - Next: M3 — Host Bridge.
+
+### M3 — Host Bridge (done)
+- `src/server/bridge.ts` `BridgeGateway implements ClaudeGateway`: `send()` parks a job; `run(label, fn, summary?)` wraps a domain operation (AsyncLocalStorage ties each `send()` to its op; returns `{opId, done}`), `cancel(opId)` aborts all its jobs (`ClaudeError("aborted")`), `next()` = shalav_next_job, `submit()` = shalav_submit_job. After a submit it waits (45 s max) for: op's next job ("Next job is ready" + job), op result (`summary(result)` content, default "Done."), op error (`isError`), or lists other still-open jobs of the op. Correction rounds set `parentJobId` and show only the new message. Dedupe: "Same instructions as job #N" / same first message. Images → MCP image content. Server tools dropped; tool answer if toolChoice names a tool or exactly one tool, else text.
+- `server.ts`: `createServer(bridge = new BridgeGateway())` registers `shalav_next_job`, `shalav_submit_job` (zod input `{jobId, input?, text?}`).
+- Tests: `bridge.test.ts` (correction round via `callStructured`, parallel jobs + dedupe, cancel, request-signal abort, text job, op error, image job) + MCP-level check in `server.test.ts`.
+- Not done (deliberate): persisting `jobs.json` for display (no consumer; add with the M4+ cards if wanted); sampling fast path (§5.3, optional); the singleton bridge is created per `createServer()` — domain code in M5+ must receive it via `setClaude(bridge)` (`claude/runtime.ts`) or equivalent.
+- Next: M4 — Cards pipeline (🧪 Claude Desktop check).
 
 ## Phase 1 — Desktop app (v1, frozen)
 

@@ -16,7 +16,11 @@ it("lists tools/prompts and calls shalav_home", async () => {
   const client = new Client({ name: "t", version: "0" });
   await Promise.all([createServer().connect(a), client.connect(b)]);
   expect(client.getInstructions()).toMatch(/shalav_next_job/);
-  expect((await client.listTools()).tools.map((t) => t.name)).toContain("shalav_home");
+  expect((await client.listTools()).tools.map((t) => t.name)).toEqual(expect.arrayContaining(["shalav_home", "shalav_next_job", "shalav_submit_job"]));
+  const nj = await client.callTool({ name: "shalav_next_job", arguments: {} });
+  expect(JSON.stringify(nj.content)).toContain("No Shalav job");
+  const bad = await client.callTool({ name: "shalav_submit_job", arguments: { jobId: 5, text: "x" } });
+  expect(bad.isError).toBe(true);
   expect((await client.listPrompts()).prompts.map((p) => p.title)).toEqual(["Shalav: my courses", "Shalav: continue learning"]);
   const r = await client.callTool({ name: "shalav_home", arguments: {} });
   expect(JSON.stringify(r.content)).toMatch(/No courses yet/);
