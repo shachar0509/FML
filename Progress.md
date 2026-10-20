@@ -5,7 +5,7 @@ Rules: work only on branch `dev`; one commit per step with tests; update this fi
 Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12), Playwright chromium. Live API checks (`vitest.live.config.ts`) are v1-only and need API credit; never store keys in files.
 
 ## Phase 2 — MCP connector (plan v2 §9)
-- [ ] M0. Freeze v1 + dependencies
+- [x] M0. Freeze v1 + dependencies — DONE (see M-log)
 - [ ] M1. Node platform layer
 - [ ] M2. MCP server skeleton
 - [ ] M3. Host Bridge (BridgeGateway, jobs)
@@ -20,11 +20,20 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - [ ] M12. Cleanup (delete Tauri/sync/API code, move to src/core)
 - [ ] M13. Hardening + acceptance checklist v2
 
-### Handoff notes for M0 (start here)
+### Handoff notes (start here)
 - v1 is complete through Step 13, plus partial Step 14 (see the log below). Step 14 is **superseded** by M13; do not continue it.
 - User-reported v1 issues already understood: (1) dot-folder fs scope (fixed in 01640cb); (2) the add-course preview shows the raw catalog syllabus, which starts with admission requirements ("קדם: …"), and looked like the plan. The fix is in plan v2 §6.2 (label + note), done in M5; (3) API keys with no credit pass `models.list` but fail every request; irrelevant in v2 (no API key).
 - The real plan output for 01040195 has never been seen (no API credit). The first real check is the M5 🧪 step in Claude Desktop.
 - `live/` + `vitest.live.config.ts` = v1 real-API harness (catalog lookup verified live: 01040195 → "חשבון אינפיניטסימלי 1", 5.5 credits). Delete in M12.
+
+### M-log
+
+### M0 — Freeze v1 + dependencies (done)
+- Tag `desktop-v1-final` (= `01640cb`) exists. Added exact-pinned deps (versions + reasons in `DECISIONS.md`): `@modelcontextprotocol/server`, `core`, `ext-apps`, `@napi-rs/canvas`; dev: `@modelcontextprotocol/client`, `vite-plugin-singlefile`, `esbuild`. Nothing deleted.
+- The MCP SDK is now the v2 split packages (not `@modelcontextprotocol/sdk` 1.x); plan doc updated. Imports for M2: `McpServer` and `InMemoryTransport` from `@modelcontextprotocol/server` (client side from `@modelcontextprotocol/client`), stdio at `@modelcontextprotocol/server/stdio`, app helpers `registerAppTool`/`registerAppResource`/`RESOURCE_MIME_TYPE` from `@modelcontextprotocol/ext-apps/server`. Verify exact export names against `node_modules/*/dist/index.d.mts` before writing code.
+- `pnpm-workspace.yaml` added (pnpm 11 `allowBuilds: esbuild: true`). Verified: `@napi-rs/canvas` loads and encodes JPEG in Node 22; esbuild CLI + JS API work.
+- typecheck/lint clean; 154 tests pass (1 live skipped).
+- Next: M1 — Node platform layer.
 
 ## Phase 1 — Desktop app (v1, frozen)
 

@@ -281,7 +281,7 @@ A single card resource with internal views keeps the CSP simple: one resource, n
 
 Every step must leave `pnpm typecheck`, `pnpm lint` and `pnpm test` green. Steps marked 🧪 also need a manual check in Claude Desktop, which only the user can do; list those checks in `Progress.md`.
 
-**M0 — Freeze v1.** Tag `desktop-v1-final` on `dev`. Add `@modelcontextprotocol/sdk`, `@modelcontextprotocol/ext-apps`, `vite-plugin-singlefile`, `esbuild`, `@napi-rs/canvas`. Before choosing versions, check npm for the current stable ones and that ext-apps' peer deps match the SDK major; record them in `DECISIONS.md`. Do not delete anything yet.
+**M0 — Freeze v1.** Tag `desktop-v1-final` on `dev`. Add the MCP SDK (v2 packages `@modelcontextprotocol/{server,core,client}`; see DECISIONS), `@modelcontextprotocol/ext-apps`, `vite-plugin-singlefile`, `esbuild`, `@napi-rs/canvas`. Before choosing versions, check npm for the current stable ones and that ext-apps' peer deps match the SDK major; record them in `DECISIONS.md`. Do not delete anything yet.
 
 **M1 — Node platform layer.**
 - `nodeFs()` implementing the `Fs` port.
@@ -295,7 +295,7 @@ Every step must leave `pnpm typecheck`, `pnpm lint` and `pnpm test` green. Steps
 **M2 — MCP server skeleton.**
 - `createServer()` with server `instructions`, the `shalav_home` tool (text only for now), and the prompts "Shalav: my courses" and "Shalav: continue learning".
 - `main.ts` over stdio.
-- Test with the SDK's in-memory client transport: list tools, call `shalav_home`.
+- Test with the SDK in-memory transport (`@modelcontextprotocol/client`): list tools, call `shalav_home`.
 - `pnpm mcp:dev` runs the server under MCP Inspector.
 
 **M3 — Host Bridge.**
