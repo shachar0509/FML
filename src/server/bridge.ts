@@ -18,9 +18,13 @@ type Job = {
   reject(e: unknown): void;
 };
 
+/** "build": plan builds, served by the chat that pressed Build ("▶️ Building the plan"); "study": everything else ("▶️ Continue"). Chats share one connection, so the message picks the lane. */
+export type Lane = "build" | "study";
+
 type Op = {
   id: number;
   label: string;
+  lane: Lane;
   ctl: AbortController;
   settled: boolean;
   lastJob?: number;
@@ -43,12 +47,15 @@ export class BridgeGateway implements ClaudeGateway {
   private listeners = new Set<() => void>();
   /** Dedupe (5.2): `${opId}:${text}` already shown -> job number. Per op, not per server: the server outlives a chat. */
   private seen = new Map<string, number>();
+  /** Last time a chat asked for or answered a build job. */
+  private servedAt = 0;
 
   /** Run a domain operation; every send() made inside it belongs to it and can be cancelled together. */
-  run<T>(label: string, fn: (signal: AbortSignal) => Promise<T>, summary?: (r: T) => Content[]): { opId: number; done: Promise<T> } {
+  run<T>(label: string, fn: (signal: AbortSignal) => Promise<T>, summary?: (r: T) => Content[], lane: Lane = "study"): { opId: number; done: Promise<T> } {
     const op: Op = {
       id: ++this.opSeq,
       label,
+      lane,
       ctl: new AbortController(),
       settled: false,
       summary: (summary as Op["summary"]) ?? (() => [{ type: "text", text: "Done." }]),
@@ -102,33 +109,43 @@ export class BridgeGateway implements ClaudeGateway {
     });
   }
 
-  /** No AI job queued or waiting for an answer. */
-  idle(): boolean {
-    return this.jobs.size === 0;
+  private laneOf(j: Job): Lane {
+    return (j.opId !== undefined && this.ops.get(j.opId)?.lane) || "study";
   }
 
-  pending(): number {
-    return [...this.jobs.values()].filter((j) => j.state === "queued").length;
+  pending(lane?: Lane): number {
+    return [...this.jobs.values()].filter((j) => j.state === "queued" && (!lane || this.laneOf(j) === lane)).length;
+  }
+
+  jobLane(jobId: number): Lane | undefined {
+    const j = this.jobs.get(jobId);
+    return j && this.laneOf(j);
+  }
+
+  /** A chat is working through build jobs right now: a new build joins it instead of asking for another "▶️ Building the plan". */
+  buildChatActive(): boolean {
+    return Date.now() - this.servedAt < 3 * 60_000 && [...this.ops.values()].some((o) => o.lane === "build" && !o.settled);
   }
 
   /** shalav_next_job */
-  next(): Content[] {
-    const job = [...this.jobs.values()].find((j) => j.state === "queued");
-    if (!job) return [{ type: "text", text: "No Shalav job is pending." }];
+  next(lane: Lane = "study"): Content[] {
+    if (lane === "build") this.servedAt = Date.now();
+    const job = [...this.jobs.values()].find((j) => j.state === "queued" && this.laneOf(j) === lane);
+    if (!job) return [{ type: "text", text: lane === "build" ? "No build work is pending." : "No Shalav job is pending." }];
     job.state = "shown";
     return this.render(job);
   }
 
-  /** shalav_next_job: like next(), but if an operation is still running (its first request not parked yet) wait for it, up to 20 s. */
-  async nextWait(): Promise<Content[]> {
+  /** shalav_next_job: like next(), but if an operation of the lane is still running (its first request not parked yet) wait for it, up to 20 s. */
+  async nextWait(lane: Lane = "study"): Promise<Content[]> {
     const deadline = Date.now() + 20_000;
-    while (this.pending() === 0 && [...this.ops.values()].some((o) => !o.settled) && Date.now() < deadline) {
+    while (this.pending(lane) === 0 && [...this.ops.values()].some((o) => o.lane === lane && !o.settled) && Date.now() < deadline) {
       await new Promise<void>((resolve) => {
         const t = setTimeout(resolve, deadline - Date.now());
         this.listeners.add(() => (clearTimeout(t), resolve()));
       });
     }
-    return this.next();
+    return this.next(lane);
   }
 
   /** shalav_submit_job: resolve the parked promise, then wait for the next job / the final result / an error. */
@@ -151,6 +168,7 @@ export class BridgeGateway implements ClaudeGateway {
 
     const op = job.opId === undefined ? undefined : this.ops.get(job.opId);
     if (!op) return { content: [{ type: "text", text: "Answer received." }] };
+    if (op.lane === "build") this.servedAt = Date.now();
     return this.wait(op);
   }
 
@@ -159,8 +177,15 @@ export class BridgeGateway implements ClaudeGateway {
     for (;;) {
       await new Promise((r) => setImmediate(r)); // let the domain code run up to its next send()
       if (op.settled) {
-        if (op.error) return err(`${op.label} failed: ${op.error instanceof Error ? op.error.message : String(op.error)}\nTell the student; they can press Try again in the card.`);
-        return { content: op.summary(op.result) };
+        // Hand-off: another build pressed meanwhile continues in this chat.
+        const more = op.lane === "build" && [...this.ops.values()].some((o) => o.lane === "build" && !o.settled)
+          ? [{ type: "text" as const, text: "\n\nMore Shalav build work is pending (another course): call shalav_next_job with build: true now and keep going until it says no build work is pending." }]
+          : [];
+        if (op.error) {
+          const e = err(`${op.label} failed: ${op.error instanceof Error ? op.error.message : String(op.error)}\nTell the student; they can press Try again in the card.`);
+          return { ...e, content: [...e.content, ...more] };
+        }
+        return { content: [...op.summary(op.result), ...more] };
       }
       const nextJob = [...this.jobs.values()].find((j) => j.state === "queued" && j.opId === op.id);
       if (nextJob) {

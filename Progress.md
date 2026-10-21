@@ -632,3 +632,22 @@ Edge cases found with the sample slides, and fixed in the renderer:
 ## M37 — file lists start collapsed ✅
 - Study materials and Sample exercises open collapsed, like the plan's units. Their header still shows the indexed-% ring, and the Add and Open folder buttons stay visible. Tapping the header opens the list.
 - **Checks:** the course e2e checks that both lists start collapsed (the files are hidden and `aria-expanded` is false), then opens them for the file checks. The add-course test now looks for the collapsed header instead of a file name. 8 course e2e passed; lint and tsc clean.
+
+## M38 — a build no longer blocks studying or other builds ✅
+- **The problem:** Build plan and Update plan sent "▶️ Continue", so that chat was busy until the build finished. Card requests (Learn, answers, lesson steps) waited until no build job was pending. A second chat calling `shalav_next_job` would also receive build jobs, whose "Same instructions as job #N" lines point at jobs it never saw.
+- **Two lanes:** Claude Desktop uses one MCP connection for all chats and sends no chat ID (`metadata: undefined` in its log), so the message picks the lane:
+  - **Build:** Build plan, Update plan and the build checklist's Nudge send "▶️ בניית תוכנית" / "▶️ Building the plan". The model calls `shalav_next_job` with `build: true` and gets plan build jobs only.
+  - **Study:** every other button sends "▶️ Continue". `shalav_next_job` with no arguments serves card requests first, then exercise and practice jobs, never build jobs.
+  - `bridge.run(…, lane)` tags each op. `next`, `nextWait` and `pending` take a lane. `shalav_submit_job` adds the "student asked for something in a card" note only for study jobs.
+- **Joining a running build:** `bridge.buildChatActive()` is true while a chat has asked for or answered a build job in the last 3 minutes and a build is still running. Then `plan_build_request` returns `joined: true` and the card sends nothing, showing "In line: the chat that is building now continues with this course". When a build finishes and another is still running, its summary tells the model to call `shalav_next_job` with `build: true` again (the hand-off).
+- **While a build runs,** the card shows "The plan is being built in the chat where you pressed the button. You can study in a new chat meanwhile."
+- **Index queue fixes:**
+  - Each queued file now runs in the async context of the build that queued it (`bind` = `AsyncLocalStorage.snapshot`). Before, course C's file could start from course A's finished file and run as A's op, so its jobs were labelled as A's. The new queue test failed this way before the fix.
+  - `idle(course)` waits only for that course's files, so a build no longer waits for other courses.
+- **Instructions:** `INSTRUCTIONS`, `CARD_NOTE` and the `plan_build_request` description describe the build message. The model calls `shalav_next_job` only for the two messages or when a tool result says so.
+- **Checks:**
+  - **Server test:** 3 courses with one file each are built together in one chat. The 2nd and 3rd builds join it (`joined: true`). Every job belongs to its own course, the hand-off carries the chat from one course to the next, and all three finish with their files indexed. Meanwhile a plain `shalav_next_job` gets no build job and a Learn request is served at once.
+  - **Queue test:** 3 courses with 2 files each; each file runs in its own course's context, and the last course to finish is the one that waited.
+  - **Course e2e:** Build sends the build message; a joined Update plan sends nothing and shows the notice.
+  - Totals: 141 unit, 81 e2e. One earlier e2e run had 4 timeouts in step and render, which passed on rerun. Lint and tsc clean.
+- **🧪 In Claude Desktop:** build course A. While it runs, press Update plan on course B: chat 1 should continue with B. Open a new chat and start a lesson. Claude Desktop running two chats' replies at the same time is not confirmed yet.

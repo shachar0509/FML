@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { beforeEach, describe, expect, it } from "vitest";
 import { FakeClaudeGateway, toolCall } from "@/core/claude/fake";
 import type { ClaudeRequest } from "@/core/claude/types";
@@ -147,5 +148,37 @@ describe("queue", () => {
     expect(asked).toBe(1);
     expect((await readFileIndex("A", "a1"))?.status).toBe("pending");
     expect(events).toEqual([]);
+  });
+
+  it("each file runs in the context of the build that queued it; idle(course) waits for that course only", async () => {
+    const als = new AsyncLocalStorage<string>();
+    const seen: [string | undefined, string][] = [];
+    for (const c of ["A", "B", "C"]) for (const k of [1, 2]) await seed(c, `${c.toLowerCase()}${k}`);
+    const { q } = mk({
+      course: async (c: string) => ({ courseNumber: c, nameHe: "x" }),
+      bind: () => AsyncLocalStorage.snapshot(),
+      gw: () => ({
+        async send(req: ClaudeRequest) {
+          seen.push([als.getStore(), /course ([ABC]) "/.exec(req.system ?? "")?.[1] ?? "?"]);
+          await new Promise((r) => setTimeout(r, 5));
+          return { ...toolCall("submit_material_pages", { pages: pagesIn(req).map((page) => ({ page, stageIds: [], summary: "", hasFigure: false, hasExercises: false })) }), usage: {} as never, model: "m" } as never;
+        },
+      }),
+    });
+    // three builds, each queues its own files in its own context (two courses run at a time, so C waits for A or B to finish a file)
+    const done: string[] = [];
+    await Promise.all(
+      ["A", "B", "C"].map((c) =>
+        als.run(c, async () => {
+          for (const k of [1, 2]) await q.retry(c, `${c.toLowerCase()}${k}`);
+          await q.idle(c);
+          done.push(c);
+          for (const k of [1, 2]) expect((await readFileIndex(c, `${c.toLowerCase()}${k}`))?.status).toBe("indexed");
+        }),
+      ),
+    );
+    expect(seen.length).toBeGreaterThanOrEqual(6);
+    for (const [ctx, c] of seen) expect(ctx).toBe(c);
+    expect(done.at(-1)).toBe("C"); // A and B did not wait for C
   });
 });

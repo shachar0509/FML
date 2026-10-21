@@ -120,6 +120,8 @@ export type CardData = HomeData | AddData | CourseData | LessonData | McqData | 
 
 /** What a card button asks Claude for (shalav_request); no request = "do the pending Shalav work". */
 export type Req =
+  /** card-only: "▶️ Building the plan" (the model serves the build lane); nothing goes to the server */
+  | { kind: "build" }
   | { kind: "learn" | "relearn"; stageId: string; title: string }
   | { kind: "answer"; text: string; number?: string; files?: string[] }
   | { kind: "step"; action: "next" | "again" }

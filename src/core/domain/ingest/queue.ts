@@ -13,6 +13,8 @@ export type QueueDeps = {
   lang: () => "he" | "en";
   confirmLarge?: (rec: FileIndex, estTokens: number) => Promise<boolean>;
   resolve(course: string, rec: FileIndex): string;
+  /** Captures the caller's async context so a file runs in the operation that queued it, not the one whose file just finished (server: AsyncLocalStorage.snapshot). */
+  bind?: () => <R>(fn: () => R) => R;
 };
 
 const MAX_GLOBAL = 2;
@@ -20,11 +22,12 @@ const LARGE = 60;
 
 /** 5.3: persistent via the index records; one file at a time per course, two globally. */
 export function createIndexQueue(deps: QueueDeps) {
-  const queue: { course: string; sha256: string }[] = [];
+  type Item = { course: string; sha256: string; ctx?: <R>(fn: () => R) => R };
+  const queue: Item[] = [];
   const busy = new Set<string>(); // courses with a running file
   const declined = new Set<string>();
   const subs = new Set<(e: QueueEvent) => void>();
-  let idleWaiters: (() => void)[] = [];
+  let idleWaiters: { course?: string; resolve: () => void }[] = [];
   const emit = (e: QueueEvent) => subs.forEach((cb) => cb(e));
   const key = (course: string, sha: string) => `${course}/${sha}`;
 
@@ -71,21 +74,21 @@ export function createIndexQueue(deps: QueueDeps) {
     while (busy.size < MAX_GLOBAL) {
       const i = queue.findIndex((q) => !busy.has(q.course));
       if (i < 0) break;
-      const [job] = queue.splice(i, 1) as [{ course: string; sha256: string }];
+      const [job] = queue.splice(i, 1) as [Item];
       busy.add(job.course);
-      void run(job.course, job.sha256).finally(() => {
+      const go = () => run(job.course, job.sha256);
+      void (job.ctx ? job.ctx(go) : go()).finally(() => {
         busy.delete(job.course);
         pump();
       });
     }
-    if (!busy.size && !queue.length) {
-      idleWaiters.forEach((r) => r());
-      idleWaiters = [];
-    }
+    idleWaiters = idleWaiters.filter((w) => !(isIdle(w.course) && (w.resolve(), true)));
   }
 
+  const isIdle = (course?: string) => (course ? !busy.has(course) && !queue.some((q) => q.course === course) : !busy.size && !queue.length);
+
   function enqueue(course: string, sha256: string) {
-    if (!queue.some((q) => q.course === course && q.sha256 === sha256)) queue.push({ course, sha256 });
+    if (!queue.some((q) => q.course === course && q.sha256 === sha256)) queue.push({ course, sha256, ctx: deps.bind?.() });
     pump();
   }
 
@@ -105,6 +108,7 @@ export function createIndexQueue(deps: QueueDeps) {
       subs.add(cb);
       return () => void subs.delete(cb);
     },
-    idle: () => (busy.size || queue.length ? new Promise<void>((r) => idleWaiters.push(r)) : Promise.resolve()),
+    /** Resolves when nothing is queued or running (for `course` only, when given). */
+    idle: (course?: string) => (isIdle(course) ? Promise.resolve() : new Promise<void>((resolve) => idleWaiters.push({ course, resolve }))),
   };
 }

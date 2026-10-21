@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { COURSE_ID_RE } from "@/core/universities";
 import { appendFile, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -41,6 +42,7 @@ export function registerFileTools(server: McpServer, o: { openFolder?: (p: strin
     course: async (c) => (await loadCourse(c))?.course ?? null,
     lang,
     resolve: (c, rec) => join(coursePaths(root(), c).course, rec.relPath),
+    bind: () => AsyncLocalStorage.snapshot(),
   });
   queue.subscribe((e) => (e.done === undefined ? prog.delete(e.sha256) : prog.set(e.sha256, { done: e.done, total: e.total ?? 0 })));
   const deps = importDeps;
@@ -116,7 +118,7 @@ export function registerFileTools(server: McpServer, o: { openFolder?: (p: strin
     });
     try {
       for (const r of todo) await queue.retry(number, r.sha256);
-      await queue.idle();
+      await queue.idle(number); // its own files only: another course's build may be indexing too
     } finally {
       off?.();
     }

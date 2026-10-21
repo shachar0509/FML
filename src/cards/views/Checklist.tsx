@@ -32,7 +32,7 @@ export function Checklist({ b, go }: { b: BuildStatus; go: Go }) {
           </li>
         ))}
       </ul>
-      {!!b.pending && <Waiting go={go} />}
+      {!!b.pending && <Waiting go={go} req={{ kind: "build" }} />}
     </div>
   );
 }

@@ -7,10 +7,13 @@ import { Button } from "@/core/components/ui/button";
 /** "Waiting for Claude…" with a Nudge button after `afterMs` (plan v2 §11: the model may skip shalav_next_job). */
 export function Waiting({
   go,
+  req,
   label,
   afterMs = 20000,
 }: {
   go: Go;
+  /** what the Nudge asks for (default: "▶️ Continue") */
+  req?: Parameters<Go>[0];
   label?: string;
   afterMs?: number;
 }) {
@@ -30,7 +33,7 @@ export function Waiting({
         {label ?? t("mcp.waiting")}
       </p>
       {late && (
-        <Button variant="outline" size="sm" onClick={() => void go()}>
+        <Button variant="outline" size="sm" onClick={() => void go(req)}>
           {t("mcp.nudgeBtn")}
         </Button>
       )}

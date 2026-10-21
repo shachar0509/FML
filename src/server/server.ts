@@ -149,18 +149,23 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
   );
   server.registerTool(
     "shalav_next_job",
-    { title: "Next Shalav job", description: "Fetch what the student asked for in a Shalav card, or the next pending Shalav AI job (instructions and the answer format). Call it when the student sends \"▶️ המשך\" / \"▶️ Continue\" or a card says work is pending." },
-    async () => {
-      // Pending AI jobs first: a lesson started mid-build would end the turn and stall the build.
-      const req = bridge.idle() ? inbox.shift() : undefined;
+    {
+      title: "Next Shalav job",
+      description: "Fetch what the student asked for in a Shalav card, or the next pending Shalav AI job (instructions and the answer format). \"▶️ המשך\" / \"▶️ Continue\" → call it with no arguments. \"▶️ בניית תוכנית\" / \"▶️ Building the plan\" → call it with build: true (plan build jobs only).",
+      inputSchema: z.object({ build: z.boolean().optional() }),
+    },
+    async ({ build }) => {
+      if (build) return { content: await bridge.nextWait("build") };
+      // Card requests first, then study jobs; build jobs belong to the chat that pressed Build (another chat may be building meanwhile).
+      const req = bridge.pending("study") ? undefined : inbox.shift();
       if (req) {
         const im = req.images;
         const load = im && loadImageB64(im.number);
         const images = im && load ? await Promise.all(im.shas.map(async (sha) => ({ type: "image" as const, mimeType: "image/jpeg", data: await load(sha, "image/jpeg") }))) : [];
-        return { content: [{ type: "text" as const, text: `Student request from the card:\n${req.text}${bridge.pending() || inbox.length ? "\n\nAfterwards call shalav_next_job again: more is pending." : ""}` }, ...images] };
+        return { content: [{ type: "text" as const, text: `Student request from the card:\n${req.text}${bridge.pending("study") || inbox.length ? "\n\nAfterwards call shalav_next_job again: more is pending." : ""}` }, ...images] };
       }
-      const c = await bridge.nextWait();
-      return { content: inbox.length && bridge.idle() ? [...c, { type: "text" as const, text: "Then call shalav_next_job again: the student asked for something in a card." }] : c };
+      const c = await bridge.nextWait("study");
+      return { content: inbox.length && !bridge.pending("study") ? [...c, { type: "text" as const, text: "Then call shalav_next_job again: the student asked for something in a card." }] : c };
     },
   );
   server.registerTool(
@@ -171,8 +176,9 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
       inputSchema: z.object({ jobId: z.number(), input: z.record(z.string(), z.unknown()).optional(), text: z.string().optional() }),
     },
     async (a) => {
+      const study = bridge.jobLane(a.jobId) === "study"; // a building chat is not handed card requests
       const r = await bridge.submit(a);
-      return inbox.length && bridge.idle() ? { ...r, content: [...r.content, { type: "text" as const, text: "Then call shalav_next_job again: the student asked for something in a card." }] } : r;
+      return study && inbox.length && !bridge.pending("study") ? { ...r, content: [...r.content, { type: "text" as const, text: "Then call shalav_next_job again: the student asked for something in a card." }] } : r;
     },
   );
 

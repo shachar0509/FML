@@ -161,6 +161,8 @@
     "firstBody": "Add lecture notes and example exercises below, or import them from Moodle. When you are ready, press Build plan; Shalav builds it from the syllabus and your files so no topic is left out.",
     "buildHint": "Ready? The plan is built from the syllabus and all the files above.",
     "upToDate": "Every file has been read and the plan is up to date. Add new files to update it.",
+    "joined": "In line: the chat that is building now continues with this course.",
+    "studyMeanwhile": "The plan is being built in the chat where you pressed the button. You can study in a new chat meanwhile.",
     "updateHint": "Added files? Update the plan: Shalav reads the new files and makes sure every topic in them and in the example exercises has a stage.",
     "build": "Build plan",
     "update": "Update plan",
@@ -490,6 +492,7 @@
       "say": "⚙️ Open Shalav settings"
     },
     "go": "▶️ Continue",
+    "build": "▶️ Building the plan",
     "replaced": "This card was replaced by a newer one below.",
     "pressEnter": "Ready in the message box. Press Enter so Claude continues.",
     "dismiss": "Dismiss",

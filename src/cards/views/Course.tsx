@@ -65,10 +65,13 @@ export function Course({
   const live = useBuild(running ? data.number : null, callTool, reload);
   const cur = data.units.flatMap((u) => u.stages).find((s) => s.id === data.current);
 
+  const [joined, setJoined] = useState(false); // another chat is building: it continues with this course
   async function build() {
-    await callTool("plan_build_request", { number: data.number });
+    const r = await callTool("plan_build_request", { number: data.number });
+    const j = !!(r.structuredContent as { joined?: boolean } | undefined)?.joined;
+    setJoined(j);
     reload();
-    void go();
+    if (!j) void go({ kind: "build" });
   }
   const buildButton = (
     <Button
@@ -105,6 +108,7 @@ export function Course({
       {running && data.build && (
         <div className={`${panel} p-4`}>
           <Checklist go={go} b={live ?? data.build} />
+          <p className="mt-3 text-sm text-muted">{t(joined ? "plan.joined" : "plan.studyMeanwhile")}</p>
         </div>
       )}
       {!running && data.build?.state === "failed" && (

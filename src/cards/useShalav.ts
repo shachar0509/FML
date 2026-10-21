@@ -41,8 +41,8 @@ export function useShalav(host: Host) {
   // The real request goes to the server; the chat only gets one short word the student sends with Enter (M15).
   const go: Go = useCallback(
     async (req) => {
-      if (req) await host.callTool("shalav_request", req);
-      await host.say(i18n.t("mcp.go"));
+      if (req && req.kind !== "build") await host.callTool("shalav_request", req);
+      await host.say(i18n.t(req?.kind === "build" ? "mcp.build" : "mcp.go"));
       setAsked(Date.now());
     },
     [host],

@@ -17,7 +17,7 @@ for (const lang of LANGS)
     await expect(page.getByRole("button", { name: lang === "he" ? /חומרי לימוד/ : /Study materials/ })).toHaveAttribute("aria-expanded", "false"); // Files section, collapsed
     expect(await said(page)).toEqual([]);
     await page.getByRole("button", { name: lang === "he" ? "בניית תוכנית" : "Build plan" }).click();
-    expect(await said(page)).toEqual([lang === "he" ? "▶️ המשך" : "▶️ Continue"]);
+    expect(await said(page)).toEqual([lang === "he" ? "▶️ בניית תוכנית" : "▶️ Building the plan"]); // the build lane
     await expect(page.getByText(lang === "he" ? "לחצו Enter" : "Press Enter")).toBeVisible();
   });
 
@@ -63,7 +63,7 @@ for (const lang of LANGS)
       await expect(page.getByText(lang === "he" ? "3 פתורים · 2 לא פתורים" : "3 solved · 2 unsolved")).toBeVisible();
       await expect(page.getByRole("button", { name: lang === "he" ? "ייבוא קבצי הקורס" : "Import course files" })).toBeEnabled();
       await page.getByRole("button", { name: lang === "he" ? "עדכון התוכנית" : "Update plan" }).click();
-      expect((await said(page)).at(-1)).toBe(lang === "he" ? "▶️ המשך" : "▶️ Continue");
+      expect((await said(page)).at(-1)).toBe(lang === "he" ? "▶️ בניית תוכנית" : "▶️ Building the plan");
       await page.waitForTimeout(400);
       await page.screenshot({ path: `e2e/tests_output/course/card-course-${lang}-${theme}.png` });
       await axe(page);
@@ -87,5 +87,19 @@ for (const lang of LANGS)
     await page.waitForTimeout(400); // card fade-in
     await axe(page);
     await page.getByRole("region", { name: lang === "he" ? "קבצי לימוד" : "Study files" }).screenshot({ path: `e2e/tests_output/course/card-files-importing-${lang}.png` });
+    expect(errors).toEqual([]);
+  });
+
+for (const lang of LANGS)
+  test(`course: Update plan joins a build running in another chat (${lang})`, async ({ page }) => {
+    const errors = pageErrors(page);
+    await page.goto(host(`lang=${lang}&joined=1`));
+    await page.locator("ul button").first().click();
+    await page.getByRole("button", { name: lang === "he" ? "עדכון התוכנית" : "Update plan" }).click();
+    await expect(page.getByText(lang === "he" ? "בתור: הצ'אט שבונה עכשיו ימשיך לקורס הזה." : "In line: the chat that is building now continues with this course.")).toBeVisible();
+    expect(await said(page)).toEqual([]); // nothing sent: that chat picks it up
+    await page.waitForTimeout(400); // card fade-in
+    await axe(page);
+    await page.getByText(lang === "he" ? "בתור:" : "In line:").locator("..").screenshot({ path: `e2e/tests_output/course/card-course-joined-${lang}.png` });
     expect(errors).toEqual([]);
   });

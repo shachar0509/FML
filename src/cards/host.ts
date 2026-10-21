@@ -1,7 +1,7 @@
 import { App, PostMessageTransport } from "@modelcontextprotocol/ext-apps";
 import type { Host } from "./types";
 
-const CARD_NOTE = "The student pressed a button in the Shalav card. The card already did its part (for example chose the university or added a course). Their next message \"▶️ המשך\" / \"▶️ Continue\" means: call shalav_next_job now and do what it returns.";
+const CARD_NOTE = "The student pressed a button in the Shalav card. The card already did its part (for example chose the university or added a course). Their next message \"▶️ המשך\" / \"▶️ Continue\" means: call shalav_next_job now and do what it returns; \"▶️ בניית תוכנית\" / \"▶️ Building the plan\" means: call shalav_next_job with build: true and work through the plan jobs.";
 
 /** The only place that touches the MCP Apps bridge (plan v2 risk table). */
 export async function connectHost(): Promise<Host> {

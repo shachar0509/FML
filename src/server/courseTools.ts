@@ -61,6 +61,7 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, in
         }
       },
       (r) => [{ type: "text", text: `The study plan for ${n} is ${r.fresh ? "built" : "updated"}${r.indexed ? ` from ${r.indexed} course file(s)` : ""}${r.added ? `; ${r.added} stage(s) were added so every topic in the files is covered` : r.indexed ? "; it already covered every topic in the files" : ""}. Tell the student in one sentence; the card shows the plan.` }],
+      "build",
     ).done.catch(() => undefined); // errors are reported to the model by the bridge and to the card by status
   }
 
@@ -116,15 +117,18 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, in
     "plan_build_request",
     {
       title: "Build or update the plan",
-      description: "Build the study plan (or update it): reads the course files the student added and makes sure every topic in them and in the example exercises has a stage (an AI job; the model must then call shalav_next_job).",
+      description: "Build the study plan (or update it): reads the course files the student added and makes sure every topic in them and in the example exercises has a stage (AI jobs: then call shalav_next_job with build: true, unless the result says another chat is already building).",
       inputSchema: numIn,
       _meta: both,
     },
     async ({ number }) => {
       if (!(await courseExists(number))) return { ...out("No such course.", { ok: false }), isError: true };
       if (builds.get(number)?.state === "running") return out("Already building.", { ok: true });
+      const joined = bridge.buildChatActive(); // a chat is already working through builds: it continues with this one
       build(number);
-      return out(`Started building the plan for ${number}. Call shalav_next_job now.`, { ok: true, next: "Call shalav_next_job now." });
+      return joined
+        ? out(`Queued the plan build for ${number}: the chat that is building now continues with it. Do not call shalav_next_job here.`, { ok: true, joined: true })
+        : out(`Started building the plan for ${number}. Call shalav_next_job with build: true now.`, { ok: true, joined: false, next: "Call shalav_next_job with build: true now." });
     },
   );
 

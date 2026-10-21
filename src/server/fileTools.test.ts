@@ -56,7 +56,7 @@ it("uploads in chunks, lists, indexes through the bridge, removes", async () => 
 
   // Update plan (a plan exists): index the new file, then check every topic is covered — one bridge operation
   expect((await call("plan_build_request", { number: num })).isError).toBeFalsy();
-  const job = JSON.stringify((await call("shalav_next_job")).content);
+  const job = JSON.stringify((await call("shalav_next_job", { build: true })).content);
   const id = Number(/job #(\d+)/.exec(job)?.[1]);
   expect(job).toContain("limits of sequences");
   const done = await call("shalav_submit_job", { jobId: id, input: { pages: [{ page: 1, stageIds: ["S001"], summary: "s", hasFigure: false, hasExercises: false }] } });
