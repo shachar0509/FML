@@ -17,7 +17,7 @@ import { Skeleton } from "./ui";
 import { useShalav } from "./useShalav";
 
 export function Cards({ host }: { host: Host }) {
-  const { data, ctx, callTool, go: ask, asked, clearAsked, displayMode } = useShalav(host);
+  const { data, stale, ctx, callTool, go: ask, asked, clearAsked, displayMode } = useShalav(host);
   const { t } = useTranslation();
   const [mode, setMode] = useState(ctx.displayMode ?? "inline");
   const canPin = !!ctx.availableDisplayModes?.includes("pip");
@@ -45,6 +45,17 @@ export function Cards({ host }: { host: Host }) {
     return () => clearTimeout(h);
   }, [asked, clearAsked]);
   useEffect(() => clearAsked(), [data, clearAsked]);
+  // A newer card took over: unpin this one so it does not float over the new card.
+  useEffect(() => {
+    if (stale && mode === "pip") void displayMode("inline").then(setMode, () => undefined);
+  }, [stale, mode, displayMode]);
+
+  if (stale)
+    return (
+      <p className="cards px-4 py-2 text-sm text-muted" role="status">
+        {t("mcp.replaced")}
+      </p>
+    );
 
   const go = async (name: string, args?: Record<string, unknown>, replace = false) => {
     const r = (await callTool(name, args)).structuredContent as CardData | undefined;

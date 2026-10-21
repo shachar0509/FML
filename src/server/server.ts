@@ -112,6 +112,23 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
       return { content: [{ type: "text" as const, text: "ok" }], structuredContent: { ok: true } };
     },
   );
+  // One card on screen (M23): every card the model renders claims a number; an older card sees a newer one and folds away.
+  let latestCard = 0;
+  registerAppTool(
+    server,
+    "shalav_card",
+    {
+      title: "Card number",
+      description: "Card-only: claim a number for a newly shown card, or read the newest one.",
+      inputSchema: z.object({ claim: z.boolean() }),
+      _meta: { ui: { resourceUri: CARDS_URI, visibility: ["app"] } },
+    },
+    async ({ claim }) => {
+      // Date.now() keeps it rising across server restarts, so old cards still lose to new ones.
+      if (claim) latestCard = Math.max(latestCard + 1, Date.now());
+      return { content: [{ type: "text" as const, text: String(latestCard) }], structuredContent: { latest: latestCard } };
+    },
+  );
   server.registerTool(
     "shalav_next_job",
     { title: "Next Shalav job", description: "Fetch what the student asked for in a Shalav card, or the next pending Shalav AI job (instructions and the answer format). Call it when the student sends \"▶️ המשך\" / \"▶️ Continue\" or a card says work is pending." },

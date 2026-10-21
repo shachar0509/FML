@@ -25,6 +25,15 @@ test("pin button floats the card when the host supports it", async ({ page }) =>
   await expect(page.getByRole("button", { name: "Back into the chat" })).toHaveAttribute("aria-pressed", "true");
 });
 
+test("an older card folds away once a newer card is shown", async ({ page }) => {
+  await page.goto("/src/cards/test-host.html?lang=he&view=step&stale=1");
+  await expect(page.getByText("הכרטיס הזה הוחלף בכרטיס חדש למטה.")).toBeVisible({ timeout: 6000 });
+  await expect(page.locator(".board-surface")).toHaveCount(0);
+  await page.goto("/src/cards/test-host.html?lang=he&view=step");
+  await page.waitForTimeout(2500);
+  await expect(page.locator(".board-surface")).toBeVisible();
+});
+
 test("back arrow: history first, then the screen above", async ({ page }) => {
   await page.goto("/src/cards/test-host.html?lang=en");
   const back = page.getByRole("button", { name: "Back to the previous screen" });

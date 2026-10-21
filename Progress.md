@@ -437,3 +437,7 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 
 ### M22d — Answer boxes: placeholder in the card's direction (done; 🧪 pending)
 - An empty `dir="auto"` textarea has no letters, so the browser made it (and its Hebrew placeholder) left to right. The answer boxes (open question, step question, practice open answer) now inherit the card direction while empty and switch to `auto` once the student types. e2e checks the empty box is rtl in Hebrew.
+
+### M23 — One card on screen (done; 🧪 pending)
+- The chat cannot delete earlier messages, so older cards fold themselves away: each card the model renders claims a number from the app-only tool `shalav_card` (`Date.now()`-based, rises across server restarts) and polls it every 2 s while visible; once a newer number exists it shows one muted line ("הכרטיס הזה הוחלף…"), stops polling and leaves pip mode. Card-side navigation does not claim (only model results do).
+- e2e: test host `?stale=1` → the step card folds; without it the board stays. Checks: typecheck/lint clean, 130 unit, 31 e2e, smoke ok (49 tools).

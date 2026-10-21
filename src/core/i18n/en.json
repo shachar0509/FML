@@ -481,6 +481,7 @@
       "say": "⚙️ Open Shalav settings"
     },
     "go": "▶️ Continue",
+    "replaced": "This card was replaced by a newer one below.",
     "pressEnter": "Ready in the message box. Press Enter so Claude continues.",
     "dismiss": "Dismiss",
     "prev": "Back to the previous screen"
