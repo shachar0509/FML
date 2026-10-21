@@ -119,6 +119,7 @@ it("runs a lesson: start, questions, events, status, completion, reopen + recap"
   // assessment -> criteria + status
   const as = await call("update_assessment", { stageId: "S001", mastery: 0.6, coveredObjectives: [0], gaps: ["limits"], reviewTopics: [], readyToAdvance: false, rationale: "halfway" });
   expect(JSON.parse(((as.content as { text: string }[])[0] as { text: string }).text)).toMatchObject({ ok: true, advanceCriteriaMet: false });
+  expect(text(as)).toMatch(/covered objectives 0.*gaps limits/); // fresh status comes with the result
   expect(text(await call("shalav_lesson_status"))).toMatch(/covered objectives 0.*gaps limits/);
   expect(sc<LessonData>(await call("lesson_state", { number: n, stageId: "S001" }))).toMatchObject({ objectives: [{ covered: true }, { covered: false }] });
 

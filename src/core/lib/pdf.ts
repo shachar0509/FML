@@ -59,7 +59,13 @@ export async function hasImagePaint(page: PDFPageProxy): Promise<boolean> {
     OPS.paintInlineImageXObjectGroup,
     OPS.paintSolidColorImageMask,
   ]);
-  return (await page.getOperatorList()).fnArray.some((f) => paint.has(f));
+  const ol = await page.getOperatorList();
+  // A few-pixel image (a spacer, as Word exports put in) shows nothing; alone it must not cost a page image.
+  const tiny = (i: number) => {
+    const [, w, h] = ol.argsArray[i] as [unknown, number?, number?];
+    return [OPS.paintImageXObject, OPS.paintImageXObjectRepeat].includes(ol.fnArray[i] as number) && Math.max(w ?? 99, h ?? 99) <= 4;
+  };
+  return ol.fnArray.some((f, i) => paint.has(f) && !tiny(i));
 }
 
 export async function renderPage(page: PDFPageProxy, longEdge: number): Promise<HTMLCanvasElement> {

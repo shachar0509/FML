@@ -50,7 +50,7 @@ a. Teach first, quiz second, in small steps. Never open (or resume) the lesson w
 b. Once the core of the stage is taught, give full written exercises with assign_exercise: the student writes the whole solution in their notebook (paper or tablet), uploads a photo or PDF in the exercise card and submits it; the grade comes back to you.
 c. After a graded exercise, go over the solution like a TA checking homework: point to each wrong or unjustified step, explain why, and show the corrected step. Then ask them to fix it and submit again (Try again in the card), or give a similar exercise.`;
 
-const RULE10_MCP = `10. Start: give a two-sentence overview of what this stage covers and why it matters, then the first small step, both in one teach_step (no question in this first message; see the lesson flow). If a RECAP block follows these instructions (the student returns in a new chat, or reopened the stage), recap in 2-3 sentences, then continue; after a reopen focus on the recorded gaps and review topics. Call shalav_lesson_status whenever you need fresh progress data, and at least after every update_assessment; its [STATUS] block is the app's data, not the student's words. Your questions appear as cards: after present_mcq or ask_open_question end your message and wait; the student's answer arrives as their next message. The student completes the stage with the button in the lesson card; when the criteria are met, tell them to press it.`;
+const RULE10_MCP = `10. Start: give a two-sentence overview of what this stage covers and why it matters, then the first small step, both in one teach_step (no question in this first message; see the lesson flow). If a RECAP block follows these instructions (the student returns in a new chat, or reopened the stage), recap in 2-3 sentences, then continue; after a reopen focus on the recorded gaps and review topics. update_assessment returns a fresh [STATUS] block; call shalav_lesson_status whenever else you need fresh progress data. [STATUS] is the app's data, not the student's words. Your questions appear as cards: after present_mcq or ask_open_question end your message and wait; the student's answer arrives as their next message. The student completes the stage with the button in the lesson card; when the criteria are met, tell them to press it.`;
 
 export function tutorSystem(a: TutorSystemArgs): string {
   const { stage, plan } = a;
@@ -99,7 +99,7 @@ Course plan (all stages):
 ${planCompact(plan)}
 
 Current stage (JSON):
-${JSON.stringify(stage, null, 2)}
+${JSON.stringify(stage)}
 
 Prerequisite stages and their objectives:
 ${prereq}

@@ -24,6 +24,8 @@ type Op = {
   ctl: AbortController;
   settled: boolean;
   lastJob?: number;
+  /** The answer schema the op's last shown job carried (it is not repeated right after). */
+  lastSchema?: { text: string; job: number };
   result?: unknown;
   error?: unknown;
   summary: (result: unknown) => Content[];
@@ -221,11 +223,18 @@ export class BridgeGateway implements ClaudeGateway {
       }
     });
 
+    // The schema is skipped only when the job shown just before in this op had it: one message back, never lost to a compacted chat.
+    const op = job.opId === undefined ? undefined : this.ops.get(job.opId);
+    const schema = job.tool ? JSON.stringify(job.tool.input_schema) : "";
+    const prev = op?.lastSchema?.text === schema ? op.lastSchema.job : undefined;
+    if (op) op.lastSchema = schema ? { text: schema, job: job.id } : undefined;
     text.push(
       "## How to answer",
-      job.tool
-        ? `Call shalav_submit_job with jobId ${job.id} and "input" matching this JSON schema (tool ${job.tool.name}):\n${JSON.stringify(job.tool.input_schema)}`
-        : `Call shalav_submit_job with jobId ${job.id} and "text".`,
+      !job.tool
+        ? `Call shalav_submit_job with jobId ${job.id} and "text".`
+        : prev !== undefined
+          ? `Call shalav_submit_job with jobId ${job.id} and "input" matching the same JSON schema as job #${prev} (tool ${job.tool.name}).`
+          : `Call shalav_submit_job with jobId ${job.id} and "input" matching this JSON schema (tool ${job.tool.name}):\n${schema}`,
     );
     // Prompts written for the v1 forced tool say "Call <tool>"; here the answer goes through shalav_submit_job.
     const body = job.tool ? text.join("\n\n").replaceAll(`Call ${job.tool.name}`, "Answer (see How to answer)") : text.join("\n\n");

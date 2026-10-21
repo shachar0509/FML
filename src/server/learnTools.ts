@@ -151,7 +151,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
 
   server.registerTool(
     "shalav_lesson_status",
-    { title: "Lesson status", description: "Fresh [STATUS] progress data for the open lesson. Call it after every update_assessment and whenever you need current progress.", inputSchema: z.object({}) },
+    { title: "Lesson status", description: "Fresh [STATUS] progress data for the open lesson (update_assessment already returns it). Call it when you need current progress, e.g. after the student answered questions in cards.", inputSchema: z.object({}) },
     async () => {
       const c = await ctx();
       if (!c) return fail(NO_LESSON);
@@ -322,7 +322,8 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     });
     const s = (await load(c.n)) as S;
     const k = criteria(s, c.stageId);
-    return out(JSON.stringify({ ok: true, advanceCriteriaMet: k.met, missing: k.missing }));
+    // The fresh [STATUS] comes with the result: no shalav_lesson_status round trip after every assessment.
+    return { content: [{ type: "text" as const, text: JSON.stringify({ ok: true, advanceCriteriaMet: k.met, missing: k.missing }) }, { type: "text" as const, text: status(s, c.stageId) }] };
   });
 
   // Plan v2 §6.3 allows raw pages for short retrievals; always doing that saves a host round trip (DECISIONS.md).

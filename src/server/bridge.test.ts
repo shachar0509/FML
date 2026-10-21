@@ -39,6 +39,9 @@ describe("BridgeGateway", () => {
     const c = b.next();
     expect(text(a)).toContain("SYS");
     expect(text(c)).toContain("Same instructions as job #1");
+    expect(text(a)).toContain('"properties"');
+    expect(text(c)).toContain("same JSON schema as job #1"); // shown just before: not repeated
+    expect(text(c)).not.toContain('"properties"');
     expect((await b.submit({ jobId: 99, input: {} })).isError).toBe(true);
     expect((await b.submit({ jobId: 1, text: "x" })).isError).toBe(true); // schema job needs input
     await b.submit({ jobId: 1, input: { n: 1 } });
@@ -57,6 +60,15 @@ describe("BridgeGateway", () => {
     const j = text(b.next());
     expect(j).toContain("SYS");
     expect(j).not.toContain("Same");
+  });
+
+  it("the schema is repeated once another kind of job came in between", async () => {
+    const b = new BridgeGateway();
+    b.run("op", () => Promise.all([callStructured(b, tool, req), b.send({ ...req, system: "S2" }), callStructured(b, tool, req)]));
+    await new Promise((r) => setImmediate(r));
+    const [x, , z] = [b.next(), b.next(), b.next()];
+    expect(text(x)).toContain('"properties"');
+    expect(text(z)).toContain('"properties"');
   });
 
   it("cancel rejects every job of the operation", async () => {
