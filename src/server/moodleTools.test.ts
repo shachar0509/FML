@@ -42,6 +42,11 @@ it("parses Moodle pages and guesses roles", () => {
   expect(briefRole("הרצאה 3: הגדרה. משפט. מסקנה. הערה. תזכורת: פרק 2", "notes.pdf חומר עזר להרצאות ותרגולים")).toBe("material");
   expect(briefRole("שאלה 1 סעיף א: חשבו את המהירות. שאלה 2: מצאו", "week3.pdf שבוע 3")).toBe("exercises");
   expect(briefRole("", "scan.pdf תרגולים ישנים")).toBe("exercises");
+  // Not study material: a video list (by label, or many links over little text) and course rules.
+  expect(briefRole("נושאים", "list.pdf סרטוני עזר")).toBeNull();
+  expect(briefRole("פיסיקה 1מ שם וקישור נושאים מרכזיים ".repeat(40), "list.pdf חומר עזר", 41)).toBeNull();
+  expect(briefRole("סילבוס הקורס. הרכב הציון: ציון סופי 80% מבחן. נוכחות חובה. שעות קבלה", "info.pdf מבוא")).toBeNull();
+  expect(parseCourse('<li id="section-1" data-sectionname="עזר"><a href="/mod/resource/view.php?id=1">סרטוני עזר</a></li>', base)).toEqual([]);
   expect(fileName("https://x/pluginfile.php/1/Lecture%201.pdf", undefined)).toBe("Lecture 1.pdf");
   expect(fileName("https://x/a.pdf", `inline; filename="${Buffer.from("תרגיל 3.pdf").toString("latin1")}"`)).toBe("תרגיל 3.pdf");
   expect(fileName("https://x/a.pdf", `attachment; filename="x.pdf"; filename*=UTF-8''%D7%AA.pdf`)).toBe("ת.pdf");

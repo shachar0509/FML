@@ -56,7 +56,7 @@ export function parseCourse(html: string, base: string): Link[] {
     for (const m of part.matchAll(/<a\b[^>]*href="([^"]*(?:\/mod\/(?:resource|folder|assign|page)\/view\.php\?id=\d+|pluginfile\.php\/)[^"]*)"[^>]*>([\s\S]*?)<\/a>/gi)) {
       const url = abs(m[1] as string, base);
       const text = strip(m[2] as string).replace(/\s*(?:File|Folder|Assignment|Page|קובץ|תיקייה|תצוגת תיקיית קבצים|מטלה|דף תוכן מעוצב)$/i, "");
-      if (!ADMIN.test(text) && !out.some((o) => o.url === url)) out.push({ url, text, section });
+      if (!ADMIN.test(text) && !VIDEO.test(text) && !out.some((o) => o.url === url)) out.push({ url, text, section });
     }
   }
   return out;
@@ -79,13 +79,20 @@ const EX_TEXT = /שאל(?:ה|ות)|תרגיל|סעיף|פתרון|הוכיחו|�
 const MAT_TEXT = /הרצאה|הגדרה|מסקנה|הערה|פרק|תזכורת|lecture|definition|theorem|lemma|corollary|chapter|remark|recall/gi;
 const MAT_LABEL = /הרצא|סיכום|סיכומי|רשימות|מצגת|ספר|lecture|notes|slides|summary|chapter|book/i;
 
+const VIDEO = /סרטון|סרטוני|הקלט|וידאו|video|recording|youtube|panopto/i;
+const ADMIN_TEXT = /סילבוס|הרכב הציון|ציון סופי|ציון מגן|נוכחות|שעות קבלה|מדיניות|נהלי|לוח זמנים|מילואים|syllabus|grading|final grade|attendance|office hours|policy|schedule/gi;
+
 /**
- * Brief check of what a file is: signal words in its first pages, plus the name / link label / section (worth 3 words).
- * No text (a picture, a scan) or a tie → the label alone (guessRole).
+ * Brief check of a downloaded file from its first pages (text + link count) and its name / link label / section:
+ * null = not study material (a list of video links, course admin), else the folder.
+ * Folder: signal words in the text, the label worth 3 words; no text (a picture, a scan) or a tie → the label alone (guessRole).
  */
-export function briefRole(text: string, label: string): "material" | "exercises" {
+export function briefRole(text: string, label: string, links = 0): "material" | "exercises" | null {
+  // A video list (Technion "סרטוני עזר": a table of topics and 41 links) teaches nothing the tutor can read.
+  if (VIDEO.test(label) || VIDEO.test(text.slice(0, 300)) || (links >= 15 && text.length < links * 150)) return null;
   const ex = (text.match(EX_TEXT)?.length ?? 0) + (guessRole(label, "") === "exercises" ? 3 : 0);
   const mat = (text.match(MAT_TEXT)?.length ?? 0) + (MAT_LABEL.test(label) ? 3 : 0);
+  if ((text.match(ADMIN_TEXT)?.length ?? 0) >= Math.max(3, ex + mat)) return null; // syllabus / course rules
   return ex === mat ? guessRole(label, "") : ex > mat ? "exercises" : "material";
 }
 

@@ -454,3 +454,11 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - Folder choice (`briefRole` in `moodleParse.ts`): counts exercise vs material signal words in the text of the file's first 2 pages (pdfjs, local, no AI). The file name, link label and section together count as 3 words. A file with no text (a scan or picture) or a tie falls back to the label (`guessRole`). Checked on the real 01140071 PDFs: tutorials and class exercises come out as exercises. Scans of the solved-exercises folder have no text, so the folder label decides.
 - Folder names stay "חומרי לימוד" / "תרגילים לדוגמה" (`src/constants.ts`).
 - Checks: typecheck/lint clean, 130 unit, smoke ok (49 tools).
+
+### M24c — Moodle: only study material is imported (done; 🧪 pending)
+- `briefRole` returns `null` (not imported, counted as skipped) for:
+  - a video list: "סרטון / הקלטה / video / youtube / panopto" in the label or the opening text, or ≥ 15 web links in the first 2 pages with < 150 chars of text per link (the Technion "סרטוני עזר" PDF: 78 links);
+  - course admin: syllabus, grade breakdown, attendance, office hours or rules words that outnumber the study signals (at least 3).
+- `parseCourse` already drops video-labelled links, so they are never downloaded.
+- On the real 01140071 files only the two "סרטוני עזר" copies are dropped.
+- Checks: typecheck/lint clean, 130 unit, smoke ok (49 tools).

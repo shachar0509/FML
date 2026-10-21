@@ -29,21 +29,29 @@ export type Moodle = ReturnType<typeof createMoodle>;
 // Only a real login has a logout link: guest access (Technion gives it once the session expires) has the user menu but sees no enrolled course.
 const PARALLEL = 4;
 
-/** The text of a downloaded file's first two pages, for the brief check of what it is ("" for pictures, scans and unreadable PDFs). */
-async function opening(name: string, body: Buffer): Promise<string> {
+/** The text and web-link count of a downloaded file's first two pages, for the brief check of what it is (no text for pictures, scans and unreadable PDFs). */
+async function opening(name: string, body: Buffer): Promise<{ text: string; links: number }> {
   const ext = extOf(name);
-  if (ext === "txt" || ext === "md") return body.subarray(0, 8000).toString("utf8");
-  if (ext !== "pdf") return "";
+  if (ext === "txt" || ext === "md") {
+    const text = body.subarray(0, 8000).toString("utf8");
+    return { text, links: text.match(/https?:\/\//g)?.length ?? 0 };
+  }
+  if (ext !== "pdf") return { text: "", links: 0 };
   try {
     const doc = await openPdf(new Uint8Array(body));
     try {
-      const pages = await Promise.all(Array.from({ length: Math.min(2, doc.numPages) }, async (_, i) => pageText(await doc.getPage(i + 1))));
-      return pages.join(" ");
+      const pages = await Promise.all(
+        Array.from({ length: Math.min(2, doc.numPages) }, async (_, i) => {
+          const p = await doc.getPage(i + 1);
+          return { text: await pageText(p), links: (await p.getAnnotations()).filter((a: { url?: string }) => a.url).length };
+        }),
+      );
+      return { text: pages.map((p) => p.text).join(" "), links: pages.reduce((n, p) => n + p.links, 0) };
     } finally {
       void doc.loadingTask.destroy();
     }
   } catch {
-    return "";
+    return { text: "", links: 0 };
   }
 }
 
@@ -133,11 +141,14 @@ export function createMoodle(o: { profileDir: string; channel?: string; headedLo
         }
         const name = fileName(r.url(), r.headers()["content-disposition"]);
         if (!(extOf(name) in MEDIA)) return void skipped++;
-        const sub = join(dir, String(slot++)); // own folder per file keeps the real name for import
         const body = await r.body();
+        const { text, links } = await opening(name, body);
+        const role = briefRole(text, `${name} ${hint.text} ${hint.section}`, links);
+        if (!role) return void skipped++; // not study material (video list, course admin)
+        const sub = join(dir, String(slot++)); // own folder per file keeps the real name for import
         await mkdir(sub, { recursive: true });
         await writeFile(join(sub, name), body);
-        files.push({ path: join(sub, name), role: briefRole(await opening(name, body), `${name} ${hint.text} ${hint.section}`) });
+        files.push({ path: join(sub, name), role });
       };
       // Courses, their section pages and the files all go out together, PARALLEL requests at a time.
       const pages = (
