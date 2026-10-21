@@ -225,7 +225,7 @@ export function Practice({
               ) : (
                 <>
                   <textarea
-                    dir="auto"
+                    dir={text ? "auto" : undefined}
                     rows={5}
                     value={text}
                     onChange={(e) => setText(e.target.value)}

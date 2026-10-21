@@ -434,3 +434,6 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - "> [!theorem] משפט" showed "משפט משפט": a title equal to the box's kind is dropped; the prompt says the title is the theorem's/definition's name.
 - Tests: the proof box from the student's screenshot renders with no `.katex-error`; the step fixture shows a theorem + proof box.
 - Checks: typecheck/lint clean, 130 unit, 30 e2e.
+
+### M22d — Answer boxes: placeholder in the card's direction (done; 🧪 pending)
+- An empty `dir="auto"` textarea has no letters, so the browser made it (and its Hebrew placeholder) left to right. The answer boxes (open question, step question, practice open answer) now inherit the card direction while empty and switch to `auto` once the student types. e2e checks the empty box is rtl in Hebrew.

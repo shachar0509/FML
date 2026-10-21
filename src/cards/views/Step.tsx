@@ -61,7 +61,7 @@ export function Step({ data, go }: { data: StepData; go: Go }) {
       ) : asking ? (
         <div className="flex flex-col gap-2">
           <textarea
-            dir="auto"
+            dir={q ? "auto" : undefined}
             rows={3}
             autoFocus
             value={q}

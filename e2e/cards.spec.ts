@@ -125,6 +125,8 @@ for (const lang of ["he", "en"] as const)
       await page.goto(url("open"));
       const send = page.getByRole("button", { name: lang === "he" ? "שליחת התשובה" : "Send answer" });
       await expect(send).toBeDisabled();
+      // empty answer box: the placeholder follows the card language
+      expect(await page.getByRole("textbox").evaluate((e) => getComputedStyle(e).direction)).toBe(lang === "he" ? "rtl" : "ltr");
       await page.getByRole("textbox").fill("Because $1/n$ is below $\\varepsilon$ for large $n$.");
       await axe();
       await send.click();

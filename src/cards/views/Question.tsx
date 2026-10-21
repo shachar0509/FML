@@ -96,7 +96,7 @@ export function OpenQ({ data, go }: { data: OpenData; go: Go }) {
       ) : (
         <>
           <textarea
-            dir="auto"
+            dir={a ? "auto" : undefined}
             rows={5}
             value={a}
             onChange={(e) => setA(e.target.value)}
