@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import "@/core/i18n";
-import { fixMath, hebrewOutOfMath, joinHyphenatedMath, Markdown } from "./Markdown";
+import { balanceDollars, fixMath, hebrewOutOfMath, joinHyphenatedMath, Markdown } from "./Markdown";
 import { isFigureTag } from "./Figure";
 import { splitRel } from "./Rows";
 
@@ -70,6 +70,10 @@ describe("Markdown", () => {
     expect(hebrewOutOfMath("בדיוק אחד מהבאים: a<b, a=b")).toBe("בדיוק אחד מהבאים: $a<b, a=b$");
     expect(fixMath("אם $a<b \\text{ אז } c$ ו-`$x$ שלום`")).toBe("אם $a<b$ אז $c$ ו-`$x$ שלום`"); // code untouched
     expect(fixMath("$$\na \\text{ כאשר } b\n$$")).toBe("$$\na \\text{ כאשר } b\n$$"); // display math stays whole
+    // "$…$$" / "$$…$" (mismatched delimiters) showed raw; matched ones are untouched
+    expect(balanceDollars("($a \\cdot a^{-1} = 1$ לכל $a \\neq 0$$)")).toBe("($a \\cdot a^{-1} = 1$ לכל $a \\neq 0$)");
+    expect(balanceDollars("$$x$ ו-$y$")).toBe("$x$ ו-$y$");
+    for (const ok of ["$a$ $b$", "$$a$$ ו-$b$", "$$\na\n$$", "\\$5$$"]) expect(balanceDollars(ok)).toBe(ok);
     expect(fixMath("$$x = 1 \\quad איבר אפס$$")).toBe("$$x = 1 \\quad \\text{איבר אפס}$$"); // bare Hebrew wrapped as one run
     const { container } = render(<Markdown>{"$a<b$ ו-$0<c$ גוררים $a c < b c$"}</Markdown>);
     expect(container.querySelector("p")?.getAttribute("dir")).toBe("rtl"); // the words decide, not the leading formula

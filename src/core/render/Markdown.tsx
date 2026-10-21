@@ -157,7 +157,7 @@ export const fixMath = (md: string) =>
       i % 2
         ? part
         : joinHyphenatedMath(
-            part
+            balanceDollars(part)
               .replace(/\$\$([\s\S]+?)\$\$/g, (all, t: string) => (HEB.test(t) ? `$$${wrapHebrew(t)}$$` : all))
               .replace(/(?<![$\\])\$([^$\n]+)\$(?!\$)/g, (all, t: string) =>
                 !HEB.test(t) ? all : /\\begin|&|\\\\/.test(t) ? `$${wrapHebrew(t)}$` : hebrewOutOfMath(t),
@@ -165,6 +165,25 @@ export const fixMath = (md: string) =>
           ),
     )
     .join("");
+
+/** Claude sometimes opens an inline formula with one "$" and closes it with two ("$a \\neq 0$$"), or the reverse; both show raw. */
+export const balanceDollars = (md: string) =>
+  md
+    .split("\n")
+    .map((line) => {
+      // Pair the delimiters left to right ($ or $$, not escaped); a pair of a "$" and a "$$" becomes "$…$".
+      const ds = [...line.matchAll(/(?<!\\)\${1,2}/g)];
+      let out = "";
+      let at = 0;
+      for (let k = 0; k + 1 < ds.length; k += 2) {
+        const [a, b] = [ds[k] as RegExpExecArray, ds[k + 1] as RegExpExecArray];
+        if (a[0] === b[0]) continue;
+        out += line.slice(at, a.index) + "$" + line.slice(a.index + a[0].length, b.index) + "$";
+        at = b.index + b[0].length;
+      }
+      return out + line.slice(at);
+    })
+    .join("\n");
 
 export const joinHyphenatedMath = (md: string) => md.replace(/(?<![$\\])\$([^$\n]+)\$-\$([^$\n]+)\$(?!\$)/g, (_, a: string, c: string) => `$${a}\\text{-}${c}$`);
 
