@@ -10,6 +10,7 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "e2e": "playwright test",
+    "e2e:changed": "node e2e/changed.mjs",
     "build:cards": "vite build -c vite.cards.config.ts",
     "build:server": "node scripts/build-server.mjs",
     "pack:mcpb": "node scripts/pack-mcpb.mjs",

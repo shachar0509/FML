@@ -133,7 +133,7 @@ A ```` ```rows ```` block holds one line per row: `name | formula`. It comes fro
 ## Checks
 
 - **Unit tests:** `src/core/render/Markdown.test.tsx`. It covers currency, tables, edge tokens, arrows, `\ce`, units, labels, display fences and parentheses in notes.
-- **Browser tests:** `e2e/advanced.spec.ts` renders sample slides from `src/cards/test-advanced.ts` in light and dark. For each slide it checks that there is:
+- **Browser tests:** `e2e/tests/render.spec.ts` renders sample slides from `src/cards/test-advanced.ts` in light and dark. For each slide it checks that there is:
   - no `.katex-error`;
   - no raw TeX or stray `$` in text;
   - no sideways overflow.
@@ -141,4 +141,4 @@ A ```` ```rows ```` block holds one line per row: `name | formula`. It comes fro
   - `e2e/shots/test6/`: אינפי 2 and electrical engineering;
   - `e2e/shots/test7/`: law, biology, chemistry, finance, architecture;
   - `e2e/shots/display alignment problems/`: the `$$\begin` / `\end$$` case (`fences-he-*.png`, next to the original bug, `image.png`).
-- **Adding a case:** add a sample to `ADVANCED` and its name to a list in `advanced.spec.ts`.
+- **Adding a case:** add a sample to `ADVANCED` and its name to a list in `e2e/tests/render.spec.ts`.
