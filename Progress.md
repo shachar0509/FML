@@ -509,3 +509,33 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
   - checks: no KaTeX errors, no raw TeX, nothing cut off sideways, figures drawn;
   - screenshots go to `e2e/shots/test6/`.
 - Checks: lint/typecheck clean, 136 unit, 41 e2e.
+
+## M28 — display that holds across subjects
+
+Edge cases found with the sample slides, and fixed in the renderer:
+- **Prices are not formulas** (`escapeCurrency`, using Pandoc's rule plus punctuation):
+  - "מ-$100 ל-$120" and "($)" stay text;
+  - "$" never pairs across table cells. Before, a finance table header lost its spaces.
+- **Signs stay with their numbers** (`ltr-token` islands, which never wrap). A neutral sign at the edge of a number or Latin word keeps its side: −1,000, ~26–28, ×2, NAD⁺, 25°C.
+- **Arrow characters in Hebrew text** ("גלוקוז → פירובט") are mirrored when next to Hebrew. "ATP → ADP" stays.
+- **`\ce{…}`** (mhchem) is loaded.
+- **Units in `\text`** ("kN", "dB") stay in their formula. Only Latin phrases count as words, and only top-level `\text`, never inside `{…}`.
+- **Punctuation after a formula** never starts a line on its own.
+- **Too wide content shrinks instead of spilling:**
+  - inline formulas;
+  - display formulas, in a few rounds, because KaTeX has fixed-pixel parts;
+  - rows blocks;
+  - woven and colon lines take the full row width.
+  - Fonts that load lazily trigger a re-fit.
+- **Rows:**
+  - `&&` starts the note column;
+  - an arrow that ends a formula moves into its Hebrew note, mirrored;
+  - a name can be written as math (`r = 5\% | …`);
+  - `|x| < R` and `f(x) = |x|` are not taken as names;
+  - notes stay on one line until the block stacks.
+- **Tables** break between words only.
+- **Samples** (`src/cards/test-advanced.ts`, `e2e/advanced.spec.ts`):
+  - `e2e/shots/test6/`: אינפי 2 and electrical engineering, 9 slides;
+  - `e2e/shots/test7/`: law, biology, chemistry, finance, architecture.
+- Checks: 137 unit, 59 e2e (twice in a row).
+- The first e2e run right after a code change can time out while Vite recompiles; run it again.
