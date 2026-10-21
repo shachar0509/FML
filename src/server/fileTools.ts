@@ -128,6 +128,7 @@ export function registerFileTools(server: McpServer, o: { openFolder?: (p: strin
   registerAppTool(server, "file_remove", { title: "Remove a file", description: "Card-only: move a course file to the trash and drop its index.", inputSchema: z.object({ number: num, sha: z.string() }), _meta: appOnly }, async ({ number, sha }) => {
     const r = (await listFileIndexes(number)).find((x) => x.sha256 === sha);
     if (!r) return fail("No such file.");
+    queue.cancel(number, sha); // stop reading it first: no more model work on a removed file
     await removeFile(number, r, deps());
     return out("ok", { ok: true });
   });

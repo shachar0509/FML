@@ -144,7 +144,6 @@ const union = (a: string[], b: string[]) => [...a, ...b.filter((x, i) => norm(x)
 export function mergeAdditions(s: Stage, a: StageAdditions): Stage {
   return {
     ...s,
-    objectives: union(s.objectives, a.objectives),
     techniques: union(s.techniques, a.techniques),
     edgeCases: union(s.edgeCases, a.edgeCases),
     theorems: [...s.theorems, ...a.theorems.filter((t, i) => norm(t.name) && !s.theorems.some((x) => norm(x.name) === norm(t.name)) && a.theorems.findIndex((x) => norm(x.name) === norm(t.name)) === i)],
@@ -207,7 +206,7 @@ export async function refinePlan(opts: Opts): Promise<PlanJson> {
       const body = j.ids
         .map((id) => {
           const s = byNew.get(id) as Stage;
-          const has = [`objectives: ${s.objectives.join("; ") || "none"}`, `techniques: ${s.techniques.join("; ") || "none"}`, `edge cases: ${s.edgeCases.join("; ") || "none"}`, `theorems: ${s.theorems.map((t) => t.name).join("; ") || "none"}`];
+          const has = [`objectives (fixed): ${s.objectives.join("; ") || "none"}`, `techniques: ${s.techniques.join("; ") || "none"}`, `edge cases: ${s.edgeCases.join("; ") || "none"}`, `theorems: ${s.theorems.map((t) => t.name).join("; ") || "none"}`];
           return [`${id} ${s.title} — ${s.summary}`, ...has.map((h) => `  ${h}`), "  The course files say:", ...ev.stage(id).map((l) => `    ${l}`)].join("\n");
         })
         .join("\n\n");

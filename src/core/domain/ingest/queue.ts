@@ -28,6 +28,7 @@ export function createIndexQueue(deps: QueueDeps) {
   const busy = new Map<string, number>(); // running files per course
   let running = 0;
   const declined = new Set<string>();
+  const runningFiles = new Map<string, AbortController>(); // key -> the running file's abort (file removed: stop spending the student's model work)
   const subs = new Set<(e: QueueEvent) => void>();
   let idleWaiters: { course?: string; resolve: () => void }[] = [];
   const emit = (e: QueueEvent) => subs.forEach((cb) => cb(e));
@@ -58,12 +59,14 @@ export function createIndexQueue(deps: QueueDeps) {
         declined.add(key(course, sha256)); // stays pending; retry() asks again
         return;
       }
+      const ctl = new AbortController();
+      runningFiles.set(key(course, sha256), ctl);
       rec = await set(course, rec, { status: "indexing", error: null });
       const source = await deps.open({ path: deps.resolve(course, rec), mediaType: rec.mediaType, sha256 });
       try {
         const index = rec.role === "material" ? indexMaterial : indexExercises;
         const out = await index({
-          gw: deps.gw(), source, rec, plan, course: head, lang: deps.lang(),
+          gw: deps.gw(), source, rec, plan, course: head, lang: deps.lang(), signal: ctl.signal,
           onProgress: (done, total) => emit({ course, sha256, status: "indexing", done, total }),
         });
         await set(course, out, {});
@@ -71,9 +74,11 @@ export function createIndexQueue(deps: QueueDeps) {
         source.close();
       }
     } catch (e) {
-      if (e instanceof Removed) return emit({ course, sha256, status: "removed" });
+      if (e instanceof Removed || runningFiles.get(key(course, sha256))?.signal.aborted) return emit({ course, sha256, status: "removed" });
       const error = e instanceof PasswordProtectedError ? e.message : (e instanceof Error ? e.message : String(e)).slice(0, 200);
       if (rec) await set(course, rec, { status: "failed", error }).catch(() => emit({ course, sha256, status: "removed" }));
+    } finally {
+      runningFiles.delete(key(course, sha256));
     }
   }
 
@@ -108,12 +113,28 @@ export function createIndexQueue(deps: QueueDeps) {
     async retry(course: string, sha256: string) {
       declined.delete(key(course, sha256));
       const rec = await readFileIndex(course, sha256);
-      if (rec && rec.status !== "indexed") await set(course, rec, { status: "pending", error: null });
+      if (rec && rec.status !== "indexed") {
+        try {
+          await set(course, rec, { status: "pending", error: null });
+        } catch {
+          return emit({ course, sha256, status: "removed" }); // removed meanwhile: nothing to read
+        }
+      }
       enqueue(course, sha256);
     },
     async resume(courses: string[]) {
       for (const c of courses)
         for (const r of await listFileIndexes(c)) if (r.status === "pending" || r.status === "indexing") enqueue(c, r.sha256);
+    },
+    /** The student removes the file: drop it from the queue and stop reading it (its pending AI jobs are withdrawn). */
+    cancel(course: string, sha256: string) {
+      const i = queue.findIndex((q) => q.course === course && q.sha256 === sha256);
+      if (i >= 0) {
+        queue.splice(i, 1);
+        emit({ course, sha256, status: "removed" });
+        pump();
+      }
+      runningFiles.get(key(course, sha256))?.abort();
     },
     subscribe(cb: (e: QueueEvent) => void) {
       subs.add(cb);

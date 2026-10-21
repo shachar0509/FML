@@ -70,7 +70,7 @@ it("uploads in chunks, lists, indexes through the bridge, removes", async () => 
   // kept stage S001 has a file line: one enrich job asks what it is missing
   const ask = JSON.stringify(fin.content);
   expect(ask).toContain("submit_stage_additions");
-  const end = await call("shalav_submit_job", { jobId: Number(/job #(\d+)/.exec(ask)?.[1]), input: { stages: [{ id: "S001", objectives: [], techniques: ["epsilon-N"], edgeCases: [], theorems: [] }] } });
+  const end = await call("shalav_submit_job", { jobId: Number(/job #(\d+)/.exec(ask)?.[1]), input: { stages: [{ id: "S001", techniques: ["epsilon-N"], edgeCases: [], theorems: [] }] } });
   expect(JSON.stringify(end.content)).toMatch(/updated from 1 course file\(s\); it already covered every topic/);
 
   f = sc<FilesData>(await call("files_list", { number: num }));

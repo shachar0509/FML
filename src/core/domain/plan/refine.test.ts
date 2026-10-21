@@ -47,7 +47,7 @@ const details = (req: { messages: { content: unknown }[] }) => {
     stages: ids.map((id) => ({ id, objectives: ["x", "y"], newConcepts: [], theorems: [], techniques: [], edgeCases: [], examRelevance: "core", estimatedMinutes: 25 })),
   });
 };
-const enrich = () => toolCall("submit_stage_additions", { stages: [{ id: "S003", objectives: ["a"], techniques: [], edgeCases: ["empty set", "Empty  set"], theorems: [] }] });
+const enrich = () => toolCall("submit_stage_additions", { stages: [{ id: "S003", techniques: [], edgeCases: ["empty set", "Empty  set"], theorems: [] }] });
 const rec = (v: number | null): FileIndex => ({
   schema: 1, sha256: "abc", fileName: "f.pdf", relPath: "materials/f.pdf", role: "material", mediaType: "application/pdf", pageCount: 1, addedAt: "t",
   status: "indexed", error: null, indexedAt: "t", indexModel: "m", planVersion: v,
@@ -85,10 +85,10 @@ describe("refine", () => {
     expect(ev.stage("S004")).toEqual(["- B.pdf p7: only B: the empty-set edge case"]);
     expect(ev.stage("S003").filter((l) => l.includes("C.pdf"))).toEqual([]); // same text as B: kept once
     expect(ev.uncovered).toEqual(["- B.pdf p8: nothing in the plan"]);
-    const s = mergeAdditions(plan.stages[2] as never, { id: "S003", objectives: ["A", "c"], techniques: ["t", "T "], edgeCases: [], theorems: [{ name: "X", statement: "", proofRequired: false }] });
-    expect(s.objectives).toEqual(["a", "b", "c"]);
+    const s = mergeAdditions(plan.stages[2] as never, { id: "S003", techniques: ["t", "T "], edgeCases: [], theorems: [{ name: "X", statement: "", proofRequired: false }] });
+    expect(s.objectives).toEqual(["a", "b"]); // never touched: completion needs every objective covered
     expect(s.techniques).toEqual(["t"]);
-    expect(mergeAdditions(s, { id: "S003", objectives: [], techniques: [], edgeCases: [], theorems: [{ name: "x", statement: "", proofRequired: true }] }).theorems).toHaveLength(1);
+    expect(mergeAdditions(s, { id: "S003", techniques: [], edgeCases: [], theorems: [{ name: "x", statement: "", proofRequired: true }] }).theorems).toHaveLength(1);
   });
 
   it("remapIndex remaps older records only", () => {

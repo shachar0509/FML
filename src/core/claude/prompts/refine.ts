@@ -30,6 +30,6 @@ export const enrichPrompt = (c: Pick<CourseJson, "courseNumber" | "nameHe">, sta
 Each stage below shows what it already teaches (objectives, techniques, edge cases, theorems) and what the course files say about it, from every file that covers it:
 ${stages}
 
-For each stage return ONLY what the files show that the stage does not teach yet: a technique, an edge case, a theorem, or an objective needed to solve its exercises. A detail found in only one of the files still counts. Never repeat an item the stage already has (same meaning in other words counts as the same), and return empty lists when nothing is missing. Write in ${lang}.
+For each stage return ONLY what the files show that the stage does not teach yet: a technique, an edge case or a theorem needed to solve its exercises (objectives stay as they are). A detail found in only one of the files still counts. Never repeat an item the stage already has (same meaning in other words counts as the same), and return empty lists when nothing is missing. Write in ${lang}.
 
 Call submit_stage_additions with every stage id listed.`;

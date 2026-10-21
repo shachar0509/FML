@@ -700,3 +700,14 @@ Edge cases found with the sample slides, and fixed in the renderer:
   - The server drain loops answer several jobs per result in parallel.
   - 146 unit tests; lint and tsc clean. No card changes, so no e2e.
 - **🧪 In Claude Desktop:** Update plan on a course with 2 or more multi-page files that share a topic. Several jobs should come per call, and both files' rings should move together. Remove a file mid-build: it must not come back.
+- **Fix (review):**
+  - **Enrich never adds objectives:**
+    - A stage counts as done only when every objective is covered, so a new objective would hold back a student mid-stage.
+    - A plan allows 2–6 objectives, so adding one past 6 would fail the update.
+    - Enrich now adds only techniques, edge cases and theorems.
+  - **Remove stops the file's reading:** `queue.cancel`, called by `file_remove` before the delete, does two things:
+    - drops the file if it is still queued;
+    - aborts it if it is being read, which withdraws its unanswered AI jobs from the chat.
+    It stops only that file: the build goes on with the other files and the plan update. Test: one file is cancelled while it waits on the model, another while queued, and a third still indexes.
+  - **`retry`:** a file removed while Update plan starts no longer fails the whole build with a blank error.
+  - 148 unit tests; lint and tsc clean.

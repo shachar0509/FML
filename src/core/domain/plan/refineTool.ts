@@ -30,7 +30,8 @@ export const submitPlanRevision = defineTool(
 );
 export type PlanRevision = z.infer<typeof submitPlanRevision.schema>;
 
-/** M40: details the course files show for a kept stage that it does not teach yet; merged as a union, never removing anything. */
+/** M40: details the course files show for a kept stage that it does not teach yet; merged as a union, never removing anything.
+ * No objectives: completion needs every objective covered and a plan allows 2-6, so new ones would hold a student back or fail the update. */
 export const submitStageAdditions = defineTool(
   "submit_stage_additions",
   "Submit what each stage is missing (empty lists when nothing is).",
@@ -38,7 +39,6 @@ export const submitStageAdditions = defineTool(
     stages: z.array(
       z.object({
         id: z.string(),
-        objectives: z.array(z.string()),
         techniques: z.array(z.string()),
         edgeCases: z.array(z.string()),
         theorems: z.array(z.object({ name: z.string(), statement: z.string(), proofRequired: z.boolean() })),

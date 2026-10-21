@@ -183,6 +183,52 @@ describe("queue", () => {
     expect(events).toContain("A:a3:removed");
   });
 
+  it("cancel (file removed) stops a running file's AI work and drops a queued one", async () => {
+    for (const k of [1, 2, 3]) await seed("A", `a${k}`);
+    const aborted: string[] = [];
+    const { q, events } = mk({
+      gw: () => ({
+        send: (req: ClaudeRequest) =>
+          new Promise((_, reject) => req.signal?.addEventListener("abort", () => (aborted.push(String(pagesIn(req))), reject(new Error("aborted"))))),
+      }),
+    });
+    for (const k of [1, 2, 3]) q.enqueue("A", `a${k}`);
+    await new Promise((r) => setTimeout(r, 5));
+    q.cancel("A", "a3"); // queued
+    for (const k of [1, 2]) q.cancel("A", `a${k}`); // running, waiting on the model
+    await q.idle("A");
+    expect(aborted).toHaveLength(2);
+    for (const k of [1, 2, 3]) expect(events).toContain(`A:a${k}:removed`);
+    expect(events.filter((e) => e.endsWith(":failed"))).toEqual([]);
+  });
+
+  it("cancel (file removed) stops only that file: its AI work is withdrawn, the other file still indexes", async () => {
+    for (const k of [1, 2, 3]) await seed("A", `a${k}`);
+    const aborted: string[] = [];
+    const { q, events } = mk({
+      open: async (o: { sha256: string }) => src(2, { text: async (p) => `${o.sha256} page ${p}` }),
+      gw: () => ({
+        send: (req: ClaudeRequest) =>
+          JSON.stringify(req.messages).includes("a1 page")
+            ? new Promise((_, reject) => req.signal?.addEventListener("abort", () => (aborted.push("a1"), reject(new Error("aborted")))))
+            : Promise.resolve({ ...toolCall("submit_material_pages", { pages: [1, 2].map((page) => ({ page, stageIds: [], summary: "", hasFigure: false, hasExercises: false })) }), usage: {} as never, model: "m" }),
+      }),
+    });
+    q.enqueue("A", "a1"); // waits on the model until cancelled
+    q.enqueue("A", "a3");
+    q.enqueue("A", "a2"); // third of one course: queued
+    q.cancel("A", "a2"); // queued: dropped
+    await new Promise((r) => setTimeout(r, 5));
+    q.cancel("A", "a1"); // running: aborted
+    await q.idle("A");
+    expect(aborted).toEqual(["a1"]);
+    expect(events).toContain("A:a1:removed");
+    expect(events).toContain("A:a2:removed");
+    expect(events.filter((e) => e.endsWith(":failed"))).toEqual([]);
+    expect((await readFileIndex("A", "a3"))?.status).toBe("indexed"); // the rest of the build goes on
+    expect((await readFileIndex("A", "a2"))?.status).toBe("pending"); // never read (Remove then deletes its record)
+  });
+
   it("each file runs in the context of the build that queued it; idle(course) waits for that course only", async () => {
     const als = new AsyncLocalStorage<string>();
     const seen: [string | undefined, string][] = [];
