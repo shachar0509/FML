@@ -157,3 +157,6 @@
 ## M17 — plan on demand
 - "Build plan" always ends with a coverage refine (when files are indexed) instead of building the plan straight from the files: indexing maps pages/exercises to stage ids, so a plan must exist first. Refine never deletes stages, so progress survives an update.
 - AI jobs before card requests in `shalav_next_job`: the build only advances while Claude is inside a turn; lessons and grading wait until it finishes (Claude cannot run two things at once in one chat).
+
+## M18 — Lesson content in step cards, length enforced by the server
+- The student found the chat lessons too long and the plain chat text less readable than the cards. Lesson content now goes through `teach_step` (a card per step) and the server refuses steps over ~900 characters, because a prompt-only rule ("teach slowly") was not followed reliably. Continuing still needs one Enter per step (Claude Desktop cannot start a turn from a card, see M15).

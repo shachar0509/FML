@@ -2,7 +2,7 @@ import { COURSE_ID_RE } from "@/core/universities";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import type { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod";
-import type { FigureData, LessonData, McqData, OpenData } from "@/cards/types";
+import type { FigureData, LessonData, McqData, OpenData, StepData } from "@/cards/types";
 import { statusBlock, tutorSystem } from "@/core/claude/prompts/tutor";
 import { askOpenQuestion, assignExercise, consultMaterials, presentMcq, recordCheckResult, updateAssessment } from "@/core/claude/tutorTools";
 import { buildKnowledgeBoundary } from "@/core/domain/boundary/boundary";
@@ -93,6 +93,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     if (!s) return null;
     return { s, n: active.n, stageId: stageId && s.plan.stages.some((x) => x.id === stageId) ? stageId : active.stageId };
   }
+  const STEP_CHARS = 900;
   const NO_LESSON = "No lesson is open. Call shalav_start_lesson first.";
 
   registerAppTool(
@@ -139,7 +140,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
         system,
         status(s, stage.id),
         recap,
-        "The lesson card is shown. Begin the lesson now: teach the first part of the stage (overview, intuition, definition, worked example; a figure when it helps). Do not ask any question or call present_mcq/ask_open_question in this first message.",
+        "The lesson card is shown. Begin the lesson now: one short sentence in the chat, then teach_step with the overview and the first small idea. Do not ask any question in this first message.",
       ].filter(Boolean).join("\n\n");
       return out(text, lessonData(s, stage.id));
     },
@@ -177,27 +178,56 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     return out(`Question shown (check id ${checkId}). The student's written answer arrives as their next message; evaluate it, then call record_check_result with checkToolUseId "${checkId}".`, data);
   });
 
+  /** Checks a figure source; returns the error text or null. */
+  const badFigure = (kind: string, source: string) => {
+    try {
+      if (kind === "plot") parsePlot(source);
+      else if (kind === "geometry") parseGeometry(source);
+      else if (!/^\s*<svg[\s>]/i.test(source)) throw new Error("source must be one <svg> element");
+      return null;
+    } catch (e) {
+      return `Invalid ${kind} figure: ${e instanceof Error ? e.message : String(e)}.`;
+    }
+  };
+  const figure = z.object({ kind: z.enum(["plot", "geometry", "svg"]), source: z.string().max(50_000), captionMd: z.string().max(500).default("") });
+
   registerAppTool(
     server,
     "show_figure",
     {
       title: "Show a figure",
       description:
-        "Draw a graph or diagram for the student in a card inside the chat. kind plot: function-plot JSON; geometry: JSXGraph-style JSON; svg: one <svg viewBox> element (strokes/text in currentColor, no scripts). Keep writing after it; it does not end your message.",
-      inputSchema: z.object({ kind: z.enum(["plot", "geometry", "svg"]), source: z.string().max(50_000), captionMd: z.string().max(500).default("") }),
+        "Draw a graph or diagram for the student in a card inside the chat (outside teach_step, e.g. in feedback). kind plot: function-plot JSON; geometry: JSXGraph-style JSON; svg: one <svg viewBox> element (strokes/text in currentColor, no scripts). Keep writing after it; it does not end your message.",
+      inputSchema: figure,
       _meta: withCard,
     },
     async ({ kind, source, captionMd }) => {
-      try {
-        if (kind === "plot") parsePlot(source);
-        else if (kind === "geometry") parseGeometry(source);
-        else if (!/^\s*<svg[\s>]/i.test(source)) throw new Error("source must be one <svg> element");
-      } catch (e) {
-        return fail(`Invalid ${kind} figure: ${e instanceof Error ? e.message : String(e)}. Fix it and call show_figure again.`);
-      }
+      const bad = badFigure(kind, source);
+      if (bad) return fail(`${bad} Fix it and call show_figure again.`);
       const { language, theme } = sets();
       const data: FigureData = { view: "figure", language, theme, kind, source, captionMd };
       return out("Figure shown to the student. Refer to it and continue.", data);
+    },
+  );
+
+  registerAppTool(
+    server,
+    "teach_step",
+    {
+      title: "Lesson step",
+      description: `Show ONE small step of the lesson as a card: one idea (a definition, one property, one proof step, one example), at most about 120 words of Markdown with $math$, optionally one figure. All teaching goes here, not in the chat. The student then presses Continue, Explain differently, or asks a question.${hint}`,
+      inputSchema: z.object({ titleMd: z.string().max(120), bodyMd: z.string().max(6000), figure: figure.optional() }),
+      _meta: withCard,
+    },
+    async ({ titleMd, bodyMd, figure: f }) => {
+      if (!active) return fail(NO_LESSON);
+      // ponytail: length cap counts characters without LaTeX commands; tune STEP_CHARS if Hebrew steps feel cramped.
+      if (bodyMd.replace(/\\[a-zA-Z]+|[{}$]/g, "").length > STEP_CHARS) return fail(`This step is too long (${bodyMd.length} characters). Teach less at once: split it into smaller steps and send only the first one.`);
+      const bad = f && badFigure(f.kind, f.source);
+      if (bad) return fail(`${bad} Fix it and call teach_step again.`);
+      const { language, theme } = sets();
+      const data: StepData = { view: "step", language, theme, titleMd, bodyMd, figure: f ?? null };
+      return out("Step shown. End your message now (no more text) and wait: the student continues, asks for another explanation, or asks a question.", data);
     },
   );
 

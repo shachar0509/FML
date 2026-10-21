@@ -472,5 +472,12 @@
     "pressEnter": "Ready in the message box. Press Enter so Claude continues.",
     "dismiss": "Dismiss",
     "prev": "Back to the previous screen"
+  },
+  "step": {
+    "next": "Got it, continue",
+    "again": "Explain differently",
+    "ask": "I have a question",
+    "askPlaceholder": "What is unclear?",
+    "send": "Send question"
   }
 }

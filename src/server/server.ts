@@ -91,6 +91,7 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
         z.object({ kind: z.literal("learn"), stageId: z.string().regex(/^S\d{3}$/), title: z.string().max(200) }),
         z.object({ kind: z.literal("relearn"), stageId: z.string().regex(/^S\d{3}$/), title: z.string().max(200) }),
         z.object({ kind: z.literal("answer"), text: z.string().min(1).max(4000) }),
+        z.object({ kind: z.literal("step"), action: z.enum(["next", "again", "question"]), text: z.string().max(4000).optional() }),
       ]),
       _meta: { ui: { resourceUri: CARDS_URI, visibility: ["app"] } },
     },
@@ -99,7 +100,13 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
       inbox.push(
         r.kind === "answer"
           ? `The student answered the current question in the card:\n<answer>\n${r.text}\n</answer>\nRespond to it and continue the lesson.`
-          : `The student wants to ${r.kind === "learn" ? "learn" : "learn again"} ${r.stageId} · ${r.title}. Call shalav_start_lesson with stageId ${r.stageId} and teach it.`,
+          : r.kind === "step"
+            ? r.action === "next"
+              ? "The student understood the last lesson step and pressed Continue. Teach the next small step with teach_step (or, after 2-3 steps, check with one quick question)."
+              : r.action === "again"
+                ? "The student did not understand the last lesson step. Explain the same idea differently with teach_step: simpler words, a different example or a figure."
+                : `The student asked about the last lesson step:\n<question>\n${r.text ?? ""}\n</question>\nAnswer it briefly with teach_step, then wait.`
+            : `The student wants to ${r.kind === "learn" ? "learn" : "learn again"} ${r.stageId} · ${r.title}. Call shalav_start_lesson with stageId ${r.stageId} and teach it.`,
       );
       return { content: [{ type: "text" as const, text: "ok" }], structuredContent: { ok: true } };
     },

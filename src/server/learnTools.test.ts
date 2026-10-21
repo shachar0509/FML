@@ -54,8 +54,15 @@ it("runs a lesson: start, questions, events, status, completion, reopen + recap"
   // tutor tools need an open lesson
   expect((await call("shalav_lesson_status")).isError).toBe(true);
 
+  expect((await call("teach_step", { titleMd: "t", bodyMd: "b" })).isError).toBe(true); // no lesson yet
   const start = await call("shalav_start_lesson", { courseNumber: n });
   expect(text(start)).toContain("[STATUS]");
+  expect(text(start)).toContain("teach_step");
+  // lesson steps: small, rendered by the card; a too long step is sent back to be split
+  const step = await call("teach_step", { titleMd: "Fields", bodyMd: "A **field** is $F$ with $+$ and $\\cdot$.", figure: { kind: "svg", source: "<svg viewBox='0 0 1 1'></svg>" } });
+  expect(sc(step)).toMatchObject({ view: "step", titleMd: "Fields", figure: { kind: "svg", captionMd: "" } });
+  expect(text(await call("teach_step", { titleMd: "x", bodyMd: "word ".repeat(300) }))).toMatch(/too long.*split/);
+  expect((await call("teach_step", { titleMd: "x", bodyMd: "b", figure: { kind: "plot", source: "nope" } })).isError).toBe(true);
   expect(text(start)).toContain("shalav_lesson_status");
   expect(text(start)).not.toContain("[START_LESSON]");
   expect(text(start)).not.toContain("RECAP (the student"); // nothing to recap yet

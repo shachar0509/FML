@@ -67,6 +67,8 @@ export type McqData = Base & { view: "mcq"; checkId: string; questionMd: string;
 export type OpenData = Base & { view: "open"; checkId: string; questionMd: string };
 /** A drawing the tutor shows in the chat (show_figure). */
 export type FigureData = Base & { view: "figure"; kind: "plot" | "geometry" | "svg"; source: string; captionMd: string };
+/** One small lesson step (teach_step). */
+export type StepData = Base & { view: "step"; titleMd: string; bodyMd: string; figure: Omit<FigureData, keyof Base | "view"> | null };
 /** Exercise card (assign_exercise / app-only exercise_state). */
 export type ExerciseData = Base & {
   view: "exercise";
@@ -110,10 +112,14 @@ export type PracticeData = Base & {
   error: string | null;
   summary: { items: number; avgScore: number; newMistakes: string[]; weakStages: { id: string; title: string }[] } | null;
 };
-export type CardData = HomeData | AddData | CourseData | LessonData | McqData | OpenData | ExerciseData | FigureData | PracticeData | SettingsData;
+export type CardData = HomeData | AddData | CourseData | LessonData | McqData | OpenData | ExerciseData | FigureData | StepData | PracticeData | SettingsData;
 
 /** What a card button asks Claude for (shalav_request); no request = "do the pending Shalav work". */
-export type Req = { kind: "learn" | "relearn"; stageId: string; title: string } | { kind: "answer"; text: string };
+export type Req =
+  | { kind: "learn" | "relearn"; stageId: string; title: string }
+  | { kind: "answer"; text: string }
+  | { kind: "step"; action: "next" | "again" }
+  | { kind: "step"; action: "question"; text: string };
 export type Go = (req?: Req) => Promise<void>;
 
 export type Host = {

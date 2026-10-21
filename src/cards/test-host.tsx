@@ -5,7 +5,7 @@ import "@/index.css";
 import "@/core/i18n";
 import { createRoot } from "react-dom/client";
 import { Cards } from "./Cards";
-import type { CardData, CourseData, FilesData, HomeData, Host, ExerciseData, PracticeData, SettingsData, LessonData, LookupResult, McqData, OpenData, FigureData } from "./types";
+import type { CardData, CourseData, FilesData, HomeData, Host, ExerciseData, PracticeData, SettingsData, LessonData, LookupResult, McqData, OpenData, FigureData, StepData } from "./types";
 
 /** Playwright test host: a fake bridge instead of Claude Desktop. ?lang=&theme=&empty=1 ; sent messages land in window.__said. */
 const q = new URLSearchParams(location.search);
@@ -64,7 +64,8 @@ const practiceSummary: PracticeData = { ...practiceBase, mode: "summary", summar
 const practiceReply: Record<string, PracticeData> = { practice_start_request: mcqItem, practice_next_request: mcqItem, practice_answer_mcq: mcqDone, practice_end: practiceSummary, practice_state: practiceBase };
 const settings: SettingsData = { ...base, view: "settings", university: "technion", dataRoot: "/Users/me/Documents/Shalav", learning: { minExercises: 2, minExerciseScore: 85, masteryThreshold: 0.85, requireAllObjectives: true, hintsBeforeSolution: 3 }, conflicts: ["courses/01040195/.shalav/events/dev1 (1).jsonl"] };
 const figure: FigureData = { ...base, view: "figure", kind: "plot", source: JSON.stringify({ xDomain: [-2, 2], yDomain: [-1, 4], data: [{ fn: "x^2", label: "f" }] }), captionMd: "$f(x)=x^2$" };
-const initial: CardData = ({ lesson, mcq, open, figure, exercise, practice: practiceBase, settings } as Record<string, CardData>)[q.get("view") ?? ""] ?? home;
+const step: StepData = { ...base, view: "step", titleMd: "What is a field?", bodyMd: "A **field** is a set $F$ with $+$ and $\\cdot$ where:\n\n$$a+b=b+a$$", figure: { kind: figure.kind, source: figure.source, captionMd: "" } };
+const initial: CardData = ({ lesson, mcq, open, figure, step, exercise, practice: practiceBase, settings } as Record<string, CardData>)[q.get("view") ?? ""] ?? home;
 const said: string[] = [];
 let mode = "inline";
 const reqs: unknown[] = [];

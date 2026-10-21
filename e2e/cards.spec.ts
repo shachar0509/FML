@@ -133,6 +133,17 @@ for (const lang of ["he", "en"] as const)
       await expect(page.locator("figcaption .katex").first()).toBeVisible();
       await axe();
       await page.screenshot({ path: `e2e/shots/card-figure-${lang}-${theme}.png` });
+
+      await page.goto(url("step"));
+      await expect(page.locator("article .katex").first()).toBeVisible();
+      await expect(page.locator("figure svg").first()).toBeVisible();
+      await axe();
+      await page.screenshot({ path: `e2e/shots/card-step-${lang}-${theme}.png`, fullPage: true });
+      await page.getByRole("button", { name: lang === "he" ? "יש לי שאלה" : "I have a question" }).click();
+      await page.getByRole("textbox").fill("Why?");
+      await page.getByRole("button", { name: lang === "he" ? "שליחת השאלה" : "Send question" }).click();
+      expect((await said()).at(-1)).toBe('{"kind":"step","action":"question","text":"Why?"}');
+      await expect(page.getByRole("status").filter({ hasText: "Why?" })).toBeVisible();
       expect(errors).toEqual([]);
     });
 

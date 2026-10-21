@@ -368,3 +368,10 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - Order: main/combined course first, then group courses ("קב' 082"), then courses hidden from students (`dimmed`); up to 5. A course "not available to students" has no files and adds nothing.
 - Live check: 01140071 → main + 3 groups; 01040195 → its course; 02340117 → 02340114/7 then the 082 group.
 - Not verified on a logged-in Technion course page (needs the student's login): `parseCourse` (sections/activities) is still generic Moodle.
+
+### M18 — Lessons in small steps, shown in cards (done; 🧪 pending)
+- New `teach_step` tool (model + card): one small lesson step (title, Markdown/math body, optional figure) rendered as a card. The card has "Got it, continue", "Explain differently" and "I have a question" (a text box); each goes through `shalav_request` kind `step` (next / again / question) and "▶️ המשך".
+- The server rejects a step over ~900 characters (LaTeX commands not counted) with "too long, split it into smaller steps", so Claude cannot dump a topic at once.
+- Tutor prompt (MCP): all lesson content goes in teach_step, the chat text is at most one sentence; one step per message, then wait; one idea per step (~120 words); a list of axioms or a long proof spans several steps; a quick check every 2-3 steps; questions answered briefly in a step; "explain differently" re-explains with simpler words/another example/a figure. Rules 1-2 follow this in MCP mode. `show_figure` stays for figures outside a step.
+- Checks: typecheck/lint clean, 123 unit (teach_step cases, step request), 30 e2e (step card: math, figure, question flow, axe; he/en, light/dark).
+- 🧪 Claude Desktop: start a lesson → short step cards, one per message; Continue / Explain differently / question each need one Enter.

@@ -9,6 +9,7 @@ import { FigureCard } from "./views/FigureCard";
 import { Home } from "./views/Home";
 import { Lesson } from "./views/Lesson";
 import { Settings } from "./views/Settings";
+import { Step } from "./views/Step";
 import { Practice } from "./views/Practice";
 import { Mcq, OpenQ } from "./views/Question";
 import type { CardData, Host } from "./types";
@@ -90,6 +91,7 @@ export function Cards({ host }: { host: Host }) {
     if (shown.view === "exercise") return <Exercise data={shown} callTool={callTool} go={ask} />;
     if (shown.view === "open") return <OpenQ data={shown} go={ask} />;
     if (shown.view === "figure") return <FigureCard data={shown} />;
+    if (shown.view === "step") return <Step data={shown} go={ask} />;
     return (
       <Home
         data={shown}
