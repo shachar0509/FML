@@ -14,6 +14,7 @@
     "build:cards": "vite build -c vite.cards.config.ts",
     "build:server": "node scripts/build-server.mjs",
     "pack:mcpb": "node scripts/pack-mcpb.mjs",
+    "dev:install": "node scripts/dev-install.mjs",
     "smoke:mcpb": "node scripts/smoke-mcpb.mjs",
     "mcp:dev": "pnpm build:cards && pnpm build:server && npx @modelcontextprotocol/inspector node dist/server.mjs"
   },

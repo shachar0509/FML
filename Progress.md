@@ -594,3 +594,9 @@ Edge cases found with the sample slides, and fixed in the renderer:
 - The step test's name-beside-formula check now allows the stacked layout in Hebrew too. Which layout the board picks depends on whether the KaTeX fonts were cached at the first measure, so a cold run of the step spec on its own failed.
 - **Checks:** 77 e2e (the lesson test is now three), twice in a row, plus `step` on its own; lint clean.
 - Follow-up (833a238): screenshots now go to `e2e/tests_output/<spec>/` (gitignored), e.g. `home/` or `render-display-fences/`. They are deleted, folders included, once the user has checked them.
+
+## M33 — update the installed extension without reinstalling ✅
+- `pnpm dev:install` (`scripts/dev-install.mjs`, macOS) runs `pack:mcpb` and copies `build/mcpb` over the installed extension (`~/Library/Application Support/Claude/Claude Extensions/local.mcpb.shalav.shalav`). If Claude Desktop is running, it quits it and opens it again so the new server loads.
+- `--no-restart` only copies. Then turn Shalav off and on in Settings → Extensions, or restart Claude Desktop yourself.
+- You still install `dist/shalav.mcpb` by hand the first time. The script stops if the extension folder is missing.
+- **Checks:** ran with `--no-restart`; `diff -rq` of the build against the installed folder shows they are the same; lint clean.
