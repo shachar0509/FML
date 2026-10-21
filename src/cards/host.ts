@@ -1,6 +1,8 @@
 import { App, PostMessageTransport } from "@modelcontextprotocol/ext-apps";
 import type { Host } from "./types";
 
+const CARD_NOTE = "The student pressed a button in the Shalav card. The card already did its part (for example chose the university or added a course). Their next message \"▶️ המשך\" / \"▶️ Continue\" means: call shalav_next_job now and do what it returns.";
+
 /** The only place that touches the MCP Apps bridge (plan v2 risk table). */
 export async function connectHost(): Promise<Host> {
   const app = new App({ name: "shalav-cards", version: "2.0.0" }, {});
@@ -15,7 +17,11 @@ export async function connectHost(): Promise<Host> {
   await app.connect(new PostMessageTransport(window.parent, window.parent));
   return {
     callTool: (name, args) => app.callServerTool({ name, arguments: args }),
-    say: async (text) => void (await app.sendMessage({ role: "user", content: [{ type: "text", text }] })),
+    say: async (text) => {
+      // Hosts that pass model context get the meaning of the short line too (best effort; Claude may ignore it).
+      await app.updateModelContext({ content: [{ type: "text", text: CARD_NOTE }] }).catch(() => undefined);
+      await app.sendMessage({ role: "user", content: [{ type: "text", text }] });
+    },
     context: () => app.getHostContext() ?? {},
     displayMode: async (mode) => (await app.requestDisplayMode({ mode })).mode,
     subscribe(onData, onContext) {

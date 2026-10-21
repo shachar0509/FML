@@ -313,3 +313,10 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - Chaining: `files_start_indexing` refines the plan in the same run. A Moodle import that added files starts indexing by itself → import + index + plan update = one Enter.
 - Checks: typecheck/lint clean, 122 unit, 29 e2e, pack + smoke ok (48 tools).
 - 🧪 Claude Desktop (a regular chat, not Cowork): Learn → composer shows only "▶️ המשך" → Enter → the lesson starts; MCQ answer → Enter → Claude reacts to the chosen option.
+
+### M15a — fix: Claude ignored "▶️ המשך" after card choices
+- Live test: the student chose the university and added a course in the card, then sent "▶️ המשך". Claude's last message had asked "which university?", so it asked again instead of calling `shalav_next_job`.
+- Fixes:
+  - With a cards host, `shalav_home` text now says the student acts in the card and that Claude should not ask in chat.
+  - The instructions say: on "▶️ המשך" always call `shalav_next_job` first, because card clicks change state the model does not see.
+  - The card also sends `updateModelContext` with the meaning of the line (best effort).

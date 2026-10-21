@@ -1,6 +1,6 @@
 import { chooseUniversity } from "@/core/lib/firstRun";
 import { UNIVERSITIES, UNIVERSITY_IDS, university } from "@/core/universities";
-import { registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
+import { getUiCapability, registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 import { McpServer } from "@modelcontextprotocol/server";
 import { listCourses } from "@/core/domain/courses/courses";
 import * as z from "zod";
@@ -30,8 +30,11 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
   const home = async () => {
       const uni = university();
       const courses = uni ? await listCourses() : [];
+      // With cards the student acts in the card; the model must not ask the same in chat (it does not see card clicks).
+      const cards = !!getUiCapability(server.server.getClientCapabilities());
+      const cardText = `${uni ? `${courses.length} course(s) shown in the card.` : "The card shows the university picker."} The student acts in the card; do not ask them in chat. The card already does choices and adds courses itself. When the student sends "▶️ המשך" / "▶️ Continue", call shalav_next_job.`;
       // Text fallback for hosts without cards: the courses and numbered next actions.
-      const text = !uni ? `No university chosen yet. Ask the student: ${UNIVERSITY_IDS.map((i) => UNIVERSITIES[i].nameEn).join(", ")}; then call shalav_choose_university (it cannot be changed later).` : `${courses.length ? courses.map((c, i) => `${i + 1}. ${c.course.courseNumber} — ${c.course.nameHe}`).join("\n") : "No courses yet."}\nOptions: a) add a course (ask for the number, then course_lookup and course_create_request); ${courses.length ? "b) open a course (shalav_course); c) " : ""}settings (shalav_settings).`;
+      const text = cards ? cardText : !uni ? `No university chosen yet. Ask the student: ${UNIVERSITY_IDS.map((i) => UNIVERSITIES[i].nameEn).join(", ")}; then call shalav_choose_university (it cannot be changed later).` : `${courses.length ? courses.map((c, i) => `${i + 1}. ${c.course.courseNumber} — ${c.course.nameHe}`).join("\n") : "No courses yet."}\nOptions: a) add a course (ask for the number, then course_lookup and course_create_request); ${courses.length ? "b) open a course (shalav_course); c) " : ""}settings (shalav_settings).`;
       const { language, theme } = useSettings.getState().settings;
       const data: HomeData = {
         view: "home",
