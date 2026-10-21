@@ -19,6 +19,12 @@ for (const lang of ["he", "en"] as const)
       expect(errors).toEqual([]);
     });
 
+test("pin button floats the card when the host supports it", async ({ page }) => {
+  await page.goto("/src/cards/test-host.html?lang=en");
+  await page.getByRole("button", { name: "Keep this card on screen" }).click();
+  await expect(page.getByRole("button", { name: "Back into the chat" })).toHaveAttribute("aria-pressed", "true");
+});
+
 test("home card empty state", async ({ page }) => {
   await page.goto("/src/cards/test-host.html?lang=en&empty=1");
   await expect(page.getByText("Add your first course to start")).toBeVisible();

@@ -65,13 +65,15 @@ const practiceReply: Record<string, PracticeData> = { practice_start_request: mc
 const settings: SettingsData = { ...base, view: "settings", university: "technion", dataRoot: "/Users/me/Documents/Shalav", learning: { minExercises: 2, minExerciseScore: 85, masteryThreshold: 0.85, requireAllObjectives: true, hintsBeforeSolution: 3 }, conflicts: ["courses/01040195/.shalav/events/dev1 (1).jsonl"] };
 const initial: CardData = ({ lesson, mcq, open, exercise, practice: practiceBase, settings } as Record<string, CardData>)[q.get("view") ?? ""] ?? home;
 const said: string[] = [];
+let mode = "inline";
 (window as unknown as { __said: string[] }).__said = said;
 const host: Host = {
   callTool: async (name) => ({
     structuredContent: practiceReply[name] ?? (name === "shalav_settings" ? settings : name === "settings_update" ? { ...settings, learning: { ...settings.learning, minExercises: 3 } } : undefined) ?? (name === "course_lookup" ? found : name === "shalav_course" ? course : name === "files_list" ? files : name === "lesson_state" ? lesson : name === "stage_complete" ? { ...lesson, status: "completed_override" } : name === "stage_reopen" ? lesson : name === "check_answer" ? { selectedIndex: 1, correct: false, correctIndex: 0, explanationMd: "Since $1/n \\to 0$." } : name === "attachment_upload" ? { files: [{ sha256: "a".repeat(64), mediaType: "image/jpeg" }] } : name === "exercise_grade_request" || name === "exercise_state" ? graded : name === "moodle_import" ? { ok: true } : name === "course_status" ? { state: "running", step: "plan", unit: { k: 1, n: 4 }, pending: 1 } : { ok: true }),
   }),
   say: async (t) => void said.push(t),
-  context: () => ({ theme: q.get("theme") ?? undefined }),
+  context: () => ({ theme: q.get("theme") ?? undefined, availableDisplayModes: ["inline", "pip"], displayMode: mode }),
+  displayMode: async (m) => (mode = m),
   subscribe: (onData) => (onData(initial), () => undefined),
 };
 createRoot(document.getElementById("root") as HTMLElement).render(<Cards host={host} />);

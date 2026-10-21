@@ -17,6 +17,7 @@ export async function connectHost(): Promise<Host> {
     callTool: (name, args) => app.callServerTool({ name, arguments: args }),
     say: async (text) => void (await app.sendMessage({ role: "user", content: [{ type: "text", text }] })),
     context: () => app.getHostContext() ?? {},
+    displayMode: async (mode) => (await app.requestDisplayMode({ mode })).mode,
     subscribe(onData, onContext) {
       dataSubs.add(onData);
       ctxSubs.add(onContext);

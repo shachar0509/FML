@@ -118,7 +118,9 @@ export type Host = {
   callTool(name: string, args?: Record<string, unknown>): Promise<{ structuredContent?: unknown; isError?: boolean }>;
   /** Puts a short user line into the chat (how card buttons ask the model for AI work). */
   say(text: string): Promise<void>;
-  context(): { theme?: string; locale?: string };
+  context(): { theme?: string; locale?: string; displayMode?: string; availableDisplayModes?: string[] };
+  /** Asks the host to show the card inline, floating (pip) or full screen; resolves to the mode the host chose. */
+  displayMode(mode: "inline" | "pip" | "fullscreen"): Promise<string>;
   /** Replays the latest result to a new subscriber. */
   subscribe(onData: (d: unknown) => void, onContext: () => void): () => void;
 };

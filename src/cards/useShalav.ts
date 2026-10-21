@@ -12,5 +12,5 @@ export function useShalav(host: Host) {
       ),
     [host],
   );
-  return { data, ctx: host.context(), callTool: host.callTool, say: host.say };
+  return { data, ctx: host.context(), callTool: host.callTool, say: host.say, displayMode: host.displayMode };
 }

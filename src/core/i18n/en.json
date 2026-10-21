@@ -449,6 +449,8 @@
     "retry": "Try again"
   },
   "mcp": {
+    "pin": "Keep this card on screen",
+    "unpin": "Back into the chat",
     "addCourse": "➕ I'd like to add a course",
     "openCourse": "▶️ Let's continue with {{name}}",
     "buildPlan": "🛠️ Please build my study plan now",
