@@ -33,7 +33,7 @@ export function Waiting({
         {label ?? t("mcp.waiting")}
       </p>
       {late && (
-        <Button variant="outline" size="sm" onClick={() => void go(req)}>
+        <Button variant="outline" size="sm" onClick={() => void (req ? go(req) : go())}>
           {t("mcp.nudgeBtn")}
         </Button>
       )}

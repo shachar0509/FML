@@ -52,17 +52,18 @@ function Chip({ f, hasPlan }: { f: FileRow; hasPlan: boolean }) {
   );
 }
 
-/** "Importing…" with the percentage above a bar. */
-function Importing({ done, total }: { done: number; total: number }) {
+/** "Importing…" (or another label) with the percentage above a bar. */
+function Importing({ done, total, label }: { done: number; total: number; label?: string }) {
   const { t } = useTranslation();
   const pct = total ? Math.round((100 * done) / total) : 0;
+  const text = label ?? t("files.importing");
   return (
     <div className="flex flex-col gap-1" role="status">
       <div className="flex items-center justify-between text-sm">
-        <span className="text-muted">{t("files.importing")}</span>
+        <span className="text-muted">{text}</span>
         <span className="font-medium tabular-nums">{pct}%</span>
       </div>
-      <Bar pct={pct} label={t("files.importing")} />
+      <Bar pct={pct} label={text} />
     </div>
   );
 }
@@ -331,8 +332,8 @@ export function Files({
               onChange={(e) => setUrl(e.target.value)}
             />
           )}
-          {d.moodle.busy === "sync" && d.moodle.progress ? (
-            <Importing {...d.moodle.progress} />
+          {(d.moodle.busy === "sync" || d.moodle.busy === "install") && d.moodle.progress ? (
+            <Importing {...d.moodle.progress} label={d.moodle.busy === "install" ? t("moodle.installing") : undefined} />
           ) : (
             d.moodle.busy && (
               <p className="text-sm text-muted" role="status">

@@ -24,7 +24,7 @@ for (const d of await readdir("node_modules/.pnpm")) {
   if (m && m[2] === version) await cp(join("node_modules/.pnpm", d, "node_modules/@napi-rs", m[1]), join(out, "server/node_modules/@napi-rs", m[1]), { recursive: true });
 }
 
-// playwright-core (Moodle import) is external too: pure JS, drives the student's own Chrome.
+// playwright-core (Moodle import) is external too: pure JS; its cli.js downloads Shalav's own Chromium on the first import (browser.ts).
 await cp("node_modules/playwright-core", join(out, "server/node_modules/playwright-core"), { recursive: true, dereference: true });
 
 run("npx", ["mcpb", "validate", join(out, "manifest.json")]);

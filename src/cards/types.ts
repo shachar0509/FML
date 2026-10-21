@@ -47,13 +47,14 @@ export type FilesData = Base & {
 export type MoodleState = {
   url: string | null;
   connected: boolean;
-  busy: "login" | "sync" | null;
+  /** install: downloading Shalav's browser (once); login: the window is open; sync: downloading, hidden */
+  busy: "install" | "login" | "sync" | null;
   /** `code` names the failure for the card (i18n moodle.err.*); `error` is the English detail for the model. */
-  /** Moodle links handled so far while syncing (download only; the import after it takes seconds). */
+  /** install: percent of the browser download (total 100); sync: Moodle links handled so far (the import after it takes seconds). */
   progress?: { done: number; total: number } | null;
   last: { course: string; added: number; duplicate: number; skipped: number; error: string | null; code?: MoodleError } | null;
 };
-export type MoodleError = "chrome" | "closed" | "timeout" | "http" | "noCourse" | "login" | "failed";
+export type MoodleError = "install" | "closed" | "timeout" | "http" | "noCourse" | "login" | "failed";
 /** Lesson card (shalav_start_lesson / app-only lesson_state). */
 export type LessonData = Base & {
   view: "lesson";

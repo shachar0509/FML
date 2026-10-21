@@ -11,6 +11,7 @@ import { importFiles } from "@/core/domain/ingest/import";
 import { nodeDirs } from "@/core/lib/platform";
 import { COURSE_ID_RE, university } from "@/core/universities";
 import { useSettings } from "@/stores/settings";
+import { ensureChromium } from "./browser";
 import { importDeps } from "./fileTools";
 import { createMoodle, LoginNeeded, MoodleFail, type Moodle } from "./moodle";
 import { CARDS_URI } from "./resources";
@@ -22,9 +23,24 @@ const fail = (text: string) => ({ ...out(text, { ok: false, error: text }), isEr
 /** Import from the university's Moodle (plan M14b): the student logs in once in a browser window; sync runs in the background and shows in files_list. */
 export function registerMoodleTools(server: McpServer, make?: (profileDir: string) => Moodle) {
   const config = () => nodeDirs.config ?? "";
-  const profile = () => join(config(), "moodle-profile");
-  const marker = () => join(config(), "moodle-login");
-  const moodle = () => (make ?? ((profileDir) => createMoodle({ profileDir, channel: "chrome" })))(profile());
+  // M39: Shalav's own Chromium. Its cookies are encrypted under another keychain item than Chrome's, so it gets its own profile and login marker (the student logs in once more).
+  const profile = () => join(config(), "moodle-profile-chromium");
+  const marker = () => join(config(), "moodle-login-chromium");
+  const chromiumPath = async () => {
+    await rm(join(config(), "moodle-profile"), { recursive: true, force: true }).catch(() => undefined); // the old Chrome profile and marker
+    await rm(join(config(), "moodle-login"), { force: true }).catch(() => undefined);
+    const was = busy;
+    try {
+      return await ensureChromium(join(config(), "browsers"), (pct) => {
+        busy = "install";
+        progress = { done: pct, total: 100 };
+      });
+    } finally {
+      busy = was;
+      progress = null;
+    }
+  };
+  const moodle = () => (make ?? ((profileDir) => createMoodle({ profileDir, executablePath: chromiumPath })))(profile());
   let connected: boolean | null = null; // null = not read yet
   let busy: MoodleState["busy"] = null;
   let last: MoodleState["last"] = null;

@@ -58,14 +58,16 @@ async function opening(name: string, body: Buffer): Promise<{ text: string; link
 const loggedIn = () => !document.body.classList.contains("notloggedin") && !!document.querySelector('a[href*="login/logout.php"]');
 
 /**
- * Drives the student's own Chrome with a persistent profile: they log in (SSO + MFA) in the window, Shalav only keeps the browser session.
- * `channel` undefined = Playwright's bundled Chromium (tests).
+ * Drives Shalav's own Chromium with a persistent profile: the student logs in (SSO + MFA) in a window that closes right after; the rest runs hidden.
+ * `executablePath` undefined = Playwright's default Chromium (tests).
  */
-export function createMoodle(o: { profileDir: string; channel?: string; headedLogin?: boolean; delayMs?: number }) {
-  const open = (headless: boolean) =>
-    chromium.launchPersistentContext(o.profileDir, { headless, channel: o.channel, ...(headless ? {} : { viewport: null }) }).catch((e: unknown) => {
-      throw o.channel === "chrome" ? new MoodleFail("chrome", "Google Chrome is needed for Moodle import. Install it and try again.") : e;
+export function createMoodle(o: { profileDir: string; executablePath?: () => Promise<string>; headedLogin?: boolean; delayMs?: number }) {
+  const open = async (headless: boolean) => {
+    const executablePath = await o.executablePath?.().catch((e: unknown) => {
+      throw new MoodleFail("install", `Could not download the browser for Moodle: ${e instanceof Error ? e.message : String(e)}`);
     });
+    return chromium.launchPersistentContext(o.profileDir, { headless, executablePath, ...(headless ? {} : { viewport: null }) });
+  };
 
   /** Opens Moodle in the window and resolves with Moodle's real origin once a logged-in Moodle page shows in any tab (SSO may use a popup). */
   async function waitLogin(ctx: BrowserContext, baseUrl: string, timeoutMs: number): Promise<string> {
@@ -82,15 +84,21 @@ export function createMoodle(o: { profileDir: string; channel?: string; headedLo
 
   /**
    * Downloads the supported files of every Moodle course whose name has the course number (all its sections) into `dir`. Same host only, PARALLEL requests at a time; each file's folder is chosen by a brief look at its first pages (briefRole).
-   * `login`: open a window and wait for the student to log in, then download in that same browser (Moodle's session cookie dies with the browser).
+   * `login`: open a window and wait for the student to log in, then close it and download in a hidden browser that gets the window's cookies (Moodle's session cookie dies with the browser).
    */
   async function sync(baseUrl: string, number: string, dir: string, login = false, onLoggedIn?: () => void, loginTimeoutMs = 5 * 60_000, onProgress?: (done: number, total: number) => void): Promise<{ course: string; files: Downloaded[]; skipped: number }> {
-    const ctx = await open(!(login && (o.headedLogin ?? true)));
+    const headed = login && (o.headedLogin ?? true);
+    let ctx = await open(!headed);
     try {
       let origin: string;
       if (login) {
         origin = await waitLogin(ctx, baseUrl, loginTimeoutMs);
         onLoggedIn?.();
+        // Hide the browser: same profile (keeps the SSO cookies) headless, plus the session cookies that die with the window.
+        const cookies = await ctx.cookies();
+        await ctx.close();
+        ctx = await open(true);
+        await ctx.addCookies(cookies);
       } else {
         // The SSO provider's cookies stay in the profile: opening /my/ signs in silently when they are still valid (no MFA), otherwise the student logs in again.
         const probe = await ctx.newPage();

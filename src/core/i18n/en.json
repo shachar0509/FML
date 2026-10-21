@@ -287,7 +287,8 @@
   },
   "moodle": {
     "title": "Import from Moodle",
-    "hint": "Opens a browser window once so you can log in to your university Moodle (including two-step verification). Shalav never sees your password.",
+    "hint": "The first time, Shalav downloads its own browser (about 190 MB). A login window opens so you can log in to your university Moodle (including two-step verification), then it closes and the import runs in the background. Shalav never sees your password.",
+    "installing": "Downloading the browser for Moodle (one time)…",
     "url": "Moodle address",
     "import": "Import course files",
     "login": "Log in in the browser window that opened…",
@@ -296,7 +297,7 @@
     "forget": "Forget my Moodle login",
     "failed": "The import failed.",
     "err": {
-      "chrome": "Moodle import needs Google Chrome. Install it and try again.",
+      "install": "Could not download the browser for Moodle. Check your internet connection and try again.",
       "closed": "The login window was closed before the login finished. Try again.",
       "timeout": "The login timed out. Try again and log in in the window that opens.",
       "http": "Moodle did not answer properly. Try again in a few minutes.",

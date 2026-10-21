@@ -103,3 +103,16 @@ for (const lang of LANGS)
     await page.getByText(lang === "he" ? "בתור:" : "In line:").locator("..").screenshot({ path: `e2e/tests_output/course/card-course-joined-${lang}.png` });
     expect(errors).toEqual([]);
   });
+
+for (const lang of LANGS)
+  test(`course files: first Moodle import downloads the browser (${lang})`, async ({ page }) => {
+    const errors = pageErrors(page);
+    await page.goto(host(`lang=${lang}&files=installing`));
+    await page.locator("ul button").first().click();
+    const label = lang === "he" ? "מוריד דפדפן לחיבור למודל (פעם אחת)…" : "Downloading the browser for Moodle (one time)…";
+    await expect(page.getByRole("progressbar", { name: label })).toHaveAttribute("aria-valuenow", "42");
+    await page.waitForTimeout(400); // card fade-in
+    await axe(page);
+    await page.getByRole("region", { name: lang === "he" ? "קבצי לימוד" : "Study files" }).screenshot({ path: `e2e/tests_output/course/card-files-installing-${lang}.png` });
+    expect(errors).toEqual([]);
+  });

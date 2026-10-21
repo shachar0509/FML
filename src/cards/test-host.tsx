@@ -31,10 +31,10 @@ const course: CourseData = {
   units: [{ id: "U01", title: lang === "he" ? "סדרות" : "Sequences", stages: [st("S001", L("הגדרה", "Definition"), "completed", 90), st("S002", L("גבולות", "Limits"), "in_progress", 40), st("S003", L("כלל הסנדוויץ'", "Squeeze"), "locked", 0)] }],
 };
 const found: LookupResult = { status: "found", entry: { courseNumber: "01040195", nameHe: "חשבון אינפיניטסימלי 1", credits: 5.5, faculty: "מתמטיקה", syllabusHe: "קדם: 01040031\nסדרות, גבולות, רציפות" } };
-// ?files=read: every file indexed (Update plan disabled); ?files=importing: a Moodle import at 3 of 8 links
+// ?files=read: every file indexed (Update plan disabled); ?files=importing: a Moodle import at 3 of 8 links; ?files=installing: the browser download at 42%
 const files: FilesData = {
   view: "files", language: lang, theme: "system", number: "01040195",
-  moodle: { url: "https://moodle.example.ac.il/", connected: q.get("files") === "importing", busy: q.get("files") === "importing" ? "sync" : null, last: null, progress: q.get("files") === "importing" ? { done: 3, total: 8 } : null },
+  moodle: { url: "https://moodle.example.ac.il/", connected: q.get("files") === "importing", busy: q.get("files") === "importing" ? "sync" : q.get("files") === "installing" ? "install" : null, last: null, progress: q.get("files") === "importing" ? { done: 3, total: 8 } : q.get("files") === "installing" ? { done: 42, total: 100 } : null },
   materials: [{ sha: "a1", name: "lecture1.pdf", pages: 12, status: "indexed", error: null, exercises: 0, solved: 0 }, { sha: "a2", name: "lecture2.pdf", pages: 9, status: q.get("files") === "read" ? "indexed" : "pending", error: null, exercises: 0, solved: 0 }],
   exercises: [{ sha: "b1", name: "hw1.pdf", pages: 3, status: "indexed", error: null, exercises: 5, solved: 3 }],
 };
