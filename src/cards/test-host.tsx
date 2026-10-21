@@ -35,7 +35,7 @@ const found: LookupResult = { status: "found", entry: { courseNumber: "01040195"
 const files: FilesData = {
   view: "files", language: lang, theme: "system", number: "01040195",
   moodle: { url: "https://moodle.example.ac.il/", connected: q.get("files") === "importing", busy: q.get("files") === "importing" ? "sync" : q.get("files") === "installing" ? "install" : null, last: null, progress: q.get("files") === "importing" ? { done: 3, total: 8 } : q.get("files") === "installing" ? { done: 42, total: 100 } : null },
-  materials: [{ sha: "a1", name: "lecture1.pdf", pages: 12, status: "indexed", error: null, exercises: 0, solved: 0 }, { sha: "a2", name: "lecture2.pdf", pages: 9, status: q.get("files") === "read" ? "indexed" : "pending", error: null, exercises: 0, solved: 0 }],
+  materials: [{ sha: "a1", name: "lecture1.pdf", pages: 12, status: "indexed", error: null, exercises: 0, solved: 0 }, { sha: "a2", name: "lecture2.pdf", pages: 9, status: q.get("files") === "read" ? "indexed" : "pending", error: null, exercises: 0, solved: 0 }, ...(q.get("files") === "mix" ? [{ sha: "a3", name: "lecture3.pdf", pages: 4, status: "indexing" as const, error: null, exercises: 0, solved: 0, done: 1, total: 4 }] : [])],
   exercises: [{ sha: "b1", name: "hw1.pdf", pages: 3, status: "indexed", error: null, exercises: 5, solved: 3 }],
 };
 const base = { language: lang, theme: "system" } as const;

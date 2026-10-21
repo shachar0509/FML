@@ -68,12 +68,20 @@ function Importing({ done, total, label }: { done: number; total: number; label?
   );
 }
 
-/** Share of a section's files that are indexed, as a ring with the whole percentage inside. */
+/** A section's files by scan state: scanned, scanning, not scanned (waiting or failed). */
+const groups = (rows: FileRow[]) => [
+  { key: "scanned", n: rows.filter((f) => f.status === "indexed").length, stroke: "stroke-success", dot: "bg-success" },
+  { key: "scanning", n: rows.filter((f) => f.status === "indexing").length, stroke: "stroke-warning", dot: "bg-warning" },
+  { key: "notScanned", n: rows.filter((f) => f.status === "pending" || f.status === "failed").length, stroke: "stroke-danger", dot: "bg-danger" },
+];
+
+/** The section's files as a ring split by scan state (exact shares via pathLength), the scanned percentage inside. */
 function Ring({ rows }: { rows: FileRow[] }) {
   const { t } = useTranslation();
-  const pct = Math.round((100 * rows.filter((f) => f.status === "indexed").length) / rows.length);
-  const r = 15;
-  const c = 2 * Math.PI * r;
+  const g = groups(rows);
+  const pct = Math.round((100 * (g[0]?.n ?? 0)) / rows.length);
+  const len = g.map(({ n }) => (100 * n) / rows.length);
+  const at = len.map((_, i) => len.slice(0, i).reduce((a, b) => a + b, 0));
   return (
     <span
       className="relative inline-flex size-10 shrink-0 items-center justify-center"
@@ -81,23 +89,45 @@ function Ring({ rows }: { rows: FileRow[] }) {
       aria-label={t("files.indexedPct", { pct })}
     >
       <svg viewBox="0 0 36 36" className="absolute inset-0 -rotate-90" aria-hidden>
-        <circle cx="18" cy="18" r={r} fill="none" strokeWidth="3" className="stroke-border" />
-        <circle
-          cx="18"
-          cy="18"
-          r={r}
-          fill="none"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeDasharray={c}
-          strokeDashoffset={c * (1 - pct / 100)}
-          className={pct === 100 ? "stroke-success" : "stroke-primary"}
-        />
+        <circle cx="18" cy="18" r="15" fill="none" strokeWidth="3" className="stroke-border" />
+        {g.map(({ key, n, stroke }, i) =>
+          n ? (
+            <circle
+              key={key}
+              cx="18"
+              cy="18"
+              r="15"
+              fill="none"
+              strokeWidth="3"
+              pathLength={100}
+              strokeDasharray={`${len[i]} 100`}
+              strokeDashoffset={-(at[i] ?? 0)}
+              className={stroke}
+            />
+          ) : null,
+        )}
       </svg>
       <span className="text-[10px] font-semibold tabular-nums" aria-hidden>
         {pct}%
       </span>
     </span>
+  );
+}
+
+/** Counts per scan state under a section's title, matching the ring's colors. */
+function Legend({ rows }: { rows: FileRow[] }) {
+  const { t } = useTranslation();
+  const items = [...groups(rows), { key: "total", n: rows.length, dot: "bg-muted" }];
+  return (
+    <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+      {items.map(({ key, n, dot }) => (
+        <li key={key} className="flex items-center gap-1.5">
+          <span className={`size-2 shrink-0 rounded-full ${dot}`} aria-hidden />
+          {t(`files.state.${key}`)}
+          <span className="font-medium text-fg tabular-nums">{t("files.count", { count: n })}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -304,6 +334,7 @@ export function Files({
           </button>
         </h3>
       )}
+      {rows.length > 0 && <Legend rows={rows} />}
       {rows.length === 0 && (
         <p className="rounded-lg border border-dashed border-border p-3 text-center text-sm text-muted">
           {t("files.dropHint")}

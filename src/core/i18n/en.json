@@ -376,7 +376,15 @@
     "removeTitle": "Delete file",
     "removeAsk": "Are you sure you want to delete {{name}} from {{folder}}?",
     "keep": "Cancel",
-    "openFolder": "Open folder"
+    "openFolder": "Open folder",
+    "state": {
+      "scanned": "Scanned",
+      "scanning": "Scanning",
+      "notScanned": "Not scanned",
+      "total": "Total"
+    },
+    "count_one": "{{count}} file",
+    "count_other": "{{count}} files"
   },
   "render": {
     "copy": "Copy",

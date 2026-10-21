@@ -33,6 +33,11 @@ for (const lang of LANGS)
       // file lists start collapsed (like the plan units); the rings show without opening them
       await expect(page.getByRole("img", { name: lang === "he" ? "50% נסרקו" : "50% scanned" })).toBeVisible();
       await expect(page.getByRole("img", { name: lang === "he" ? "100% נסרקו" : "100% scanned" })).toBeVisible();
+      // each list shows its counts by scan state
+      const legend = page.getByRole("list").filter({ hasText: lang === "he" ? "סה״כ" : "Total" }).first();
+      await expect(legend).toContainText(lang === "he" ? "נסרק בהצלחהקובץ אחד" : "Scanned1 file");
+      await expect(legend).toContainText(lang === "he" ? "לא נסרקקובץ אחד" : "Not scanned1 file");
+      await expect(legend).toContainText(lang === "he" ? "סה״כ2 קבצים" : "Total2 files");
       const filesSection = page.getByRole("region", { name: lang === "he" ? "קבצי לימוד" : "Study files" });
       const mats = page.getByRole("button", { name: lang === "he" ? /חומרי לימוד/ : /Study materials/ });
       const exs = page.getByRole("button", { name: lang === "he" ? /תרגילים לדוגמה/ : /Sample exercises/ });
@@ -114,6 +119,21 @@ for (const lang of LANGS)
     await page.getByRole("region", { name: lang === "he" ? "קבצי לימוד" : "Study files" }).screenshot({ path: `e2e/tests_output/course/card-files-importing-${lang}.png` });
     expect(errors).toEqual([]);
   });
+
+for (const lang of LANGS)
+  for (const theme of THEMES)
+    test(`course files: ring split by scan state (${lang}/${theme})`, async ({ page }) => {
+      const errors = pageErrors(page);
+      await page.goto(host(`lang=${lang}&theme=${theme}&files=mix`));
+      await page.locator("ul button").first().click();
+      await expect(page.getByRole("img", { name: lang === "he" ? "33% נסרקו" : "33% scanned" })).toBeVisible(); // a third each
+      const legend = page.getByRole("list").filter({ hasText: lang === "he" ? "סה״כ3 קבצים" : "Total3 files" });
+      await expect(legend).toContainText(lang === "he" ? "בסריקהקובץ אחד" : "Scanning1 file");
+      await page.waitForTimeout(400); // card fade-in
+      await axe(page);
+      await page.getByRole("region", { name: lang === "he" ? "קבצי לימוד" : "Study files" }).screenshot({ path: `e2e/tests_output/course/card-files-states-${lang}-${theme}.png` });
+      expect(errors).toEqual([]);
+    });
 
 for (const lang of LANGS)
   test(`course: Update plan joins a build running in another chat (${lang})`, async ({ page }) => {

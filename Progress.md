@@ -736,3 +736,8 @@ Edge cases found with the sample slides, and fixed in the renderer:
   - Unit tests: trap, key point and note lines reach enrich even when one exercise among 16 has the trap; repeats are kept once; parts cover every line; scanning saves the new fields and defaults them; file_open and file_reindex work.
   - E2e course spec: menu keyboard navigation, Esc and outside click, Open and Re-scan calls, Re-scan disabled on a file not scanned yet, Delete through the menu, axe.
   - Totals: 149 unit tests; course, step, practice and render e2e specs green (some failed once from dev-server load and passed on rerun). Lint and tsc clean.
+
+## M42: file lists show counts by scan state; the ring is split by state
+- Under each file list (study materials, sample exercises): ● scanned (green), ● scanning (yellow), ● not scanned (red: waiting or failed), ● total (grey), each with its count, in the settings language.
+- The ring is split into green / yellow / red arcs in the exact ratio (`pathLength=100`, fractional dash lengths, so 1/3 is exact). The number inside is still the scanned %.
+- e2e: the legend counts, plus a mixed (⅓ each) fixture `files=mix` with screenshots.

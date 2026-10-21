@@ -380,7 +380,16 @@
     "removeTitle": "מחיקת קובץ",
     "removeAsk": "בטוחים שאתם רוצים למחוק את {{name}} מתוך {{folder}}?",
     "keep": "ביטול",
-    "openFolder": "פתיחת התיקייה"
+    "openFolder": "פתיחת התיקייה",
+    "state": {
+      "scanned": "נסרק בהצלחה",
+      "scanning": "בסריקה",
+      "notScanned": "לא נסרק",
+      "total": "סה״כ"
+    },
+    "count_one": "קובץ אחד",
+    "count_two": "{{count}} קבצים",
+    "count_other": "{{count}} קבצים"
   },
   "render": {
     "copy": "העתק",
