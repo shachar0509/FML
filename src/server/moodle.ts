@@ -2,7 +2,7 @@ import { chromium, type BrowserContext } from "playwright-core";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { MEDIA, extOf } from "@/core/domain/ingest/import";
-import { fileName, guessRole, parseCourse, parsePluginfiles, parseSearch } from "./moodleParse";
+import { fileName, guessRole, numberForms, parseCourse, parsePluginfiles, parseSearch, parseSections } from "./moodleParse";
 
 /** The saved login is gone or expired: the student has to log in again in the browser window. */
 export class LoginNeeded extends Error {
@@ -40,7 +40,7 @@ export function createMoodle(o: { profileDir: string; channel?: string; headedLo
   }
 
   /**
-   * Downloads the supported files of the course into `dir`. Same host only, one request at a time.
+   * Downloads the supported files of every Moodle course whose name has the course number (all its sections) into `dir`. Same host only, one request at a time.
    * `login`: open a window and wait for the student to log in, then download in that same browser (Moodle's session cookie dies with the browser).
    */
   async function sync(baseUrl: string, number: string, dir: string, login = false, onLoggedIn?: () => void, loginTimeoutMs = 5 * 60_000): Promise<{ course: string; files: Downloaded[]; skipped: number }> {
@@ -65,10 +65,14 @@ export function createMoodle(o: { profileDir: string; channel?: string; headedLo
         if (!r.ok()) throw new Error(`Moodle answered ${r.status()} for ${new URL(url).pathname}.`);
         return { text: await r.text(), url: r.url() };
       };
-      const s = await html(new URL(`/course/search.php?search=${encodeURIComponent(number)}`, origin).href);
-      const hit = parseSearch(s.text, s.url, number)[0];
-      if (!hit) throw new Error(`No Moodle course matches ${number}. Check that you are enrolled and that the number is in the course name.`);
-      const page = await html(hit.url);
+      const found: { url: string; text: string }[] = [];
+      for (const q of numberForms(number)) {
+        const s = await html(new URL(`/course/search.php?search=${encodeURIComponent(q)}&perpage=50`, origin).href);
+        for (const h of parseSearch(s.text, s.url, number)) if (!found.some((f) => f.url === h.url)) found.push(h);
+      }
+      // ponytail: first 5 matching courses (e.g. several semesters); raise if past semesters matter more.
+      const hits = found.slice(0, 5);
+      if (!hits.length) throw new Error(`No Moodle course matches ${number}. Check that you are enrolled and that the number is in the course name.`);
       const files: Downloaded[] = [];
       const seen = new Set<string>();
       let skipped = 0;
@@ -89,8 +93,16 @@ export function createMoodle(o: { profileDir: string; channel?: string; headedLo
         await writeFile(path, await r.body());
         files.push({ path, role: guessRole(name, `${hint.text} ${hint.section}`) });
       };
-      for (const l of parseCourse(page.text, page.url)) await grab(l.url, l, 0);
-      return { course: hit.text, files, skipped };
+      for (const hit of hits) {
+        const page = await html(hit.url);
+        const pages = [page];
+        for (const u of parseSections(page.text, page.url)) {
+          const sec = new URL(u).origin === origin && (await html(u).catch(() => null)); // one section per page; a broken section is skipped
+          if (sec) pages.push(sec);
+        }
+        for (const p of pages) for (const l of parseCourse(p.text, p.url)) await grab(l.url, l, 0);
+      }
+      return { course: hits.map((h) => h.text).join(", "), files, skipped };
     } finally {
       await ctx.close().catch(() => undefined);
     }

@@ -10,7 +10,7 @@ import type { FilesData } from "@/cards/types";
 import { FakeClaudeGateway, toolCall } from "@/core/claude/fake";
 import { setClaude } from "@/core/claude/runtime";
 import { createCourse } from "@/core/domain/courses/courses";
-import { fileName, guessRole, parseCourse, parseSearch } from "./moodleParse";
+import { fileName, guessRole, parseCourse, parseSearch, parseSections } from "./moodleParse";
 import { createMoodle } from "./moodle";
 import { initNode } from "./platform";
 import { createServer } from "./server";
@@ -24,7 +24,8 @@ const sc = <T,>(r: { structuredContent?: unknown }) => r.structuredContent as T;
 
 it("parses Moodle pages and guesses roles", () => {
   const base = "https://m.example.ac.il/course/view.php?id=7";
-  expect(parseSearch('<a href="/course/view.php?id=3">Other</a><a href="/course/view.php?id=7&amp;x=1">01040195 Calculus</a>', base, "01040195")[0]?.text).toBe("01040195 Calculus");
+  expect(parseSearch('<a href="/course/view.php?id=3">Other</a><a href="/course/view.php?id=4">010401950 X</a><a href="/course/view.php?id=7&amp;x=1">01040195 Calculus</a><a href="/course/view.php?id=8">חדו"א 104195</a>', base, "01040195").map((h) => h.text)).toEqual(["01040195 Calculus", 'חדו"א 104195']);
+  expect(parseSections('<a href="/course/section.php?id=5">s</a><a href="/course/view.php?id=7&amp;section=2#x">s2</a><a href="/course/view.php?id=3&section=1">other</a>', base)).toEqual(["https://m.example.ac.il/course/section.php?id=5", "https://m.example.ac.il/course/view.php?id=7&section=2"]);
   const links = parseCourse('<li id="section-1" data-sectionname="Exercises"><a href="/mod/resource/view.php?id=9"><span>sheet 1</span> <span class="accesshide">File</span></a></li>', base);
   expect(links).toEqual([{ url: "https://m.example.ac.il/mod/resource/view.php?id=9", text: "sheet 1", section: "Exercises" }]);
   expect(guessRole("lecture1.pdf", "Week 1")).toBe("material");
@@ -48,7 +49,11 @@ function fakeMoodle() {
     const p = url.pathname;
     if (p === "/" || p === "/my/") return loggedIn ? html(logout) : p === "/" ? html('<script>document.cookie="idp=1;path=/;max-age=86400";location.reload()</script>') : html("please log in");
     if (!loggedIn) return html("please log in");
-    if (p === "/course/search.php") return html('<a href="/course/view.php?id=7">01040195 Calculus</a>');
+    // Another course and a site link must be ignored; the old 6-digit number finds last year's course.
+    if (p === "/course/search.php") return html(url.searchParams.get("search") === "104195" ? '<a href="/course/view.php?id=8">104195 Calculus 2024</a>' : '<a href="/course/view.php?id=1">Home</a><a href="/course/view.php?id=9">01040196 Other</a><a href="/course/view.php?id=7">01040195 Calculus</a>');
+    if (p === "/course/view.php" && url.searchParams.get("id") === "8") return html('<li id="section-1"><a href="/course/section.php?id=81">Exams 2024</a></li>');
+    if (p === "/course/section.php") return html('<li id="section-1" data-sectionname="Exams 2024"><a href="/mod/resource/view.php?id=5">Moed A</a></li>');
+    if (p === "/course/view.php" && url.searchParams.get("id") !== "7") return html('<a href="/pluginfile.php/9/not-this-course.txt">x</a>');
     if (p === "/course/view.php")
       return html(`<li id="section-1" data-sectionname="Week 1"><a href="/mod/resource/view.php?id=1">Lecture</a><a href="/mod/resource/view.php?id=4">Landing</a></li>
         <li id="section-2" data-sectionname="Exams"><a href="/mod/resource/view.php?id=2">Exam A</a><a href="/mod/folder/view.php?id=3">Sheets</a></li>`);
@@ -56,7 +61,7 @@ function fakeMoodle() {
       const id = url.searchParams.get("id");
       if (id === "4") return html('<iframe src="/pluginfile.php/4/landing-notes.txt"></iframe>');
       res.statusCode = 302;
-      return res.setHeader("location", id === "1" ? "/pluginfile.php/1/lecture1.txt" : "/pluginfile.php/2/exam-moed-a.txt"), res.end();
+      return res.setHeader("location", id === "1" ? "/pluginfile.php/1/lecture1.txt" : id === "5" ? "/pluginfile.php/5/exam-2024.txt" : "/pluginfile.php/2/exam-moed-a.txt"), res.end();
     }
     if (p === "/mod/folder/view.php") return html('<a href="/pluginfile.php/3/sheet1.txt">s</a><a href="/pluginfile.php/3/archive.zip">z</a>');
     if (p.startsWith("/pluginfile.php")) return file(p.split("/").pop() as string, p.endsWith(".zip") ? "application/zip" : "text/plain");
@@ -93,13 +98,13 @@ it("moodle_import logs in once, downloads by role, is repeatable, and can forget
   expect((await call("moodle_import", { number: "01040195" })).structuredContent).toMatchObject({ needUrl: true }); // technion default exists only as https, tests have no university chosen
   await call("moodle_import", { number: "01040195", url: base });
   let f = await files();
-  expect(f.moodle).toMatchObject({ connected: true, last: { added: 4, duplicate: 0, skipped: 1, error: null } });
+  expect(f.moodle).toMatchObject({ connected: true, last: { added: 5, duplicate: 0, skipped: 1, error: null } });
   expect(f.materials.map((x) => x.name).sort()).toEqual(["landing-notes.txt", "lecture1.txt"]);
-  expect(f.exercises.map((x) => x.name).sort()).toEqual(["exam-moed-a.txt", "sheet1.txt"]);
+  expect(f.exercises.map((x) => x.name).sort()).toEqual(["exam-2024.txt", "exam-moed-a.txt", "sheet1.txt"]);
 
   await call("moodle_import", { number: "01040195" }); // saved address, saved login
   f = await files();
-  expect(f.moodle?.last).toMatchObject({ added: 0, duplicate: 4, error: null });
+  expect(f.moodle?.last).toMatchObject({ added: 0, duplicate: 5, error: null });
 
   expect(sc<{ state: { connected: boolean } }>(await call("moodle_disconnect")).state.connected).toBe(false);
   await call("moodle_import", { number: "01040195" }); // logs in again

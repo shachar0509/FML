@@ -82,7 +82,7 @@ export function registerMoodleTools(server: McpServer, make?: (profileDir: strin
     "moodle_import",
     {
       title: "Import from Moodle",
-      description: "Download the course's files from the student's university Moodle into the course (a browser window opens once so the student can log in, including two-step verification). Runs in the background; poll files_list. The student then presses Build/Update plan when ready (plan_build_request). `url` is the Moodle address when the university has no built-in one.",
+      description: "Download the files (all sections) of the Moodle courses whose name has this course number, from the student's university Moodle, into the course (a browser window opens once so the student can log in, including two-step verification). Runs in the background; poll files_list. The student then presses Build/Update plan when ready (plan_build_request). `url` is the Moodle address when the university has no built-in one.",
       inputSchema: z.object({ number: z.string().regex(COURSE_ID_RE), url: z.string().max(300).optional() }),
       _meta: both,
     },

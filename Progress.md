@@ -354,3 +354,9 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - Moodle: `moodle.technion.ac.il` redirects to `moodle26.technion.ac.il`, and the login check compared against the address before the redirect, so it never saw the login. Now the real origin is taken after the redirect (login page, `/my/` probe, search and same-host filter), the logged-in check looks at every tab (SSO popups) and also accepts Moodle 4's `#user-menu-toggle`, and after a login the files download in the same browser window (Moodle's session cookie dies when the browser closes). `connect` folded into `sync(…, login)`.
 - Test: the fake Moodle now redirects 127.0.0.1 → localhost (the old code hangs on it).
 - 🧪 Claude Desktop: Moodle import → log in → the window closes after the download and the files show; start a lesson → the first message teaches with no question.
+
+### M17b — Moodle import: only the course's own Moodle pages, all sections (done; 🧪 pending)
+- Search hits must contain the course number (as a whole number; for Technion also the old 6-digit form, 01040195 → 104195, searched too). Before, a search with no exact hit fell back to the first course link on the page (e.g. the site home), so the import scanned the wrong page.
+- Up to 5 matching courses (e.g. several semesters) are imported, each with all its sections: one-section-per-page courses (`course/section.php?id=…`, `view.php?id=…&section=N`) are followed. Assignment and page activities are scanned for attached files too.
+- Test: the fake Moodle has a site link, another course, an old-number course with a section page; only the right files are imported (5).
+- 🧪 Claude Desktop: Moodle import for a real course → only that course's files (materials + exams).

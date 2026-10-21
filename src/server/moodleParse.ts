@@ -5,23 +5,36 @@ const decode = (s: string) => s.replace(/&amp;/g, "&").replace(/&quot;/g, '"').r
 const strip = (s: string) => decode(s.replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim();
 const abs = (href: string, base: string) => new URL(decode(href), base).href;
 
-/** Course links of a search result page: [{url,text}] with the number-matching ones first. */
-export function parseSearch(html: string, base: string, number: string): { url: string; text: string }[] {
-  const out: { url: string; text: string }[] = [];
-  for (const m of html.matchAll(/<a\b[^>]*href="([^"]*\/course\/view\.php\?id=\d+[^"]*)"[^>]*>([\s\S]*?)<\/a>/gi)) {
-    const url = abs(m[1] as string, base);
-    if (!out.some((o) => o.url === url)) out.push({ url, text: strip(m[2] as string) });
-  }
-  return out.sort((a, b) => Number(b.text.includes(number)) - Number(a.text.includes(number)));
+/** The course number as it can appear in a Moodle course name: as given, and for 8-digit Technion numbers also the old 6-digit form (01040195 → 104195). */
+export function numberForms(number: string): string[] {
+  return /^0\d{3}0\d{3}$/.test(number) ? [number, number.slice(1, 4) + number.slice(5)] : [number];
 }
 
-/** File-ish links of a course page with their section title: resource / folder views and direct pluginfile links. */
+/** Course links of a search result page whose name contains the course number (other courses and site links are dropped). */
+export function parseSearch(html: string, base: string, number: string): { url: string; text: string }[] {
+  const out: { url: string; text: string }[] = [];
+  const re = new RegExp(`(?<!\\d)(?:${numberForms(number).join("|")})(?!\\d)`);
+  for (const m of html.matchAll(/<a\b[^>]*href="([^"]*\/course\/view\.php\?id=\d+[^"]*)"[^>]*>([\s\S]*?)<\/a>/gi)) {
+    const url = abs(m[1] as string, base);
+    const text = strip(m[2] as string);
+    if (re.test(text) && !out.some((o) => new URL(o.url).searchParams.get("id") === new URL(url).searchParams.get("id"))) out.push({ url, text });
+  }
+  return out;
+}
+
+/** Section pages of a course shown one section per page (Moodle 4: course/section.php?id=…, older: view.php?id=<course>&section=N). */
+export function parseSections(html: string, base: string): string[] {
+  const id = new URL(base).searchParams.get("id");
+  return [...new Set([...html.matchAll(/href="([^"]*\/course\/(?:section\.php\?id=\d+|view\.php\?id=(\d+)[^"]*?[?&;]section=\d+)[^"]*)"/gi)].filter((m) => !m[2] || m[2] === id).map((m) => abs((m[1] as string).split("#")[0] as string, base)))];
+}
+
+/** File-ish links of a course page with their section title: resource / folder / assignment / page views and direct pluginfile links. */
 export function parseCourse(html: string, base: string): Link[] {
   const out: Link[] = [];
   const parts = html.split(/(?=<li\b[^>]*\bid="section-\d+")/i);
   for (const part of parts) {
     const section = strip(/data-sectionname="([^"]*)"/i.exec(part)?.[1] ?? /<h[1-6][^>]*class="[^"]*sectionname[^"]*"[^>]*>([\s\S]*?)<\/h[1-6]>/i.exec(part)?.[1] ?? "");
-    for (const m of part.matchAll(/<a\b[^>]*href="([^"]*(?:\/mod\/(?:resource|folder)\/view\.php\?id=\d+|pluginfile\.php\/)[^"]*)"[^>]*>([\s\S]*?)<\/a>/gi)) {
+    for (const m of part.matchAll(/<a\b[^>]*href="([^"]*(?:\/mod\/(?:resource|folder|assign|page)\/view\.php\?id=\d+|pluginfile\.php\/)[^"]*)"[^>]*>([\s\S]*?)<\/a>/gi)) {
       const url = abs(m[1] as string, base);
       if (!out.some((o) => o.url === url)) out.push({ url, text: strip(m[2] as string).replace(/\s*(?:File|Folder|קובץ|תיקייה)$/i, ""), section });
     }
