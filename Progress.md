@@ -154,7 +154,7 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - `moodleTools.ts`: `moodle_import({number, url?})` (background job; login first if needed, one automatic re-login on expiry; files go through `importFiles`, so dedupe and naming are the usual ones), `moodle_disconnect` (deletes the profile). State shows in `files_list.moodle`; the Files card has an "Import from Moodle" box (address field when the university has no built-in URL, progress, result, Forget login).
 - Moodle address: Technion built in (`https://moodle.technion.ac.il/`, to verify); HUJI/Reichman/Braude unknown → the student pastes it once (saved in settings `moodleUrl`, https only).
 - Tests: parsers + a fake Moodle (http server with an SSO-style persistent cookie and a session cookie) driven by Playwright's bundled Chromium: login, 4 files by role, zip skipped, second run all duplicates, forget + re-login. 122 unit, 28 e2e.
-- Packaging: `playwright-core` is external and copied into the MCPB `node_modules` (`scripts/pack-mcpb.mjs`) — **`pnpm pack:mcpb` / `smoke:mcpb` not re-run yet** (the run was stopped); smoke's tool count will change.
+- Packaging: `playwright-core` is external and copied into the MCPB `node_modules` (`scripts/pack-mcpb.mjs`). `pnpm pack:mcpb` ok (44.7 MB), `smoke:mcpb` ok (47 tools), `playwright-core` loads from the staged server.
 - 🧪 live (needs the Mac screen): Import from Moodle in a course card → Chrome opens → log in with MFA → files appear → Start indexing. Report failing selectors.
 
 ### M14c — University polish (done)
