@@ -593,3 +593,4 @@ Edge cases found with the sample slides, and fixed in the renderer:
 - `pnpm exec playwright test <spec>` runs one spec by name.
 - The step test's name-beside-formula check now allows the stacked layout in Hebrew too. Which layout the board picks depends on whether the KaTeX fonts were cached at the first measure, so a cold run of the step spec on its own failed.
 - **Checks:** 77 e2e (the lesson test is now three), twice in a row, plus `step` on its own; lint clean.
+- Follow-up (833a238): screenshots now go to `e2e/tests_output/<spec>/` (gitignored), e.g. `home/` or `render-display-fences/`. They are deleted, folders included, once the user has checked them.
