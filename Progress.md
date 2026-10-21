@@ -539,3 +539,15 @@ Edge cases found with the sample slides, and fixed in the renderer:
   - `e2e/shots/test7/`: law, biology, chemistry, finance, architecture.
 - Checks: 137 unit, 59 e2e (twice in a row).
 - The first e2e run right after a code change can time out while Vite recompiles; run it again.
+
+## M29 — PDFs open inside Claude Desktop ✅
+- **Bug:** a Moodle import showed "0 new, 0 already there, 170 skipped" although the files were copied into the course folders, and no course had ever been indexed.
+- **Cause:** Claude Desktop runs extensions in an Electron utility process (`process.type` is `"utility"`). pdf.js then takes it for a browser, and every PDF open fails with `No "GlobalWorkerOptions.workerSrc" specified`:
+  - `register` returned "failed" without an index record; Moodle counts that as "skipped";
+  - the brief look at a file's first pages read no text, so the folder came from the file name alone;
+  - every `files_list` scan failed the same way.
+- **Fix:** `initNode` clears `process.type` before pdf.js loads.
+- **Checks:**
+  - reproduced in a real Electron utility process with the bundled import: `failed` before, `added` after;
+  - new `platform.test.ts`; 138 unit tests.
+- 🧪 Install `dist/shalav.mcpb` in Claude Desktop and open the course files: the files already in the folders are indexed by that scan, with no new Moodle import needed.
