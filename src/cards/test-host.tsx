@@ -41,7 +41,7 @@ const lesson: LessonData = {
   objectives: [{ text: L("לנסח את הגדרת $\\varepsilon$-$N$", "State the $\\varepsilon$-$N$ definition"), covered: true }, { text: L("להוכיח גבול לפי ההגדרה", "Prove a limit from the definition"), covered: false }],
   criteria: { met: false, missing: [L("לפתור עוד 2 תרגילים בציון 85 לפחות", "Solve 2 more exercises with score ≥ 85")] },
 };
-const mcq: McqData = { ...base, view: "mcq", checkId: "c1", questionMd: L("מה נכון לגבי $a_n = 1/n$?", "Which holds for $a_n = 1/n$?"), options: ["$a_n \\to 0$", "$a_n \\to 1$", L("מתבדרת", "diverges")] };
+const mcq: McqData = { ...base, view: "mcq", checkId: "c1", questionMd: L("מה נכון לגבי $a_n = 1/n$?", "Which holds for $a_n = 1/n$?"), options: ["$a_n \\to 0$", "$a_n \\to 1$", L("מתבדרת", "diverges"), L("$a_n \\to 0$ רק אם $n$ זוגי", "$a_n \\to 0$ only for even $n$")] };
 const open: OpenData = { ...base, view: "open", checkId: "c2", questionMd: L("הסבירו למה $\\lim 1/n = 0$.", "Explain why $\\lim 1/n = 0$.") };
 const exercise: ExerciseData = {
   ...base, view: "exercise", number: "01040195", runId: "r1", difficulty: 3, statementMd: L("הוכיחו ש-$\\lim 1/n = 0$.", "Prove that $\\lim 1/n = 0$."), figures: [], hints: [], solutionMd: null, grade: null, canReveal: false, busy: null, error: null,
@@ -72,6 +72,7 @@ ${L("קיבוציות", "Associativity")} | (a \\cdot b) \\cdot c = a \\cdot (b 
 ${L("חילופיות", "Commutativity")} | a \\cdot b = b \\cdot a
 ${L("איבר יחידה", "Identity")} | a \\cdot 1 = a, \\quad 1 \\neq 0
 ${L("איבר הופכי", "Inverse")} | a \\cdot a^{-1} = 1, \\quad a \\neq 0
+${L("טרנזיטיביות", "Transitivity")} | a < b \\text{ ${L("וגם", "and")} } b < c \\Rightarrow a < c
 \`\`\`
 
 > [!definition] ${L("שדה סדור", "Ordered field")}

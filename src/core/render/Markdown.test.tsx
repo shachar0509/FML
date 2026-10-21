@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import "@/core/i18n";
-import { joinHyphenatedMath, Markdown } from "./Markdown";
+import { fixMath, hebrewOutOfMath, joinHyphenatedMath, Markdown } from "./Markdown";
 import { isFigureTag } from "./Figure";
 import { splitRel } from "./Rows";
 
@@ -10,7 +10,7 @@ describe("Markdown", () => {
     const { container } = render(
       <Markdown>{"שלום $x\\in\\R$ עולם\n\n$$\n\\sum_{i}^{n} i\n$$\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n<script>alert(1)</script>"}</Markdown>,
     );
-    expect(container.querySelector("p")?.getAttribute("dir")).toBe("auto");
+    expect(container.querySelector("p")?.getAttribute("dir")).toBe("rtl");
     expect(container.querySelector(".katex-display")).toBeTruthy();
     expect(container.querySelector(".katex-mathml")?.innerHTML).toMatch(/ℝ|double-struck/); // \R macro
     expect(container.querySelector("table")?.parentElement?.className).toContain("overflow-x-auto");
@@ -63,6 +63,21 @@ describe("Markdown", () => {
   it("two formulas around a hyphen become one (keeps their order in RTL)", () => {
     expect(joinHyphenatedMath("הגדרת $\\varepsilon$-$N$ ו-$x$")).toBe("הגדרת $\\varepsilon\\text{-}N$ ו-$x$");
     expect(joinHyphenatedMath("$$a$$-$$b$$")).toBe("$$a$$-$$b$$");
+  });
+
+  it("Hebrew inside a formula is pulled out as text; formulas skip the paragraph direction", () => {
+    expect(hebrewOutOfMath(String.raw`a < b \text{ וגם } b < c \Rightarrow a < c`)).toBe(String.raw`$a < b$ וגם $b < c \Rightarrow a < c$`);
+    expect(hebrewOutOfMath("בדיוק אחד מהבאים: a<b, a=b")).toBe("בדיוק אחד מהבאים: $a<b, a=b$");
+    expect(fixMath("אם $a<b \\text{ אז } c$ ו-`$x$ שלום`")).toBe("אם $a<b$ אז $c$ ו-`$x$ שלום`"); // code untouched
+    expect(fixMath("$$\na \\text{ כאשר } b\n$$")).toBe("\n\n$a$ כאשר $b$\n\n");
+    const { container } = render(<Markdown>{"$a<b$ ו-$0<c$ גוררים $a c < b c$"}</Markdown>);
+    expect(container.querySelector("p")?.getAttribute("dir")).toBe("rtl"); // the words decide, not the leading formula
+    expect(render(<Markdown>{"$a_n \\to 0$"}</Markdown>).container.querySelector("p")?.hasAttribute("dir")).toBe(false); // formulas only: the card's direction
+    expect(render(<Markdown>{"Since $1/n \\to 0$."}</Markdown>).container.querySelector("p")?.getAttribute("dir")).toBe("ltr");
+    const rows = render(<Markdown>{"```rows\nטרנזיטיביות | a < b \\text{ וגם } b < c \\Rightarrow a < c\nסגירות | a + b \\in F\n```"}</Markdown>).container;
+    expect(rows.querySelectorAll(".board-mixed")).toHaveLength(1);
+    expect(rows.querySelector(".board-mixed")?.textContent).toContain("וגם");
+    expect(rows.querySelectorAll(".board-rel .katex")).toHaveLength(1);
   });
 
   it("dispatches only the five figure tags", () => {

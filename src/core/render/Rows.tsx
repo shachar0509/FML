@@ -1,5 +1,5 @@
 import katex from "katex";
-import { KATEX } from "./Markdown";
+import { hebrewOutOfMath, KATEX, Markdown } from "./Markdown";
 
 const RELS = new Set(["neq", "ne", "le", "leq", "ge", "geq", "subset", "subseteq", "supset", "supseteq", "in", "notin", "iff", "Rightarrow", "Leftrightarrow", "to", "approx", "equiv", "sim", "cong", "coloneqq"]);
 
@@ -52,9 +52,18 @@ export function Rows({ source }: { source: string }) {
           <span className="board-label" dir="auto">
             {label}
           </span>
-          <span className="board-lhs" dangerouslySetInnerHTML={tex(l)} />
-          <span className="board-rel" dangerouslySetInnerHTML={r ? tex(r) : undefined} />
-          <span className="board-rhs" dangerouslySetInnerHTML={rhs ? tex(rhs) : undefined} />
+          {/[\u0590-\u05FF]/.test(l + rhs) ? (
+            // words in the row: one mixed line (math stays formulas), not split at the relation
+            <span className="board-mixed">
+              <Markdown>{hebrewOutOfMath([l, r, rhs].join(" "))}</Markdown>
+            </span>
+          ) : (
+            <>
+              <span className="board-lhs" dangerouslySetInnerHTML={tex(l)} />
+              <span className="board-rel" dangerouslySetInnerHTML={r ? tex(r) : undefined} />
+              <span className="board-rhs" dangerouslySetInnerHTML={rhs ? tex(rhs) : undefined} />
+            </>
+          )}
         </div>
       ))}
     </div>

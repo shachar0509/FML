@@ -29,7 +29,7 @@ const bare = <P extends { node?: unknown }>(p: P): Omit<P, "node"> => {
 const auto = <T extends keyof React.JSX.IntrinsicElements>(tag: T) =>
   function Auto(props: ComponentProps<T> & { node?: unknown }) {
     const Tag = tag as "p";
-    return <Tag dir="auto" {...(bare(props) as object)} />;
+    return <Tag {...(bare(props) as object)} />;
   };
 
 /** Board boxes: a blockquote that starts with "[!definition] Title" (GitHub-alert style). */
@@ -47,6 +47,14 @@ const rehypeBoxes = () => (tree: El) => {
         t.value = (t.value ?? "").slice(m[0].length);
         if (!t.value && p.children?.length === 1) n.children = n.children?.filter((c) => c !== p);
       }
+    }
+    // A block's direction comes from its words, never from its formulas: Hebrew words → rtl, other words → ltr,
+    // formulas only → the card's direction. ("$a<b$ גוררים …" is a Hebrew sentence; dir="auto" would call it ltr.)
+    const cls = n.properties?.className as string[] | undefined;
+    if (cls?.includes("katex") || cls?.includes("katex-display")) n.properties = { ...n.properties, dir: "ltr" };
+    else if (n.type === "element" && BLOCKS.has(n.tagName ?? "")) {
+      const words = wordsOf(n);
+      n.properties = { ...n.properties, dir: /[\u0590-\u05FF]/.test(words) ? "rtl" : /[A-Za-z]/.test(words) ? "ltr" : undefined };
     }
     if (n.tagName === "code" || n.tagName === "pre" || n.tagName === "annotation") return;
     // A colour macro written outside $…$ (e.g. "\\blue{מעבד}") would show as raw text: colour the words instead.
@@ -66,6 +74,14 @@ const rehypeBoxes = () => (tree: El) => {
   };
   walk(tree);
 };
+const BLOCKS = new Set(["p", "li", "h1", "h2", "h3", "h4", "h5", "h6", "td", "th"]);
+/** The text of a node outside formulas (and code). */
+const wordsOf = (n: El): string =>
+  n.type === "text"
+    ? (n.value ?? "")
+    : (n.properties?.className as string[] | undefined)?.some((c) => c.startsWith("katex")) || n.tagName === "code"
+      ? ""
+      : (n.children ?? []).map(wordsOf).join("");
 const COLOR_RE = /\\(blue|green|pink|orange)\{[^{}]*\}/;
 const COLOR_SPLIT = /\\(blue|green|pink|orange)\{([^{}]*)\}/;
 
@@ -106,6 +122,38 @@ const components: Components = {
 };
 
 /** "$\\varepsilon$-$N$" is two formulas around a hyphen; in a right-to-left line they swap places ("N-ε"). One formula keeps the order. */
+const HEB = /[\u0590-\u05FF]/;
+/** Hebrew inside a formula renders reversed (KaTeX lays text left to right): pull it out as text, keeping the math pieces as formulas. */
+export function hebrewOutOfMath(tex: string): string {
+  const out: string[] = [];
+  const math = (m: string) => {
+    const t = m.trim();
+    if (t) out.push(/^[\s,.:;]*$/.test(t) ? t : `$${t}$`);
+  };
+  let at = 0;
+  for (const m of tex.matchAll(/\\text\{([^{}]*[\u0590-\u05FF][^{}]*)\}|[\u0590-\u05FF][\u0590-\u05FF\s"'׳״,.:;!?-]*/g)) {
+    math(tex.slice(at, m.index));
+    out.push((m[1] ?? m[0]).trim());
+    at = m.index + m[0].length;
+  }
+  math(tex.slice(at));
+  return out.join(" ");
+}
+/** Applies the bidi fixes to Claude's Markdown outside code blocks: Hebrew out of formulas, hyphen-joined formulas merged. */
+export const fixMath = (md: string) =>
+  md
+    .split(/(```[\s\S]*?```)/)
+    .map((part, i) =>
+      i % 2
+        ? part
+        : joinHyphenatedMath(
+            part
+              .replace(/\$\$([\s\S]+?)\$\$/g, (all, t: string) => (HEB.test(t) ? `\n\n${hebrewOutOfMath(t)}\n\n` : all))
+              .replace(/(?<![$\\])\$([^$\n]+)\$(?!\$)/g, (all, t: string) => (HEB.test(t) ? hebrewOutOfMath(t) : all)),
+          ),
+    )
+    .join("");
+
 export const joinHyphenatedMath = (md: string) => md.replace(/(?<![$\\])\$([^$\n]+)\$-\$([^$\n]+)\$(?!\$)/g, (_, a: string, c: string) => `$${a}\\text{-}${c}$`);
 
 /** The one renderer for all Claude text (11.1). Raw HTML is ignored by react-markdown. */
@@ -113,7 +161,7 @@ export function Markdown({ children, className }: { children: string; className?
   return (
     <div className={`md ${className ?? ""}`}>
       <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[[rehypeKatex, KATEX], rehypeBoxes]} components={components}>
-        {joinHyphenatedMath(children)}
+        {fixMath(children)}
       </ReactMarkdown>
     </div>
   );

@@ -421,3 +421,10 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - Rows block: the left side now hugs the relation (`justify-self: end`, like `\begin{aligned}`), the gap opens between the Hebrew name and the formula (1.25em). e2e asserts the left sides end at the same x; the step fixture is the multiplication axioms from the student's screenshot (left sides of different widths). Fixed a specificity bug that let a row's display math become its own scroll box.
 - Two inline formulas around a hyphen ("$\varepsilon$-$N$") are joined into one formula before rendering, so a right-to-left line no longer swaps them ("N-ε").
 - Checks: typecheck/lint clean, 128 unit, 30 e2e.
+
+### M22b — Hebrew and formulas in one line (bidi) (done; 🧪 pending)
+- Hebrew inside a formula (Claude wrote `a < b \text{ וגם } b < c` or plain Hebrew inside `$…$` / a rows line) rendered reversed and broke the rows split. `hebrewOutOfMath` pulls Hebrew runs (and `\text{…}` with Hebrew) out as text, keeping the math pieces as formulas; `fixMath` applies it to inline and display math outside code blocks. A rows line with words becomes one mixed line spanning the formula columns (no relation split).
+- Block direction now comes from the words, not the formulas: a rehype pass sets `dir` on p/li/headings/cells from the text outside KaTeX (Hebrew → rtl, Latin → ltr, formulas only → inherit the card). Before, `dir="auto"` read the first formula and made "$a<b$ ו-$0<c$ גוררים …" an LTR paragraph (scrambled MCQ options); formula-only options were left-aligned among Hebrew ones.
+- Prompt: no words inside math or a row's formula; statements that need words are normal sentences with inline formulas.
+- Fixtures/e2e: an MCQ option that starts with a formula is rtl in Hebrew; a rows line with "וגם" renders as a mixed line.
+- Checks: typecheck/lint clean, 129 unit, 30 e2e.

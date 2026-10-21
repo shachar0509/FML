@@ -141,6 +141,9 @@ body {
 .board-row {
   display: contents;
 }
+.board-mixed {
+  grid-column: 2 / -1;
+}
 /* Like \begin{aligned}: the left side hugs the relation, the gap opens between the name and the formula. */
 .board-lhs {
   justify-self: end;

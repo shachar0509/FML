@@ -114,6 +114,8 @@ for (const lang of ["he", "en"] as const)
       expect((await said()).at(-1)).toContain("\"stageId\":\"S003\"");
 
       await page.goto(url("mcq"));
+      // an option that starts with a formula still reads in the card language
+      expect(await page.locator("ul li").nth(3).locator("p").evaluate((e) => getComputedStyle(e).direction)).toBe(lang === "he" ? "rtl" : "ltr");
       await page.getByRole("button", { name: /diverges|מתבדרת/ }).click();
       await expect(page.getByRole("status")).toContainText(lang === "he" ? "לא נכון" : "Not quite");
       expect((await said()).at(-1)).toContain(lang === "he" ? "C) מתבדרת" : "C) diverges");
@@ -139,7 +141,8 @@ for (const lang of ["he", "en"] as const)
       // \neq overlays a slash on "="; it shows as "/=" when KaTeX's CSS and JS versions differ
       expect(await page.locator("article .katex .katex-thinbox").first().evaluate((e) => getComputedStyle(e).maxWidth)).toBe("0px");
       // board layout: labelled rows lined up at "=", a definition box, a sticky side note, a boxed result
-      await expect(page.locator(".board-row")).toHaveCount(5);
+      await expect(page.locator(".board-row")).toHaveCount(6);
+      if (lang === "he") await expect(page.locator(".board-mixed")).toContainText("וגם"); // words in a formula become text
       const eq = await page.locator(".board-rel").evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().left)));
       expect(new Set(eq).size).toBe(1);
       // the left sides end at the relation (aligned), whatever their width
