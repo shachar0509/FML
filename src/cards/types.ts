@@ -114,6 +114,10 @@ export type PracticeData = Base & {
 };
 export type CardData = HomeData | AddData | CourseData | LessonData | McqData | OpenData | ExerciseData | PracticeData | SettingsData;
 
+/** What a card button asks Claude for (shalav_request); no request = "do the pending Shalav work". */
+export type Req = { kind: "learn" | "relearn"; stageId: string; title: string } | { kind: "answer"; text: string };
+export type Go = (req?: Req) => Promise<void>;
+
 export type Host = {
   callTool(name: string, args?: Record<string, unknown>): Promise<{ structuredContent?: unknown; isError?: boolean }>;
   /** Puts a short user line into the chat (how card buttons ask the model for AI work). */

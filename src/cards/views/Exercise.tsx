@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Markdown } from "@/core/render/Markdown";
 import { GradeCard, readable } from "./GradeCard";
-import type { ExerciseData } from "../types";
+import type { ExerciseData, Go } from "../types";
 
 type Tool = (name: string, args?: Record<string, unknown>) => Promise<{ structuredContent?: unknown; isError?: boolean }>;
 type Ref = { sha256: string; mediaType: string; name: string };
@@ -34,7 +34,7 @@ async function prep(f: File): Promise<{ mime: string; base64: string }> {
   return { mime: f.type, base64: await b64(f) };
 }
 
-export function Exercise({ data, callTool, say }: { data: ExerciseData; callTool: Tool; say: (t: string) => Promise<void> }) {
+export function Exercise({ data, callTool, go }: { data: ExerciseData; callTool: Tool; go: Go }) {
   const { t } = useTranslation();
   const [d, setD] = useState(data);
   const [files, setFiles] = useState<Ref[]>([]);
@@ -69,10 +69,10 @@ export function Exercise({ data, callTool, say }: { data: ExerciseData; callTool
     setUp(false);
   }
   const refs = () => files.map(({ sha256, mediaType }) => ({ sha256, mediaType }));
-  async function ask(tool: string, args: Record<string, unknown>, line: string) {
+  async function ask(tool: string, args: Record<string, unknown>) {
     if (apply(await callTool(tool, { runId: d.runId, ...args }))) {
       setFiles([]);
-      void say(line);
+      void go();
     }
   }
   const busy = !!d.busy;
@@ -96,7 +96,7 @@ export function Exercise({ data, callTool, say }: { data: ExerciseData; callTool
           <Markdown>{d.solutionMd}</Markdown>
         </div>
       )}
-      {busy && <Waiting say={say} label={d.busy === "grade" ? t("exercise.grading") : undefined} />}
+      {busy && <Waiting go={go} label={d.busy === "grade" ? t("exercise.grading") : undefined} />}
       {(err || d.error) && <p role="alert" className="text-sm text-danger">{t("exercise.failed")}</p>}
       {!done && (
         <div className="flex flex-col gap-2 rounded-lg border border-dashed border-border p-3">
@@ -118,11 +118,11 @@ export function Exercise({ data, callTool, say }: { data: ExerciseData; callTool
           <>
             <input ref={pick} type="file" accept="image/*,application/pdf" multiple hidden onChange={(e) => { void add(e.target.files); e.target.value = ""; }} />
             <Button variant="outline" disabled={busy || up} onClick={() => pick.current?.click()}><ImagePlus className="size-4" />{t("exercise.upload")}</Button>
-            <Button disabled={busy || up || files.length === 0} onClick={() => void ask("exercise_grade_request", { files: refs() }, t("mcp.grade"))}>{busy && d.busy === "grade" ? t("exercise.grading") : t("exercise.submit")}</Button>
-            <Button variant="outline" disabled={busy || up || d.hints.length >= 3} onClick={() => void ask("exercise_hint_request", { files: refs() }, t("mcp.hint", { n: level }))}>{t("exercise.hintN", { n: level })}</Button>
+            <Button disabled={busy || up || files.length === 0} onClick={() => void ask("exercise_grade_request", { files: refs() })}>{busy && d.busy === "grade" ? t("exercise.grading") : t("exercise.submit")}</Button>
+            <Button variant="outline" disabled={busy || up || d.hints.length >= 3} onClick={() => void ask("exercise_hint_request", { files: refs() })}>{t("exercise.hintN", { n: level })}</Button>
           </>
         )}
-        {d.canReveal && <Button variant="ghost" disabled={busy} onClick={() => void ask("exercise_solution_request", {}, t("mcp.solution"))}>{t("exercise.showSolution")}</Button>}
+        {d.canReveal && <Button variant="ghost" disabled={busy} onClick={() => void ask("exercise_solution_request", {})}>{t("exercise.showSolution")}</Button>}
         {d.grade && !done && <Button variant="outline" onClick={async () => void apply(await callTool("exercise_retry", { runId: d.runId }))}>{t("exercise.retry")}</Button>}
       </div>
     </section>

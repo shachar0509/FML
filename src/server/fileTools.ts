@@ -114,15 +114,31 @@ export function registerFileTools(server: McpServer, bridge: BridgeGateway, o: {
     return out("ok", { ok: true });
   });
 
+  async function improve(number: string) {
+    const c = await loadCourse(number);
+    if (!c?.plan) return;
+    improving.set(number, { state: "running", error: null });
+    try {
+      await refinePlan({ gw: claude(), course: c.course, lang: lang() });
+      improving.delete(number);
+    } catch (e) {
+      improving.set(number, { state: "failed", error: e instanceof Error ? e.message : String(e) });
+      throw e;
+    }
+  }
+
   registerAppTool(server, "files_start_indexing", { title: "Start indexing", description: "Index the pending files (an AI job; the model must then call shalav_next_job).", inputSchema: numIn, _meta: both }, async ({ number }) => {
     if (!(await loadCourse(number))?.plan) return fail("This course has no study plan yet.");
     const todo = (await listFileIndexes(number)).filter((r) => r.status === "pending" || r.status === "failed");
     if (!todo.length) return out("Nothing to index.", { ok: true, count: 0 });
+    // One Enter does both: index, then refine the plan from what was indexed (M15).
     bridge.run(`Indexing files of ${number}`, async () => {
       for (const r of todo) await queue.retry(number, r.sha256);
       await queue.idle();
+      const ok = (await listFileIndexes(number)).some((r) => r.status === "indexed" && todo.some((x) => x.sha256 === r.sha256));
+      if (ok) await improve(number);
       return todo.length;
-    }, (n) => [{ type: "text", text: `Indexed ${n} file(s) of ${number}. Tell the student; the card shows the result.` }]).done.catch(() => undefined);
+    }, (n) => [{ type: "text", text: `Indexed ${n} file(s) of ${number} and updated the plan from them. Tell the student; the card shows the result.` }]).done.catch(() => undefined);
     return out(`Started indexing ${todo.length} file(s). Call shalav_next_job now.`, { ok: true, count: todo.length, next: "Call shalav_next_job now." });
   });
 
@@ -137,16 +153,8 @@ export function registerFileTools(server: McpServer, bridge: BridgeGateway, o: {
     const c = await loadCourse(number);
     if (!c?.plan) return fail("This course has no study plan yet.");
     if (improving.get(number)?.state === "running") return out("Already improving.", { ok: true });
-    improving.set(number, { state: "running", error: null });
-    bridge.run(`Improving the study plan for ${number}`, async () => {
-      try {
-        await refinePlan({ gw: claude(), course: c.course, lang: lang() });
-        improving.delete(number);
-      } catch (e) {
-        improving.set(number, { state: "failed", error: e instanceof Error ? e.message : String(e) });
-        throw e;
-      }
-    }, () => [{ type: "text", text: `The plan for ${number} was updated from the materials. Tell the student.` }]).done.catch(() => undefined);
+    improving.set(number, { state: "running", error: null }); // the card sees it at once
+    bridge.run(`Improving the study plan for ${number}`, () => improve(number), () => [{ type: "text", text: `The plan for ${number} was updated from the materials. Tell the student.` }]).done.catch(() => undefined);
     return out("Started improving the plan. Call shalav_next_job now.", { ok: true, next: "Call shalav_next_job now." });
   });
 }

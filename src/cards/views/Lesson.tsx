@@ -3,11 +3,11 @@ import { Check, Circle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Markdown } from "@/core/render/Markdown";
-import type { LessonData } from "../types";
+import type { LessonData, Go } from "../types";
 
 type Tool = (name: string, args?: Record<string, unknown>) => Promise<{ structuredContent?: unknown; isError?: boolean }>;
 
-export function Lesson({ data, callTool, say }: { data: LessonData; callTool: Tool; say: (t: string) => Promise<void> }) {
+export function Lesson({ data, callTool, go }: { data: LessonData; callTool: Tool; go: Go }) {
   const { t } = useTranslation();
   const [d, setD] = useState(data);
   const [confirm, setConfirm] = useState(false);
@@ -27,7 +27,7 @@ export function Lesson({ data, callTool, say }: { data: LessonData; callTool: To
     apply(await callTool("stage_complete", { ...args, by }));
     setConfirm(false);
   };
-  const stage = (s: { id: string; title: string }, key: "mcp.learn" | "mcp.relearn") => void say(t(key, { stage: `${s.id} · ${s.title}` }));
+  const stage = (s: { id: string; title: string }, kind: "learn" | "relearn") => void go({ kind, stageId: s.id, title: s.title });
 
   return (
     <section className="flex flex-col gap-4 p-4" aria-label={d.title}>
@@ -57,8 +57,8 @@ export function Lesson({ data, callTool, say }: { data: LessonData; callTool: To
         <div className="flex flex-col gap-2">
           <p className="flex items-center gap-2 font-medium"><Check className="size-4 text-success" aria-hidden />{t("learn.completed")}</p>
           <div className="flex flex-wrap gap-2">
-            {d.next && <Button onClick={() => stage(d.next as { id: string; title: string }, "mcp.learn")}>{t("learn.nextStage")}</Button>}
-            <Button variant="outline" onClick={() => void callTool("stage_reopen", args).then((r) => (apply(r), stage({ id: d.stageId, title: d.title }, "mcp.relearn")))}>{t("learn.again")}</Button>
+            {d.next && <Button onClick={() => stage(d.next as { id: string; title: string }, "learn")}>{t("learn.nextStage")}</Button>}
+            <Button variant="outline" onClick={() => void callTool("stage_reopen", args).then((r) => (apply(r), stage({ id: d.stageId, title: d.title }, "relearn")))}>{t("learn.again")}</Button>
           </div>
         </div>
       ) : d.criteria.met ? (

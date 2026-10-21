@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Pin, PinOff } from "lucide-react";
+import { CornerDownLeft, Pin, PinOff, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { applyLanguage, applyTheme } from "@/core/lib/dom";
 import { AddCourse } from "./views/AddCourse";
@@ -14,7 +14,7 @@ import type { CardData, Host } from "./types";
 import { useShalav } from "./useShalav";
 
 export function Cards({ host }: { host: Host }) {
-  const { data, ctx, callTool, say, displayMode } = useShalav(host);
+  const { data, ctx, callTool, go: ask, asked, clearAsked, displayMode } = useShalav(host);
   const { t } = useTranslation();
   const [mode, setMode] = useState(ctx.displayMode ?? "inline");
   const canPin = !!ctx.availableDisplayModes?.includes("pip");
@@ -32,6 +32,13 @@ export function Cards({ host }: { host: Host }) {
     ctx.theme === "light" || ctx.theme === "dark" ? ctx.theme : (data?.theme ?? "system");
   useEffect(() => applyLanguage(language), [language]);
   useEffect(() => applyTheme(theme), [theme]);
+  // "Press Enter" hint after a button put the short line in the chat box; gone after 90 s or when the model answers.
+  useEffect(() => {
+    if (!asked) return;
+    const h = setTimeout(clearAsked, 90_000);
+    return () => clearTimeout(h);
+  }, [asked, clearAsked]);
+  useEffect(() => clearAsked(), [data, clearAsked]);
 
   const go = useCallback(
     async (name: string, args?: Record<string, unknown>) => {
@@ -52,14 +59,14 @@ export function Cards({ host }: { host: Host }) {
       );
     if (shown.view === "add")
       return (
-        <AddCourse example={shown.example} callTool={callTool} say={say} open={open} back={home} />
+        <AddCourse example={shown.example} callTool={callTool} go={ask} open={open} back={home} />
       );
     if (shown.view === "course")
       return (
         <Course
           data={shown}
           callTool={callTool}
-          say={say}
+          go={ask}
           reload={() => open(shown.number)}
           back={home}
           practice={() => void go("shalav_practice", { courseNumber: shown.number })}
@@ -67,13 +74,13 @@ export function Cards({ host }: { host: Host }) {
       );
     if (shown.view === "practice")
       return (
-        <Practice data={shown} callTool={callTool} say={say} back={() => open(shown.number)} />
+        <Practice data={shown} callTool={callTool} go={ask} back={() => open(shown.number)} />
       );
     if (shown.view === "settings") return <Settings data={shown} callTool={callTool} back={home} />;
-    if (shown.view === "lesson") return <Lesson data={shown} callTool={callTool} say={say} />;
-    if (shown.view === "mcq") return <Mcq data={shown} callTool={callTool} say={say} />;
-    if (shown.view === "exercise") return <Exercise data={shown} callTool={callTool} say={say} />;
-    if (shown.view === "open") return <OpenQ data={shown} say={say} />;
+    if (shown.view === "lesson") return <Lesson data={shown} callTool={callTool} go={ask} />;
+    if (shown.view === "mcq") return <Mcq data={shown} callTool={callTool} go={ask} />;
+    if (shown.view === "exercise") return <Exercise data={shown} callTool={callTool} go={ask} />;
+    if (shown.view === "open") return <OpenQ data={shown} go={ask} />;
     return (
       <Home
         data={shown}
@@ -105,6 +112,15 @@ export function Cards({ host }: { host: Host }) {
         </button>
       )}
       {view()}
+      {!!asked && (
+        <div aria-live="polite" className="sticky bottom-0 m-3 flex items-center gap-2 rounded-card border border-primary/40 bg-primary/10 px-3 py-2 text-sm">
+          <CornerDownLeft className="size-4 shrink-0 text-primary" aria-hidden />
+          <span className="grow">{t("mcp.pressEnter")}</span>
+          <button className="text-muted hover:text-fg" aria-label={t("mcp.dismiss")} onClick={clearAsked}>
+            <X className="size-4" aria-hidden />
+          </button>
+        </div>
+      )}
     </>
   );
 }

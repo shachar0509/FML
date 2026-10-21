@@ -4,7 +4,7 @@ import { Check, FileText, FolderOpen, Loader2, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Input } from "@/core/components/ui/input";
-import type { FileRow, FilesData } from "../types";
+import type { FileRow, FilesData, Go } from "../types";
 
 type Tool = (name: string, args?: Record<string, unknown>) => Promise<{ structuredContent?: unknown; isError?: boolean }>;
 type Role = "material" | "exercises";
@@ -25,7 +25,7 @@ function Chip({ f }: { f: FileRow }) {
   return <span className="text-muted">{t("files.waiting")}</span>;
 }
 
-export function Files({ number, callTool, say, reload }: { number: string; callTool: Tool; say: (t: string) => Promise<void>; reload: () => void }) {
+export function Files({ number, callTool, go, reload }: { number: string; callTool: Tool; go: Go; reload: () => void }) {
   const { t } = useTranslation();
   const [d, setD] = useState<FilesData | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -52,6 +52,14 @@ export function Files({ number, callTool, say, reload }: { number: string; callT
     if (wasActive.current && !active) reload(); // plan may have changed
     wasActive.current = active;
   }, [active, reload]);
+
+  // A Moodle import that added files goes straight on to indexing (one Enter for import + index + plan update).
+  const wasMoodle = useRef(false);
+  useEffect(() => {
+    if (wasMoodle.current && !moodleBusy && d?.moodle?.last?.added && !d.moodle.last.error && d.canIndex) void start();
+    wasMoodle.current = moodleBusy;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [moodleBusy]);
 
   async function upload(role: Role, files: File[]) {
     setBusy(true);
@@ -84,12 +92,12 @@ export function Files({ number, callTool, say, reload }: { number: string; callT
   async function start() {
     const r = await callTool("files_start_indexing", { number });
     await refresh();
-    if (!r.isError) void say(t("mcp.index"));
+    if (!r.isError) void go();
   }
   async function improve() {
     await callTool("plan_improve_request", { number });
     await refresh();
-    void say(t("mcp.improve"));
+    void go();
   }
 
   if (!d) return null;
@@ -138,7 +146,7 @@ export function Files({ number, callTool, say, reload }: { number: string; callT
       {busy && <p className="text-sm text-muted" role="status"><Loader2 className="me-1 inline size-4 animate-spin" aria-hidden />{t("files.uploading")}</p>}
       {msg && <p className="text-sm text-danger" role="alert">{msg}</p>}
       {d.improving?.state === "failed" && <p className="text-sm text-danger" role="alert">{t("courseHome.improveFailed")}</p>}
-      {active && <Waiting say={say} />}
+      {active && <Waiting go={go} />}
       {!d.hasPlan && (d.materials.length > 0 || d.exercises.length > 0) && <p className="text-sm text-muted">{t("files.needPlan")}</p>}
       <div className="flex flex-wrap gap-3">
         <Button disabled={!d.canIndex || active} onClick={() => void start()}>{t("files.start")}</Button>

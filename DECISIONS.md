@@ -146,3 +146,7 @@
 - Moodle via the student's installed Chrome (not a bundled browser: MCPB size) with a persistent profile; no passwords or cookies are handled by Shalav code, and nothing is written outside the browser profile except a "logged in once" marker file.
 - One import tool runs login+sync as a background job (MCP calls time out); progress is read through files_list.
 - Unknown Moodle addresses are asked from the student instead of guessed.
+
+## M15 — card requests
+- No full automation: Claude Desktop's `ui/message` fills the composer only (claude-ai-mcp#1111), sampling is not offered, and `updateModelContext` does not start a turn. Skills don't help either (Claude runs them inside a turn the student started, and an MCPB can't ship one). The student presses Enter once per action.
+- The composer shows one fixed word ("▶️ המשך") instead of a request text, because the student asked not to see prompts. The request itself lives in a server-side inbox (last 5, in memory), and the server writes its text from an enum kind. The card never sends free text, except the student's own answer, which goes inside an `<answer>` block.

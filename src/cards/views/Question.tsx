@@ -3,13 +3,13 @@ import { Check, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Markdown } from "@/core/render/Markdown";
-import type { McqData, OpenData } from "../types";
+import type { McqData, OpenData, Go } from "../types";
 
 type Tool = (name: string, args?: Record<string, unknown>) => Promise<{ structuredContent?: unknown; isError?: boolean }>;
 type Marked = { selectedIndex: number; correct: boolean; correctIndex: number; explanationMd: string };
 const letter = (i: number) => String.fromCharCode(65 + i);
 
-export function Mcq({ data, callTool, say }: { data: McqData; callTool: Tool; say: (t: string) => Promise<void> }) {
+export function Mcq({ data, callTool, go }: { data: McqData; callTool: Tool; go: Go }) {
   const { t } = useTranslation();
   const [m, setM] = useState<Marked | null>(null);
   const [err, setErr] = useState(false);
@@ -17,7 +17,7 @@ export function Mcq({ data, callTool, say }: { data: McqData; callTool: Tool; sa
     const r = await callTool("check_answer", { checkId: data.checkId, selectedIndex: i });
     if (r.isError || !r.structuredContent) return setErr(true);
     setM(r.structuredContent as Marked);
-    void say(t("mcp.answer", { a: `${letter(i)}) ${data.options[i]}` }));
+    void go({ kind: "answer", text: `${letter(i)}) ${data.options[i]}` });
   }
   return (
     <section className="flex flex-col gap-3 p-4" aria-label={t("learn.exercise")}>
@@ -53,7 +53,7 @@ export function Mcq({ data, callTool, say }: { data: McqData; callTool: Tool; sa
   );
 }
 
-export function OpenQ({ data, say }: { data: OpenData; say: (t: string) => Promise<void> }) {
+export function OpenQ({ data, go }: { data: OpenData; go: Go }) {
   const { t } = useTranslation();
   const [a, setA] = useState("");
   const [sent, setSent] = useState(false);
@@ -68,7 +68,7 @@ export function OpenQ({ data, say }: { data: OpenData; say: (t: string) => Promi
             dir="auto" rows={5} value={a} onChange={(e) => setA(e.target.value)} placeholder={t("learn.answerPlaceholder")} aria-label={t("learn.yourAnswer")}
             className="rounded-lg border border-border bg-card p-3 text-sm"
           />
-          <Button className="self-start" disabled={!a.trim()} onClick={() => (setSent(true), void say(t("mcp.answerOpen", { a: a.trim() })))}>{t("learn.sendAnswer")}</Button>
+          <Button className="self-start" disabled={!a.trim()} onClick={() => (setSent(true), void go({ kind: "answer", text: a.trim() }))}>{t("learn.sendAnswer")}</Button>
         </>
       )}
     </section>

@@ -61,7 +61,13 @@ it("uploads in chunks, lists, indexes through the bridge, removes", async () => 
   const id = Number(/job #(\d+)/.exec(job)?.[1]);
   expect(job).toContain("limits of sequences");
   const done = await call("shalav_submit_job", { jobId: id, input: { pages: [{ page: 1, stageIds: ["S001"], summary: "s", hasFigure: false, hasExercises: false }] } });
-  expect(JSON.stringify(done.content)).toMatch(/Indexed 1 file/);
+  // the same run then refines the plan (M15: one Enter does both)
+  const rev = JSON.stringify(done.content);
+  expect(rev).toContain("submit_plan_revision");
+  const sid = (k: number) => `S${String(k).padStart(3, "0")}`;
+  const revUnit = (from: number) => ({ title: "u", summary: "s", stages: Array.from({ length: 18 }, (_, i) => ({ title: "t", kind: "concept", summary: "s", prerequisites: [], sourceId: sid(from + i) })) });
+  const fin = await call("shalav_submit_job", { jobId: Number(/job #(\d+)/.exec(rev)?.[1]), input: { courseKind: "mixed", units: [revUnit(1), revUnit(19)] } });
+  expect(JSON.stringify(fin.content)).toMatch(/Indexed 1 file/);
 
   f = sc<FilesData>(await call("files_list", { number: num }));
   expect(f.materials[0]?.status).toBe("indexed");

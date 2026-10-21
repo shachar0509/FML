@@ -306,3 +306,10 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - Pin button (top corner of every card) asks the host for `pip` display mode so the card stays on screen while the chat scrolls; shown only when the host lists `pip` in `availableDisplayModes`. e2e covers the toggle with the test host.
 - Live notes: in Claude Desktop a card's `sendMessage` only fills the input box (the student presses Enter); MCP sampling is not offered, so card buttons cannot start AI work by themselves.
 - 🧪: does the pin button appear in Claude Desktop, and does the card float?
+
+### M15 — Card requests behind one "▶️ המשך" (done; 🧪 pending)
+- Claude Desktop can't start a turn from a card (sendMessage only fills the composer, anthropics/claude-ai-mcp#1111; no sampling). So the card now sends the real request to a hidden app-only tool `shalav_request` (kinds: learn, relearn, answer), and the composer gets only "▶️ המשך" / "▶️ Continue". `shalav_next_job` hands out the card requests first, then the bridge jobs. The instructions tell Claude that this word comes from a card.
+- Cards: `say(text)` became `go(req?)` (`useShalav`). A "press Enter" banner shows at the bottom of the card; it hides on new data, after 90 s, or on ✕. The long `mcp.*` chat lines are gone.
+- Chaining: `files_start_indexing` refines the plan in the same run. A Moodle import that added files starts indexing by itself → import + index + plan update = one Enter.
+- Checks: typecheck/lint clean, 122 unit, 29 e2e, pack + smoke ok (48 tools).
+- 🧪 Claude Desktop (a regular chat, not Cowork): Learn → composer shows only "▶️ המשך" → Enter → the lesson starts; MCQ answer → Enter → Claude reacts to the chosen option.

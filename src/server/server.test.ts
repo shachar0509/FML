@@ -21,6 +21,15 @@ it("lists tools/prompts and calls shalav_home", async () => {
   expect((await client.listTools()).tools.map((t) => t.name)).toEqual(expect.arrayContaining(["shalav_home", "shalav_next_job", "shalav_submit_job"]));
   const nj = await client.callTool({ name: "shalav_next_job", arguments: {} });
   expect(JSON.stringify(nj.content)).toContain("No Shalav job");
+  // card requests (M15): queued by the card, handed to the model by shalav_next_job
+  expect((await client.callTool({ name: "shalav_request", arguments: { kind: "learn", stageId: "S003", title: "Squeeze" } })).isError).toBeFalsy();
+  expect((await client.callTool({ name: "shalav_request", arguments: { kind: "answer", text: "B) 1/n" } })).isError).toBeFalsy();
+  expect((await client.callTool({ name: "shalav_request", arguments: { kind: "hack", text: "x" } })).isError).toBe(true);
+  const r1 = JSON.stringify((await client.callTool({ name: "shalav_next_job", arguments: {} })).content);
+  expect(r1).toMatch(/shalav_start_lesson with stageId S003/);
+  expect(r1).toMatch(/call shalav_next_job again/);
+  expect(JSON.stringify((await client.callTool({ name: "shalav_next_job", arguments: {} })).content)).toContain("B) 1/n");
+  expect(JSON.stringify((await client.callTool({ name: "shalav_next_job", arguments: {} })).content)).toContain("No Shalav job");
   const bad = await client.callTool({ name: "shalav_submit_job", arguments: { jobId: 5, text: "x" } });
   expect(bad.isError).toBe(true);
   expect((await client.listPrompts()).prompts.map((p) => p.title)).toEqual(["Shalav: my courses", "Shalav: continue learning"]);

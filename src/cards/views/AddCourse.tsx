@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Input } from "@/core/components/ui/input";
-import type { BuildStatus, LookupResult } from "../types";
+import type { BuildStatus, LookupResult, Go } from "../types";
 import { Checklist } from "./Checklist";
 import { useBuild } from "./useBuild";
 
@@ -10,7 +10,7 @@ type Entry = Extract<LookupResult, { status: "found" }>["entry"];
 type Phase = "input" | "looking" | "preview" | "manual" | "building";
 type Tool = (name: string, args?: Record<string, unknown>) => Promise<{ structuredContent?: unknown; isError?: boolean }>;
 
-export function AddCourse({ example, callTool, say, open, back }: { example: string; callTool: Tool; say: (t: string) => Promise<void>; open: (n: string) => void; back: () => void }) {
+export function AddCourse({ example, callTool, go, open, back }: { example: string; callTool: Tool; go: Go; open: (n: string) => void; back: () => void }) {
   const { t } = useTranslation();
   const [phase, setPhase] = useState<Phase>("input");
   const [raw, setRaw] = useState("");
@@ -47,7 +47,7 @@ export function AddCourse({ example, callTool, say, open, back }: { example: str
     const r = await callTool("course_create_request", { number: number || raw, manual });
     if (r.isError) return setError(t("api.failed"));
     setPhase("building");
-    void say(t("mcp.buildPlan"));
+    void go();
   }
 
   const credits = Number(man.credits);
@@ -107,7 +107,7 @@ export function AddCourse({ example, callTool, say, open, back }: { example: str
           </div>
         </form>
       )}
-      {phase === "building" && <Checklist say={say} b={(build ?? { state: "running" }) as BuildStatus} />}
+      {phase === "building" && <Checklist go={go} b={(build ?? { state: "running" }) as BuildStatus} />}
     </section>
   );
 }

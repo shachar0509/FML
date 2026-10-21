@@ -3,14 +3,14 @@ import { Check, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Markdown } from "@/core/render/Markdown";
-import type { PracticeData } from "../types";
+import type { PracticeData, Go } from "../types";
 import { Exercise } from "./Exercise";
 
 type Tool = (name: string, args?: Record<string, unknown>) => Promise<{ structuredContent?: unknown; isError?: boolean }>;
 type Scope = { kind: "all" | "weak" } | { kind: "unit"; unitId: string } | { kind: "stage"; stageId: string };
 const letter = (i: number) => String.fromCharCode(65 + i);
 
-export function Practice({ data, callTool, say, back }: { data: PracticeData; callTool: Tool; say: (t: string) => Promise<void>; back: () => void }) {
+export function Practice({ data, callTool, go, back }: { data: PracticeData; callTool: Tool; go: Go; back: () => void }) {
   const { t } = useTranslation();
   const [d, setD] = useState(data);
   const [again, setAgain] = useState(false); // chooser after a summary
@@ -23,7 +23,7 @@ export function Practice({ data, callTool, say, back }: { data: PracticeData; ca
     if (r.structuredContent) {
       const x = r.structuredContent as PracticeData;
       setD(x);
-      if (x.loading) void say(t("mcp.practice")); // Claude has the work; ask the chat to fetch the job
+      if (x.loading) void go(); // Claude has the work; ask the chat to fetch the job
     }
     return r;
   };
@@ -74,7 +74,7 @@ export function Practice({ data, callTool, say, back }: { data: PracticeData; ca
         <>
           <p className="text-sm text-muted" role="status">{t("practice.answered")}: {d.counters.answered} · {t("practice.correct")}: {d.counters.correct} · {t("practice.avg")}: {d.counters.avg}</p>
           {d.loading && !d.item && <p role="status" className="text-muted">{t("practice.preparing")}</p>}
-          {d.item?.kind === "E" && <Exercise key={d.item.exercise.runId} data={d.item.exercise} callTool={callTool} say={say} />}
+          {d.item?.kind === "E" && <Exercise key={d.item.exercise.runId} data={d.item.exercise} callTool={callTool} go={go} />}
           {d.item?.kind === "M" && (
             <div className="flex flex-col gap-2">
               <Markdown>{d.item.questionMd}</Markdown>
@@ -132,7 +132,7 @@ export function Practice({ data, callTool, say, back }: { data: PracticeData; ca
               {d.summary.weakStages.map((s) => (
                 <li key={s.id} className="flex items-center gap-2 text-sm">
                   <span className="grow">{s.id} · {s.title}</span>
-                  <Button variant="outline" onClick={() => void call("practice_learn_again", { stageId: s.id }).then(() => say(t("mcp.relearn", { stage: `${s.id} · ${s.title}` })))}>{t("practice.summary.learnAgain")}</Button>
+                  <Button variant="outline" onClick={() => void call("practice_learn_again", { stageId: s.id }).then(() => go({ kind: "relearn", stageId: s.id, title: s.title }))}>{t("practice.summary.learnAgain")}</Button>
                 </li>
               ))}
             </ul>

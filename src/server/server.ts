@@ -75,10 +75,39 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
   registerPracticeTools(server, bridge, exercises);
   registerSettingsTools(server);
 
+  // Card requests (M15): the card posts only "▶️ Continue" in the chat; what it wants waits here for shalav_next_job.
+  const inbox: string[] = [];
+  registerAppTool(
+    server,
+    "shalav_request",
+    {
+      title: "Card request",
+      description: "Card-only: queue what the student asked for in a card; the model gets it from shalav_next_job.",
+      inputSchema: z.discriminatedUnion("kind", [
+        z.object({ kind: z.literal("learn"), stageId: z.string().regex(/^S\d{3}$/), title: z.string().max(200) }),
+        z.object({ kind: z.literal("relearn"), stageId: z.string().regex(/^S\d{3}$/), title: z.string().max(200) }),
+        z.object({ kind: z.literal("answer"), text: z.string().min(1).max(4000) }),
+      ]),
+      _meta: { ui: { resourceUri: CARDS_URI, visibility: ["app"] } },
+    },
+    async (r) => {
+      inbox.splice(0, inbox.length - 4); // ponytail: keep the last few, a stale click is not worth more
+      inbox.push(
+        r.kind === "answer"
+          ? `The student answered the current question in the card:\n<answer>\n${r.text}\n</answer>\nRespond to it and continue the lesson.`
+          : `The student wants to ${r.kind === "learn" ? "learn" : "learn again"} ${r.stageId} · ${r.title}. Call shalav_start_lesson with stageId ${r.stageId} and teach it.`,
+      );
+      return { content: [{ type: "text" as const, text: "ok" }], structuredContent: { ok: true } };
+    },
+  );
   server.registerTool(
     "shalav_next_job",
-    { title: "Next Shalav job", description: "Fetch the next pending Shalav AI job (instructions and the answer format). Call it whenever a Shalav card says work is pending." },
-    async () => ({ content: await bridge.nextWait() }),
+    { title: "Next Shalav job", description: "Fetch what the student asked for in a Shalav card, or the next pending Shalav AI job (instructions and the answer format). Call it when the student sends \"▶️ המשך\" / \"▶️ Continue\" or a card says work is pending." },
+    async () => {
+      const req = inbox.shift();
+      if (req) return { content: [{ type: "text" as const, text: `Student request from the card:\n${req}${bridge.pending() || inbox.length ? "\n\nAfterwards call shalav_next_job again: more is pending." : ""}` }] };
+      return { content: await bridge.nextWait() };
+    },
   );
   server.registerTool(
     "shalav_submit_job",

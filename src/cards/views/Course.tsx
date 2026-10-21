@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Check, ChevronDown, Circle, Contrast, Lock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
-import type { CourseData, Stage } from "../types";
+import type { CourseData, Stage, Go } from "../types";
 import { Checklist } from "./Checklist";
 import { Files } from "./Files";
 import { useBuild } from "./useBuild";
@@ -21,7 +21,7 @@ const Bar = ({ pct }: { pct: number }) => (
   </div>
 );
 
-export function Course({ data, callTool, say, reload, back, practice }: { data: CourseData; callTool: Tool; say: (t: string) => Promise<void>; reload: () => void; back: () => void; practice: () => void }) {
+export function Course({ data, callTool, go, reload, back, practice }: { data: CourseData; callTool: Tool; go: Go; reload: () => void; back: () => void; practice: () => void }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [sel, setSel] = useState<string | null>(null);
@@ -32,7 +32,7 @@ export function Course({ data, callTool, say, reload, back, practice }: { data: 
   async function retry() {
     await callTool("plan_retry_request", { number: data.number });
     reload();
-    void say(t("mcp.buildPlan"));
+    void go();
   }
 
   return (
@@ -52,7 +52,7 @@ export function Course({ data, callTool, say, reload, back, practice }: { data: 
       {!data.hasPlan && data.build && (
         <div className="flex flex-col gap-3 rounded-card border border-warning p-4">
           {running ? (
-            <Checklist say={say} b={live ?? data.build} />
+            <Checklist go={go} b={live ?? data.build} />
           ) : (
             <>
               <p>{t("plan.failed")}</p>
@@ -65,7 +65,7 @@ export function Course({ data, callTool, say, reload, back, practice }: { data: 
 
       {data.hasPlan && (
         <div className="flex flex-wrap gap-3">
-          <Button disabled={!cur} onClick={() => cur && void say(t("mcp.learn", { stage: `${cur.id} · ${cur.title}` }))}>{t("nav.learn")}{cur ? ` — ${cur.id}` : ""}</Button>
+          <Button disabled={!cur} onClick={() => cur && void go({ kind: "learn", stageId: cur.id, title: cur.title })}>{t("nav.learn")}{cur ? ` — ${cur.id}` : ""}</Button>
           <Button variant="outline" disabled={!data.canPractice} onClick={practice}>{t("nav.practice")}</Button>
         </div>
       )}
@@ -113,7 +113,7 @@ export function Course({ data, callTool, say, reload, back, practice }: { data: 
           })}
         </section>
       )}
-      {!running && <Files number={data.number} callTool={callTool} say={say} reload={reload} />}
+      {!running && <Files number={data.number} callTool={callTool} go={go} reload={reload} />}
     </section>
   );
 }
