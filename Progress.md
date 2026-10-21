@@ -551,3 +551,19 @@ Edge cases found with the sample slides, and fixed in the renderer:
   - reproduced in a real Electron utility process with the bundled import: `failed` before, `added` after;
   - new `platform.test.ts`; 138 unit tests.
 - 🧪 Install `dist/shalav.mcpb` in Claude Desktop and open the course files: the files already in the folders are indexed by that scan, with no new Moodle import needed.
+
+## M30 — display fences, parentheses in notes, OUTPUT_ALIGN.md ✅
+- **Bug** (`e2e/shots/display alignment problems/image.png`): a proof written as `$$\begin{aligned} … \end{aligned}$$` showed as red raw TeX.
+  - remark-math reads `$$` like a code fence: it drops text after an opening `$$` and closes only on a line that is just `$$`. So `\begin` was lost and the block ran past `\end{aligned}$$`.
+  - It showed whenever the rows conversion did not take the block: a `.` after the closing `$$`, `cases`, or `aligned` without Hebrew.
+- **Fix:** `fenceDisplays` puts the fences on lines of their own, inside the same blockquote. Punctuation after the closing `$$` moves inside the formula; other text moves to the next line.
+  - It runs before `escapeCurrency` and `balanceDollars`. Those work one line at a time and paired `\end{cases}$$` with a later `$`.
+- **`displayToRows`** accepts `.,;:` after `\end{…}`, so a proof that ends with a period stays rows.
+- **Notes like "(הנחה: a + c = 0)":**
+  - `\text{(}` and `\text{)}` count as words beside Hebrew, so the parentheses follow the Hebrew and `)` no longer sits inside the formula;
+  - `joinPieces` adds no space after `(` or before `)`;
+  - the colon line break skips a colon inside an open parenthesis.
+- **`OUTPUT_ALIGN.md`** documents the whole alignment pipeline: source rewrite, HTML pass, rows, fitting, checks.
+- **Checks:**
+  - sample `fences`, with screenshots in `e2e/shots/display alignment problems/`;
+  - unit tests; 138 unit and 61 e2e pass.
