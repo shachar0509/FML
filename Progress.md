@@ -711,3 +711,28 @@ Edge cases found with the sample slides, and fixed in the renderer:
     It stops only that file: the build goes on with the other files and the plan update. Test: one file is cancelled while it waits on the model, another while queued, and a third still indexes.
   - **`retry`:** a file removed while Update plan starts no longer fails the whole build with a blank error.
   - 148 unit tests; lint and tsc clean.
+
+## M41: classic edge cases reach the curriculum; file ⋯ menu; the indexing stage is called "scan" (סריקה) ✅
+- **Traps are captured at scanning time:**
+  - **Exercises:**
+    - `edgeCaseFocus` now has a definition: traps a careful solver must check (domain of definition, division by zero, boundary or degenerate cases, an answer that is undefined, a hypothesis that fails).
+    - The model thinks the solution through without writing it, so it catches traps that only show when solving, even when the file has no solution.
+    - New field `keyPoints`: the specific trick an exercise needs beyond the routine method.
+  - **Material pages:** new field `notes`, holding remarks, warnings, special cases and counterexamples, in the page's words.
+  - All three fields default to `[]`, and records scanned before M41 still load.
+- **Every trap reaches the plan update:**
+  - Traps, key points and notes are lines of their own under the stage they belong to. A line repeated across files is kept once.
+  - Enrich now gets **all** of a stage's lines with no cut. A stage with more lines than fit is checked in parts (`enrichParts`), and the parts' additions merge.
+  - Rule in the prompt: a trap seen even once becomes an edge case of the stage, for example one exercise undefined because of its domain while similar ones are defined. It's written as a general rule ("check the domain of definition first").
+  - The tutor already must teach and test every listed edge case of a stage.
+- **Old files:** they are re-scanned only when the student asks, from the new menu.
+- **File ⋯ menu** (replaces the trash icon), designed as an extension of the card's existing style:
+  - **Open** (`file_open`, the system's default app).
+  - **Re-scan / סריקה מחדש** (`file_reindex`). The file waits for the next Update plan, and a note says so. It's disabled for a file not scanned yet.
+  - **Delete**, in red, which still asks first.
+  - Arrow keys move through it, Esc closes it and returns focus to ⋯, and an outside click closes it.
+- **Naming convention:** the indexing stage is "סריקה" / "scan" in all UI text (נסרק, נסרקו, סורק; "Scanning", "Not scanned yet", "Re-scan").
+- **Checks:**
+  - Unit tests: trap, key point and note lines reach enrich even when one exercise among 16 has the trap; repeats are kept once; parts cover every line; scanning saves the new fields and defaults them; file_open and file_reindex work.
+  - E2e course spec: menu keyboard navigation, Esc and outside click, Open and Re-scan calls, Re-scan disabled on a file not scanned yet, Delete through the menu, axe.
+  - Totals: 149 unit tests; course, step, practice and render e2e specs green (some failed once from dev-server load and passed on rerun). Lint and tsc clean.

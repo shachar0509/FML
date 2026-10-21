@@ -44,9 +44,9 @@ describe("indexing", () => {
     // batches run in parallel, so replies go by the pages asked, not by call order
     const reply = (r: ClaudeRequest) =>
       r.tools?.[0]?.name === "submit_exercises"
-        ? toolCall("submit_exercises", { exercises: [ex("q1", { figures: [{ page: 3, bbox: [0, 0.1, 2, 0.5] }] })] })
+        ? toolCall("submit_exercises", { exercises: [ex("q1", { figures: [{ page: 3, bbox: [0, 0.1, 2, 0.5] }], edgeCaseFocus: ["x = 2 is outside the domain"], keyPoints: ["divide by the leading term"] })] })
         : toolCall("submit_material_pages", {
-            pages: pagesIn(r).map((p) => (p <= 8 ? { page: p, stageIds: ["S002", "S999"], summary: "s", hasFigure: false, hasExercises: p === 3 } : { page: p, stageIds: [], summary: "s", hasFigure: true, hasExercises: false })),
+            pages: pagesIn(r).map((p) => (p <= 8 ? { page: p, stageIds: ["S002", "S999"], summary: "s", hasFigure: false, hasExercises: p === 3, ...(p === 3 ? { notes: ["check the domain"] } : p < 9 ? { notes: [] } : {}) } : { page: p, stageIds: [], summary: "s", hasFigure: true, hasExercises: false })),
           });
     const gw = new FakeClaudeGateway([reply, reply, reply]);
     const out = await indexMaterial(opts(gw, src(10), rec()));
@@ -57,6 +57,9 @@ describe("indexing", () => {
     expect((first.messages[0]?.content as { type: string }[]).filter((b) => b.type === "image")).toHaveLength(1);
     expect((first.messages[0]?.content as { text?: string }[])[0]?.text?.length).toBeLessThan(6020);
     expect(out.materialPages.map((p) => p.page)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(out.materialPages[2]?.notes).toEqual(["check the domain"]);
+    expect(out.materialPages[9]?.notes).toEqual([]); // a model may leave it out: defaults to none
+    expect(out.exercises[0]).toMatchObject({ edgeCaseFocus: ["x = 2 is outside the domain"], keyPoints: ["divide by the leading term"] });
     expect(out.status).toBe("indexed");
     expect(out.planVersion).toBe(3);
     expect(out.materialPages).toHaveLength(10);

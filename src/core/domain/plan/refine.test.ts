@@ -10,7 +10,7 @@ import { stageId, unitId } from "@/core/lib/ids";
 import { setDeviceId } from "@/core/lib/device";
 import { useSettings } from "@/stores/settings";
 import { memFs } from "@/test/memfs";
-import { applyRevision, mergeAdditions, newStageIds, refinePlan, remapIndex, stageEvidence } from "./refine";
+import { applyRevision, enrichParts, mergeAdditions, newStageIds, refinePlan, remapIndex, stageEvidence } from "./refine";
 import { validatePlan } from "./plan";
 
 const N = "01040195";
@@ -89,6 +89,28 @@ describe("refine", () => {
     expect(s.objectives).toEqual(["a", "b"]); // never touched: completion needs every objective covered
     expect(s.techniques).toEqual(["t"]);
     expect(mergeAdditions(s, { id: "S003", techniques: [], edgeCases: [], theorems: [{ name: "x", statement: "", proofRequired: true }] }).theorems).toHaveLength(1);
+  });
+
+  it("traps, key points and page notes are lines of their own; every line reaches enrich, in parts when many", () => {
+    const ex = (label: string, trap: string[]) => ({ ...rec(1).exercises[0], id: label, label, requiredStageIds: ["S003"], gist: `limit ${label}`, edgeCaseFocus: trap, keyPoints: label === "q2" ? ["substitute t = 1/x"] : [] });
+    const files = Array.from({ length: 8 }, (_, k) => ({
+      ...rec(1), sha256: `f${k}`, fileName: `F${k}.pdf`,
+      materialPages: [{ page: 1, stageIds: ["S003"], summary: `summary of file ${k} `.padEnd(200, "x"), hasFigure: false, text: "", notes: k === 6 ? ["note: undefined at x = 0"] : [] }],
+      exercises: [ex("q1", []), ex("q2", k === 5 ? ["the answer is undefined: x = 2 is outside the domain"] : [])],
+    }));
+    const ev = stageEvidence(files as never, new Set(["S003"]));
+    const all = ev.all("S003");
+    expect(all).toContain("- F5.pdf q2: trap: the answer is undefined: x = 2 is outside the domain"); // one exercise among 16
+    expect(all).toContain("- F6.pdf p1: note: note: undefined at x = 0");
+    expect(all).toContain("- F0.pdf q2: key point: substitute t = 1/x");
+    expect(all.filter((l) => l.includes("key point"))).toHaveLength(1); // same text in 8 files: once
+    expect(ev.stage("S003").length).toBeLessThan(all.length); // Pass A sees a fair sample; enrich sees everything
+    const parts = enrichParts([{ s: plan.stages[2] as never, lines: all }, { s: plan.stages[3] as never, lines: ["- a"] }], 600);
+    const s3 = parts.flat().filter((x) => x.id === "S003");
+    expect(s3.length).toBeGreaterThan(1);
+    expect(s3.every((x, k) => x.of?.k === k + 1 && x.of.n === s3.length)).toBe(true);
+    expect(s3.flatMap((x) => x.lines)).toEqual(all); // nothing cut
+    expect(parts.at(-1)?.some((x) => x.id === "S004")).toBe(true); // small stages share a part
   });
 
   it("remapIndex remaps older records only", () => {

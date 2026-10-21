@@ -87,6 +87,7 @@ export function remapIndex(rec: FileIndex, idMap: Record<string, string | null>,
 
 const STAGE_CHARS = 1500;
 const UNCOVERED_CHARS = 8000;
+const ENRICH_CHARS = 6000; // file lines per enrich job; a stage with more is checked in several parts, so no line is cut
 
 /** Takes lines round-robin across files until `budget` chars: a long file A never crowds out file B. */
 function fair(byFile: Map<string, string[]>, budget: number): string[] {
@@ -122,19 +123,31 @@ export function stageEvidence(indexes: FileIndex[], known: Set<string>) {
   };
   for (const r of indexes) {
     if (r.status !== "indexed") continue;
+    // M41: traps, key points and page notes are lines of their own: short, each kept, never folded into a summary
     for (const m of r.materialPages) {
       const ids = m.stageIds.filter((id) => known.has(id));
-      for (const id of ids.length ? ids : [""]) add(id, r.fileName, `p${m.page}`, m.summary);
+      for (const id of ids.length ? ids : [""]) {
+        add(id, r.fileName, `p${m.page}`, m.summary);
+        for (const n of m.notes ?? []) add(id, r.fileName, `p${m.page}`, `note: ${n}`);
+      }
     }
     for (const e of r.exercises) {
-      // ponytail: gist (or the statement's first 300 chars) + edge cases; enough to name what the exercise needs.
-      const body = `[${e.type}] ${e.gist || e.statementMd.replace(/\s+/g, " ").slice(0, 300)}${e.edgeCaseFocus.length ? ` (edge cases: ${e.edgeCaseFocus.join("; ")})` : ""}`;
+      // ponytail: gist (or the statement's first 300 chars); enough to name what the exercise is about.
       const ids = e.requiredStageIds.filter((id) => known.has(id));
-      for (const id of ids.length ? ids : [""]) add(id, r.fileName, e.label, body);
+      for (const id of ids.length ? ids : [""]) {
+        add(id, r.fileName, e.label, `[${e.type}] ${e.gist || e.statementMd.replace(/\s+/g, " ").slice(0, 300)}`);
+        for (const x of e.edgeCaseFocus) add(id, r.fileName, e.label, `trap: ${x}`);
+        for (const x of e.keyPoints ?? []) add(id, r.fileName, e.label, `key point: ${x}`);
+      }
     }
   }
   const lines = (id: string, budget: number) => fair(by.get(id) ?? new Map(), budget);
-  return { stage: (id: string) => lines(id, STAGE_CHARS), uncovered: lines("", UNCOVERED_CHARS) };
+  return {
+    stage: (id: string) => lines(id, STAGE_CHARS),
+    /** Every line of the stage, no budget (enrich splits them into parts). */
+    all: (id: string) => lines(id, Infinity),
+    uncovered: lines("", UNCOVERED_CHARS),
+  };
 }
 
 const norm = (t: string) => t.replace(/\s+/g, " ").trim().toLowerCase();
@@ -148,6 +161,40 @@ export function mergeAdditions(s: Stage, a: StageAdditions): Stage {
     edgeCases: union(s.edgeCases, a.edgeCases),
     theorems: [...s.theorems, ...a.theorems.filter((t, i) => norm(t.name) && !s.theorems.some((x) => norm(x.name) === norm(t.name)) && a.theorems.findIndex((x) => norm(x.name) === norm(t.name)) === i)],
   };
+}
+
+type EnrichPart = { id: string; lines: string[]; of?: { k: number; n: number } }[];
+
+/** Pure (M41): packs every stage's file lines into enrich jobs of about ENRICH_CHARS; a stage with more lines spans several parts. */
+export function enrichParts(xs: { s: Stage; lines: string[] }[], max = ENRICH_CHARS): EnrichPart[] {
+  const chunks = xs.flatMap(({ s, lines }) => {
+    const out: string[][] = [];
+    let cur: string[] = [];
+    let len = 0;
+    for (const l of lines) {
+      if (cur.length && len + l.length > max) {
+        out.push(cur);
+        cur = [];
+        len = 0;
+      }
+      cur.push(l);
+      len += l.length + 1;
+    }
+    if (cur.length) out.push(cur);
+    return out.map((lines, k) => ({ id: s.id, lines, of: out.length > 1 ? { k: k + 1, n: out.length } : undefined }));
+  });
+  const parts: EnrichPart[] = [];
+  let len = Infinity;
+  for (const c of chunks) {
+    const size = c.lines.join("\n").length;
+    if (len + size > max) {
+      parts.push([]);
+      len = 0;
+    }
+    (parts.at(-1) as EnrichPart).push(c);
+    len += size;
+  }
+  return parts;
 }
 
 type Opts = { gw: ClaudeGateway; course: CourseJson; lang: "he" | "en"; onProgress?: (p: PlanProgress) => void; signal?: AbortSignal };
@@ -193,28 +240,29 @@ export async function refinePlan(opts: Opts): Promise<PlanJson> {
   // Pass B for new/split stages, and enrich for kept stages the files say something about; grouped by unit, max 3 in parallel.
   const text = outlineText(units, stages);
   const jobs = units.map((u) => ({ ...u, stageIds: u.stageIds.filter((id) => fresh.has(id)) })).filter((u) => u.stageIds.length);
-  const enrich = units.map((u) => u.stageIds.filter((id) => !fresh.has(id) && ev.stage(id).length)).filter((ids) => ids.length);
   const byNew = new Map(stages.map((s) => [s.id, s]));
+  const enrich = enrichParts(stages.filter((s) => !fresh.has(s.id)).map((s) => ({ s, lines: ev.all(s.id) })));
   const details = new Map<string, UnitDetails>();
-  const additions = new Map<string, StageAdditions>();
+  const additions = new Map<string, StageAdditions[]>();
   let done = 0;
   const n = jobs.length + enrich.length;
   const tick = () => onProgress?.({ step: "plan", unit: { k: ++done, n } });
-  await pool<{ unit: Unit } | { ids: string[] }, unknown>([...jobs.map((unit) => ({ unit })), ...enrich.map((ids) => ({ ids }))], 3, async (j) => {
+  await pool<{ unit: Unit } | { part: EnrichPart }, unknown>([...jobs.map((unit) => ({ unit })), ...enrich.map((part) => ({ part }))], 3, async (j) => {
     if ("unit" in j) for (const [id, d] of await detailUnit(opts, text, j.unit)) details.set(id, d);
     else {
-      const body = j.ids
-        .map((id) => {
+      const ids = j.part.map((x) => x.id);
+      const body = j.part
+        .map(({ id, lines, of }) => {
           const s = byNew.get(id) as Stage;
           const has = [`objectives (fixed): ${s.objectives.join("; ") || "none"}`, `techniques: ${s.techniques.join("; ") || "none"}`, `edge cases: ${s.edgeCases.join("; ") || "none"}`, `theorems: ${s.theorems.map((t) => t.name).join("; ") || "none"}`];
-          return [`${id} ${s.title} — ${s.summary}`, ...has.map((h) => `  ${h}`), "  The course files say:", ...ev.stage(id).map((l) => `    ${l}`)].join("\n");
+          return [`${id} ${s.title} — ${s.summary}`, ...has.map((h) => `  ${h}`), `  The course files say${of ? ` (part ${of.k} of ${of.n} of its lines)` : ""}:`, ...lines.map((l) => `    ${l}`)].join("\n");
         })
         .join("\n\n");
       try {
         const { value } = await callStructured(gw, submitStageAdditions, {
           task: "plan", courseNumber: course.courseNumber, system: SYSTEM, messages: [{ role: "user", content: enrichPrompt(course, body, lang === "he" ? "Hebrew" : "English") }], signal,
         });
-        for (const a of value.stages) if (j.ids.includes(a.id)) additions.set(a.id, a);
+        for (const a of value.stages) if (ids.includes(a.id)) additions.set(a.id, [...(additions.get(a.id) ?? []), a]);
       } catch (e) {
         if (signal?.aborted) throw e; // otherwise the stages keep their details: enriching is a bonus, not a reason to fail the build
       }
@@ -232,8 +280,8 @@ export async function refinePlan(opts: Opts): Promise<PlanJson> {
     units,
     stages: stages.map((s) => {
       const d = details.get(s.id);
-      const a = additions.get(s.id);
-      return d ? { ...s, ...d, estimatedMinutes: Math.min(45, Math.max(20, Math.round(d.estimatedMinutes))) } : a ? mergeAdditions(s, a) : s;
+      if (d) return { ...s, ...d, estimatedMinutes: Math.min(45, Math.max(20, Math.round(d.estimatedMinutes))) };
+      return (additions.get(s.id) ?? []).reduce(mergeAdditions, s);
     }),
   };
   const errs = validatePlan(plan, course.credits);

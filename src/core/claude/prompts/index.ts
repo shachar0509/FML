@@ -1,12 +1,12 @@
 import { uniName } from "@/core/universities";
-// Spec 10.4 (verbatim apart from placeholders).
+// Spec 10.4 (verbatim apart from placeholders), plus the M41 notes / traps / key points.
 type Head = { courseNumber: string; nameHe: string };
 
 export const materialPrompt = (c: Head, planCompact: string, lang: string) =>
   `You index pages of course material for ${uniName()} course ${c.courseNumber} "${c.nameHe}".
 Study plan stages:
 ${planCompact}
-For each page below, list the stage ids whose content appears on the page (empty if none), a summary of at most 40 words in ${lang}, whether the page has a figure, and whether it contains exercises or worked problems. Call submit_material_pages.`;
+For each page below, list the stage ids whose content appears on the page (empty if none), a summary of at most 40 words in ${lang}, its notes (remarks, warnings, special cases, counterexamples, conditions such as a domain restriction; these are easy to miss and must not be lost), whether the page has a figure, and whether it contains exercises or worked problems. Call submit_material_pages.`;
 
 export const exercisesPrompt = (c: Head, planCompact: string) =>
   `You extract exercises from pages of a ${uniName()} course exercise file (${c.courseNumber} "${c.nameHe}").
@@ -14,7 +14,8 @@ Study plan stages:
 ${planCompact}
 Rules:
 - Split every multi-part question into one exercise per part. Each part's statement must be self-contained: repeat the shared stem.
-- Transcribe faithfully in Markdown with LaTeX. Do not solve.
+- Transcribe faithfully in Markdown with LaTeX. Do not write a solution.
+- edgeCaseFocus and keyPoints: think the solution through (without writing it) and name every trap and special idea, e.g. "the answer is undefined: x = 2 is outside the domain". A trap that only this exercise has matters most.
 - referenceSolutionMd: only a solution printed in the file, attached to the correct part; otherwise null.
 - requiredStageIds: every stage whose content is needed to solve the exercise.
 - difficulty: 1 = direct application of one definition; 2 = routine computation; 3 = typical exam part; 4 = hard exam part combining several stages; 5 = hardest exam question.

@@ -115,7 +115,7 @@ async function extract(o: IndexOpts, pages: number[], tick: () => void): Promise
       out.push({
         id, label: e.label, pages: e.pages, statementMd: e.statementMd, figureCrops, referenceSolutionMd: e.referenceSolutionMd,
         requiredStageIds: req, primaryStageId, difficulty: e.difficulty as IndexedExercise["difficulty"], type: e.type,
-        estimatedMinutes: e.estimatedMinutes, edgeCaseFocus: e.edgeCaseFocus, gist: e.gist,
+        estimatedMinutes: e.estimatedMinutes, edgeCaseFocus: e.edgeCaseFocus, keyPoints: e.keyPoints, gist: e.gist,
       });
     }
   }
@@ -161,7 +161,7 @@ export async function indexMaterial(o: IndexOpts): Promise<FileIndex> {
     for (const p of batch) {
       const r = value.pages.find((x) => x.page === p);
       materialPages.push({
-        page: p, stageIds: (r?.stageIds ?? []).filter((s) => known.has(s)), summary: r?.summary ?? "", hasFigure: r?.hasFigure ?? false,
+        page: p, stageIds: (r?.stageIds ?? []).filter((s) => known.has(s)), summary: r?.summary ?? "", notes: r?.notes ?? [], hasFigure: r?.hasFigure ?? false,
         text: (await source.text(p)).slice(0, RECORD_CHARS),
       });
       if (r?.hasExercises) withExercises.push(p);

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { axe, host, LANGS, pageErrors, said, THEMES } from "./helpers";
+import { axe, host, LANGS, pageErrors, said, THEMES, toolsCalled } from "./helpers";
 
 for (const lang of LANGS)
   test(`add-course flow (${lang})`, async ({ page }) => {
@@ -31,8 +31,8 @@ for (const lang of LANGS)
       await expect(page.getByText(lang === "he" ? "שכחו את תנאי ההתכנסות" : "Forgot the convergence condition")).toBeVisible();
       await expect(page.getByText("S002").first()).toBeVisible(); // current unit is expanded
       // file lists start collapsed (like the plan units); the rings show without opening them
-      await expect(page.getByRole("img", { name: lang === "he" ? "50% אונדקסו" : "50% indexed" })).toBeVisible();
-      await expect(page.getByRole("img", { name: lang === "he" ? "100% אונדקסו" : "100% indexed" })).toBeVisible();
+      await expect(page.getByRole("img", { name: lang === "he" ? "50% נסרקו" : "50% scanned" })).toBeVisible();
+      await expect(page.getByRole("img", { name: lang === "he" ? "100% נסרקו" : "100% scanned" })).toBeVisible();
       const filesSection = page.getByRole("region", { name: lang === "he" ? "קבצי לימוד" : "Study files" });
       const mats = page.getByRole("button", { name: lang === "he" ? /חומרי לימוד/ : /Study materials/ });
       const exs = page.getByRole("button", { name: lang === "he" ? /תרגילים לדוגמה/ : /Sample exercises/ });
@@ -46,17 +46,42 @@ for (const lang of LANGS)
       await exs.click();
       await expect(mats).toHaveAttribute("aria-expanded", "true");
       await expect(page.getByText("lecture2.pdf")).toBeVisible();
-      await expect(page.getByText(lang === "he" ? "עוד לא נקרא — לחצו על ״עדכון התוכנית״" : "Not read yet — press Update plan")).toBeVisible();
-      // delete asks first; Cancel keeps the file
-      await page.getByRole("button", { name: `${lang === "he" ? "הסרה" : "Remove"} lecture2.pdf` }).click();
+      await expect(page.getByText(lang === "he" ? "עוד לא נסרק — לחצו על ״עדכון התוכנית״" : "Not scanned yet — press Update plan")).toBeVisible();
+      // the ⋯ menu: Open, Re-scan (not for a file not scanned yet), Delete (asks first; Cancel keeps the file)
+      const menuOf = (name: string) => page.getByRole("button", { name: lang === "he" ? `אפשרויות לקובץ ${name}` : `Options for ${name}` });
+      const item = (name: string) => page.getByRole("menuitem", { name });
+      const [OPEN, RESCAN, DEL] = lang === "he" ? ["פתיחה", "סריקה מחדש", "מחיקה"] : ["Open", "Re-scan", "Delete"];
+      await menuOf("lecture1.pdf").click();
+      await expect(item(OPEN)).toBeFocused();
+      await page.keyboard.press("ArrowDown");
+      await expect(item(RESCAN)).toBeFocused();
+      await page.waitForTimeout(200); // menu fade-in
+      await axe(page);
+      await filesSection.screenshot({ path: `e2e/tests_output/course/card-files-menu-${lang}-${theme}.png` });
+      await page.keyboard.press("Escape");
+      await expect(item(OPEN)).toBeHidden();
+      await expect(menuOf("lecture1.pdf")).toBeFocused();
+      await menuOf("lecture1.pdf").click();
+      await item(OPEN).click();
+      await menuOf("lecture1.pdf").click();
+      await item(RESCAN).click();
+      expect(await toolsCalled(page)).toEqual(expect.arrayContaining(["file_open", "file_reindex"]));
+      await expect(page.getByText(lang === "he" ? "lecture1.pdf ייסרק מחדש בעדכון התוכנית הבא." : "lecture1.pdf will be scanned again on the next plan update.")).toBeVisible();
+      await menuOf("lecture2.pdf").click();
+      await expect(item(RESCAN)).toBeDisabled(); // not scanned yet: nothing to redo
+      await page.mouse.click(5, 5); // outside closes
+      await expect(item(OPEN)).toBeHidden();
+      await menuOf("lecture2.pdf").click();
+      await item(DEL).click();
       const ask = page.getByRole("alertdialog");
       await expect(ask).toContainText(lang === "he" ? "בטוחים שאתם רוצים למחוק את lecture2.pdf מתוך חומרי לימוד?" : "Are you sure you want to delete lecture2.pdf from Study materials?");
       await axe(page);
       await page.getByRole("region", { name: lang === "he" ? "קבצי לימוד" : "Study files" }).screenshot({ path: `e2e/tests_output/course/card-files-delete-${lang}-${theme}.png` });
       await ask.getByRole("button", { name: lang === "he" ? "ביטול" : "Cancel" }).click();
       await expect(ask).toBeHidden();
-      await page.getByRole("button", { name: `${lang === "he" ? "הסרה" : "Remove"} lecture2.pdf` }).click();
-      await ask.getByRole("button", { name: lang === "he" ? "הסרה" : "Remove" }).click();
+      await menuOf("lecture2.pdf").click();
+      await item(DEL).click();
+      await ask.getByRole("button", { name: DEL }).click();
       await expect(ask).toBeHidden();
       await filesSection.screenshot({ path: `e2e/tests_output/course/card-files-${lang}-${theme}.png` });
       await expect(page.getByText(lang === "he" ? "5 תרגילים" : "5 exercises found")).toBeVisible();
@@ -78,7 +103,7 @@ for (const lang of LANGS)
     await page.goto(host(`lang=${lang}&files=read`));
     await page.locator("ul button").first().click();
     await expect(page.getByRole("button", { name: lang === "he" ? "עדכון התוכנית" : "Update plan" })).toBeDisabled();
-    await expect(page.getByText(lang === "he" ? "כל הקבצים נקראו" : "Every file has been read")).toBeVisible();
+    await expect(page.getByText(lang === "he" ? "כל הקבצים נסרקו" : "Every file has been scanned")).toBeVisible();
     await page.goto(host(`lang=${lang}&files=importing`));
     await page.locator("ul button").first().click();
     const bar = page.getByRole("progressbar", { name: lang === "he" ? "מייבא קבצים…" : "Importing files…" });

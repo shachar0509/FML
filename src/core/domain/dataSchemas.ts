@@ -180,6 +180,8 @@ export const IndexedExerciseSchema = z.object({
   type: z.enum(["proof", "computation", "multiple_choice", "true_false", "short_answer", "coding", "design"]),
   estimatedMinutes: z.number(),
   edgeCaseFocus: z.array(z.string()),
+  /** M41: the specific idea or trick this exercise needs beyond the routine method (absent in records read before M41). */
+  keyPoints: z.array(z.string()).optional(),
   gist: z.string(),
 });
 export type IndexedExercise = z.infer<typeof IndexedExerciseSchema>;
@@ -199,6 +201,8 @@ export const FileIndexSchema = z.object({
   planVersion: z.number().int().nullable(),
   materialPages: z.array(z.object({
     page: z.number().int(), stageIds: z.array(stageId), summary: z.string(), hasFigure: z.boolean(), text: z.string(),
+    /** M41: remarks, warnings, special cases and counterexamples printed on the page (absent in records read before M41). */
+    notes: z.array(z.string()).optional(),
   })),
   exercises: z.array(IndexedExerciseSchema),
 });

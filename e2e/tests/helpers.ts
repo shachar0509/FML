@@ -31,4 +31,5 @@ export function pageErrors(page: Page) {
 export const said = (page: Page) => page.evaluate(() => (window as unknown as { __said: string[] }).__said);
 
 /** The last request the card sent the model (shalav_request), as JSON. */
+export const toolsCalled = (page: Page) => page.evaluate(() => (window as unknown as { __tools: string[] }).__tools);
 export const lastReq = async (page: Page) => JSON.stringify((await page.evaluate(() => (window as unknown as { __reqs: unknown[] }).__reqs)).at(-1));

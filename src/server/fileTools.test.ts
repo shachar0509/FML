@@ -4,13 +4,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/client";
 import { InMemoryTransport } from "@modelcontextprotocol/server";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import type { FilesData } from "@/cards/types";
 import { FakeClaudeGateway, toolCall } from "@/core/claude/fake";
 import { setClaude } from "@/core/claude/runtime";
 import { createCourse } from "@/core/domain/courses/courses";
 import { initNode } from "./platform";
 import { createServer } from "./server";
+
+const opened: string[] = [];
+vi.mock("./native", async (orig) => ({ ...(await orig<typeof import("./native")>()), openFolder: async (p: string) => void opened.push(p) }));
 
 const unit = (n: number) => ({ title: "u", summary: "s", stages: Array.from({ length: n }, () => ({ title: "t", kind: "concept", summary: "s", prerequisites: [] })) });
 const details = (req: { messages: { content: unknown }[] }) =>
@@ -75,6 +78,13 @@ it("uploads in chunks, lists, indexes through the bridge, removes", async () => 
 
   f = sc<FilesData>(await call("files_list", { number: num }));
   expect(f.materials[0]?.status).toBe("indexed");
+
+  // the file menu: Open (the system opens it), Read again (waits for the next Update plan)
+  expect((await call("file_open", { number: num, sha: f.materials[0]?.sha })).isError).toBeFalsy();
+  expect(opened.at(-1)).toMatch(/\/notes\.txt$/);
+  expect((await call("file_reindex", { number: num, sha: f.materials[0]?.sha })).isError).toBeFalsy();
+  expect(sc<FilesData>(await call("files_list", { number: num })).materials[0]?.status).toBe("pending");
+  expect((await call("file_reindex", { number: num, sha: "nope" })).isError).toBe(true);
 
   await call("file_remove", { number: num, sha: f.materials[0]?.sha });
   expect(sc<FilesData>(await call("files_list", { number: num })).materials).toEqual([]);

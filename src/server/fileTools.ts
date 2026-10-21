@@ -9,7 +9,7 @@ import * as z from "zod";
 import type { FilesData } from "@/cards/types";
 import { claude } from "@/core/claude/runtime";
 import { loadCourse, courseExists } from "@/core/domain/courses/courses";
-import { importFiles, removeFile, scanCourse, type Deps } from "@/core/domain/ingest/import";
+import { importFiles, reindex, removeFile, scanCourse, type Deps } from "@/core/domain/ingest/import";
 import { listFileIndexes } from "@/core/domain/ingest/indexStore";
 import { openSource } from "@/core/domain/ingest/pageSource";
 import { createIndexQueue } from "@/core/domain/ingest/queue";
@@ -124,6 +124,22 @@ export function registerFileTools(server: McpServer, o: { openFolder?: (p: strin
     }
     return (await listFileIndexes(number)).filter((r) => r.status === "indexed").length;
   }
+
+  registerAppTool(server, "file_open", { title: "Open a file", description: "Card-only: open a course file in the system's default app.", inputSchema: z.object({ number: num, sha: z.string() }), _meta: appOnly }, async ({ number, sha }) => {
+    const r = (await listFileIndexes(number)).find((x) => x.sha256 === sha);
+    if (!r) return fail("No such file.");
+    await (o.openFolder ?? openFolder)(join(coursePaths(root(), number).course, r.relPath)); // `open` / explorer / xdg-open open files too
+    return out("ok", { ok: true });
+  });
+
+  // M41: files read before the trap / key point / note fields are re-read only when the student asks; the next Build/Update plan reads it.
+  registerAppTool(server, "file_reindex", { title: "Read a file again", description: "Card-only: mark a course file to be read again by the next Build plan / Update plan.", inputSchema: z.object({ number: num, sha: z.string() }), _meta: appOnly }, async ({ number, sha }) => {
+    const r = (await listFileIndexes(number)).find((x) => x.sha256 === sha);
+    if (!r) return fail("No such file.");
+    if (r.status === "indexing") return fail("This file is being read right now.");
+    await reindex(number, r, deps());
+    return out("ok", { ok: true });
+  });
 
   registerAppTool(server, "file_remove", { title: "Remove a file", description: "Card-only: move a course file to the trash and drop its index.", inputSchema: z.object({ number: num, sha: z.string() }), _meta: appOnly }, async ({ number, sha }) => {
     const r = (await listFileIndexes(number)).find((x) => x.sha256 === sha);

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, FileText, FolderOpen, Loader2, Trash2, Upload } from "lucide-react";
+import { Check, ChevronDown, ExternalLink, FileText, FolderOpen, Loader2, MoreHorizontal, ScanLine, Trash2, Upload } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Input } from "@/core/components/ui/input";
@@ -101,6 +101,78 @@ function Ring({ rows }: { rows: FileRow[] }) {
   );
 }
 
+/** The ⋯ menu of one file: Open, Re-scan, Delete. Arrow keys move, Esc or an outside click closes. */
+function FileMenu({ f, onOpen, onRescan, onDelete }: { f: FileRow; onOpen: () => void; onRescan: () => void; onDelete: () => void }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLSpanElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const items = () => [...(box.current?.querySelectorAll<HTMLButtonElement>("[role=menuitem]:not(:disabled)") ?? [])];
+  useEffect(() => {
+    if (!open) return;
+    items()[0]?.focus();
+    const away = (e: PointerEvent) => !box.current?.contains(e.target as Node) && setOpen(false);
+    document.addEventListener("pointerdown", away);
+    return () => document.removeEventListener("pointerdown", away);
+  }, [open]);
+  const close = (refocus = true) => {
+    setOpen(false);
+    if (refocus) trigger.current?.focus();
+  };
+  const keys = (e: React.KeyboardEvent) => {
+    const all = items();
+    const i = all.indexOf(document.activeElement as HTMLButtonElement);
+    if (e.key === "Escape") close();
+    else if (e.key === "Tab") close(false);
+    else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      all[(i + (e.key === "ArrowDown" ? 1 : all.length - 1)) % all.length]?.focus();
+    }
+  };
+  const item = "flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-start text-sm outline-none transition-colors motion-reduce:transition-none disabled:pointer-events-none disabled:opacity-45";
+  return (
+    <span ref={box} className="relative">
+      <button
+        ref={trigger}
+        className={`grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-border/50 hover:text-fg focus-visible:outline-2 focus-visible:outline-primary motion-reduce:transition-none ${open ? "bg-border/50 text-fg" : ""}`}
+        aria-label={t("files.menu", { name: f.name })}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        <MoreHorizontal className="size-4" aria-hidden />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          aria-label={t("files.menu", { name: f.name })}
+          onKeyDown={keys}
+          className="fade-in absolute end-0 top-full z-20 mt-1 flex min-w-44 flex-col rounded-lg border border-border bg-card p-1 shadow-lg"
+        >
+          <button role="menuitem" className={`${item} hover:bg-border/50 focus-visible:bg-border/50`} onClick={() => (close(), onOpen())}>
+            <ExternalLink className="size-4 shrink-0 text-muted" aria-hidden />
+            {t("files.open")}
+          </button>
+          <button
+            role="menuitem"
+            className={`${item} hover:bg-border/50 focus-visible:bg-border/50`}
+            disabled={f.status === "pending" || f.status === "indexing"} // nothing to redo yet
+            onClick={() => (close(), onRescan())}
+          >
+            <ScanLine className="size-4 shrink-0 text-muted" aria-hidden />
+            {t("files.reindex")}
+          </button>
+          <div className="mx-1 my-1 h-px bg-border" role="separator" />
+          <button role="menuitem" className={`${item} text-danger hover:bg-danger/10 focus-visible:bg-danger/10`} onClick={() => (close(), onDelete())}>
+            <Trash2 className="size-4 shrink-0" aria-hidden />
+            {t("files.delete")}
+          </button>
+        </div>
+      )}
+    </span>
+  );
+}
+
 export function Files({
   number,
   callTool,
@@ -121,6 +193,7 @@ export function Files({
   const { t } = useTranslation();
   const [d, setD] = useState<FilesData | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null); // a plain notice (not an error)
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState<{ done: number; total: number } | null>(null); // upload bytes
   const [del, setDel] = useState<string | null>(null); // sha awaiting "are you sure"
@@ -255,13 +328,17 @@ export function Files({
             )}
             <span className="text-xs text-muted">{t("files.pages", { count: f.pages })}</span>
             <Chip f={f} hasPlan={hasPlan} />
-            <button
-              className="rounded text-muted hover:text-danger focus-visible:outline-2 focus-visible:outline-primary"
-              aria-label={`${t("files.remove")} ${f.name}`}
-              onClick={() => setDel(f.sha)}
-            >
-              <Trash2 className="size-4" aria-hidden />
-            </button>
+            <FileMenu
+              f={f}
+              onOpen={() => void callTool("file_open", { number, sha: f.sha })}
+              onRescan={() =>
+                void callTool("file_reindex", { number, sha: f.sha }).then((r) => {
+                  if (!r.isError) setNote(t("files.rescanned", { name: f.name }));
+                  return refresh();
+                })
+              }
+              onDelete={() => setDel(f.sha)}
+            />
             {del === f.sha && (
               <div
                 className="flex w-full flex-col gap-2 rounded-lg border border-danger/50 p-3"
@@ -277,7 +354,8 @@ export function Files({
                       void callTool("file_remove", { number, sha: f.sha }).then(refresh);
                     }}
                   >
-                    {t("files.remove")}
+                    <Trash2 className="size-4" aria-hidden />
+                    {t("files.delete")}
                   </Button>
                   <Button variant="outline" onClick={() => setDel(null)}>
                     {t("files.keep")}
@@ -372,6 +450,11 @@ export function Files({
         </div>
       )}
       {sent && <Importing {...sent} />}
+      {note && (
+        <p className="text-sm text-muted" role="status">
+          {note}
+        </p>
+      )}
       {msg && (
         <p className="text-sm text-danger" role="alert">
           {msg}
