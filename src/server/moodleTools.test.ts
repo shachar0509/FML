@@ -10,7 +10,7 @@ import type { FilesData } from "@/cards/types";
 import { FakeClaudeGateway, toolCall } from "@/core/claude/fake";
 import { setClaude } from "@/core/claude/runtime";
 import { createCourse } from "@/core/domain/courses/courses";
-import { fileName, guessRole, parseCourse, parseSearch, parseSections } from "./moodleParse";
+import { courseNumbers, fileName, guessRole, parseCourse, parseSearch, parseSections, searchTerm } from "./moodleParse";
 import { createMoodle } from "./moodle";
 import { initNode } from "./platform";
 import { createServer } from "./server";
@@ -24,7 +24,12 @@ const sc = <T,>(r: { structuredContent?: unknown }) => r.structuredContent as T;
 
 it("parses Moodle pages and guesses roles", () => {
   const base = "https://m.example.ac.il/course/view.php?id=7";
-  expect(parseSearch('<a href="/course/view.php?id=3">Other</a><a href="/course/view.php?id=4">010401950 X</a><a href="/course/view.php?id=7&amp;x=1">01040195 Calculus</a><a href="/course/view.php?id=8">חדו"א 104195</a>', base, "01040195").map((h) => h.text)).toEqual(["01040195 Calculus", 'חדו"א 104195']);
+  const tile = (id: number, name: string, cls = "coursevisible") => `<div class="tilecontainer" onclick="window.location.href='https://m.example.ac.il/course/view.php?id=${id}';"><div class="${cls}"><h3>${name}</h3><a href="https://m.example.ac.il/course/view.php?id=${id}" class="coursestyle2btn">צפה בקורס</a><ul><li>מורה: x</li></ul></div></div>`;
+  const page = `<a href="/course/view.php?id=3">Other</a>${tile(10, "מבוא - קב' 082 - חורף - 02340117")}${tile(11, "מבוא - חורף - 02340117", "dimmed")}${tile(12, "מבוא מ'/ח' - חורף - 02340114/7")}${tile(13, "מבוא - חורף - 02340114")}<a href="/course/view.php?id=7&amp;x=1">104117 old</a>`;
+  expect(parseSearch(page, base, "02340117").map((h) => h.url.split("=")[1])).toEqual(["12", "10", "11"]);
+  expect(parseSearch(page, base, "01040117").map((h) => h.text)).toEqual(["104117 old"]);
+  expect(courseNumbers("x - 02340114/7, 01040195/01040196 and 104195")).toEqual(["02340114", "02340117", "01040195", "01040196", "01040195"]);
+  expect(searchTerm("02340117")).toBe("0234011");
   expect(parseSections('<a href="/course/section.php?id=5">s</a><a href="/course/view.php?id=7&amp;section=2#x">s2</a><a href="/course/view.php?id=3&section=1">other</a>', base)).toEqual(["https://m.example.ac.il/course/section.php?id=5", "https://m.example.ac.il/course/view.php?id=7&section=2"]);
   const links = parseCourse('<li id="section-1" data-sectionname="Exercises"><a href="/mod/resource/view.php?id=9"><span>sheet 1</span> <span class="accesshide">File</span></a></li>', base);
   expect(links).toEqual([{ url: "https://m.example.ac.il/mod/resource/view.php?id=9", text: "sheet 1", section: "Exercises" }]);
@@ -49,8 +54,9 @@ function fakeMoodle() {
     const p = url.pathname;
     if (p === "/" || p === "/my/") return loggedIn ? html(logout) : p === "/" ? html('<script>document.cookie="idp=1;path=/;max-age=86400";location.reload()</script>') : html("please log in");
     if (!loggedIn) return html("please log in");
-    // Another course and a site link must be ignored; the old 6-digit number finds last year's course.
-    if (p === "/course/search.php") return html(url.searchParams.get("search") === "104195" ? '<a href="/course/view.php?id=8">104195 Calculus 2024</a>' : '<a href="/course/view.php?id=1">Home</a><a href="/course/view.php?id=9">01040196 Other</a><a href="/course/view.php?id=7">01040195 Calculus</a>');
+    // A site link and another course are ignored; a Technion-style tile (name in <h3>, link text "צפה בקורס") of a combined course matches too.
+    const tile = (id: number, name: string) => `<div class="tilecontainer" onclick="window.location.href='/course/view.php?id=${id}';"><figcaption><h3>${name}</h3><a href="/course/view.php?id=${id}">צפה בקורס</a></figcaption></div>`;
+    if (p === "/course/search.php") return html(url.searchParams.get("search") === "0104019" ? `<a href="/course/view.php?id=1">Home</a>${tile(9, "Other - 01040196")}<a href="/course/view.php?id=7">01040195 Calculus</a>${tile(8, "Calculus M/H - 01040194/5")}` : "no courses");
     if (p === "/course/view.php" && url.searchParams.get("id") === "8") return html('<li id="section-1"><a href="/course/section.php?id=81">Exams 2024</a></li>');
     if (p === "/course/section.php") return html('<li id="section-1" data-sectionname="Exams 2024"><a href="/mod/resource/view.php?id=5">Moed A</a></li>');
     if (p === "/course/view.php" && url.searchParams.get("id") !== "7") return html('<a href="/pluginfile.php/9/not-this-course.txt">x</a>');

@@ -2,7 +2,7 @@ import { chromium, type BrowserContext } from "playwright-core";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { MEDIA, extOf } from "@/core/domain/ingest/import";
-import { fileName, guessRole, numberForms, parseCourse, parsePluginfiles, parseSearch, parseSections } from "./moodleParse";
+import { fileName, guessRole, parseCourse, parsePluginfiles, parseSearch, parseSections, searchTerm } from "./moodleParse";
 
 /** The saved login is gone or expired: the student has to log in again in the browser window. */
 export class LoginNeeded extends Error {
@@ -65,13 +65,9 @@ export function createMoodle(o: { profileDir: string; channel?: string; headedLo
         if (!r.ok()) throw new Error(`Moodle answered ${r.status()} for ${new URL(url).pathname}.`);
         return { text: await r.text(), url: r.url() };
       };
-      const found: { url: string; text: string }[] = [];
-      for (const q of numberForms(number)) {
-        const s = await html(new URL(`/course/search.php?search=${encodeURIComponent(q)}&perpage=50`, origin).href);
-        for (const h of parseSearch(s.text, s.url, number)) if (!found.some((f) => f.url === h.url)) found.push(h);
-      }
-      // ponytail: first 5 matching courses (e.g. several semesters); raise if past semesters matter more.
-      const hits = found.slice(0, 5);
+      const s = await html(new URL(`/course/search.php?search=${encodeURIComponent(searchTerm(number))}&perpage=all`, origin).href);
+      // ponytail: first 5 matching courses (main, combined, groups); raise if courses have more groups.
+      const hits = parseSearch(s.text, s.url, number).slice(0, 5);
       if (!hits.length) throw new Error(`No Moodle course matches ${number}. Check that you are enrolled and that the number is in the course name.`);
       const files: Downloaded[] = [];
       const seen = new Set<string>();

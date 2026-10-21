@@ -5,21 +5,39 @@ const decode = (s: string) => s.replace(/&amp;/g, "&").replace(/&quot;/g, '"').r
 const strip = (s: string) => decode(s.replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim();
 const abs = (href: string, base: string) => new URL(decode(href), base).href;
 
-/** The course number as it can appear in a Moodle course name: as given, and for 8-digit Technion numbers also the old 6-digit form (01040195 → 104195). */
-export function numberForms(number: string): string[] {
-  return /^0\d{3}0\d{3}$/.test(number) ? [number, number.slice(1, 4) + number.slice(5)] : [number];
-}
+/** 6-digit Technion numbers are the old form of 8-digit ones (104195 → 01040195). */
+const norm = (n: string) => (/^\d{6}$/.test(n) ? `0${n.slice(0, 3)}0${n.slice(3)}` : n);
 
-/** Course links of a search result page whose name contains the course number (other courses and site links are dropped). */
-export function parseSearch(html: string, base: string, number: string): { url: string; text: string }[] {
-  const out: { url: string; text: string }[] = [];
-  const re = new RegExp(`(?<!\\d)(?:${numberForms(number).join("|")})(?!\\d)`);
-  for (const m of html.matchAll(/<a\b[^>]*href="([^"]*\/course\/view\.php\?id=\d+[^"]*)"[^>]*>([\s\S]*?)<\/a>/gi)) {
-    const url = abs(m[1] as string, base);
-    const text = strip(m[2] as string);
-    if (re.test(text) && !out.some((o) => new URL(o.url).searchParams.get("id") === new URL(url).searchParams.get("id"))) out.push({ url, text });
+/** Course numbers in a Moodle course name; a combined course "02340114/7" (or "02340114/02340117") counts for both. */
+export function courseNumbers(text: string): string[] {
+  const out: string[] = [];
+  for (const m of text.matchAll(/(?<!\d)\d{5,8}(?:\s*\/\s*\d{1,8})*(?!\d)/g)) {
+    const [first, ...rest] = m[0].split("/").map((x) => x.trim()) as [string, ...string[]];
+    out.push(norm(first), ...rest.map((x) => norm(x.length >= first.length ? x : first.slice(0, -x.length) + x)));
   }
   return out;
+}
+
+/** What to type in Moodle's course search: without the last digit, so combined courses ("02340114/7") show up too; parseSearch filters. */
+export const searchTerm = (number: string) => (/^\d{8}$/.test(number) ? number.slice(0, -1) : number);
+
+/**
+ * Courses of a search (or course list) page whose name has the course number. Works on any theme: the page is cut into one block per
+ * course (from its first link or onclick to the next course), the name is the block's first heading (Technion tiles), else its text.
+ * Order: the main course, then group courses ("קב' 082"), then courses hidden from students.
+ */
+export function parseSearch(html: string, base: string, number: string): { url: string; text: string }[] {
+  const want = norm(number);
+  const firsts: { id: string; at: number }[] = [];
+  for (const m of html.matchAll(/course\/view\.php\?id=(\d+)/g)) if (!firsts.some((f) => f.id === m[1])) firsts.push({ id: m[1] as string, at: html.lastIndexOf("<", m.index) });
+  const out: { url: string; text: string; rank: number }[] = [];
+  firsts.forEach((f, i) => {
+    const block = html.slice(f.at, firsts[i + 1]?.at ?? html.length);
+    const text = strip(/<h[1-6]\b[^>]*>([\s\S]*?)<\/h[1-6]>/i.exec(block)?.[1] ?? block).slice(0, 200);
+    if (!courseNumbers(text).includes(want)) return;
+    out.push({ url: new URL(`/course/view.php?id=${f.id}`, base).href, text, rank: (/קב'|קבוצה|group/i.test(text) ? 1 : 0) + (/dimmed/.test(block) ? 2 : 0) });
+  });
+  return out.sort((a, b) => a.rank - b.rank).map(({ url, text }) => ({ url, text }));
 }
 
 /** Section pages of a course shown one section per page (Moodle 4: course/section.php?id=…, older: view.php?id=<course>&section=N). */

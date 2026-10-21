@@ -360,3 +360,11 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - Up to 5 matching courses (e.g. several semesters) are imported, each with all its sections: one-section-per-page courses (`course/section.php?id=…`, `view.php?id=…&section=N`) are followed. Assignment and page activities are scanned for attached files too.
 - Test: the fake Moodle has a site link, another course, an old-number course with a section page; only the right files are imported (5).
 - 🧪 Claude Desktop: Moodle import for a real course → only that course's files (materials + exams).
+
+### M17c — Moodle import finds Technion courses (tiles, combined and group courses) (done; 🧪 pending)
+- Real-site check (guest search on moodle26.technion.ac.il): Technion's theme shows search results as tiles; the course name is in an `<h3>` and the links say "צפה בקורס" or wrap an image, so matching link text never found the number (01140071, 01040195, 02340117 all failed).
+- `parseSearch` now cuts the page into one block per course (from its first link/onclick to the next course) and matches the block's first heading (else its text) → works on Technion tiles and standard Moodle lists.
+- Combined courses: `courseNumbers` expands "02340114/7" → 02340114 + 02340117 (and old 6-digit numbers → 8 digits). The search query drops the last digit (`searchTerm`: 0234011) so combined courses show up; results are filtered by number.
+- Order: main/combined course first, then group courses ("קב' 082"), then courses hidden from students (`dimmed`); up to 5. A course "not available to students" has no files and adds nothing.
+- Live check: 01140071 → main + 3 groups; 01040195 → its course; 02340117 → 02340114/7 then the 082 group.
+- Not verified on a logged-in Technion course page (needs the student's login): `parseCourse` (sections/activities) is still generic Moodle.
