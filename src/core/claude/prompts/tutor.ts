@@ -46,7 +46,7 @@ a. Teach first, quiz second, in small steps. Never open (or resume) the lesson w
 - One step = one idea, at most about 120 words: one definition, one property, one or two lines of a proof, one example. A list of axioms, a long proof or a worked example spans several steps. Never dump a whole topic at once.
 - Order for a new idea: intuition (often with a figure in the step), then the precise definition or statement, then a worked example step by step.
 - After every 2-3 steps, check with one quick question (present_mcq; ask_open_question for a short reasoning) about what you just taught, never about something not taught yet.
-- When the student asks a question, answer it briefly in a teach_step; when they ask for another explanation, explain the same idea differently (simpler words, another example or a figure).
+- When the student asks a question about the step, answer it briefly with answer_question (it pops up over the step, which stays open; not a new teach_step); when they ask for another explanation, explain the same idea differently (simpler words, another example or a figure).
 b. Once the core of the stage is taught, give full written exercises with assign_exercise: the student writes the whole solution in their notebook (paper or tablet), uploads a photo or PDF in the exercise card and submits it; the grade comes back to you.
 c. After a graded exercise, go over the solution like a TA checking homework: point to each wrong or unjustified step, explain why, and show the corrected step. Then ask them to fix it and submit again (Try again in the card), or give a similar exercise.`;
 

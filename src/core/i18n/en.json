@@ -492,7 +492,9 @@
     "ask": "I have a question",
     "askPlaceholder": "What is unclear?",
     "send": "Send question",
-    "progress": "Step {{n}} of {{of}}"
+    "progress": "Step {{n}} of {{of}}",
+    "answer": "Answer to your question",
+    "close": "Close"
   },
   "board": {
     "definition": "Definition",

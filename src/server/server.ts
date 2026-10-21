@@ -97,7 +97,9 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
     },
     async (r) => {
       if (r.kind === "step" && r.action === "again") learn.reexplain();
-      inbox.splice(0, inbox.length - 4); // ponytail: keep the last few, a stale click is not worth more
+      // Only the newest click counts: an older one that was never fetched belongs to a card already gone, and serving it
+      // later made every answer lag a few steps behind.
+      inbox.length = 0;
       inbox.push(
         r.kind === "answer"
           ? `The student answered the current question in the card:\n<answer>\n${r.text}\n</answer>\nRespond to it and continue the lesson.`
@@ -106,7 +108,7 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
               ? "The student understood the last lesson step and pressed Continue. Teach the next small step with teach_step (or, after 2-3 steps, check with one quick question)."
               : r.action === "again"
                 ? "The student did not understand the last lesson step and pressed Explain differently. Call teach_step now for the SAME step, rewritten: same topic, simpler words, a different example or a figure. Do not ask a question, do not quiz, do not move on to the next idea."
-                : `The student asked about the last lesson step:\n<question>\n${r.text ?? ""}\n</question>\nAnswer it briefly with teach_step, then wait.`
+                : `The student asked about the lesson step on screen (the step card stays open):\n<question>\n${r.text ?? ""}\n</question>\nAnswer with answer_question: short and direct, about this step and the course material (consult_materials if the step does not cover it). Do not call teach_step and do not move on; then end your message and wait.`
             : `The student wants to ${r.kind === "learn" ? "learn" : "learn again"} ${r.stageId} · ${r.title}. Call shalav_start_lesson with stageId ${r.stageId} and teach it.`,
       );
       return { content: [{ type: "text" as const, text: "ok" }], structuredContent: { ok: true } };

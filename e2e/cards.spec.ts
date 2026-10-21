@@ -169,6 +169,13 @@ for (const lang of ["he", "en"] as const)
       await page.getByRole("button", { name: lang === "he" ? "שליחת השאלה" : "Send question" }).click();
       expect((await said()).at(-1)).toBe('{"kind":"step","action":"question","text":"Why?"}');
       await expect(page.getByRole("status").filter({ hasText: "Why?" })).toBeVisible();
+      // the answer pops up over the step (answer_question), not as a new step card
+      const pop = page.getByRole("dialog", { name: lang === "he" ? "תשובה לשאלה שלך" : "Answer to your question" });
+      await expect(pop.locator(".katex")).toBeVisible();
+      await expect(pop).toContainText("Why?");
+      await axe();
+      await pop.getByRole("button", { name: lang === "he" ? "סגירה" : "Close" }).last().click();
+      await expect(page.getByRole("button", { name: lang === "he" ? "הסבר אחרת" : "Explain differently" })).toBeVisible();
       expect(errors).toEqual([]);
     });
 

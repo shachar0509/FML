@@ -25,12 +25,12 @@ it("lists tools/prompts and calls shalav_home", async () => {
   expect((await client.callTool({ name: "shalav_request", arguments: { kind: "learn", stageId: "S003", title: "Squeeze" } })).isError).toBeFalsy();
   expect((await client.callTool({ name: "shalav_request", arguments: { kind: "answer", text: "B) 1/n" } })).isError).toBeFalsy();
   expect((await client.callTool({ name: "shalav_request", arguments: { kind: "hack", text: "x" } })).isError).toBe(true);
+  // only the newest click counts: an unfetched older one belongs to a card already gone (it made answers lag behind)
   const r1 = JSON.stringify((await client.callTool({ name: "shalav_next_job", arguments: {} })).content);
-  expect(r1).toMatch(/shalav_start_lesson with stageId S003/);
-  expect(r1).toMatch(/call shalav_next_job again/);
-  expect(JSON.stringify((await client.callTool({ name: "shalav_next_job", arguments: {} })).content)).toContain("B) 1/n");
+  expect(r1).toContain("B) 1/n");
+  expect(r1).not.toMatch(/S003|call shalav_next_job again/);
   await client.callTool({ name: "shalav_request", arguments: { kind: "step", action: "question", text: "why 0+0=0?" } });
-  expect(JSON.stringify((await client.callTool({ name: "shalav_next_job", arguments: {} })).content)).toMatch(/asked about the last lesson step.*why 0\+0=0\?/);
+  expect(JSON.stringify((await client.callTool({ name: "shalav_next_job", arguments: {} })).content)).toMatch(/asked about the lesson step on screen.*why 0\+0=0\?.*answer_question/);
   expect(JSON.stringify((await client.callTool({ name: "shalav_next_job", arguments: {} })).content)).toContain("No Shalav job");
   const bad = await client.callTool({ name: "shalav_submit_job", arguments: { jobId: 5, text: "x" } });
   expect(bad.isError).toBe(true);

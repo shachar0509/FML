@@ -102,7 +102,7 @@ export function Cards({ host }: { host: Host }) {
     if (shown.view === "exercise") return <Exercise data={shown} callTool={callTool} go={ask} />;
     if (shown.view === "open") return <OpenQ data={shown} go={ask} />;
     if (shown.view === "figure") return <FigureCard data={shown} />;
-    if (shown.view === "step") return <Step data={shown} go={ask} />;
+    if (shown.view === "step") return <Step data={shown} go={ask} callTool={callTool} />;
     return (
       <Home
         data={shown}

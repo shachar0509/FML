@@ -65,6 +65,12 @@ it("runs a lesson: start, questions, events, status, completion, reopen + recap"
   expect(sc(await call("teach_step", { titleMd: "x", bodyMd: "b", progress: { n: 7, of: 5 } }))).toMatchObject({ progress: { n: 5, of: 5 } });
   expect(sc(await call("teach_step", { titleMd: "x", bodyMd: "b", sideMd: "$\\N \\subset \\Z$" }))).toMatchObject({ sideMd: "$\\N \\subset \\Z$" });
   expect(text(await call("teach_step", { titleMd: "x", bodyMd: "word ".repeat(150), sideMd: "note ".repeat(100) }))).toMatch(/too long/); // the side note counts too
+  // a question about the step: answered in a pop-up over the step card, which polls for answers newer than its question
+  const asked = Date.now();
+  expect(sc(await call("step_answer", { since: asked }))).toEqual({ answerMd: null });
+  expect(text(await call("answer_question", { answerMd: "Because $0$ is neutral." }))).toMatch(/shown over the step card/);
+  expect(sc(await call("step_answer", { since: asked }))).toEqual({ answerMd: "Because $0$ is neutral." });
+  expect(sc(await call("step_answer", { since: Date.now() + 1000 }))).toEqual({ answerMd: null }); // an older answer is not this question's
   // "Explain differently": no question until the step is re-taught
   await call("shalav_request", { kind: "step", action: "again" });
   const mcq = { stageId: "S001", questionMd: "q", options: ["a", "b"], correctIndex: 0, explanationMd: "", conceptTags: [] };

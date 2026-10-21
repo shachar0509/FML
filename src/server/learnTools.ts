@@ -237,6 +237,26 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     },
   );
 
+  // A question about a step is answered in a pop-up over that step card (a new card would replace the step).
+  let answer: { answerMd: string; at: number } | null = null;
+  server.registerTool(
+    "answer_question",
+    {
+      title: "Answer a question about the step",
+      description: "Answer the student's question about the lesson step on screen; the answer pops up over the step card, which stays open. Short Markdown with $math$, in the student's language. Use it only for such a question, never to teach the next step.",
+      inputSchema: z.object({ answerMd: z.string().min(1).max(4000) }),
+    },
+    async ({ answerMd }) => {
+      if (!active) return fail(NO_LESSON);
+      answer = { answerMd, at: Date.now() };
+      return out("The answer is shown over the step card. End your message now (no more text) and wait.");
+    },
+  );
+  registerAppTool(server, "step_answer", { title: "Step answer", description: "Card-only: the answer to a question asked since the given time.", inputSchema: z.object({ since: z.number() }), _meta: appOnly }, async ({ since }) => {
+    const a = answer && answer.at >= since ? answer.answerMd : null;
+    return out(a ? "answer" : "waiting", { answerMd: a });
+  });
+
   registerAppTool(server, assignExercise.def.name, { title: "Exercise", description: assignExercise.def.description + hint, inputSchema: assignExercise.schema, _meta: withCard }, async (i) => {
     if (reexplain) return fail(REEXPLAIN);
     const c = await ctx(i.stageIds[0]);

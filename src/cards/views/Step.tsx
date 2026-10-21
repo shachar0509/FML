@@ -1,18 +1,38 @@
-import { useState } from "react";
-import { ArrowLeft, HelpCircle, RefreshCw } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, HelpCircle, RefreshCw, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Markdown } from "@/core/render/Markdown";
-import type { Go, StepData } from "../types";
+import type { Go, Host, StepData } from "../types";
 import { FigureCard } from "./FigureCard";
 
 /** One small lesson step on a notebook page; the student moves on, asks for another explanation, or asks a question. */
-export function Step({ data, go }: { data: StepData; go: Go }) {
+export function Step({ data, go, callTool }: { data: StepData; go: Go; callTool: Host["callTool"] }) {
   const { t } = useTranslation();
   const [asking, setAsking] = useState(false);
   const [q, setQ] = useState("");
   const [sent, setSent] = useState<string | null>(null);
   const send = (label: string, req: Parameters<Go>[0]) => (setSent(label), void go(req));
+  // A question is answered in a pop-up over this step (answer_question); the card polls for it.
+  const [since, setSince] = useState(0);
+  const [answer, setAnswer] = useState<{ q: string; md: string } | null>(null);
+  useEffect(() => {
+    if (!since) return;
+    const h = setInterval(
+      () =>
+        void callTool("step_answer", { since })
+          .then((r) => {
+            const md = (r.structuredContent as { answerMd?: string | null } | undefined)?.answerMd;
+            if (!md) return;
+            setAnswer({ q: sent ?? "", md });
+            setSince(0);
+          })
+          .catch(() => undefined),
+      2000,
+    );
+    return () => clearInterval(h);
+  }, [callTool, since, sent]);
+  const close = () => (setAnswer(null), setSent(null), setAsking(false), setQ(""));
   const p = data.progress;
   const side = !!(data.figure || data.sideMd);
   return (
@@ -54,7 +74,22 @@ export function Step({ data, go }: { data: StepData; go: Go }) {
           </ol>
         </div>
       )}
-      {sent ? (
+      {answer ? (
+        <div role="dialog" aria-label={t("step.answer")} className="flex flex-col gap-3 rounded-card border border-primary/40 bg-card p-5 shadow-card">
+          <div className="flex items-start gap-3">
+            <p className="grow text-sm text-muted" dir="auto">
+              {answer.q}
+            </p>
+            <Button variant="ghost" size="icon" onClick={close} aria-label={t("step.close")}>
+              <X className="size-4" aria-hidden />
+            </Button>
+          </div>
+          <Markdown>{answer.md}</Markdown>
+          <Button className="self-start" onClick={close}>
+            {t("step.close")}
+          </Button>
+        </div>
+      ) : sent ? (
         <p className="rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary self-start" role="status">
           {sent}
         </p>
@@ -71,7 +106,7 @@ export function Step({ data, go }: { data: StepData; go: Go }) {
             className="rounded-card border border-border bg-card p-4 text-[15px] shadow-card focus-visible:outline-2 focus-visible:outline-primary"
           />
           <div className="flex gap-2">
-            <Button disabled={!q.trim()} onClick={() => send(q.trim(), { kind: "step", action: "question", text: q.trim() })}>
+            <Button disabled={!q.trim()} onClick={() => (setSince(Date.now()), send(q.trim(), { kind: "step", action: "question", text: q.trim() }))}>
               {t("step.send")}
             </Button>
             <Button variant="ghost" onClick={() => setAsking(false)}>

@@ -492,7 +492,9 @@
     "ask": "יש לי שאלה",
     "askPlaceholder": "מה לא ברור?",
     "send": "שליחת השאלה",
-    "progress": "צעד {{n}} מתוך {{of}}"
+    "progress": "צעד {{n}} מתוך {{of}}",
+    "answer": "תשובה לשאלה שלך",
+    "close": "סגירה"
   },
   "board": {
     "definition": "הגדרה",
