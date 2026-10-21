@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, FileText, FolderOpen, Loader2, Trash2, Upload } from "lucide-react";
+import { Check, ChevronDown, FileText, FolderOpen, Loader2, Trash2, Upload } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Input } from "@/core/components/ui/input";
@@ -48,6 +48,39 @@ function Chip({ f }: { f: FileRow }) {
   return <span className={`${pill} bg-border/60 text-muted`}>{t("files.waiting")}</span>;
 }
 
+/** Share of a section's files that are indexed, as a ring with the whole percentage inside. */
+function Ring({ rows }: { rows: FileRow[] }) {
+  const { t } = useTranslation();
+  const pct = Math.round((100 * rows.filter((f) => f.status === "indexed").length) / rows.length);
+  const r = 15;
+  const c = 2 * Math.PI * r;
+  return (
+    <span
+      className="relative inline-flex size-10 shrink-0 items-center justify-center"
+      role="img"
+      aria-label={t("files.indexedPct", { pct })}
+    >
+      <svg viewBox="0 0 36 36" className="absolute inset-0 -rotate-90" aria-hidden>
+        <circle cx="18" cy="18" r={r} fill="none" strokeWidth="3" className="stroke-border" />
+        <circle
+          cx="18"
+          cy="18"
+          r={r}
+          fill="none"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={c * (1 - pct / 100)}
+          className={pct === 100 ? "stroke-success" : "stroke-primary"}
+        />
+      </svg>
+      <span className="text-[10px] font-semibold tabular-nums" aria-hidden>
+        {pct}%
+      </span>
+    </span>
+  );
+}
+
 export function Files({
   number,
   callTool,
@@ -65,6 +98,7 @@ export function Files({
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [url, setUrl] = useState("");
+  const [shut, setShut] = useState<Partial<Record<Role, boolean>>>({});
   const refresh = useCallback(async () => {
     const r = await callTool("files_list", { number });
     if (!r.isError) setD(r.structuredContent as FilesData);
@@ -108,7 +142,10 @@ export function Files({
             { done?: boolean; status?: string; error?: string } | undefined;
           if (r.isError || (s?.done && s.status !== "added" && s.status !== "duplicate")) {
             setMsg(
-              t("files.rejected", { name: file.name, error: t(`file.${s?.status ?? "failed"}`, { defaultValue: t("file.failed") }) }),
+              t("files.rejected", {
+                name: file.name,
+                error: t(`file.${s?.status ?? "failed"}`, { defaultValue: t("file.failed") }),
+              }),
             );
             break;
           }
@@ -126,8 +163,7 @@ export function Files({
       number,
       ...(url.trim() ? { url: url.trim() } : {}),
     });
-    if (r.isError)
-      setMsg(t("moodle.err.url"));
+    if (r.isError) setMsg(t("moodle.err.url"));
     await refresh();
   }
 
@@ -141,37 +177,55 @@ export function Files({
         void upload(role, [...e.dataTransfer.files]);
       }}
     >
-      <h3 className="font-medium">{title}</h3>
+      {rows.length === 0 ? (
+        <h3 className="font-medium">{title}</h3>
+      ) : (
+        <h3>
+          <button
+            className="flex w-full items-center gap-2 rounded text-start font-medium focus-visible:outline-2 focus-visible:outline-primary"
+            aria-expanded={!shut[role]}
+            onClick={() => setShut((x) => ({ ...x, [role]: !x[role] }))}
+          >
+            <ChevronDown
+              className={`size-4 shrink-0 text-muted transition-transform motion-reduce:transition-none ${shut[role] ? "rtl:rotate-90 ltr:-rotate-90" : ""}`}
+              aria-hidden
+            />
+            <span className="flex-1">{title}</span>
+            <Ring rows={rows} />
+          </button>
+        </h3>
+      )}
       {rows.length === 0 && (
         <p className="rounded-lg border border-dashed border-border p-3 text-center text-sm text-muted">
           {t("files.dropHint")}
         </p>
       )}
-      {rows.map((f) => (
-        <div
-          key={f.sha}
-          className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-2 text-sm first-of-type:border-t-0 first-of-type:pt-0"
-        >
-          <FileText className="size-4 shrink-0 text-muted" aria-hidden />
-          <span className="min-w-0 flex-1 truncate" dir="auto">
-            {f.name}
-          </span>
-          {role === "exercises" && f.status === "indexed" && (
-            <span className="text-xs text-muted">
-              {t("files.exercisesFound", { count: f.exercises })}
-            </span>
-          )}
-          <span className="text-xs text-muted">{t("files.pages", { count: f.pages })}</span>
-          <Chip f={f} />
-          <button
-            className="rounded text-muted hover:text-danger focus-visible:outline-2 focus-visible:outline-primary"
-            aria-label={`${t("files.remove")} ${f.name}`}
-            onClick={() => void callTool("file_remove", { number, sha: f.sha }).then(refresh)}
+      {!shut[role] &&
+        rows.map((f) => (
+          <div
+            key={f.sha}
+            className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-2 text-sm first-of-type:border-t-0 first-of-type:pt-0"
           >
-            <Trash2 className="size-4" aria-hidden />
-          </button>
-        </div>
-      ))}
+            <FileText className="size-4 shrink-0 text-muted" aria-hidden />
+            <span className="min-w-0 flex-1 truncate" dir="auto">
+              {f.name}
+            </span>
+            {role === "exercises" && f.status === "indexed" && (
+              <span className="text-xs text-muted">
+                {t("files.exercisesFound", { count: f.exercises })}
+              </span>
+            )}
+            <span className="text-xs text-muted">{t("files.pages", { count: f.pages })}</span>
+            <Chip f={f} />
+            <button
+              className="rounded text-muted hover:text-danger focus-visible:outline-2 focus-visible:outline-primary"
+              aria-label={`${t("files.remove")} ${f.name}`}
+              onClick={() => void callTool("file_remove", { number, sha: f.sha }).then(refresh)}
+            >
+              <Trash2 className="size-4" aria-hidden />
+            </button>
+          </div>
+        ))}
       <div className="mt-1 flex flex-wrap items-center gap-3">
         <label className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-sm font-medium shadow-sm hover:bg-border/50 has-focus-visible:outline-2 has-focus-visible:outline-primary">
           <Upload className="size-4" aria-hidden />

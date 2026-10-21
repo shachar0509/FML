@@ -31,6 +31,19 @@ for (const lang of LANGS)
       await expect(page.getByText(lang === "he" ? "שכחו את תנאי ההתכנסות" : "Forgot the convergence condition")).toBeVisible();
       await expect(page.getByText("S002").first()).toBeVisible(); // current unit is expanded
       await expect(page.getByText("lecture2.pdf")).toBeVisible(); // Files section
+      await expect(page.getByRole("img", { name: lang === "he" ? "50% אונדקסו" : "50% indexed" })).toBeVisible();
+      await expect(page.getByRole("img", { name: lang === "he" ? "100% אונדקסו" : "100% indexed" })).toBeVisible();
+      await expect(page.getByText(lang === "he" ? "יאונדקס בבניית התוכנית הבאה" : "Indexed on the next plan build")).toBeVisible();
+      const filesSection = page.getByRole("region", { name: lang === "he" ? "קבצי לימוד" : "Study files" });
+      await filesSection.screenshot({ path: `e2e/tests_output/course/card-files-${lang}-${theme}.png` });
+      const mats = page.getByRole("button", { name: lang === "he" ? /חומרי לימוד/ : /Study materials/ });
+      await mats.click(); // collapse
+      await expect(mats).toHaveAttribute("aria-expanded", "false");
+      await expect(page.getByText("lecture2.pdf")).toBeHidden();
+      await page.waitForTimeout(300); // chevron rotation
+      await filesSection.screenshot({ path: `e2e/tests_output/course/card-files-collapsed-${lang}-${theme}.png` });
+      await mats.click();
+      await expect(page.getByText("lecture2.pdf")).toBeVisible();
       await expect(page.getByText(lang === "he" ? "5 תרגילים" : "5 exercises found")).toBeVisible();
       await expect(page.getByRole("button", { name: lang === "he" ? "ייבוא קבצי הקורס" : "Import course files" })).toBeEnabled();
       await page.getByRole("button", { name: lang === "he" ? "עדכון התוכנית" : "Update plan" }).click();

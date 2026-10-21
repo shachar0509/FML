@@ -601,3 +601,9 @@ Edge cases found with the sample slides, and fixed in the renderer:
 - You still install `dist/shalav.mcpb` by hand the first time. The script stops if the extension folder is missing.
 - If Claude Desktop is still running 20 s after the quit request, the script sends it SIGTERM. If it still has not quit, the script stops without copying. (The first version waited only 10 s, then reopened the app that was still running, so nothing restarted.)
 - **Checks:** a full run restarted Claude Desktop (new process ID) and Shalav started from the new files, according to its Claude Desktop log; ran with `--no-restart`; `diff -rq` of the build against the installed folder shows they are the same; lint clean.
+
+## M34 — files list: clearer status, collapsible sections, indexed ring ✅
+- A file that is not indexed yet now says "Indexed on the next plan build" ("יאונדקס בבניית התוכנית הבאה") instead of "Waiting". Uploaded files are indexed only when Build plan or Update plan runs.
+- The Study materials and Sample exercises headers are buttons (`aria-expanded`) that collapse or expand their file list. The Add and Open folder buttons stay visible.
+- Each header has a ring with the share of its files that are indexed, rounded to a whole percent. It turns green at 100%. Screen readers hear "50% indexed".
+- **Checks:** the course e2e checks the 50% and 100% rings, the new label, and collapse and expand. 77 e2e passed (the i18n change runs every spec); lint and tsc clean.
