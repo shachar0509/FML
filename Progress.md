@@ -582,3 +582,14 @@ Edge cases found with the sample slides, and fixed in the renderer:
   - the exercise card uses the same `AnswerFiles` component, so its drop zone now really accepts dropped files.
 - **Checks:** server tests for card numbers and paper answers, e2e for dropping a file. 139 unit and 61 e2e pass.
 - 🧪 In Claude Desktop: press Back on an open question (the card should stay), then drop a photo of a handwritten proof.
+
+## M32 — e2e split by card, run only what a change touches ✅
+- `e2e/cards.spec.ts` and `e2e/advanced.spec.ts` became one spec per card in `e2e/tests/`: `home`, `shell` (pin, one card on screen, Back), `course` (add course, course card), `lesson` (lesson, MCQ, open question), `step` (figure, board), `exercise`, `practice`, `settings`, `render` (the advanced samples). Shared helpers are in `helpers.ts`.
+- `pnpm e2e:changed [ref]` (`e2e/changed.mjs`) maps the files changed vs `ref` (default HEAD, working tree and new files included; `a..b` for a range) to specs and runs only those:
+  - one view → its spec;
+  - `src/core/render` → render, step, lesson, practice;
+  - shared card code (Cards, useShalav, ui, i18n, css, test host, helpers, config) → all;
+  - server-only or docs → none.
+- `pnpm exec playwright test <spec>` runs one spec by name.
+- The step test's name-beside-formula check now allows the stacked layout in Hebrew too. Which layout the board picks depends on whether the KaTeX fonts were cached at the first measure, so a cold run of the step spec on its own failed.
+- **Checks:** 77 e2e (the lesson test is now three), twice in a row, plus `step` on its own; lint clean.
