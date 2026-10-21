@@ -18,9 +18,9 @@ export default defineConfig({
   plugins: [katexWoff2Only, react(), tailwindcss(), viteSingleFile()],
   resolve: {
     alias: [
-      // The card bundle renders Markdown + KaTeX only; code highlighting and figures stay in the desktop build.
+      // The card bundle renders Markdown, KaTeX and plot/geometry/svg figures; code highlighting, Mermaid and WaveDrom stay in the desktop build.
       { find: /^\.\/CodeBlock$/, replacement: fileURLToPath(new URL("./src/cards/stubs/CodeBlock.tsx", import.meta.url)) },
-      { find: /^\.\/Figure$/, replacement: fileURLToPath(new URL("./src/cards/stubs/Figure.tsx", import.meta.url)) },
+      { find: /^\.\/figures\/(Mermaid|Wavedrom)$/, replacement: fileURLToPath(new URL("./src/cards/stubs/HeavyFigure.tsx", import.meta.url)) },
       { find: "@", replacement: fileURLToPath(new URL("./src", import.meta.url)) },
     ],
   },

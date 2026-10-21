@@ -6,7 +6,9 @@ export function Plot({ source }: { source: string; dark: boolean }) {
   const ref = useDraw(
     async (el) => {
       const spec = parsePlot(source);
-      const { default: functionPlot } = await import("function-plot");
+      // CJS interop: the default export is nested once more in some bundles (Vite dev).
+      const m = (await import("function-plot")) as unknown as { default: { default?: typeof import("function-plot").default } & typeof import("function-plot").default };
+      const functionPlot = m.default.default ?? m.default;
       const data: FunctionPlotDatum[] = spec.data.map((d) => {
         if ("fn" in d) return { fn: d.fn, range: d.range, color: d.color, graphType: "polyline" };
         if ("points" in d) {

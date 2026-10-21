@@ -88,7 +88,7 @@ export function registerExerciseTools(server: McpServer, bridge: BridgeGateway) 
       if (x.run.error) return `Grading failed: ${x.run.error}. Tell the student; they can press Grade again.`;
       if (!g || !readable(g)) return "The solution was not readable. The card asks the student for a clearer photo; wait for their next message.";
       const res = JSON.stringify({ ...g, hintsUsed: x.run.state.hints.length, solutionRevealed: !!x.run.state.solutionMd });
-      return `Graded; the Grade card is shown. Result: ${res}\n${x.context === "learn" ? "Continue the lesson: react in 2-3 sentences without repeating the card, then call update_assessment." : ""}`;
+      return `Graded; the Grade card is shown. Result: ${res}\n${x.context === "learn" ? "Continue the lesson like a TA checking homework: do not repeat the score, go through each wrong or unjustified step (what is wrong, why, the corrected step), call update_assessment, then ask them to fix it and submit again or give a similar exercise." : ""}`;
     });
     return out(`Grading started. ${wait}`, data(runId));
   });

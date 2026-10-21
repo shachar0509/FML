@@ -2,7 +2,7 @@ import { COURSE_ID_RE } from "@/core/universities";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import type { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod";
-import type { LessonData, McqData, OpenData } from "@/cards/types";
+import type { FigureData, LessonData, McqData, OpenData } from "@/cards/types";
 import { statusBlock, tutorSystem } from "@/core/claude/prompts/tutor";
 import { askOpenQuestion, assignExercise, consultMaterials, presentMcq, recordCheckResult, updateAssessment } from "@/core/claude/tutorTools";
 import { buildKnowledgeBoundary } from "@/core/domain/boundary/boundary";
@@ -14,6 +14,7 @@ import { normalizeTag, reduceProgress } from "@/core/domain/progress/reduce";
 import { appendEvent } from "@/core/domain/progress/store";
 import { resolveExercise, type Ex } from "@/core/domain/practice/exercises";
 import { pagesFor } from "@/core/domain/retrieval/retrieve";
+import { parseGeometry, parsePlot } from "@/core/render/figures/specs";
 import { readJsonFile } from "@/core/lib/fs/atomicWrite";
 import { readJsonlDir } from "@/core/lib/fs/jsonl";
 import { coursePaths } from "@/core/lib/fs/paths";
@@ -175,6 +176,30 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     const data: OpenData = { view: "open", language, theme, checkId, questionMd: i.questionMd };
     return out(`Question shown (check id ${checkId}). The student's written answer arrives as their next message; evaluate it, then call record_check_result with checkToolUseId "${checkId}".`, data);
   });
+
+  registerAppTool(
+    server,
+    "show_figure",
+    {
+      title: "Show a figure",
+      description:
+        "Draw a graph or diagram for the student in a card inside the chat. kind plot: function-plot JSON; geometry: JSXGraph-style JSON; svg: one <svg viewBox> element (strokes/text in currentColor, no scripts). Keep writing after it; it does not end your message.",
+      inputSchema: z.object({ kind: z.enum(["plot", "geometry", "svg"]), source: z.string().max(50_000), captionMd: z.string().max(500).default("") }),
+      _meta: withCard,
+    },
+    async ({ kind, source, captionMd }) => {
+      try {
+        if (kind === "plot") parsePlot(source);
+        else if (kind === "geometry") parseGeometry(source);
+        else if (!/^\s*<svg[\s>]/i.test(source)) throw new Error("source must be one <svg> element");
+      } catch (e) {
+        return fail(`Invalid ${kind} figure: ${e instanceof Error ? e.message : String(e)}. Fix it and call show_figure again.`);
+      }
+      const { language, theme } = sets();
+      const data: FigureData = { view: "figure", language, theme, kind, source, captionMd };
+      return out("Figure shown to the student. Refer to it and continue.", data);
+    },
+  );
 
   registerAppTool(server, assignExercise.def.name, { title: "Exercise", description: assignExercise.def.description + hint, inputSchema: assignExercise.schema, _meta: withCard }, async (i) => {
     const c = await ctx(i.stageIds[0]);

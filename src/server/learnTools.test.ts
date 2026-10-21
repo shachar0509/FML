@@ -45,6 +45,12 @@ it("runs a lesson: start, questions, events, status, completion, reopen + recap"
   for (const t of ["check_answer", "lesson_state", "stage_complete", "stage_reopen"]) expect(tools.find((x) => x.name === t)?._meta).toMatchObject({ ui: { visibility: ["app"] } });
   for (const t of ["shalav_start_lesson", "shalav_lesson_status", "present_mcq", "ask_open_question", "record_check_result", "update_assessment", "consult_materials"]) expect(tools.map((x) => x.name)).toContain(t);
 
+  // figures: validated on the server, rendered by the card
+  const fig = await call("show_figure", { kind: "plot", source: JSON.stringify({ xDomain: [-2, 2], yDomain: [0, 4], data: [{ fn: "x^2" }] }), captionMd: "$y=x^2$" });
+  expect(sc(fig)).toMatchObject({ view: "figure", kind: "plot", captionMd: "$y=x^2$" });
+  expect((await call("show_figure", { kind: "plot", source: "not json" })).isError).toBe(true);
+  expect((await call("show_figure", { kind: "svg", source: "<div/>" })).isError).toBe(true);
+
   // tutor tools need an open lesson
   expect((await call("shalav_lesson_status")).isError).toBe(true);
 

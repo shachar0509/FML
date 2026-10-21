@@ -447,7 +447,7 @@
     "hints": "Hints",
     "showSolution": "Show full solution",
     "solution": "Full solution",
-    "drop": "Drop your solution here (images or PDF)",
+    "drop": "Solve it in your notebook (paper or tablet), then upload a photo or PDF of the whole solution",
     "continue": "Continue",
     "figure": "Figure {{n}}",
     "failed": "Something went wrong. Try again.",

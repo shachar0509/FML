@@ -5,6 +5,7 @@ import { applyLanguage, applyTheme } from "@/core/lib/dom";
 import { AddCourse } from "./views/AddCourse";
 import { Course } from "./views/Course";
 import { Exercise } from "./views/Exercise";
+import { FigureCard } from "./views/FigureCard";
 import { Home } from "./views/Home";
 import { Lesson } from "./views/Lesson";
 import { Settings } from "./views/Settings";
@@ -81,6 +82,7 @@ export function Cards({ host }: { host: Host }) {
     if (shown.view === "mcq") return <Mcq data={shown} callTool={callTool} go={ask} />;
     if (shown.view === "exercise") return <Exercise data={shown} callTool={callTool} go={ask} />;
     if (shown.view === "open") return <OpenQ data={shown} go={ask} />;
+    if (shown.view === "figure") return <FigureCard data={shown} />;
     return (
       <Home
         data={shown}

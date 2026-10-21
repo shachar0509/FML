@@ -106,6 +106,12 @@ for (const lang of ["he", "en"] as const)
       await axe();
       await send.click();
       expect((await said()).at(-1)).toContain("Because");
+
+      await page.goto(url("figure"));
+      await expect(page.locator("figure svg").first()).toBeVisible();
+      await expect(page.locator("figcaption .katex").first()).toBeVisible();
+      await axe();
+      await page.screenshot({ path: `e2e/shots/card-figure-${lang}-${theme}.png` });
       expect(errors).toEqual([]);
     });
 

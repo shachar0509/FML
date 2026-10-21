@@ -150,3 +150,6 @@
 ## M15 — card requests
 - No full automation: Claude Desktop's `ui/message` fills the composer only (claude-ai-mcp#1111), sampling is not offered, and `updateModelContext` does not start a turn. Skills don't help either (Claude runs them inside a turn the student started, and an MCPB can't ship one). The student presses Enter once per action.
 - The composer shows one fixed word ("▶️ המשך") instead of a request text, because the student asked not to see prompts. The request itself lives in a server-side inbox (last 5, in memory), and the server writes its text from an enum kind. The card never sends free text, except the student's own answer, which goes inside an `<answer>` block.
+
+## M16 — figures in lessons
+- Figures go through a tool (`show_figure`) and a card, not fenced blocks: Shalav does not render Claude's chat text. Only plot/geometry/SVG are in the card bundle; Mermaid + WaveDrom would make every card 9.4 MB instead of 3.3 MB. SVG covers trees, automata and circuits.

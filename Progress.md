@@ -327,3 +327,11 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - Shared bits in `src/cards/ui.tsx` (panel, Bar, Ring, Skeleton). Home: course rows with progress bar + stage pill, empty state with one CTA, university tiles. Course: header with ring + bar, Learn/Practice with icons, units with done count and status chips. Lesson/MCQ/Open/Exercise/Practice/Files/Settings/AddCourse/Checklist/Waiting restyled in the same language. No behaviour, tool or i18n changes.
 - Checks: typecheck/lint clean, 122 unit, 29 e2e (axe AA clean); screenshots inspected (he/en, light/dark).
 - 🧪 Claude Desktop: look at the cards in a real chat (light + dark, Hebrew + English); is the banner/pin placement right in the iframe?
+
+### M16 — Lesson like a TA: figures, quick checks, notebook exercises (done; 🧪 pending)
+- New `show_figure` tool (model + card): Claude draws a function plot, a geometry drawing or an SVG in a card inside the chat while it teaches. The server checks the source first (plot/geometry schema, `<svg>`) and returns the error so Claude can fix it. The figure is drawn left to right even in Hebrew (minus signs stayed on the wrong side).
+- The card bundle now includes the plot/geometry/SVG renderers (cards.html 1.8 → 3.3 MB); Mermaid and WaveDrom stay out (9.4 MB with them).
+- Tutor prompt (MCP only): teach slowly (intuition with a figure → precise statement → worked example → one quick check), then full written exercises in the student's notebook (paper/tablet) uploaded as a photo or PDF, then a TA-style correction step by step and a resubmit or a similar exercise. The grade result tells Claude the same. The exercise card says "solve in your notebook, upload a photo or PDF".
+- Fix: `function-plot` default-export interop (the plot threw "functionPlot is not a function" under Vite dev).
+- Checks: typecheck/lint clean, 123 unit, 29 e2e (the lesson e2e now covers the figure card, he/en, light/dark, axe).
+- 🧪 Claude Desktop: start a lesson → does Claude draw figures, ask MCQs, then assign a notebook exercise, and after grading go over the mistakes?
