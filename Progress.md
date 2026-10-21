@@ -462,3 +462,20 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - `parseCourse` already drops video-labelled links, so they are never downloaded.
 - On the real 01140071 files only the two "סרטוני עזר" copies are dropped.
 - Checks: typecheck/lint clean, 130 unit, smoke ok (49 tools).
+
+## M25 — token cuts that keep the same information, and two lesson bugs
+
+- M25a: job dedupe is per operation. The server outlives a chat, so a later build in a new chat gets the full instructions again.
+- M25b: a formula opened with `$` and closed with `$$` (or the reverse) used to show raw. It now renders (`balanceDollars`).
+- M25c: "I have a question" on a step:
+  - the answer pops up over the step card (`answer_question` / `step_answer`) instead of arriving as a new step;
+  - only the newest card click is kept, because unfetched older clicks made answers lag 2–3 steps behind.
+- M25d:
+  - the answer schema is not repeated when the job just before showed it;
+  - `update_assessment` returns the fresh `[STATUS]`, so there is no `shalav_lesson_status` call after it;
+  - the stage JSON in the tutor prompt is compact;
+  - images of 4 px or smaller (spacers) no longer force a page image. On the real courses that is 30 of 183 image pages.
+- Not done:
+  - removing repeated tool-description rules: they guard against model misbehaviour fixed in M15/M22;
+  - page-text dedupe between the indexing passes: those jobs are too far apart to point back to safely.
+- Checks: typecheck/lint clean, 133 unit, lesson e2e (4 variants) ok.
