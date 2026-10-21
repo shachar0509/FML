@@ -63,11 +63,15 @@ it("uploads in chunks, lists, indexes through the bridge, removes", async () => 
   // the same run then refines the plan for coverage
   const rev = JSON.stringify(done.content);
   expect(rev).toContain("submit_plan_revision");
-  expect(rev).toContain("Example exercises from the course");
+  expect(rev).toContain("- notes.txt p1: s"); // the file's lines sit under the stage they cover
   const sid = (k: number) => `S${String(k).padStart(3, "0")}`;
   const revUnit = (from: number) => ({ title: "u", summary: "s", stages: Array.from({ length: 18 }, (_, i) => ({ title: "t", kind: "concept", summary: "s", prerequisites: [], sourceId: sid(from + i) })) });
   const fin = await call("shalav_submit_job", { jobId: Number(/job #(\d+)/.exec(rev)?.[1]), input: { courseKind: "mixed", units: [revUnit(1), revUnit(19)] } });
-  expect(JSON.stringify(fin.content)).toMatch(/updated from 1 course file\(s\); it already covered every topic/);
+  // kept stage S001 has a file line: one enrich job asks what it is missing
+  const ask = JSON.stringify(fin.content);
+  expect(ask).toContain("submit_stage_additions");
+  const end = await call("shalav_submit_job", { jobId: Number(/job #(\d+)/.exec(ask)?.[1]), input: { stages: [{ id: "S001", objectives: [], techniques: ["epsilon-N"], edgeCases: [], theorems: [] }] } });
+  expect(JSON.stringify(end.content)).toMatch(/updated from 1 course file\(s\); it already covered every topic/);
 
   f = sc<FilesData>(await call("files_list", { number: num }));
   expect(f.materials[0]?.status).toBe("indexed");

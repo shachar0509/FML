@@ -38,6 +38,21 @@ const slices = <T>(xs: T[], size: number, step: number) => {
   return out;
 };
 
+/** Runs fn over items, at most `n` at once (the host model can answer several jobs per turn); results in input order. */
+export async function pool<T, R>(items: T[], n: number, fn: (x: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i] as T);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, worker));
+  return out;
+}
+const PARALLEL = 3;
+
 async function pageBlocks(source: PageSource, pages: number[], role: "material" | "exercises"): Promise<Block[]> {
   const out: Block[] = [];
   for (const p of pages) {
@@ -64,12 +79,17 @@ async function extract(o: IndexOpts, pages: number[], tick: () => void): Promise
   const out: IndexedExercise[] = [];
   let model: string | null = null;
 
-  for (const batch of slices(pages, EXERCISE_BATCH, EXERCISE_BATCH - 1)) {
+  // The AI calls run in parallel; dedupe across the 1-page overlap, ids and crops then go in page order (same output as serial).
+  const replies = await pool(slices(pages, EXERCISE_BATCH, EXERCISE_BATCH - 1), PARALLEL, async (batch) => {
     const content = await pageBlocks(source, batch, "exercises");
-    const { value, response } = await callStructured(gw, submitExercises, {
+    const r = await callStructured(gw, submitExercises, {
       task: "index", courseNumber: course.courseNumber, system: exercisesPrompt(course, planCompact(plan)),
       messages: [{ role: "user", content }], signal: o.signal,
     });
+    tick();
+    return r;
+  });
+  for (const { value, response } of replies) {
     model = response.model;
     for (const e of value.exercises) {
       const key = `${e.label}|${e.statementMd.slice(0, 80)}`;
@@ -98,7 +118,6 @@ async function extract(o: IndexOpts, pages: number[], tick: () => void): Promise
         estimatedMinutes: e.estimatedMinutes, edgeCaseFocus: e.edgeCaseFocus, gist: e.gist,
       });
     }
-    tick();
   }
   return { exercises: out, model };
 }
@@ -126,13 +145,18 @@ export async function indexMaterial(o: IndexOpts): Promise<FileIndex> {
   const materialPages: FileIndex["materialPages"] = [];
   const withExercises: number[] = [];
 
-  for (const batch of batches) {
+  const replies = await pool(batches, PARALLEL, async (batch) => {
     const content = await pageBlocks(source, batch, "material");
-    const { value, response } = await callStructured(gw, submitMaterialPages, {
+    const r = await callStructured(gw, submitMaterialPages, {
       task: "index", courseNumber: course.courseNumber,
       system: materialPrompt(course, planCompact(plan), lang === "he" ? "Hebrew" : "English"),
       messages: [{ role: "user", content }], signal: o.signal,
     });
+    o.onProgress?.(++done, total);
+    return r;
+  });
+  for (const [i, { value, response }] of replies.entries()) {
+    const batch = batches[i] as number[];
     model = response.model;
     for (const p of batch) {
       const r = value.pages.find((x) => x.page === p);
@@ -142,7 +166,6 @@ export async function indexMaterial(o: IndexOpts): Promise<FileIndex> {
       });
       if (r?.hasExercises) withExercises.push(p);
     }
-    o.onProgress?.(++done, total);
   }
 
   let exercises: IndexedExercise[] = [];

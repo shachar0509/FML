@@ -4,7 +4,7 @@ import { indexExercises, indexMaterial, pageTokenEstimate } from "./index";
 import { listFileIndexes, readFileIndex, writeFileIndex } from "./indexStore";
 import { PasswordProtectedError, type OpenSource } from "./types";
 
-export type QueueEvent = { course: string; sha256: string; status: FileIndex["status"]; done?: number; total?: number; error?: string | null };
+export type QueueEvent = { course: string; sha256: string; status: FileIndex["status"] | "removed"; done?: number; total?: number; error?: string | null };
 export type QueueDeps = {
   gw: () => ClaudeGateway;
   open: OpenSource;
@@ -17,21 +17,26 @@ export type QueueDeps = {
   bind?: () => <R>(fn: () => R) => R;
 };
 
-const MAX_GLOBAL = 2;
+const MAX_GLOBAL = 3;
+const PER_COURSE = 2; // files of one course only read the plan and write their own records
 const LARGE = 60;
 
-/** 5.3: persistent via the index records; one file at a time per course, two globally. */
+/** 5.3: persistent via the index records; two files at a time per course, three globally. */
 export function createIndexQueue(deps: QueueDeps) {
   type Item = { course: string; sha256: string; ctx?: <R>(fn: () => R) => R };
   const queue: Item[] = [];
-  const busy = new Set<string>(); // courses with a running file
+  const busy = new Map<string, number>(); // running files per course
+  let running = 0;
   const declined = new Set<string>();
   const subs = new Set<(e: QueueEvent) => void>();
   let idleWaiters: { course?: string; resolve: () => void }[] = [];
   const emit = (e: QueueEvent) => subs.forEach((cb) => cb(e));
   const key = (course: string, sha: string) => `${course}/${sha}`;
 
+  class Removed extends Error {}
+  /** Writes the record unless the student removed the file meanwhile (no ghost index for a trashed file). */
   async function set(course: string, rec: FileIndex, patch: Partial<FileIndex>): Promise<FileIndex> {
+    if (!(await readFileIndex(course, rec.sha256))) throw new Removed();
     const next = { ...rec, ...patch };
     await writeFileIndex(course, next);
     emit({ course, sha256: rec.sha256, status: next.status, error: next.error });
@@ -40,7 +45,8 @@ export function createIndexQueue(deps: QueueDeps) {
 
   async function run(course: string, sha256: string) {
     let rec = await readFileIndex(course, sha256);
-    if (!rec || rec.status === "indexed" || declined.has(key(course, sha256))) return;
+    if (!rec) return emit({ course, sha256, status: "removed" }); // removed while queued
+    if (rec.status === "indexed" || declined.has(key(course, sha256))) return;
     try {
       const plan = await deps.getPlan(course);
       const head = await deps.course(course);
@@ -65,27 +71,32 @@ export function createIndexQueue(deps: QueueDeps) {
         source.close();
       }
     } catch (e) {
+      if (e instanceof Removed) return emit({ course, sha256, status: "removed" });
       const error = e instanceof PasswordProtectedError ? e.message : (e instanceof Error ? e.message : String(e)).slice(0, 200);
-      if (rec) await set(course, rec, { status: "failed", error });
+      if (rec) await set(course, rec, { status: "failed", error }).catch(() => emit({ course, sha256, status: "removed" }));
     }
   }
 
   function pump() {
-    while (busy.size < MAX_GLOBAL) {
-      const i = queue.findIndex((q) => !busy.has(q.course));
+    while (running < MAX_GLOBAL) {
+      const i = queue.findIndex((q) => (busy.get(q.course) ?? 0) < PER_COURSE);
       if (i < 0) break;
       const [job] = queue.splice(i, 1) as [Item];
-      busy.add(job.course);
+      busy.set(job.course, (busy.get(job.course) ?? 0) + 1);
+      running++;
       const go = () => run(job.course, job.sha256);
       void (job.ctx ? job.ctx(go) : go()).finally(() => {
-        busy.delete(job.course);
+        running--;
+        const n = (busy.get(job.course) ?? 1) - 1;
+        if (n) busy.set(job.course, n);
+        else busy.delete(job.course);
         pump();
       });
     }
     idleWaiters = idleWaiters.filter((w) => !(isIdle(w.course) && (w.resolve(), true)));
   }
 
-  const isIdle = (course?: string) => (course ? !busy.has(course) && !queue.some((q) => q.course === course) : !busy.size && !queue.length);
+  const isIdle = (course?: string) => (course ? !busy.has(course) && !queue.some((q) => q.course === course) : !running && !queue.length);
 
   function enqueue(course: string, sha256: string) {
     if (!queue.some((q) => q.course === course && q.sha256 === sha256)) queue.push({ course, sha256, ctx: deps.bind?.() });

@@ -2,19 +2,16 @@ import { uniName } from "@/core/universities";
 // Spec 4.6.
 import type { CourseJson } from "@/core/domain/dataSchemas";
 
-export const refinePrompt = (c: Pick<CourseJson, "courseNumber" | "nameHe" | "credits" | "syllabusHe">, plan: string, materials: string, lang: string, exercises = "") =>
+export const refinePrompt = (c: Pick<CourseJson, "courseNumber" | "nameHe" | "credits" | "syllabusHe">, plan: string, uncovered: string, lang: string) =>
   `You are improving the study plan of ${uniName()} course ${c.courseNumber} "${c.nameHe}" (${c.credits} credits) using the student's own course materials.
 Official syllabus:
 ${c.syllabusHe}
 
-Current plan (stage ids, kinds, titles, summaries):
+Current plan (stage ids, kinds, titles, summaries). Under each stage: what the course files say about it (material page summaries and example exercises, each labeled with its file); the same subject may appear in several files, so judge each stage once using all its lines:
 ${plan}
 
-Indexed course materials, page summaries grouped by file:
-${materials}
-
-Example exercises from the course, grouped by file (label [type]: start of the statement):
-${exercises || "none"}
+Material pages and example exercises that no current stage covers:
+${uncovered || "none"}
 
 Return the full revised outline. Rules:
 - Never delete or merge stages: every current stage id must appear as "sourceId" on at least one revised stage.
@@ -27,3 +24,12 @@ Return the full revised outline. Rules:
 Call submit_plan_revision with the full revised outline.`;
 
 export const revisionFixMsg = (errs: string[]) => `The revision is invalid:\n${errs.join("\n")}\nResubmit the full revised outline.`;
+
+export const enrichPrompt = (c: Pick<CourseJson, "courseNumber" | "nameHe">, stages: string, lang: string) =>
+  `You are completing the study plan of ${uniName()} course ${c.courseNumber} "${c.nameHe}" from the student's own course files.
+Each stage below shows what it already teaches (objectives, techniques, edge cases, theorems) and what the course files say about it, from every file that covers it:
+${stages}
+
+For each stage return ONLY what the files show that the stage does not teach yet: a technique, an edge case, a theorem, or an objective needed to solve its exercises. A detail found in only one of the files still counts. Never repeat an item the stage already has (same meaning in other words counts as the same), and return empty lists when nothing is missing. Write in ${lang}.
+
+Call submit_stage_additions with every stage id listed.`;

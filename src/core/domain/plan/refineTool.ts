@@ -29,3 +29,21 @@ export const submitPlanRevision = defineTool(
   }),
 );
 export type PlanRevision = z.infer<typeof submitPlanRevision.schema>;
+
+/** M40: details the course files show for a kept stage that it does not teach yet; merged as a union, never removing anything. */
+export const submitStageAdditions = defineTool(
+  "submit_stage_additions",
+  "Submit what each stage is missing (empty lists when nothing is).",
+  z.object({
+    stages: z.array(
+      z.object({
+        id: z.string(),
+        objectives: z.array(z.string()),
+        techniques: z.array(z.string()),
+        edgeCases: z.array(z.string()),
+        theorems: z.array(z.object({ name: z.string(), statement: z.string(), proofRequired: z.boolean() })),
+      }),
+    ),
+  }),
+);
+export type StageAdditions = z.infer<typeof submitStageAdditions.schema>["stages"][number];

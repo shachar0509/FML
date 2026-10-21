@@ -53,18 +53,24 @@ it("looks up, creates a course through the bridge with fake jobs, shows the cour
 
   // the host model answers the jobs ("▶️ Building the plan"): outline, then the unit details, until the final summary
   expect(text(await call("shalav_next_job"))).toContain("No Shalav job"); // "▶️ Continue" never gets build jobs
-  let r = await call("shalav_next_job", { build: true });
+  let r: { content?: unknown } = await call("shalav_next_job", { build: true });
   let final = "";
+  let most = 0;
   for (let i = 0; i < 20 && !final; i++) {
-    const t = text(r);
-    const id = Number(/job #(\d+)/.exec(t)?.[1]);
-    expect(id).toBeGreaterThan(0);
-    const input = t.includes("submit_plan_outline")
-      ? { courseKind: "computational", units: [unit(35), unit(35)] }
-      : { stages: (/stage ids ([S\d, ]+)\./.exec(t.replaceAll("\\n", "\n"))?.[1] ?? "").split(", ").map((sid) => ({ id: sid, objectives: ["a", "b"], newConcepts: [], theorems: [], techniques: [], edgeCases: [], examRelevance: "core", estimatedMinutes: 30 })) };
-    r = await client.callTool({ name: "shalav_submit_job", arguments: { jobId: id, input } });
+    // one result may hold several jobs: answer them all with parallel submits, like the host model
+    const jobs = sections(text(r));
+    expect(jobs.length).toBeGreaterThan(0);
+    most = Math.max(most, jobs.length);
+    const rs = await Promise.all(jobs.map(({ id, t }) => {
+      const input = t.includes("submit_plan_outline")
+        ? { courseKind: "computational", units: [unit(35), unit(35)] }
+        : { stages: (/stage ids ([S\d, ]+)\./.exec(t.replaceAll("\\n", "\n"))?.[1] ?? "").split(", ").map((sid) => ({ id: sid, objectives: ["a", "b"], newConcepts: [], theorems: [], techniques: [], edgeCases: [], examRelevance: "core", estimatedMinutes: 30 })) };
+      return client.callTool({ name: "shalav_submit_job", arguments: { jobId: id, input } });
+    }));
+    r = { content: rs.flatMap((x) => x.content as unknown[]) };
     if (/The study plan for \d+ is built/.test(text(r))) final = text(r);
   }
+  expect(most).toBeGreaterThan(1); // the unit details came several per call
   expect(final).toContain("the card shows the plan");
   expect(sc<{ state: string }>(await call("course_status", { number: "01040195" })).state).toBe("done");
 
@@ -81,6 +87,9 @@ it("looks up, creates a course through the bridge with fake jobs, shows the cour
   expect((await call("course_create_request", { number: "01040195" })).isError).toBe(true);
   expect((await call("shalav_course", { number: "99999999" })).isError).toBe(true);
 }, 20_000);
+
+/** Every job in a tool result (one result may hold several): its number and its own text. */
+const sections = (t: string) => t.split("# Shalav job #").slice(1).map((x) => ({ id: Number(/^\d+/.exec(x)?.[0]), t: x }));
 
 it("builds at once: one chat works through both, each job belongs to its own course", async () => {
   const d = await mkdtemp(join(tmpdir(), "shalav-"));
@@ -108,7 +117,8 @@ it("builds at once: one chat works through both, each job belongs to its own cou
   // chat 1 ("▶️ Building the plan") works through the build lane; the other builds join it and a summary hands off to the next course
   const seen: Record<string, number> = {};
   let handoffs = 0;
-  let r = await call("shalav_next_job", { build: true });
+  let r: { content?: unknown } = await call("shalav_next_job", { build: true });
+  let results = [r];
   for (const n of rest) expect(sc<{ joined: boolean }>(await call("plan_build_request", { number: n })).joined).toBe(true);
   // chat 2 ("▶️ Continue") meanwhile: no build jobs, and a lesson request is served at once
   expect(text(await call("shalav_next_job"))).toContain("No Shalav job is pending");
@@ -117,26 +127,31 @@ it("builds at once: one chat works through both, each job belongs to its own cou
   for (let i = 0; i < 60; i++) {
     const t = text(r);
     if (t.includes("No build work is pending")) break;
-    const job = /job #(\d+) \(Building the study plan for (\d+)\)/.exec(t);
-    if (!job) {
+    const jobs = results.flatMap((x) => sections(text(x))); // per result: a summary of another course never sits inside a job's text
+    if (!jobs.length) {
       expect(t).toMatch(/The study plan for \d+ is built/);
       expect(t).not.toMatch(/call shalav_next_job(?! with build: true)/); // never sends the build chat to the study lane
       if (!t.includes("call shalav_next_job with build: true")) break; // the last build: no hand-off
       handoffs++;
       r = await call("shalav_next_job", { build: true });
+      results = [r];
       continue;
     }
-    const n = job[2] as string;
-    for (const c of courses) if (c !== n) expect(t.includes(c)).toBe(false); // nothing of another course
-    seen[n] = (seen[n] ?? 0) + 1;
-    const input = t.includes("submit_plan_outline")
-      ? { courseKind: "computational", units: [unit(35), unit(35)] }
-      : t.includes("submit_plan_revision") // same plan, nothing added
-        ? { courseKind: "computational", units: [0, 35].map((o) => ({ ...unit(35), stages: unit(35).stages.map((st, k) => ({ ...st, prerequisites: [], sourceId: `S${String(o + k + 1).padStart(3, "0")}` })) })) }
-        : t.includes("submit_material_pages")
-        ? { pages: [{ page: 1, stageIds: ["S001"], summary: "limits", hasFigure: false, hasExercises: false }] }
-        : { stages: (/stage ids ([S\d, ]+)\./.exec(t.replaceAll("\\n", "\n"))?.[1] ?? "").split(", ").map((sid) => ({ id: sid, objectives: ["a", "b"], newConcepts: [], theorems: [], techniques: [], edgeCases: [], examRelevance: "core", estimatedMinutes: 30 })) };
-    r = await call("shalav_submit_job", { jobId: Number(job[1]), input });
+    const rs = await Promise.all(jobs.map(({ id, t }) => {
+      const n = /^\d+ \(Building the study plan for (\d+)\)/.exec(t)?.[1] as string;
+      for (const c of courses) if (c !== n) expect(t.includes(c)).toBe(false); // nothing of another course
+      seen[n] = (seen[n] ?? 0) + 1;
+      const input = t.includes("submit_plan_outline")
+        ? { courseKind: "computational", units: [unit(35), unit(35)] }
+        : t.includes("submit_plan_revision") // same plan, nothing added
+          ? { courseKind: "computational", units: [0, 35].map((o) => ({ ...unit(35), stages: unit(35).stages.map((st, k) => ({ ...st, prerequisites: [], sourceId: `S${String(o + k + 1).padStart(3, "0")}` })) })) }
+          : t.includes("submit_material_pages")
+          ? { pages: [{ page: 1, stageIds: ["S001"], summary: "limits", hasFigure: false, hasExercises: false }] }
+          : { stages: (/stage ids ([S\d, ]+)\./.exec(t.replaceAll("\\n", "\n"))?.[1] ?? "").split(", ").map((sid) => ({ id: sid, objectives: ["a", "b"], newConcepts: [], theorems: [], techniques: [], edgeCases: [], examRelevance: "core", estimatedMinutes: 30 })) };
+      return call("shalav_submit_job", { jobId: id, input });
+    }));
+    results = rs; // jobs handed out by any of them are answered next round; a summary (and its hand-off) is read once none are left
+    r = { content: rs.flatMap((x) => x.content as unknown[]) };
   }
   expect(handoffs).toBeLessThanOrEqual(2); // jobs of all courses interleave; a summary hands off only while another build still runs
   expect(text(await call("shalav_next_job", { build: true }))).toContain("No build work is pending");

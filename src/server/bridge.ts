@@ -35,6 +35,9 @@ type Op = {
 
 const NO_USAGE = { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 };
 const WAIT_MS = 45_000;
+/** Jobs handed out per call: the model answers them with parallel shalav_submit_job calls in one turn. */
+const PER_CALL = 3;
+const IMAGE_BYTES = 1_500_000; // base64 chars of images per tool result, to stay well inside the host's result size
 
 export class BridgeGateway implements ClaudeGateway {
   private jobs = new Map<number, Job>();
@@ -130,14 +133,31 @@ export class BridgeGateway implements ClaudeGateway {
   /** shalav_next_job */
   next(lane: Lane = "study"): Content[] {
     if (lane === "build") this.servedAt = Date.now();
-    const job = [...this.jobs.values()].find((j) => j.state === "queued" && this.laneOf(j) === lane);
-    if (!job) {
+    const jobs = [...this.jobs.values()].filter((j) => j.state === "queued" && this.laneOf(j) === lane);
+    if (!jobs.length) {
       if (lane === "study") return [{ type: "text", text: "No Shalav job is pending." }];
       const running = [...this.ops.values()].some((o) => o.lane === "build" && !o.settled);
       return [{ type: "text", text: running ? "Build work is still running (reading files): call shalav_next_job with build: true again." : "No build work is pending." }];
     }
-    job.state = "shown";
-    return this.render(job);
+    return this.show(jobs);
+  }
+
+  /** Claims up to PER_CALL of `jobs` (the first always; more while their images fit) and renders them as one result. */
+  private show(jobs: Job[]): Content[] {
+    const picked: Job[] = [];
+    let bytes = 0;
+    for (const j of jobs) {
+      const size = j.req.messages.flatMap((m) => (typeof m.content === "string" ? [] : m.content)).reduce((n, b) => n + (b.type === "image" ? String((b.source as { data?: string }).data ?? "").length : 0), 0);
+      if (picked.length && (picked.length >= PER_CALL || bytes + size > IMAGE_BYTES)) break;
+      picked.push(j);
+      bytes += size;
+    }
+    for (const j of picked) j.state = "shown";
+    if (picked.length === 1) return this.render(picked[0] as Job);
+    return [
+      { type: "text", text: `${picked.length} jobs are ready: ${picked.map((j) => "#" + j.id).join(", ")}. Answer each with its own shalav_submit_job; calling them in parallel is fine.\n\n` },
+      ...picked.flatMap((j) => this.render(j)),
+    ];
   }
 
   /** shalav_next_job: like next(), but if an operation of the lane is still running (its first request not parked yet) wait for it, up to 20 s. */
@@ -193,11 +213,9 @@ export class BridgeGateway implements ClaudeGateway {
       }
       // A build chat takes any course's queued build job while its own op waits (e.g. for an index queue slot held by another course).
       const queued = [...this.jobs.values()].filter((j) => j.state === "queued");
-      const nextJob = queued.find((j) => j.opId === op.id) ?? (op.lane === "build" ? queued.find((j) => this.laneOf(j) === "build") : undefined);
-      if (nextJob) {
-        nextJob.state = "shown";
-        return { content: [{ type: "text", text: "Next job is ready.\n\n" }, ...this.render(nextJob)] };
-      }
+      const own = queued.filter((j) => j.opId === op.id);
+      const ready = op.lane === "build" ? [...own, ...queued.filter((j) => j.opId !== op.id && this.laneOf(j) === "build")] : own;
+      if (ready.length) return { content: [{ type: "text", text: "Next job is ready.\n\n" }, ...this.show(ready)] };
       const open = [...this.jobs.values()].filter((j) => j.state === "shown" && j.opId === op.id);
       if (open.length) return { content: [{ type: "text", text: `Answer the other open job(s) of ${op.label} too: ${open.map((j) => "#" + j.id).join(", ")}.` }] };
       const left = deadline - Date.now();

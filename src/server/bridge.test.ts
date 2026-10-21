@@ -35,13 +35,13 @@ describe("BridgeGateway", () => {
     const { done } = b.run("op", () => Promise.all([callStructured(b, tool, req), callStructured(b, tool, req)]));
     await new Promise((r) => setImmediate(r));
     expect(b.pending()).toBe(2);
-    const a = b.next();
-    const c = b.next();
-    expect(text(a)).toContain("SYS");
-    expect(text(c)).toContain("Same instructions as job #1");
-    expect(text(a)).toContain('"properties"');
-    expect(text(c)).toContain("same JSON schema as job #1"); // shown just before: not repeated
-    expect(text(c)).not.toContain('"properties"');
+    const both = text(b.next()); // one call hands out both jobs
+    expect(both).toContain("2 jobs are ready: #1, #2");
+    expect(both).toContain("SYS");
+    expect(both).toContain("Same instructions as job #1");
+    expect(both).toContain("same JSON schema as job #1"); // shown just before: not repeated
+    expect(both.split('"properties"')).toHaveLength(2);
+    expect(text(b.next())).toContain("No Shalav job");
     expect((await b.submit({ jobId: 99, input: {} })).isError).toBe(true);
     expect((await b.submit({ jobId: 1, text: "x" })).isError).toBe(true); // schema job needs input
     await b.submit({ jobId: 1, input: { n: 1 } });
@@ -66,9 +66,27 @@ describe("BridgeGateway", () => {
     const b = new BridgeGateway();
     b.run("op", () => Promise.all([callStructured(b, tool, req), b.send({ ...req, system: "S2" }), callStructured(b, tool, req)]));
     await new Promise((r) => setImmediate(r));
-    const [x, , z] = [b.next(), b.next(), b.next()];
-    expect(text(x)).toContain('"properties"');
-    expect(text(z)).toContain('"properties"');
+    expect(text(b.next()).split('"properties"')).toHaveLength(3); // jobs 1 and 3 both show it
+  });
+
+  it("hands out up to 3 jobs per call, fewer when the images are big; parallel submits get distinct jobs", async () => {
+    const b = new BridgeGateway();
+    const img = (kb: number) => ({ ...req, messages: [{ role: "user" as const, content: [{ type: "image" as const, source: { type: "base64", media_type: "image/png", data: "A".repeat(kb * 1000) } }] }] });
+    const { done } = b.run("op", () => Promise.all([1, 2, 3, 4, 5].map(() => callStructured(b, tool, req))));
+    await new Promise((r) => setImmediate(r));
+    const first = text(b.next());
+    expect(first).toContain("3 jobs are ready: #1, #2, #3");
+    const [r1, r2] = await Promise.all([b.submit({ jobId: 1, input: { n: 1 } }), b.submit({ jobId: 2, input: { n: 2 } })]);
+    const both = text(r1.content) + text(r2.content);
+    for (const id of [4, 5]) expect(both.split(`# Shalav job #${id} `)).toHaveLength(2); // each handed out once
+    for (const id of [3, 4, 5]) await b.submit({ jobId: id, input: { n: id } }).catch(() => undefined);
+    await done;
+
+    const big = new BridgeGateway();
+    big.run("op", () => Promise.all([big.send(img(1000)), big.send(img(1000))]));
+    await new Promise((r) => setImmediate(r));
+    expect(text(big.next())).not.toContain("jobs are ready"); // 2 MB of images: one job only
+    expect(big.pending()).toBe(1);
   });
 
   it("cancel rejects every job of the operation", async () => {

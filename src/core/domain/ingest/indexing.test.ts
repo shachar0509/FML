@@ -41,18 +41,22 @@ describe("indexing", () => {
   it("pageTokenEstimate", () => expect(pageTokenEstimate(70)).toBe(154000));
 
   it("material: batches of 8, drops unknown stages, truncates, chains exercise extraction", async () => {
-    const gw = new FakeClaudeGateway([
-      (r) => toolCall("submit_material_pages", {
-        pages: pagesIn(r).map((p) => ({ page: p, stageIds: ["S002", "S999"], summary: "s", hasFigure: false, hasExercises: p === 3 })),
-      }),
-      (r) => toolCall("submit_material_pages", { pages: pagesIn(r).map((p) => ({ page: p, stageIds: [], summary: "s", hasFigure: true, hasExercises: false })) }),
-      toolCall("submit_exercises", { exercises: [ex("q1", { figures: [{ page: 3, bbox: [0, 0.1, 2, 0.5] }] })] }),
-    ]);
+    // batches run in parallel, so replies go by the pages asked, not by call order
+    const reply = (r: ClaudeRequest) =>
+      r.tools?.[0]?.name === "submit_exercises"
+        ? toolCall("submit_exercises", { exercises: [ex("q1", { figures: [{ page: 3, bbox: [0, 0.1, 2, 0.5] }] })] })
+        : toolCall("submit_material_pages", {
+            pages: pagesIn(r).map((p) => (p <= 8 ? { page: p, stageIds: ["S002", "S999"], summary: "s", hasFigure: false, hasExercises: p === 3 } : { page: p, stageIds: [], summary: "s", hasFigure: true, hasExercises: false })),
+          });
+    const gw = new FakeClaudeGateway([reply, reply, reply]);
     const out = await indexMaterial(opts(gw, src(10), rec()));
-    expect(gw.calls.map((c) => pagesIn(c).length)).toEqual([8, 2, 1]);
-    expect(gw.calls[0]?.task).toBe("index");
-    expect((gw.calls[0]?.messages[0]?.content as { type: string }[]).filter((b) => b.type === "image")).toHaveLength(1);
-    expect((gw.calls[0]?.messages[0]?.content as { text?: string }[])[0]?.text?.length).toBeLessThan(6020);
+    expect(gw.calls.map((c) => pagesIn(c).length).sort()).toEqual([1, 2, 8]);
+    expect(gw.calls.at(-1)?.tools?.[0]?.name).toBe("submit_exercises"); // after every material batch
+    const first = gw.calls.find((c) => pagesIn(c)[0] === 1) as ClaudeRequest;
+    expect(first.task).toBe("index");
+    expect((first.messages[0]?.content as { type: string }[]).filter((b) => b.type === "image")).toHaveLength(1);
+    expect((first.messages[0]?.content as { text?: string }[])[0]?.text?.length).toBeLessThan(6020);
+    expect(out.materialPages.map((p) => p.page)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     expect(out.status).toBe("indexed");
     expect(out.planVersion).toBe(3);
     expect(out.materialPages).toHaveLength(10);
@@ -64,13 +68,26 @@ describe("indexing", () => {
   });
 
   it("exercises: 6-page windows with 1-page overlap, dedupe, ids, stage fallback, crop failure tolerated", async () => {
-    const gw = new FakeClaudeGateway([
-      toolCall("submit_exercises", { exercises: [ex("a"), ex("b", { requiredStageIds: ["S001", "S003"], figures: [{ page: 1, bbox: [0, 0, 1, 1] }] })] }),
-      toolCall("submit_exercises", { exercises: [ex("b", { requiredStageIds: ["S001", "S003"] }), ex("c", { requiredStageIds: ["S404"] })] }),
-    ]);
+    // the second window answers first: ids and the overlap dedupe still follow page order
+    let inFlight = 0;
+    let most = 0;
+    const gw = {
+      calls: [] as ClaudeRequest[],
+      async send(r: ClaudeRequest) {
+        gw.calls.push(r);
+        most = Math.max(most, ++inFlight);
+        const firstWindow = pagesIn(r)[0] === 1;
+        await new Promise((ok) => setTimeout(ok, firstWindow ? 20 : 1));
+        inFlight--;
+        return { usage: {} as never, model: "m", ...(firstWindow
+          ? toolCall("submit_exercises", { exercises: [ex("a"), ex("b", { requiredStageIds: ["S001", "S003"], figures: [{ page: 1, bbox: [0, 0, 1, 1] }] })] })
+          : toolCall("submit_exercises", { exercises: [ex("b", { requiredStageIds: ["S001", "S003"] }), ex("c", { requiredStageIds: ["S404"] })] })) } as never;
+      },
+    };
     const source = src(11, { crop: async () => { throw new Error("boom"); } });
-    const out = await indexExercises(opts(gw, source, rec({ role: "exercises" })));
-    expect(gw.calls.map((c) => pagesIn(c))).toEqual([[1, 2, 3, 4, 5, 6], [6, 7, 8, 9, 10, 11]]);
+    const out = await indexExercises({ ...opts(gw as never, source, rec({ role: "exercises" })) });
+    expect(gw.calls.map((c) => pagesIn(c)).sort()).toEqual([[1, 2, 3, 4, 5, 6], [6, 7, 8, 9, 10, 11]]);
+    expect(most).toBe(2); // both windows at once
     expect(out.exercises.map((e) => e.id)).toEqual(["abcdef01-1", "abcdef01-2", "abcdef01-3"]);
     expect(out.exercises[1]?.primaryStageId).toBe("S003");
     expect(out.exercises[1]?.figureCrops).toEqual([]);
@@ -102,9 +119,10 @@ describe("queue", () => {
   };
   const seed = async (c: string, sha: string, o: Partial<FileIndex> = {}) => writeFileIndex(c, rec({ sha256: sha, ...o }));
 
-  it("one file per course, two globally, skips indexed, resumes pending/indexing", async () => {
+  it("two files per course, three globally, skips indexed, resumes pending/indexing", async () => {
     await seed("A", "a1", { status: "pending" });
     await seed("A", "a2", { status: "indexing" });
+    await seed("A", "a3");
     await seed("B", "b1");
     await seed("C", "c1");
     await seed("C", "c2", { status: "indexed" });
@@ -113,11 +131,12 @@ describe("queue", () => {
     await q.idle();
     expect((await readFileIndex("A", "a2"))?.status).toBe("indexed");
     expect((await readFileIndex("C", "c1"))?.status).toBe("indexed");
-    expect(new Set(events.filter((e) => e.endsWith(":indexing"))).size).toBe(4);
+    expect(new Set(events.filter((e) => e.endsWith(":indexing"))).size).toBe(5);
     expect(events.some((e) => e.startsWith("C:c2"))).toBe(false);
-    expect(max()).toBe(2);
-    // never two A files at once: a2 starts after a1 is indexed
-    expect(events.indexOf("A:a2:indexing")).toBeGreaterThan(events.indexOf("A:a1:indexed"));
+    expect(max()).toBe(3);
+    // two A files at once (a1, a2), never three: a3 starts after one of them is indexed
+    expect(events.indexOf("A:a2:indexing")).toBeLessThan(events.indexOf("A:a1:indexed"));
+    expect(events.indexOf("A:a3:indexing")).toBeGreaterThan(Math.min(events.indexOf("A:a1:indexed"), events.indexOf("A:a2:indexed")));
   });
 
   it("fails without a plan, on password-protected PDFs, and retries", async () => {
@@ -148,6 +167,20 @@ describe("queue", () => {
     expect(asked).toBe(1);
     expect((await readFileIndex("A", "a1"))?.status).toBe("pending");
     expect(events).toEqual([]);
+  });
+
+  it("a file removed while it is indexed or queued leaves no record, and idle still resolves", async () => {
+    for (const k of [1, 2, 3]) await seed("A", `a${k}`);
+    const drop = (sha: string) => [...m.files.keys()].filter((k) => k.endsWith(`/files/${sha}.json`)).forEach((k) => m.files.delete(k));
+    // a1 is removed while its pages are being read; a3 (third of one course: waits for a slot) while still queued
+    const { q, events } = mk({ open: async (o: { sha256: string }) => (o.sha256 === "a1" && (drop("a1"), drop("a3")), src(2)) });
+    for (const k of [1, 2, 3]) q.enqueue("A", `a${k}`);
+    await q.idle("A");
+    expect(await readFileIndex("A", "a1")).toBeNull();
+    expect(await readFileIndex("A", "a3")).toBeNull();
+    expect((await readFileIndex("A", "a2"))?.status).toBe("indexed");
+    expect(events).toContain("A:a1:removed");
+    expect(events).toContain("A:a3:removed");
   });
 
   it("each file runs in the context of the build that queued it; idle(course) waits for that course only", async () => {

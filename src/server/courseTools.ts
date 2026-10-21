@@ -47,6 +47,7 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, in
           }
           const indexed = await indexPending(n, (k, total) => (b.progress = { step: "index", unit: total ? { k, n: total } : undefined }));
           let added = 0;
+          // Serial by design: refine starts only after every file of this course is read (indexPending waits for them), and one build per course runs at a time.
           const c = await loadCourse(n);
           if (indexed && c?.plan && had) {
             b.progress = { step: "cover" };

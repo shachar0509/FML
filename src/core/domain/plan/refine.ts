@@ -1,9 +1,10 @@
 import { callStructured } from "@/core/claude/structured";
-import { refinePrompt, revisionFixMsg } from "@/core/claude/prompts/refine";
+import { enrichPrompt, refinePrompt, revisionFixMsg } from "@/core/claude/prompts/refine";
 import { ClaudeError } from "@/core/claude/errors";
 import type { ClaudeGateway, Message } from "@/core/claude/types";
 import { PlanJsonSchema, type CourseJson, type FileIndex, type PlanJson, type Stage, type Unit } from "@/core/domain/dataSchemas";
-import { listFileIndexes, writeFileIndex } from "@/core/domain/ingest/indexStore";
+import { pool } from "@/core/domain/ingest/index";
+import { listFileIndexes, readFileIndex, writeFileIndex } from "@/core/domain/ingest/indexStore";
 import { appendEvent, recomputeProgress } from "@/core/domain/progress/store";
 import { readJsonFile, writeJsonAtomic, writeTextAtomic } from "@/core/lib/fs/atomicWrite";
 import { coursePaths } from "@/core/lib/fs/paths";
@@ -12,7 +13,7 @@ import { nowIso } from "@/core/lib/time";
 import { useSettings } from "@/stores/settings";
 import { detailUnit, type PlanProgress, type UnitDetails } from "./generate";
 import { outlineText, renderPlanMd, validatePlan } from "./plan";
-import { submitPlanRevision, type PlanRevision } from "./refineTool";
+import { submitPlanRevision, submitStageAdditions, type PlanRevision, type StageAdditions } from "./refineTool";
 
 const SYSTEM = "You are an expert university curriculum designer.";
 
@@ -84,6 +85,72 @@ export function remapIndex(rec: FileIndex, idMap: Record<string, string | null>,
   };
 }
 
+const STAGE_CHARS = 1500;
+const UNCOVERED_CHARS = 8000;
+
+/** Takes lines round-robin across files until `budget` chars: a long file A never crowds out file B. */
+function fair(byFile: Map<string, string[]>, budget: number): string[] {
+  const out: string[] = [];
+  let used = 0;
+  const lists = [...byFile.values()];
+  for (let i = 0; lists.some((l) => i < l.length); i++)
+    for (const l of lists) {
+      const line = l[i];
+      if (line === undefined) continue;
+      if (used + line.length > budget) return out;
+      out.push(line);
+      used += line.length + 1;
+    }
+  return out;
+}
+
+/**
+ * Pure (M40): what every file says, grouped by stage, so a subject shared by several files is judged once with all its lines.
+ * Lines repeated across files (same text) are kept once; lines no known stage claims go to `uncovered` (new stages come from there).
+ */
+export function stageEvidence(indexes: FileIndex[], known: Set<string>) {
+  const by = new Map<string, Map<string, string[]>>();
+  const seen = new Map<string, Set<string>>();
+  const add = (stage: string, file: string, where: string, body: string) => {
+    const key = body.replace(/\s+/g, " ").trim().toLowerCase();
+    if (!key) return;
+    const s = seen.get(stage) ?? new Set<string>();
+    if (s.has(key)) return;
+    seen.set(stage, s.add(key));
+    const files = by.get(stage) ?? new Map<string, string[]>();
+    by.set(stage, files.set(file, [...(files.get(file) ?? []), `- ${file} ${where}: ${body}`]));
+  };
+  for (const r of indexes) {
+    if (r.status !== "indexed") continue;
+    for (const m of r.materialPages) {
+      const ids = m.stageIds.filter((id) => known.has(id));
+      for (const id of ids.length ? ids : [""]) add(id, r.fileName, `p${m.page}`, m.summary);
+    }
+    for (const e of r.exercises) {
+      // ponytail: gist (or the statement's first 300 chars) + edge cases; enough to name what the exercise needs.
+      const body = `[${e.type}] ${e.gist || e.statementMd.replace(/\s+/g, " ").slice(0, 300)}${e.edgeCaseFocus.length ? ` (edge cases: ${e.edgeCaseFocus.join("; ")})` : ""}`;
+      const ids = e.requiredStageIds.filter((id) => known.has(id));
+      for (const id of ids.length ? ids : [""]) add(id, r.fileName, e.label, body);
+    }
+  }
+  const lines = (id: string, budget: number) => fair(by.get(id) ?? new Map(), budget);
+  return { stage: (id: string) => lines(id, STAGE_CHARS), uncovered: lines("", UNCOVERED_CHARS) };
+}
+
+const norm = (t: string) => t.replace(/\s+/g, " ").trim().toLowerCase();
+const union = (a: string[], b: string[]) => [...a, ...b.filter((x, i) => norm(x) && !a.some((y) => norm(y) === norm(x)) && b.findIndex((y) => norm(y) === norm(x)) === i)];
+
+/** Pure (M40): adds what the model found missing; existing items are never removed, repeats are no-ops. */
+export function mergeAdditions(s: Stage, a: StageAdditions): Stage {
+  return {
+    ...s,
+    objectives: union(s.objectives, a.objectives),
+    techniques: union(s.techniques, a.techniques),
+    edgeCases: union(s.edgeCases, a.edgeCases),
+    theorems: [...s.theorems, ...a.theorems.filter((t, i) => norm(t.name) && !s.theorems.some((x) => norm(x.name) === norm(t.name)) && a.theorems.findIndex((x) => norm(x.name) === norm(t.name)) === i)],
+  };
+}
+
 type Opts = { gw: ClaudeGateway; course: CourseJson; lang: "he" | "en"; onProgress?: (p: PlanProgress) => void; signal?: AbortSignal };
 
 /** Spec 4.6. Throws on failure; the old plan stays untouched until everything is validated. */
@@ -93,23 +160,14 @@ export async function refinePlan(opts: Opts): Promise<PlanJson> {
   const old = await readJsonFile(p.planJson, PlanJsonSchema);
   if (!old) throw new ClaudeError("invalid_output", "plan.json missing");
   const indexes = await listFileIndexes(course.courseNumber);
-  const materials = indexes
-    .filter((r) => r.role === "material" && r.status === "indexed")
-    .map((r) => `## ${r.fileName}\n` + r.materialPages.map((m) => `p${m.page}: ${m.summary}`).join("\n"))
-    .join("\n\n");
-  // ponytail: first 300 chars per exercise, 12k chars in all; enough to name the topic.
-  const exercises = indexes
-    .filter((r) => r.role === "exercises" && r.status === "indexed" && r.exercises.length)
-    .map((r) => `## ${r.fileName}\n` + r.exercises.map((e) => `- ${e.label} [${e.type}]: ${e.statementMd.replace(/\s+/g, " ").slice(0, 300)}`).join("\n"))
-    .join("\n\n")
-    .slice(0, 12_000);
+  const ev = stageEvidence(indexes, new Set(old.stages.map((s) => s.id)));
   const byId = new Map(old.stages.map((s) => [s.id, s]));
   const planText = old.units
-    .map((u) => `${u.id} ${u.title}\n` + u.stageIds.map((id) => `  ${id} [${byId.get(id)?.kind}] ${byId.get(id)?.title} — ${byId.get(id)?.summary}`).join("\n"))
+    .map((u) => `${u.id} ${u.title}\n` + u.stageIds.map((id) => [`  ${id} [${byId.get(id)?.kind}] ${byId.get(id)?.title} — ${byId.get(id)?.summary}`, ...ev.stage(id).map((l) => `    ${l}`)].join("\n")).join("\n"))
     .join("\n");
 
   onProgress?.({ step: "plan" });
-  let messages: Message[] = [{ role: "user", content: refinePrompt(course, planText, materials, lang === "he" ? "Hebrew" : "English", exercises) }];
+  let messages: Message[] = [{ role: "user", content: refinePrompt(course, planText, ev.uncovered.join("\n"), lang === "he" ? "Hebrew" : "English") }];
   let rev: PlanRevision;
   let model: string;
   for (let fix = 0; ; fix++) {
@@ -133,19 +191,37 @@ export async function refinePlan(opts: Opts): Promise<PlanJson> {
   }
 
   const { units, stages, fresh, idMap } = applyRevision(old, rev);
-  // Pass B only for new/split stages, grouped by unit, max 3 in parallel.
+  // Pass B for new/split stages, and enrich for kept stages the files say something about; grouped by unit, max 3 in parallel.
   const text = outlineText(units, stages);
   const jobs = units.map((u) => ({ ...u, stageIds: u.stageIds.filter((id) => fresh.has(id)) })).filter((u) => u.stageIds.length);
+  const enrich = units.map((u) => u.stageIds.filter((id) => !fresh.has(id) && ev.stage(id).length)).filter((ids) => ids.length);
+  const byNew = new Map(stages.map((s) => [s.id, s]));
   const details = new Map<string, UnitDetails>();
-  let next = 0;
+  const additions = new Map<string, StageAdditions>();
   let done = 0;
-  const worker = async () => {
-    while (next < jobs.length) {
-      for (const [id, d] of await detailUnit(opts, text, jobs[next++] as Unit)) details.set(id, d);
-      onProgress?.({ step: "plan", unit: { k: ++done, n: jobs.length } });
+  const n = jobs.length + enrich.length;
+  const tick = () => onProgress?.({ step: "plan", unit: { k: ++done, n } });
+  await pool<{ unit: Unit } | { ids: string[] }, unknown>([...jobs.map((unit) => ({ unit })), ...enrich.map((ids) => ({ ids }))], 3, async (j) => {
+    if ("unit" in j) for (const [id, d] of await detailUnit(opts, text, j.unit)) details.set(id, d);
+    else {
+      const body = j.ids
+        .map((id) => {
+          const s = byNew.get(id) as Stage;
+          const has = [`objectives: ${s.objectives.join("; ") || "none"}`, `techniques: ${s.techniques.join("; ") || "none"}`, `edge cases: ${s.edgeCases.join("; ") || "none"}`, `theorems: ${s.theorems.map((t) => t.name).join("; ") || "none"}`];
+          return [`${id} ${s.title} — ${s.summary}`, ...has.map((h) => `  ${h}`), "  The course files say:", ...ev.stage(id).map((l) => `    ${l}`)].join("\n");
+        })
+        .join("\n\n");
+      try {
+        const { value } = await callStructured(gw, submitStageAdditions, {
+          task: "plan", courseNumber: course.courseNumber, system: SYSTEM, messages: [{ role: "user", content: enrichPrompt(course, body, lang === "he" ? "Hebrew" : "English") }], signal,
+        });
+        for (const a of value.stages) if (j.ids.includes(a.id)) additions.set(a.id, a);
+      } catch (e) {
+        if (signal?.aborted) throw e; // otherwise the stages keep their details: enriching is a bonus, not a reason to fail the build
+      }
     }
-  };
-  await Promise.all(Array.from({ length: Math.min(3, jobs.length) }, worker));
+    tick();
+  });
 
   onProgress?.({ step: "validate" });
   const plan: PlanJson = {
@@ -157,7 +233,8 @@ export async function refinePlan(opts: Opts): Promise<PlanJson> {
     units,
     stages: stages.map((s) => {
       const d = details.get(s.id);
-      return d ? { ...s, ...d, estimatedMinutes: Math.min(45, Math.max(20, Math.round(d.estimatedMinutes))) } : s;
+      const a = additions.get(s.id);
+      return d ? { ...s, ...d, estimatedMinutes: Math.min(45, Math.max(20, Math.round(d.estimatedMinutes))) } : a ? mergeAdditions(s, a) : s;
     }),
   };
   const errs = validatePlan(plan, course.credits);
@@ -168,9 +245,11 @@ export async function refinePlan(opts: Opts): Promise<PlanJson> {
   await writeTextAtomic(p.planMd, renderPlanMd(course, plan));
   await writeJsonAtomic(p.courseJson, { ...course, courseKind: plan.courseKind, planVersion: plan.version, updatedAt: nowIso() });
   await appendEvent(course.courseNumber, { type: "plan_replaced", fromVersion: old.version, toVersion: plan.version, idMap });
-  for (const r of indexes) {
-    const m = remapIndex(r, idMap, plan.version);
-    if (m !== r) await writeFileIndex(course.courseNumber, m);
+  // Re-read at commit: a file removed during the AI work is not resurrected, and a record written meanwhile is not clobbered.
+  for (const { sha256 } of indexes) {
+    const r = await readFileIndex(course.courseNumber, sha256);
+    const m = r && remapIndex(r, idMap, plan.version);
+    if (m && m !== r) await writeFileIndex(course.courseNumber, m);
   }
   await recomputeProgress(course.courseNumber);
   return plan;

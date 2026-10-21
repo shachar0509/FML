@@ -672,3 +672,31 @@ Edge cases found with the sample slides, and fixed in the renderer:
   - `next("build")` says "still running" (not "no build work") while a build is unfinished.
   - The schema skip is per lane, so it always points one message back.
   - Bridge test: answering A's job returns B's job at once, and "no build work" appears only when all builds are done. It hangs without the fix.
+
+## M40: parallel indexing, a plan update that stays serial and never resurrects deleted files, shared subjects merged by stage ✅
+- **Parallel reading:** the page batches of a file run up to 3 at once (`pool` in `src/core/domain/ingest/index.ts`). Post-processing still goes in page order (overlap dedupe, exercise ids, crops), so the output equals the serial output.
+- **More files at once:** the queue runs 2 files per course and 3 in all (was 1 and 2).
+- **Several jobs per call:** `shalav_next_job` and `submit` hand out up to 3 queued jobs of the lane (fewer once their images pass ~1.5 MB). The model answers them with parallel `shalav_submit_job` calls, which saves a round trip per batch.
+- **Plan update stays serial:** refine starts only after every file of the course is read, and one build per course runs at a time.
+- **Deletes:**
+  - A file removed while it is being indexed leaves no ghost record: the queue checks the record exists before every write and emits `removed`.
+  - A file removed while queued is skipped and counted as done.
+  - A file removed during refine is not resurrected: the remap re-reads the records at commit.
+  - Removing an indexed file keeps the plan's stages (the student chose this).
+- **Shared subjects:**
+  - Refine's input is grouped by stage: every file's page summaries and exercises sit under the stage they cover, repeated lines are kept once, and lines no stage covers are listed apart.
+  - Each stage has a 1.5k-char budget filled round-robin across files, which replaces the global 12k cut. A long file A no longer crowds out file B.
+  - Each subject is judged once with all its lines.
+  - **Enrich (new):** kept stages that the files say something about get one job per unit (`submit_stage_additions`). It returns only what the stage is missing (techniques, edge cases, theorems, objectives).
+  - The additions merge as a union: nothing is removed, and repeats are no-ops. A detail found only in the second file still reaches the stage.
+  - A failed enrich keeps the stage as it was.
+- **Checks:**
+  - Out-of-order batch replies give the same result as serial, with 2 in flight.
+  - Removal mid-index and while queued: no record, and idle still resolves.
+  - 3 jobs per call, distinct jobs on parallel submits, and the image cap.
+  - Stage grouping: fair budget, dedupe, uncovered lines.
+  - The union merge.
+  - A delete during refine is not brought back; a failed enrich doesn't fail the build.
+  - The server drain loops answer several jobs per result in parallel.
+  - 146 unit tests; lint and tsc clean. No card changes, so no e2e.
+- **🧪 In Claude Desktop:** Update plan on a course with 2 or more multi-page files that share a topic. Several jobs should come per call, and both files' rings should move together. Remove a file mid-build: it must not come back.
