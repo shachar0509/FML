@@ -84,7 +84,7 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, so
         : await catalog().lookup(n).catch(() => null);
       if (!entry) return { ...out("Course not found in the catalog.", { ok: false }), isError: true };
       start(n, "Building the study plan for", (on) => createCourse(entry, on));
-      return out(`Started building the plan for ${n}. Call shalav_next_job now.`, { ok: true, number: n });
+      return out(`Started building the plan for ${n}. Call shalav_next_job now.`, { ok: true, number: n, next: "Call shalav_next_job now." });
     },
   );
 
@@ -92,7 +92,7 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, so
     if (!(await courseExists(number))) return { ...out("No such course.", { ok: false }), isError: true };
     if (builds.get(number)?.state === "running") return out("Already building.", { ok: true });
     start(number, "Rebuilding the study plan for", (on) => buildPlan(number, on));
-    return out(`Started rebuilding the plan for ${number}. Call shalav_next_job now.`, { ok: true });
+    return out(`Started rebuilding the plan for ${number}. Call shalav_next_job now.`, { ok: true, next: "Call shalav_next_job now." });
   });
 
   registerAppTool(server, "course_status", { title: "Plan build status", description: "progress of a plan build.", inputSchema: numIn, _meta: both }, async ({ number }) => {

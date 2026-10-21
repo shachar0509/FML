@@ -118,7 +118,7 @@ export function registerFileTools(server: McpServer, bridge: BridgeGateway, o: {
       await queue.idle();
       return todo.length;
     }, (n) => [{ type: "text", text: `Indexed ${n} file(s) of ${number}. Tell the student; the card shows the result.` }]).done.catch(() => undefined);
-    return out(`Started indexing ${todo.length} file(s). Call shalav_next_job now.`, { ok: true, count: todo.length });
+    return out(`Started indexing ${todo.length} file(s). Call shalav_next_job now.`, { ok: true, count: todo.length, next: "Call shalav_next_job now." });
   });
 
   registerAppTool(server, "file_remove", { title: "Remove a file", description: "Card-only: move a course file to the trash and drop its index.", inputSchema: z.object({ number: num, sha: z.string() }), _meta: appOnly }, async ({ number, sha }) => {
@@ -142,6 +142,6 @@ export function registerFileTools(server: McpServer, bridge: BridgeGateway, o: {
         throw e;
       }
     }, () => [{ type: "text", text: `The plan for ${number} was updated from the materials. Tell the student.` }]).done.catch(() => undefined);
-    return out("Started improving the plan. Call shalav_next_job now.", { ok: true });
+    return out("Started improving the plan. Call shalav_next_job now.", { ok: true, next: "Call shalav_next_job now." });
   });
 }

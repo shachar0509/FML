@@ -158,7 +158,7 @@ export class BridgeGateway implements ClaudeGateway {
       const nextJob = [...this.jobs.values()].find((j) => j.state === "queued" && j.opId === op.id);
       if (nextJob) {
         nextJob.state = "shown";
-        return { content: [{ type: "text", text: "Next job is ready." }, ...this.render(nextJob)] };
+        return { content: [{ type: "text", text: "Next job is ready.\n\n" }, ...this.render(nextJob)] };
       }
       const open = [...this.jobs.values()].filter((j) => j.state === "shown" && j.opId === op.id);
       if (open.length) return { content: [{ type: "text", text: `Answer the other open job(s) of ${op.label} too: ${open.map((j) => "#" + j.id).join(", ")}.` }] };
@@ -221,7 +221,9 @@ export class BridgeGateway implements ClaudeGateway {
         ? `Call shalav_submit_job with jobId ${job.id} and "input" matching this JSON schema (tool ${job.tool.name}):\n${JSON.stringify(job.tool.input_schema)}`
         : `Call shalav_submit_job with jobId ${job.id} and "text".`,
     );
-    out.push({ type: "text", text: text.join("\n\n") });
+    // Prompts written for the v1 forced tool say "Call <tool>"; here the answer goes through shalav_submit_job.
+    const body = job.tool ? text.join("\n\n").replaceAll(`Call ${job.tool.name}`, "Answer (see How to answer)") : text.join("\n\n");
+    out.push({ type: "text", text: body });
     return out.filter((c) => c.type !== "text" || c.text);
   }
 }

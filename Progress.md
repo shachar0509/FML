@@ -135,6 +135,13 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - `ACCEPTANCE.md`: the §10 checklist with auto coverage and the 🧪 boxes. Checks: typecheck/lint clean, 119 unit, 27 e2e, pack + smoke ok.
 - **All remaining work is the user's 🧪 checks** (M4–M11 items above + ACCEPTANCE.md) and fixes from what they find. Open polish: unused v1 i18n keys, `src/server/tools/` split, signing/icon for the `.mcpb`.
 
+### M13b — First real run (headless Claude Code, 2026-10-21)
+- Remote testing without the Mac screen: `claude mcp add shalav -e SHALAV_DATA_FOLDER=~/Documents/ShalavTest -- node build/mcpb/server/server.mjs`, then `claude -p "<test prompt>" --allowedTools mcp__shalav` from the Bash tool. Remove with `claude mcp remove shalav`. Test data lives in `~/Documents/ShalavTest` (not the real Shalav folder).
+- **Plan build for 01040195 verified with real Claude**: lookup ok, 7 units / 101 stages (target 66–121), 8 jobs (1 outline + 7 units), `shalav_course` data fine, `plan.md` readable Hebrew, courseKind became proof-based. Claude needed only one `shalav_next_job` call (each submit returns the next job).
+- Fixes from its report: job text said "Call submit_plan_outline" (now rewritten to point at "How to answer"); `Next job is ready.` now followed by a blank line; action tools return `next: "Call shalav_next_job now."` in structuredContent (Claude Code shows structuredContent only, the text hint was invisible).
+- Not fixed: jobs 2–8 repeat ~3k tokens (outline + syllabus) each; "Same instructions as job #1" dedupe may confuse a model that lost job 1; exam-prep stages S099–S101 sit at the end of the last unit; text fallback options of shalav_home/shalav_course are invisible in Claude Code for the same structuredContent reason.
+- Still 🧪: the cards in Claude Desktop (needs the Mac screen).
+
 ## Phase 1 — Desktop app (v1, frozen)
 
 ### Steps (v1 spec §19)
