@@ -94,8 +94,8 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
     server.registerPrompt(name, { title, description: title }, () => ({
       messages: [{ role: "user", content: { type: "text", text } }],
     }));
-  prompt("shalav_my_courses", "Shalav: my courses", "Open Shalav and show my courses.");
-  prompt("shalav_continue_learning", "Shalav: continue learning", "Open Shalav and continue my lesson where I stopped.");
+  prompt("shalav_my_courses", "Shalav: my courses", "Call the shalav_home tool now and show its card. Use only what it returns, not memory or past chats.");
+  prompt("shalav_continue_learning", "Shalav: continue learning", "Call the shalav_home tool now, then continue my current lesson from what it returns (not from memory or past chats).");
 
   return server;
 }
