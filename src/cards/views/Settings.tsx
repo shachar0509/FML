@@ -46,7 +46,7 @@ export function Settings({
   const set = (patch: Partial<L>) => void save({ learning: { ...d.learning, ...patch } });
   return (
     <section className="flex flex-col gap-4" aria-label={t("mcp.settings.title")}>
-      <h1 className="text-xl font-bold">{t("mcp.settings.title")}</h1>
+      <h1 className="hand text-4xl">{t("mcp.settings.title")}</h1>
       <div className={`${panel} flex flex-wrap items-center justify-between gap-3 p-4`}>
         <span className="font-medium">{t("settings.general.language")}</span>
         <div role="group" aria-label={t("settings.general.language")} className="flex gap-2">

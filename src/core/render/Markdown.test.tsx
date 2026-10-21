@@ -55,6 +55,11 @@ describe("Markdown", () => {
     expect(container.querySelector("code")?.textContent).toBe("\\pink{x}"); // code stays literal
   });
 
+  it("a short word before inline math stays glued to it", () => {
+    const { container } = render(<Markdown>{"לכל $c$: אם $a<b$ אז $a+c<b+c$"}</Markdown>);
+    expect(container.querySelector("p")?.innerHTML).toMatch(/אם&nbsp;<span class="katex"/);
+  });
+
   it("dispatches only the five figure tags", () => {
     expect(["mermaid", "plot", "geometry", "wavedrom", "svg", "python"].filter(isFigureTag)).toHaveLength(5);
   });

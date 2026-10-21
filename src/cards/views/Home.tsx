@@ -15,7 +15,7 @@ function PickUniversity({ choose }: { choose: (id: UniversityId) => void }) {
   return (
     <section className="flex flex-col gap-4" aria-label={t("university.title")}>
       <div>
-        <h1 className="text-xl font-bold">{t("university.title")}</h1>
+        <h1 className="hand text-4xl">{t("university.title")}</h1>
         <p className="mt-1 text-sm text-muted">{t("university.hint")}</p>
       </div>
       <ul className="grid gap-3 sm:grid-cols-2">
@@ -61,7 +61,7 @@ export function Home({
   return (
     <section className="flex flex-col gap-4" aria-label={t("screens.home")}>
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">{t("screens.home")}</h1>
+        <h1 className="hand text-4xl">{t("screens.home")}</h1>
         <div className="flex gap-2">
           <Button
             variant="outline"

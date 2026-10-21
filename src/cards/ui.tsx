@@ -28,7 +28,7 @@ export const Bar = ({
   </div>
 );
 
-/** `hero`: drawn on the violet hero band (white ink). */
+/** `hero`: drawn on a board header (board ink). */
 export function Ring({ pct, hero }: { pct: number; hero?: boolean }) {
   const r = 20;
   const c = 2 * Math.PI * r;
@@ -39,7 +39,7 @@ export function Ring({ pct, hero }: { pct: number; hero?: boolean }) {
       role="img"
       aria-label={`${pct}%`}
     >
-      <circle cx="24" cy="24" r={r} fill="none" strokeWidth="4.5" className={hero ? "stroke-white/25" : "stroke-border"} />
+      <circle cx="24" cy="24" r={r} fill="none" strokeWidth="4.5" className={hero ? "stroke-(--board-muted)/30" : "stroke-border"} />
       <circle
         cx="24"
         cy="24"
@@ -47,7 +47,7 @@ export function Ring({ pct, hero }: { pct: number; hero?: boolean }) {
         fill="none"
         strokeWidth="4.5"
         strokeLinecap="round"
-        className={hero ? "stroke-white" : "stroke-primary"}
+        className={hero ? "stroke-(--board-ink)" : "stroke-primary"}
         strokeDasharray={c}
         strokeDashoffset={c * (1 - pct / 100)}
       />
@@ -56,7 +56,7 @@ export function Ring({ pct, hero }: { pct: number; hero?: boolean }) {
         y="24"
         textAnchor="middle"
         dominantBaseline="central"
-        className={`origin-center rotate-90 text-[11px] font-semibold ${hero ? "fill-white" : "fill-fg"}`}
+        className={`origin-center rotate-90 text-[11px] font-semibold ${hero ? "fill-(--board-fg)" : "fill-fg"}`}
       >
         {pct}%
       </text>

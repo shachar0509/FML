@@ -401,3 +401,10 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - Claude wrote `\blue{מעבד (CPU)}` in plain text (outside `$…$`), so the raw command showed. The renderer now turns such stray `\blue{…}` / `\green{…}` / `\pink{…}` / `\orange{…}` in text into coloured words (code and math sources untouched), and the prompt says the colour commands work only inside math, only on symbols; words are stressed with **bold**.
 - "Explain differently" sometimes got a quiz question. The request text is stricter (same step, rewritten, no question), and the server enforces it: after the request, `present_mcq` / `ask_open_question` / `assign_exercise` are refused until Claude calls `teach_step`.
 - Checks: typecheck/lint clean, 126 unit, 30 e2e.
+
+### M21 — Card redesign: the lecture-hall board (done; 🧪 pending)
+- Direction chosen by the student: a real board. Light mode = whiteboard (off-white surface with a glossy sheen and faint ghost marks, aluminium frame, blue/red/black markers), dark mode = green chalkboard (chalk dust smudges, wooden frame, white and coloured chalk). A ledge under each board holds two markers / pieces of chalk.
+- Handwriting (Gveret Levin, Hebrew + Latin subsets) for what a lecturer writes by hand: step and header titles, screen titles, row names, box labels, the sticky note. Body text stays Rubik; math stays KaTeX.
+- Boards: lesson steps, lesson/course headers, MCQ/open questions, practice questions and exercise statements. Everything else (lists, files, settings) stays calm cards on the classroom-wall background. No gradients; buttons and progress are marker blue / chalk yellow. The board logic from M20 (rows, boxes, sticky note, boxed results) is unchanged, only restyled.
+- Text fixes: inline math never breaks across lines (`.md .katex { white-space: nowrap }`; "a +" / "(−b)" were split); a short word right before inline math ("אם $a<b$") is glued to it with a no-break space (rehype pass in `Markdown.tsx`).
+- Checks: typecheck/lint clean, 127 unit, 30 e2e (axe AA, he/en × light/dark), screenshots reviewed.

@@ -56,6 +56,12 @@ const rehypeBoxes = () => (tree: El) => {
         i % 3 === 1 ? { type: "element", tagName: "span", properties: { className: [`m-${part}`] }, children: [{ type: "text", value: all[i + 1] ?? "" }] } : { type: "text", value: i % 3 === 2 ? "" : part },
       );
     });
+    // A short word right before inline math ("אם $a<b$", "של $x$") stays on the math's line.
+    n.children?.forEach((c, i) => {
+      const next = n.children?.[i + 1];
+      const isMath = next?.type === "element" && (next.properties?.className as string[] | undefined)?.includes("katex");
+      if (c.type === "text" && isMath) c.value = (c.value ?? "").replace(/(^|\s)(\S{1,4}) $/u, "$1$2\u00a0");
+    });
     n.children?.forEach(walk);
   };
   walk(tree);

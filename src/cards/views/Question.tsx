@@ -29,7 +29,7 @@ export function Mcq({ data, callTool, go }: { data: McqData; callTool: Tool; go:
   }
   return (
     <section className="flex flex-col gap-3" aria-label={t("learn.exercise")}>
-      <div className="board rounded-card border border-border bg-card p-5 text-lg font-medium shadow-card">
+      <div className="board-surface board mb-3 px-5 py-5 text-lg font-medium sm:px-7">
         <Markdown>{data.questionMd}</Markdown>
       </div>
       <ul className="flex flex-col gap-2">
@@ -80,7 +80,7 @@ export function OpenQ({ data, go }: { data: OpenData; go: Go }) {
   const [sent, setSent] = useState(false);
   return (
     <section className="flex flex-col gap-3" aria-label={t("learn.exercise")}>
-      <div className="board rounded-card border border-border bg-card p-5 text-lg font-medium shadow-card">
+      <div className="board-surface board mb-3 px-5 py-5 text-lg font-medium sm:px-7">
         <Markdown>{data.questionMd}</Markdown>
       </div>
       {sent ? (

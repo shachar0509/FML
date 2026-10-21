@@ -14,6 +14,9 @@ importers:
       '@fontsource-variable/rubik':
         specifier: ^5.3.0
         version: 5.3.0
+      '@fontsource/gveret-levin':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@fontsource/heebo':
         specifier: ^5.3.0
         version: 5.3.0
@@ -548,6 +551,9 @@ packages:
 
   '@fontsource-variable/rubik@5.3.0':
     resolution: {integrity: sha512-yQUf8qle24MJYA+EuauyF+cqjjN6I715nGjitt3sGmwZA0XfA4fWJcLq1C/diREZl4Qzn1E80nLMc0ipC/a4Lg==}
+
+  '@fontsource/gveret-levin@5.3.0':
+    resolution: {integrity: sha512-Jwp7PGMg63rJtkzYo/PwnPHnEvJy6uJ7EG94LLIhnD7sBxHAhK+8ifymz3BcRw/5UJ3CfekSY4Cyl/bXXP7VYQ==}
 
   '@fontsource/heebo@5.3.0':
     resolution: {integrity: sha512-Z01U2fWWrfJnSE6SmDYtZJ1uCnKs8V3WSdip/lVDfKnsC1ASumb7IZmOrXjaYK+PVm7qGD3+4cwTAFOxG5uMaw==}
@@ -3522,6 +3528,8 @@ snapshots:
   '@exodus/bytes@1.16.0': {}
 
   '@fontsource-variable/rubik@5.3.0': {}
+
+  '@fontsource/gveret-levin@5.3.0': {}
 
   '@fontsource/heebo@5.3.0': {}
 

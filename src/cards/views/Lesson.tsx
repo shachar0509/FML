@@ -40,19 +40,19 @@ export function Lesson({ data, callTool, go }: { data: LessonData; callTool: Too
       <header className="hero flex flex-col gap-4 p-5">
         <div className="flex flex-col gap-1.5">
           <span
-            className="self-start rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-semibold tabular-nums"
+            className="self-start rounded-full bg-(--board-ink)/20 text-(--board-fg) px-2.5 py-0.5 text-xs font-semibold tabular-nums"
             dir="ltr"
           >
             {d.stageId}
           </span>
-          <h1 className="text-2xl leading-snug font-bold">{d.title}</h1>
+          <h1 className="hand text-4xl leading-tight">{d.title}</h1>
         </div>
         <div className="flex flex-col gap-1.5">
           <div className="flex justify-between text-sm">
-            <span className="text-white/85">{t("learn.mastery")}</span>
+            <span className="text-(--board-muted)">{t("learn.mastery")}</span>
             <span className="font-semibold tabular-nums">{d.mastery}%</span>
           </div>
-          <Bar pct={d.mastery} label={t("learn.mastery")} tone="bg-white" track="bg-white/25" />
+          <Bar pct={d.mastery} label={t("learn.mastery")} tone="bg-(--board-ink)" track="bg-(--board-muted)/30" />
         </div>
       </header>
       <div className={`${panel} p-4`}>

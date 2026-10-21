@@ -119,6 +119,10 @@ body {
   direction: ltr;
   unicode-bidi: isolate;
 }
+/* An inline formula never breaks across lines ("a +" / "(−b)" on two lines reads wrong in RTL). */
+.md .katex {
+  white-space: nowrap;
+}
 /* Colored math terms (\\blue{a}, \\green{b}, \\pink{c}, \\orange{d} in KaTeX); the cards override the shades. */
 .m-blue { color: var(--m-blue, #2563eb); }
 .m-green { color: var(--m-green, #15803d); }

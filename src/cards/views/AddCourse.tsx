@@ -67,7 +67,7 @@ export function AddCourse({
   const lbl = "flex flex-col gap-1.5 text-sm font-medium";
   return (
     <section className="flex flex-col gap-4" aria-label={t("home.add")}>
-      <h1 className="text-xl font-bold">{t("home.add")}</h1>
+      <h1 className="hand text-4xl">{t("home.add")}</h1>
       {(phase === "input" || phase === "looking") && (
         <form
           className={`${panel} flex flex-col gap-3 p-4`}

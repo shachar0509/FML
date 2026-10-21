@@ -82,7 +82,7 @@ export function Practice({
 
       {mode === "choose" && (
         <div className="flex flex-col gap-3">
-          <h1 className="text-lg font-semibold">{t("practice.chooseTitle")}</h1>
+          <h1 className="hand text-3xl">{t("practice.chooseTitle")}</h1>
           <div
             role="radiogroup"
             aria-label={t("practice.chooseTitle")}
@@ -156,7 +156,9 @@ export function Practice({
           )}
           {d.item?.kind === "M" && (
             <div className="flex flex-col gap-2">
-              <Markdown>{d.item.questionMd}</Markdown>
+              <div className="board-surface board mb-3 px-5 py-5 text-lg font-medium">
+                <Markdown>{d.item.questionMd}</Markdown>
+              </div>
               <ul className="flex flex-col gap-2">
                 {d.item.options.map((o, i) => {
                   const it = d.item as Extract<PracticeData["item"], { kind: "M" }>;
@@ -204,7 +206,9 @@ export function Practice({
           )}
           {d.item?.kind === "O" && (
             <div className="flex flex-col gap-2">
-              <Markdown>{d.item.questionMd}</Markdown>
+              <div className="board-surface board mb-3 px-5 py-5 text-lg font-medium">
+                <Markdown>{d.item.questionMd}</Markdown>
+              </div>
               {d.item.result ? (
                 <div
                   className={`rounded-card border border-s-4 border-border bg-card p-4 shadow-card ${d.item.result.correct ? "border-s-success" : "border-s-danger"}`}
@@ -267,7 +271,7 @@ export function Practice({
 
       {mode === "summary" && d.summary && (
         <div className={`${panel} flex flex-col gap-3 p-4`}>
-          <h1 className="text-lg font-semibold">{t("practice.summary.title")}</h1>
+          <h1 className="hand text-3xl">{t("practice.summary.title")}</h1>
           <p>
             {t("practice.summary.items")}: {d.summary.items} · {t("practice.summary.avg")}:{" "}
             {d.summary.avgScore}

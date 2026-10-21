@@ -101,7 +101,7 @@ export function Exercise({ data, callTool, go }: { data: ExerciseData; callTool:
 
   return (
     <section className="flex flex-col gap-4" aria-label={t("learn.exercise")}>
-      <div className={`${panel} flex flex-col gap-3 p-4`}>
+      <div className="board-surface board mb-3 flex flex-col gap-3 px-5 py-5 sm:px-7">
         <p className="self-start rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
           {t("exercise.difficulty", { n: d.difficulty })}
         </p>

@@ -17,9 +17,9 @@ export function Step({ data, go }: { data: StepData; go: Go }) {
   const side = !!(data.figure || data.sideMd);
   return (
     <section className="flex flex-col gap-4" aria-label={data.titleMd}>
-      <article className={`notebook board grid min-w-0 gap-x-6 gap-y-4 overflow-x-auto rounded-card py-6 pe-6 shadow-card ${side ? "md:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]" : ""}`}>
+      <article className={`board-surface board mb-3 grid min-w-0 gap-x-6 gap-y-4 overflow-x-auto px-6 py-6 sm:px-8 ${side ? "md:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]" : ""}`}>
         <div className="min-w-0">
-          <h2 className="text-2xl font-bold">
+          <h2 className="hand text-4xl leading-tight">
             <Markdown>{data.titleMd}</Markdown>
             <span className="ink-underline" aria-hidden />
           </h2>

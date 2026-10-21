@@ -1,4 +1,5 @@
-/* Card look (M19): a squared math notebook in violet ink. Loaded after @/index.css, only in the card bundle. */
+/* Card look (M21): the lecture-hall board. Light = whiteboard and markers, dark = green chalkboard and chalk.
+   Loaded after @/index.css, only in the card bundle. */
 @font-face {
   font-family: "Rubik";
   font-style: normal;
@@ -15,52 +16,94 @@
   src: url("@fontsource-variable/rubik/files/rubik-latin-wght-normal.woff2") format("woff2-variations");
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
-
-:root {
-  --primary: #5b3df5;
-  --primary-2: #7c3aed;
-  --primary-fg: #ffffff;
-  --heading: #2a1b6b;
-  --success: #0b7a55;
-  --warning: #a14a00;
-  --danger: #c8283d;
-  --bg: #f5f3ff;
-  --card: #ffffff;
-  --fg: #1c1640;
-  --muted: #5f5884;
-  --border: #e4dffa;
-  --grid: #ece8fc;
-  --margin-line: #f2a7b5;
-  --radius-card: 20px;
-  --radius-btn: 999px;
-  --shadow-card: 0 1px 2px rgb(42 27 107 / 0.05), 0 10px 28px -16px rgb(91 61 245 / 0.28);
-  --hero: linear-gradient(135deg, #4b2fe0 0%, #6d35e8 55%, #8b3fe0 100%);
-  --m-blue: #2459d6;
-  --m-green: #13803f;
-  --m-pink: #c41d6a;
-  --m-orange: #b8430b;
+/* Handwriting for what a lecturer writes by hand: titles, row names, box labels, notes. */
+@font-face {
+  font-family: "Gveret Levin";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url("@fontsource/gveret-levin/files/gveret-levin-hebrew-400-normal.woff2") format("woff2");
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
 }
+@font-face {
+  font-family: "Gveret Levin";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url("@fontsource/gveret-levin/files/gveret-levin-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Whiteboard: white surface, aluminium frame, black / blue / red / green markers. */
+:root {
+  --primary: #1f5fbf;
+  --primary-fg: #ffffff;
+  --heading: #1f2328;
+  --success: #1e7b3c;
+  --warning: #8f5300;
+  --danger: #c42b2b;
+  --danger-fg: #ffffff;
+  --bg: #e9ecef;
+  --card: #ffffff;
+  --fg: #1f2328;
+  --muted: #59626e;
+  --border: #d3d8de;
+  --radius-card: 12px;
+  --radius-btn: 10px;
+  --shadow-card: 0 1px 2px rgb(31 35 40 / 0.06), 0 6px 18px -12px rgb(31 35 40 / 0.25);
+  --board: #f4f6f4;
+  --board-fg: #1f2328;
+  --board-muted: #545d68;
+  --board-ink: #1f5fbf;
+  --frame: #a9b0b8;
+  --frame-hi: #dde1e5;
+  /* whiteboard: a glossy diagonal sheen, faint ghost marks left by the eraser, a cooler bottom edge */
+  --dust:
+    linear-gradient(118deg, transparent 22%, rgb(255 255 255 / 0.75) 34%, transparent 46%),
+    linear-gradient(118deg, transparent 52%, rgb(255 255 255 / 0.5) 58%, transparent 64%),
+    radial-gradient(ellipse 40% 12% at 30% 22%, rgb(70 80 95 / 0.06), transparent 70%),
+    radial-gradient(ellipse 30% 10% at 70% 64%, rgb(31 95 191 / 0.05), transparent 70%),
+    radial-gradient(ellipse 25% 8% at 20% 82%, rgb(196 43 43 / 0.04), transparent 70%),
+    linear-gradient(180deg, #fbfcfb 0%, #eceff0 100%);
+  --m-blue: #1f5fbf;
+  --m-green: #1e7b3c;
+  --m-pink: #c42b2b;
+  --m-orange: #a24d00;
+  --note: #fff3b0;
+  --note-fg: #3d3200;
+}
+/* Chalkboard: deep green slate in a wooden frame, white and coloured chalk. */
 .dark {
-  --primary: #a99bff;
-  --primary-2: #c4a5ff;
-  --primary-fg: #150f33;
-  --heading: #e4ddff;
-  --success: #4fd6a0;
-  --warning: #fbbf5a;
-  --danger: #ff8a98;
-  --bg: #13112a;
-  --card: #1d1a3a;
-  --fg: #eeebff;
-  --muted: #a7a2c9;
-  --border: #322d5c;
-  --grid: #26224a;
-  --margin-line: #6b3550;
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.35), 0 12px 30px -18px rgb(0 0 0 / 0.6);
-  --hero: linear-gradient(135deg, #3a24b8 0%, #5223b8 55%, #6a259f 100%);
-  --m-blue: #7fa6ff;
-  --m-green: #5fd18c;
-  --m-pink: #ff7ab8;
-  --m-orange: #ffa26b;
+  --primary: #f5d76e;
+  --primary-fg: #1a231e;
+  --heading: #f4f1e8;
+  --success: #a8e0a0;
+  --warning: #f5c46e;
+  --danger: #f49a9a;
+  --danger-fg: #1a231e;
+  --bg: #101613;
+  --card: #1a231e;
+  --fg: #eceee6;
+  --muted: #a9b5aa;
+  --border: #31453a;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 24px -16px rgb(0 0 0 / 0.7);
+  --board: #23392e;
+  --board-fg: #eef0e8;
+  --board-muted: #b9c6b9;
+  --board-ink: #f5d76e;
+  --frame: #6b5236;
+  --frame-hi: #8a6c4b;
+  /* chalk dust: faint smudges left by the eraser */
+  --dust:
+    radial-gradient(ellipse 60% 30% at 20% 30%, rgb(255 255 255 / 0.045), transparent 70%),
+    radial-gradient(ellipse 50% 25% at 75% 70%, rgb(255 255 255 / 0.035), transparent 70%),
+    radial-gradient(ellipse 35% 20% at 55% 15%, rgb(255 255 255 / 0.03), transparent 70%);
+  --m-blue: #8cc8f2;
+  --m-green: #b9e4a0;
+  --m-pink: #f49ac1;
+  --m-orange: #f5b97a;
+  --note: #f3e48a;
+  --note-fg: #3d3200;
 }
 
 body {
@@ -70,68 +113,107 @@ body {
 .cards h2,
 .cards h3 {
   color: var(--heading);
-  letter-spacing: -0.01em;
+}
+.hand {
+  font-family: "Gveret Levin", "Rubik", cursive;
+  font-weight: 400;
+  letter-spacing: 0;
 }
 
-/* Primary buttons and progress fills carry the violet ink; nothing else gets a gradient except the hero band. */
-.cards .bg-primary {
-  background-image: linear-gradient(135deg, var(--primary), var(--primary-2));
-}
+/* A board: the writing surface inside its frame, with the chalk / marker ledge underneath. */
+.board-surface,
 .hero {
-  background: var(--hero);
-  color: #fff;
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-}
-.cards .hero h1 {
-  color: #fff;
-}
-
-/* The lesson step: a page of a squared notebook, with the red margin line on the start side. */
-.notebook {
-  background-color: var(--card);
-  background-image:
-    linear-gradient(var(--grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-  background-size: 22px 22px;
-  background-position: -1px -1px;
   position: relative;
-  padding-inline-start: 3.25rem;
+  background-color: var(--board);
+  background-image: var(--dust);
+  color: var(--board-fg);
+  border: 7px solid var(--frame);
+  border-top-color: var(--frame-hi);
+  border-radius: 10px;
+  box-shadow:
+    inset 0 2px 10px rgb(0 0 0 / 0.12),
+    var(--shadow-card);
 }
-.notebook::before {
+.cards .board-surface h1,
+.cards .board-surface h2,
+.cards .hero h1 {
+  color: var(--board-fg);
+}
+/* The ledge under the board, with two markers (whiteboard) or pieces of chalk (chalkboard) lying on it. */
+.board-surface::after {
   content: "";
   position: absolute;
-  inset-block: 0;
-  inset-inline-start: 2rem;
-  width: 2px;
-  background: var(--margin-line);
+  inset-inline: 8%;
+  bottom: -16px;
+  height: 8px;
+  border-radius: 0 0 4px 4px;
+  background:
+    linear-gradient(90deg, transparent 12%, var(--m-blue) 12% 19%, transparent 19% 22%, var(--m-pink) 22% 28%, transparent 28%) top / 100% 4px no-repeat,
+    var(--frame);
+  box-shadow: 0 3px 6px -3px rgb(0 0 0 / 0.4);
 }
-.notebook .pinned-figure {
+.dark .board-surface::after {
+  background:
+    linear-gradient(90deg, transparent 12%, #f4f1e8 12% 17%, transparent 17% 20%, #f5d76e 20% 24%, transparent 24%) top / 100% 4px no-repeat,
+    var(--frame);
+}
+.board-surface .pinned-figure {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 8px;
   padding: 0.75rem;
-  box-shadow: var(--shadow-card);
 }
 .ink-underline {
   display: block;
-  width: 2.5rem;
-  height: 4px;
-  margin-top: 0.4rem;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--primary), var(--primary-2));
+  width: 3rem;
+  height: 3px;
+  margin-top: 0.15rem;
+  border-radius: 2px 6px 3px 5px;
+  background: var(--board-ink);
+  opacity: 0.85;
+  rotate: -1deg;
 }
 
-/* Side note on the board: a sticky note taped to the notebook page (the one playful touch). */
+/* On the board, names and labels are handwritten, the boxes are drawn in marker / chalk. */
+.board-surface .board-label,
+.board-surface .board-box-tab {
+  font-family: "Gveret Levin", "Rubik", cursive;
+  font-weight: 400;
+  font-size: 1.2em;
+}
+.board-surface .board-label {
+  color: var(--board-fg);
+}
+.board-surface .board-box {
+  background: transparent;
+  border-width: 2px;
+  border-radius: 10px 14px 9px 13px;
+}
+.board-surface .board-box-tab {
+  background: var(--board);
+}
+.board-surface .board-box-title {
+  color: var(--board-fg);
+}
+.board .board-rows .katex {
+  font-size: 1.12em;
+}
+.board .md .board-rows .katex-display {
+  margin: 0;
+  padding: 0.1em 0;
+}
+
+/* Side note: a sticky note taped to the board. */
 .sticky-note {
-  --note: #fff3b0;
   position: relative;
   padding: 1.1rem 1rem 0.9rem;
   background: var(--note);
-  color: #3d3200;
-  border-radius: 4px 4px 14px 4px;
-  box-shadow: 0 10px 22px -14px rgb(60 45 0 / 0.55);
-  transform: rotate(-1.2deg);
+  color: var(--note-fg);
+  border-radius: 3px 3px 12px 3px;
+  box-shadow: 0 10px 20px -12px rgb(0 0 0 / 0.6);
+  rotate: -1.2deg;
+  font-family: "Gveret Levin", "Rubik", cursive;
+  font-size: 1.15em;
 }
 .sticky-note::before {
   content: "";
@@ -141,21 +223,10 @@ body {
   width: 3.5rem;
   height: 1.1rem;
   translate: -50% 0;
-  background: rgb(169 155 255 / 0.45);
+  background: rgb(255 255 255 / 0.45);
   border-radius: 2px;
-}
-.dark .sticky-note {
-  --note: #3b3415;
-  color: #fbe9a0;
 }
 .cards .sticky-note .md,
 .cards .sticky-note .katex {
   color: inherit;
-}
-.board .board-rows .katex {
-  font-size: 1.12em;
-}
-.board .md .board-rows .katex-display {
-  margin: 0;
-  padding: 0.1em 0;
 }
