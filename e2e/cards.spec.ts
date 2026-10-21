@@ -52,6 +52,7 @@ for (const lang of ["he", "en"] as const)
       await expect(page.getByText("S002").first()).toBeVisible(); // current unit is expanded
       await expect(page.getByText("lecture2.pdf")).toBeVisible(); // Files section
       await expect(page.getByText(lang === "he" ? "5 תרגילים" : "5 exercises found")).toBeVisible();
+      await expect(page.getByRole("button", { name: lang === "he" ? "ייבוא קבצי הקורס" : "Import course files" })).toBeEnabled();
       await page.getByRole("button", { name: lang === "he" ? "התחל אינדוקס" : "Start indexing" }).click();
       expect((await page.evaluate(() => (window as unknown as { __said: string[] }).__said)).at(-1)).toContain(lang === "he" ? "אנדקס" : "index");
       await page.waitForTimeout(400);

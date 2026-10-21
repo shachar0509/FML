@@ -8,7 +8,7 @@ await build({
   platform: "node",
   target: "node22",
   format: "esm",
-  external: ["@napi-rs/canvas"],
+  external: ["@napi-rs/canvas", "playwright-core"],
   // bundled CJS deps (e.g. pdfjs) need require()
   banner: { js: "import { createRequire as __cr } from 'node:module'; const require = __cr(import.meta.url);" },
   logLevel: "info",

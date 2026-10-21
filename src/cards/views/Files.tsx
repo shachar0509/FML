@@ -3,6 +3,7 @@ import { Waiting } from "./Waiting";
 import { Check, FileText, FolderOpen, Loader2, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
+import { Input } from "@/core/components/ui/input";
 import type { FileRow, FilesData } from "../types";
 
 type Tool = (name: string, args?: Record<string, unknown>) => Promise<{ structuredContent?: unknown; isError?: boolean }>;
@@ -29,6 +30,7 @@ export function Files({ number, callTool, say, reload }: { number: string; callT
   const [d, setD] = useState<FilesData | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [url, setUrl] = useState("");
   const refresh = useCallback(async () => {
     const r = await callTool("files_list", { number });
     if (!r.isError) setD(r.structuredContent as FilesData);
@@ -39,11 +41,12 @@ export function Files({ number, callTool, say, reload }: { number: string; callT
     return () => void (on = false);
   }, [callTool, number]);
   const active = !!d && (d.improving?.state === "running" || [...d.materials, ...d.exercises].some((f) => f.status === "indexing"));
+  const moodleBusy = !!d?.moodle?.busy;
   useEffect(() => {
-    if (!active) return;
+    if (!active && !moodleBusy) return;
     const id = setInterval(() => void refresh(), 2500);
     return () => clearInterval(id);
-  }, [active, refresh]);
+  }, [active, moodleBusy, refresh]);
   const wasActive = useRef(false);
   useEffect(() => {
     if (wasActive.current && !active) reload(); // plan may have changed
@@ -69,6 +72,13 @@ export function Files({ number, callTool, say, reload }: { number: string; callT
       setBusy(false);
       await refresh();
     }
+  }
+
+  async function importMoodle() {
+    setMsg(null);
+    const r = await callTool("moodle_import", { number, ...(url.trim() ? { url: url.trim() } : {}) });
+    if (r.isError) setMsg((r.structuredContent as { error?: string } | undefined)?.error ?? t("moodle.failed"));
+    await refresh();
   }
 
   async function start() {
@@ -111,6 +121,20 @@ export function Files({ number, callTool, say, reload }: { number: string; callT
       <h2 className="text-lg font-bold">{t("files.filter")}</h2>
       {zone("material", t("files.materials"), t("files.addMaterials"), d.materials)}
       {zone("exercises", t("files.exercises"), t("files.addExercises"), d.exercises)}
+      {d.moodle && (
+        <div className="flex flex-col gap-2 rounded-card border border-border bg-card p-3">
+          <h3 className="font-medium">{t("moodle.title")}</h3>
+          <p className="text-sm text-muted">{t("moodle.hint")}</p>
+          {!d.moodle.url && <Input dir="ltr" type="url" placeholder="https://moodle.example.ac.il/" aria-label={t("moodle.url")} value={url} onChange={(e) => setUrl(e.target.value)} />}
+          {d.moodle.busy && <p className="text-sm text-muted" role="status"><Loader2 className="me-1 inline size-4 animate-spin" aria-hidden />{t(d.moodle.busy === "login" ? "moodle.login" : "moodle.syncing")}</p>}
+          {!d.moodle.busy && d.moodle.last?.error && <p className="text-sm text-danger" role="alert">{d.moodle.last.error}</p>}
+          {!d.moodle.busy && d.moodle.last && !d.moodle.last.error && <p className="text-sm" role="status">{t("moodle.done", d.moodle.last)}</p>}
+          <div className="flex flex-wrap items-center gap-3">
+            <Button variant="outline" disabled={busy || !!d.moodle.busy || (!d.moodle.url && !url.trim())} onClick={() => void importMoodle()}>{t("moodle.import")}</Button>
+            {d.moodle.connected && !d.moodle.busy && <button className="text-sm text-muted hover:text-danger" onClick={() => void callTool("moodle_disconnect").then(refresh)}>{t("moodle.forget")}</button>}
+          </div>
+        </div>
+      )}
       {busy && <p className="text-sm text-muted" role="status"><Loader2 className="me-1 inline size-4 animate-spin" aria-hidden />{t("files.uploading")}</p>}
       {msg && <p className="text-sm text-danger" role="alert">{msg}</p>}
       {d.improving?.state === "failed" && <p className="text-sm text-danger" role="alert">{t("courseHome.improveFailed")}</p>}

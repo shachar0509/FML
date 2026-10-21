@@ -43,6 +43,14 @@ export type FilesData = Base & {
   canIndex: boolean;
   canImprove: boolean;
   improving: { state: "running" | "failed"; error: string | null } | null;
+  moodle: MoodleState | null;
+};
+/** Moodle import (plan M14b). `url` null = the student must paste their Moodle address. */
+export type MoodleState = {
+  url: string | null;
+  connected: boolean;
+  busy: "login" | "sync" | null;
+  last: { course: string; added: number; duplicate: number; skipped: number; error: string | null } | null;
 };
 /** Lesson card (shalav_start_lesson / app-only lesson_state). */
 export type LessonData = Base & {

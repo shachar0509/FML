@@ -7,6 +7,7 @@ describe("SettingsSchema", () => {
       language: "he",
       theme: "system",
       dataRoot: "",
+      moodleUrl: "",
       grading: { thinking: true, thinkingBudget: 8000 },
       retrieval: { webSearch: true },
       learning: {

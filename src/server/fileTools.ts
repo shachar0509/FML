@@ -17,6 +17,7 @@ import { coursePaths } from "@/core/lib/fs/paths";
 import { useSettings } from "@/stores/settings";
 import type { BridgeGateway } from "./bridge";
 import { native, openFolder } from "./native";
+import type { MoodleState } from "@/cards/types";
 import { CARDS_URI } from "./resources";
 
 const both = { ui: { resourceUri: CARDS_URI, visibility: ["model" as const, "app" as const] } }; // plain tools in hosts without cards (Claude Code)
@@ -27,8 +28,11 @@ const role = z.enum(["material", "exercises"]);
 const out = (text: string, structuredContent: object) => ({ content: [{ type: "text" as const, text }], structuredContent: structuredContent as Record<string, unknown> });
 const fail = (text: string) => ({ ...out(text, { ok: false, error: text }), isError: true });
 
+// Indexing starts only on "Start indexing" (it spends the student's subscription), so import never enqueues.
+export const importDeps = (): Deps => ({ native, open: openSource, enqueue: () => undefined, platform: process.platform === "win32" ? "windows" : "macos" });
+
 /** Files and indexing (plan v2 §6.6): chunked upload, open folder, scan, status, Start indexing, Improve plan. */
-export function registerFileTools(server: McpServer, bridge: BridgeGateway, o: { openFolder?: (p: string) => Promise<void> } = {}) {
+export function registerFileTools(server: McpServer, bridge: BridgeGateway, o: { openFolder?: (p: string) => Promise<void>; moodle?: () => MoodleState } = {}) {
   const root = () => useSettings.getState().settings.dataRoot;
   const lang = () => useSettings.getState().settings.language;
   const prog = new Map<string, { done: number; total: number }>();
@@ -41,8 +45,7 @@ export function registerFileTools(server: McpServer, bridge: BridgeGateway, o: {
     resolve: (c, rec) => join(coursePaths(root(), c).course, rec.relPath),
   });
   queue.subscribe((e) => (e.done === undefined ? prog.delete(e.sha256) : prog.set(e.sha256, { done: e.done, total: e.total ?? 0 })));
-  // Indexing starts only on "Start indexing" (it spends the student's subscription), so import never enqueues.
-  const deps = (): Deps => ({ native, open: openSource, enqueue: () => undefined, platform: process.platform === "win32" ? "windows" : "macos" });
+  const deps = importDeps;
   const improving = new Map<string, { state: "running" | "failed"; error: string | null }>();
 
   async function list(number: string): Promise<FilesData> {
@@ -59,6 +62,7 @@ export function registerFileTools(server: McpServer, bridge: BridgeGateway, o: {
       canIndex: !!plan && recs.some((r) => r.status === "pending" || r.status === "failed"),
       canImprove: !!plan && recs.some((r) => r.role === "material" && r.status === "indexed"),
       improving: improving.get(number) ?? null,
+      moodle: o.moodle?.() ?? null,
     };
   }
 

@@ -268,6 +268,17 @@
     "finish": "Finish"
   },
   "university": { "title": "Choose your university", "hint": "This sets the course number format. It cannot be changed later." },
+  "moodle": {
+      "title": "Import from Moodle",
+      "hint": "Opens a browser window once so you can log in to your university Moodle (including two-step verification). Shalav never sees your password.",
+      "url": "Moodle address",
+      "import": "Import course files",
+      "login": "Log in in the browser window that opened…",
+      "syncing": "Downloading your course files…",
+      "done": "Imported {{added}} new, {{duplicate}} already here, {{skipped}} skipped (from {{course}}). Now press Start indexing.",
+      "forget": "Forget my Moodle login",
+      "failed": "The import failed."
+  },
   "home": {
     "add": "Add course",
     "addDesc": "Add a new course by its number",

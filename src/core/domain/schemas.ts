@@ -17,6 +17,7 @@ export const SettingsSchema = z.object({
   schemaVersion: z.literal(1).default(1),
   language: z.enum(["he", "en"]).default("he"),
   theme: z.enum(["system", "light", "dark"]).default("system"),
+  moodleUrl: z.string().default(""), // student's Moodle address (only needed where the university has no built-in one)
   dataRoot: z.string().default(""), // "" = <Documents>/Shalav, resolved at load inside Tauri
   grading: z
     .object({

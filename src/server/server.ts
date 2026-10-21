@@ -9,6 +9,8 @@ import type { HomeData } from "@/cards/types";
 import { useSettings } from "@/stores/settings";
 import type { CatalogSource } from "@/core/domain/catalog/catalog";
 import { registerCourseTools } from "./courseTools";
+import type { Moodle } from "./moodle";
+import { registerMoodleTools } from "./moodleTools";
 import { registerFileTools } from "./fileTools";
 import { registerExerciseTools } from "./exerciseTools";
 import { registerLearnTools } from "./learnTools";
@@ -18,7 +20,7 @@ import { INSTRUCTIONS } from "./instructions";
 import { CARDS_URI, readCards } from "./resources";
 
 /** Transport-agnostic: tests connect it to an in-memory transport, main.ts to stdio. */
-export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSource): McpServer {
+export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSource, moodleMake?: (profileDir: string) => Moodle): McpServer {
   const server = new McpServer({ name: "shalav", version: "2.0.0" }, { instructions: INSTRUCTIONS });
 
   registerAppResource(server, "Shalav cards", CARDS_URI, { description: "Shalav study cards" }, async () => ({
@@ -66,7 +68,8 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
   );
 
   registerCourseTools(server, bridge, catalog);
-  registerFileTools(server, bridge);
+  const moodle = registerMoodleTools(server, moodleMake);
+  registerFileTools(server, bridge, { moodle });
   const exercises = registerExerciseTools(server, bridge);
   registerLearnTools(server, bridge, exercises);
   registerPracticeTools(server, bridge, exercises);
