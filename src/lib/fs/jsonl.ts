@@ -1,4 +1,5 @@
 import type { ZodType } from "zod";
+import { isConflictCopy } from "./conflicts";
 import { fs } from "./fs";
 import { dirname } from "./paths";
 
@@ -35,7 +36,7 @@ export async function readJsonlDir<T extends { id: string; ts: string }>(
   if (!(await fs().exists(dir))) return [];
   const all: T[] = [];
   for (const e of await fs().readDir(dir))
-    if (e.isFile && e.name.endsWith(".jsonl")) all.push(...(await readJsonl(`${dir}/${e.name}`, schema)));
+    if (e.isFile && e.name.endsWith(".jsonl") && !isConflictCopy(e.name)) all.push(...(await readJsonl(`${dir}/${e.name}`, schema)));
   return mergeById(all);
 }
 

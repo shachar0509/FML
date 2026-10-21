@@ -5,6 +5,7 @@ import { Course } from "./views/Course";
 import { Exercise } from "./views/Exercise";
 import { Home } from "./views/Home";
 import { Lesson } from "./views/Lesson";
+import { Settings } from "./views/Settings";
 import { Practice } from "./views/Practice";
 import { Mcq, OpenQ } from "./views/Question";
 import type { CardData, Host } from "./types";
@@ -34,9 +35,10 @@ export function Cards({ host }: { host: Host }) {
   if (shown.view === "add") return <AddCourse callTool={callTool} say={say} open={open} back={home} />;
   if (shown.view === "course") return <Course data={shown} callTool={callTool} say={say} reload={() => open(shown.number)} back={home} practice={() => void go("shalav_practice", { courseNumber: shown.number })} />;
   if (shown.view === "practice") return <Practice data={shown} callTool={callTool} say={say} back={() => open(shown.number)} />;
+  if (shown.view === "settings") return <Settings data={shown} callTool={callTool} back={home} />;
   if (shown.view === "lesson") return <Lesson data={shown} callTool={callTool} say={say} />;
   if (shown.view === "mcq") return <Mcq data={shown} callTool={callTool} say={say} />;
   if (shown.view === "exercise") return <Exercise data={shown} callTool={callTool} say={say} />;
   if (shown.view === "open") return <OpenQ data={shown} say={say} />;
-  return <Home data={shown} add={() => setNav({ view: "add", language: data.language, theme: data.theme })} open={open} />;
+  return <Home data={shown} add={() => setNav({ view: "add", language: data.language, theme: data.theme })} open={open} settings={() => void go("shalav_settings")} />;
 }

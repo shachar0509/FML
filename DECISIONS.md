@@ -115,3 +115,8 @@
 - **No prefetch.** The v1 engine prefetches the next item; over the bridge that parks a job nobody fetches until the next chat line, so `Practice.prefetchOn = false` on the server. Each Next may therefore need a short wait for Claude (the card says "Preparing…" and sends one chat line). Revisit if the real check shows it is slow.
 - Practice exercise items reuse the engine's own `ExerciseRun` (registered through `exercises.adopt`) instead of `exercises.open`, so results land in the session counters.
 - Open practice answers are text only (no attachments), same as Learn open questions.
+
+## M10
+- `shalav_context` takes no stage-state from the lesson: stageId defaults to `progress.currentStageId`; the boundary is the v1 function unchanged. A bare call with several courses asks which one.
+- Conflict copies are detected by file name only (json/jsonl/md); a copy is never merged or deleted by Shalav, only ignored by `readJsonlDir` and listed in the settings card.
+- The settings card does not edit the data folder (plan §6.8); the other v1 settings fields (models, usage, sync) stay in the schema, ignored.

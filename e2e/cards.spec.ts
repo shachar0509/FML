@@ -144,3 +144,20 @@ for (const lang of ["he", "en"] as const)
       expect((await page.evaluate(() => (window as unknown as { __said: string[] }).__said)).at(-1)).toContain("S001");
       expect(errors).toEqual([]);
     });
+
+for (const lang of ["he", "en"] as const)
+  for (const theme of ["light", "dark"] as const)
+    test(`settings card (${lang}/${theme})`, async ({ page }) => {
+      const errors: string[] = [];
+      page.on("pageerror", (e) => errors.push(e.message));
+      await page.goto(`/src/cards/test-host.html?lang=${lang}&theme=${theme}`);
+      await page.getByRole("button", { name: lang === "he" ? "הגדרות" : "Settings" }).click();
+      await expect(page.getByText("/Users/me/Documents/Shalav")).toBeVisible();
+      await expect(page.getByRole("alert")).toContainText("dev1 (1).jsonl");
+      await page.getByRole("spinbutton").first().fill("3");
+      await expect(page.getByRole("spinbutton").first()).toHaveValue("3");
+      const bad = (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations.filter((v) => v.impact === "serious" || v.impact === "critical");
+      expect(bad).toEqual([]);
+      await page.screenshot({ path: `e2e/shots/card-settings-${lang}-${theme}.png` });
+      expect(errors).toEqual([]);
+    });

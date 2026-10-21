@@ -11,6 +11,7 @@ import { registerFileTools } from "./fileTools";
 import { registerExerciseTools } from "./exerciseTools";
 import { registerLearnTools } from "./learnTools";
 import { registerPracticeTools } from "./practiceTools";
+import { registerSettingsTools } from "./settingsTools";
 import { INSTRUCTIONS } from "./instructions";
 import { CARDS_URI, readCards } from "./resources";
 
@@ -57,6 +58,7 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
   const exercises = registerExerciseTools(server, bridge);
   registerLearnTools(server, bridge, exercises);
   registerPracticeTools(server, bridge, exercises);
+  registerSettingsTools(server);
 
   server.registerTool(
     "shalav_next_job",

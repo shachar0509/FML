@@ -73,6 +73,13 @@ export type ExerciseData = Base & {
   busy: "grade" | "hint" | "solution" | null;
   error: string | null;
 };
+/** Settings card (shalav_settings / app-only settings_update); `conflicts` = sync conflict copies found in the data folder. */
+export type SettingsData = Base & {
+  view: "settings";
+  dataRoot: string;
+  learning: { minExercises: number; minExerciseScore: number; masteryThreshold: number; requireAllObjectives: boolean; hintsBeforeSolution: number };
+  conflicts: string[];
+};
 /** Practice card (shalav_practice / app-only practice_*). */
 export type PracticeItem =
   | { kind: "E"; exercise: ExerciseData }
@@ -91,7 +98,7 @@ export type PracticeData = Base & {
   error: string | null;
   summary: { items: number; avgScore: number; newMistakes: string[]; weakStages: { id: string; title: string }[] } | null;
 };
-export type CardData = HomeData | AddData | CourseData | LessonData | McqData | OpenData | ExerciseData | PracticeData;
+export type CardData = HomeData | AddData | CourseData | LessonData | McqData | OpenData | ExerciseData | PracticeData | SettingsData;
 
 export type Host = {
   callTool(name: string, args?: Record<string, unknown>): Promise<{ structuredContent?: unknown; isError?: boolean }>;

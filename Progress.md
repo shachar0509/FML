@@ -15,7 +15,7 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - [x] M7. Learn — DONE (see M-log; 🧪 full lesson pending)
 - [x] M8. Exercises and grading — DONE (see M-log; 🧪 check pending)
 - [x] M9. Practice — DONE (see M-log; 🧪 check pending)
-- [ ] M10. Settings and context
+- [x] M10. Settings and context — DONE (see M-log)
 - [ ] M11. Packaging (MCPB) and docs (🧪)
 - [ ] M12. Cleanup (delete Tauri/sync/API code, move to src/core)
 - [ ] M13. Hardening + acceptance checklist v2
@@ -103,6 +103,14 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - 🧪 **User check in Claude Desktop** (after M11): complete one stage, open the course card, press Practice, choose a scope, Start; Claude should fetch the job(s) and an item appears (exercise → upload/grade like M8, MCQ, open answer). Report how many tool calls an item takes and whether the "continue" chat line works.
 - Not done: prefetch (decision: off, see DECISIONS.md); open-answer attachments; the weak scope is untested over MCP.
 - Next: M10 — Settings and context.
+
+### M10 — Settings and context (done)
+- `src/server/settingsTools.ts` (`registerSettingsTools`): model+card `shalav_settings`, app-only `settings_update` ({language?, learning?}, zod bounds from the v1 schema, saved through the v1 settings store), model tool `shalav_context({courseNumber?, stageId?})` = course progress + v1 §6.8 knowledge boundary + current stage objectives + nearby plan (courseNumber defaults to the only course). Instructions mention both.
+- Sync conflict copies: `lib/fs/conflicts.ts` (`isConflictCopy`: `x (1).json`, `(conflicted copy)`, `(Case Conflict)`; `findConflictCopies(root)` skips materials/exercises/attachments/crops). `readJsonlDir` now ignores conflict copies; the settings card lists them in an alert.
+- Card `views/Settings.tsx` (language buttons, read-only data folder with the note "change it in the extension settings", learning criteria with restore defaults, conflict warning); Home got a settings icon button.
+- Tests: `settingsTools.test.ts` (conflict-name table; settings round trip incl. out-of-range rejection; a conflicted events file is ignored and listed; `shalav_context` + unknown course); e2e settings card he/en × light/dark (axe, screenshot inspected). 174 unit + 34 e2e; typecheck/lint clean; cards 1.79 MB.
+- Not done / known: the language button changes the setting but the open card keeps its language until the next card; the data folder comes from MCPB `user_config` in M11 (until then `dataRoot` is the settings.json value); only data files (json/jsonl/md) are scanned for conflicts.
+- Next: M11 — Packaging (MCPB) and docs (🧪).
 
 ## Phase 1 — Desktop app (v1, frozen)
 

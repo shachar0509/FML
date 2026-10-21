@@ -5,7 +5,7 @@ import "@/index.css";
 import "@/i18n";
 import { createRoot } from "react-dom/client";
 import { Cards } from "./Cards";
-import type { CardData, CourseData, FilesData, HomeData, Host, ExerciseData, PracticeData, LessonData, LookupResult, McqData, OpenData } from "./types";
+import type { CardData, CourseData, FilesData, HomeData, Host, ExerciseData, PracticeData, SettingsData, LessonData, LookupResult, McqData, OpenData } from "./types";
 
 /** Playwright test host: a fake bridge instead of Claude Desktop. ?lang=&theme=&empty=1 ; sent messages land in window.__said. */
 const q = new URLSearchParams(location.search);
@@ -61,12 +61,13 @@ const mcqItem: PracticeData = { ...practiceBase, mode: "item", item: { kind: "M"
 const mcqDone: PracticeData = { ...mcqItem, counters: { answered: 1, correct: 0, avg: 0 }, item: { ...(mcqItem.item as Extract<PracticeData["item"], { kind: "M" }>), selected: 1, correctIndex: 0, explanationMd: "Since $1/n \\to 0$." } };
 const practiceSummary: PracticeData = { ...practiceBase, mode: "summary", summary: { items: 1, avgScore: 0, newMistakes: ["Sign slip"], weakStages: [{ id: "S001", title: "Sequences" }] } };
 const practiceReply: Record<string, PracticeData> = { practice_start_request: mcqItem, practice_next_request: mcqItem, practice_answer_mcq: mcqDone, practice_end: practiceSummary, practice_state: practiceBase };
-const initial: CardData = ({ lesson, mcq, open, exercise, practice: practiceBase } as Record<string, CardData>)[q.get("view") ?? ""] ?? home;
+const settings: SettingsData = { ...base, view: "settings", dataRoot: "/Users/me/Documents/Shalav", learning: { minExercises: 2, minExerciseScore: 85, masteryThreshold: 0.85, requireAllObjectives: true, hintsBeforeSolution: 3 }, conflicts: ["courses/01040195/.shalav/events/dev1 (1).jsonl"] };
+const initial: CardData = ({ lesson, mcq, open, exercise, practice: practiceBase, settings } as Record<string, CardData>)[q.get("view") ?? ""] ?? home;
 const said: string[] = [];
 (window as unknown as { __said: string[] }).__said = said;
 const host: Host = {
   callTool: async (name) => ({
-    structuredContent: practiceReply[name] ?? (name === "course_lookup" ? found : name === "shalav_course" ? course : name === "files_list" ? files : name === "lesson_state" ? lesson : name === "stage_complete" ? { ...lesson, status: "completed_override" } : name === "stage_reopen" ? lesson : name === "check_answer" ? { selectedIndex: 1, correct: false, correctIndex: 0, explanationMd: "Since $1/n \\to 0$." } : name === "attachment_upload" ? { files: [{ sha256: "a".repeat(64), mediaType: "image/jpeg" }] } : name === "exercise_grade_request" || name === "exercise_state" ? graded : name === "course_status" ? { state: "running", step: "plan", unit: { k: 1, n: 4 }, pending: 1 } : { ok: true }),
+    structuredContent: practiceReply[name] ?? (name === "shalav_settings" ? settings : name === "settings_update" ? { ...settings, learning: { ...settings.learning, minExercises: 3 } } : undefined) ?? (name === "course_lookup" ? found : name === "shalav_course" ? course : name === "files_list" ? files : name === "lesson_state" ? lesson : name === "stage_complete" ? { ...lesson, status: "completed_override" } : name === "stage_reopen" ? lesson : name === "check_answer" ? { selectedIndex: 1, correct: false, correctIndex: 0, explanationMd: "Since $1/n \\to 0$." } : name === "attachment_upload" ? { files: [{ sha256: "a".repeat(64), mediaType: "image/jpeg" }] } : name === "exercise_grade_request" || name === "exercise_state" ? graded : name === "course_status" ? { state: "running", step: "plan", unit: { k: 1, n: 4 }, pending: 1 } : { ok: true }),
   }),
   say: async (t) => void said.push(t),
   context: () => ({ theme: q.get("theme") ?? undefined }),

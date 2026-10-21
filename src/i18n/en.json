@@ -450,6 +450,14 @@
     "grade": "📝 Please grade my solution now",
     "hint": "💡 Please give me hint {{n}}",
     "practice": "🧪 Please prepare my next practice question now",
-    "solution": "📖 Please show me the full solution"
+    "solution": "📖 Please show me the full solution",
+    "settings": {
+      "title": "Settings",
+      "dataRoot": "Data folder",
+      "dataHint": "Change it in the extension settings in Claude Desktop.",
+      "conflicts": "Sync conflict copies found. Shalav ignores them; delete them after checking nothing is missing:",
+      "none": "No sync conflicts.",
+      "say": "⚙️ Open Shalav settings"
+    }
   }
 }

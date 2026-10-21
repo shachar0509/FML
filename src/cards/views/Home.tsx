@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { Plus, Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import type { HomeData } from "../types";
@@ -15,15 +15,20 @@ function Ring({ pct }: { pct: number }) {
   );
 }
 
-export function Home({ data, add, open }: { data: HomeData; add: () => void; open: (n: string) => void }) {
+export function Home({ data, add, open, settings }: { data: HomeData; add: () => void; open: (n: string) => void; settings: () => void }) {
   const { t } = useTranslation();
   return (
     <section className="flex flex-col gap-4 p-4" aria-label={t("screens.home")}>
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-xl font-bold">{t("screens.home")}</h1>
-        <Button onClick={add}>
-          <Plus className="size-4" aria-hidden /> {t("home.add")}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={settings} aria-label={t("screens.settings")}>
+            <Settings className="size-4" aria-hidden />
+          </Button>
+          <Button onClick={add}>
+            <Plus className="size-4" aria-hidden /> {t("home.add")}
+          </Button>
+        </div>
       </div>
       {data.courses.length === 0 && <p className="text-muted">{t("home.empty")}</p>}
       <ul className="grid gap-3 sm:grid-cols-2">
