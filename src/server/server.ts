@@ -75,7 +75,7 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
   const files = registerFileTools(server, { moodle });
   const builds = registerCourseTools(server, bridge, files.indexPending, catalog);
   const exercises = registerExerciseTools(server, bridge);
-  registerLearnTools(server, bridge, exercises);
+  const learn = registerLearnTools(server, bridge, exercises);
   registerPracticeTools(server, bridge, exercises);
   registerSettingsTools(server);
 
@@ -96,6 +96,7 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
       _meta: { ui: { resourceUri: CARDS_URI, visibility: ["app"] } },
     },
     async (r) => {
+      if (r.kind === "step" && r.action === "again") learn.reexplain();
       inbox.splice(0, inbox.length - 4); // ponytail: keep the last few, a stale click is not worth more
       inbox.push(
         r.kind === "answer"
@@ -104,7 +105,7 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
             ? r.action === "next"
               ? "The student understood the last lesson step and pressed Continue. Teach the next small step with teach_step (or, after 2-3 steps, check with one quick question)."
               : r.action === "again"
-                ? "The student did not understand the last lesson step. Explain the same idea differently with teach_step: simpler words, a different example or a figure."
+                ? "The student did not understand the last lesson step and pressed Explain differently. Call teach_step now for the SAME step, rewritten: same topic, simpler words, a different example or a figure. Do not ask a question, do not quiz, do not move on to the next idea."
                 : `The student asked about the last lesson step:\n<question>\n${r.text ?? ""}\n</question>\nAnswer it briefly with teach_step, then wait.`
             : `The student wants to ${r.kind === "learn" ? "learn" : "learn again"} ${r.stageId} · ${r.title}. Call shalav_start_lesson with stageId ${r.stageId} and teach it.`,
       );

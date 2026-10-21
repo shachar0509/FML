@@ -47,6 +47,14 @@ describe("Markdown", () => {
     expect(container.querySelectorAll("blockquote")).toHaveLength(2);
   });
 
+  it("a colour macro written outside math is coloured, not shown raw", () => {
+    const { container } = render(<Markdown>{"1. \\blue{מעבד (CPU)} – מבצע. ו-\\green{זיכרון} `\\pink{x}`"}</Markdown>);
+    expect(container.textContent).not.toMatch(/\\blue|\\green/);
+    expect(container.querySelector(".m-blue")?.textContent).toBe("מעבד (CPU)");
+    expect(container.querySelector(".m-green")?.textContent).toBe("זיכרון");
+    expect(container.querySelector("code")?.textContent).toBe("\\pink{x}"); // code stays literal
+  });
+
   it("dispatches only the five figure tags", () => {
     expect(["mermaid", "plot", "geometry", "wavedrom", "svg", "python"].filter(isFigureTag)).toHaveLength(5);
   });

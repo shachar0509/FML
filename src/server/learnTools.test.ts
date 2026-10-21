@@ -65,6 +65,13 @@ it("runs a lesson: start, questions, events, status, completion, reopen + recap"
   expect(sc(await call("teach_step", { titleMd: "x", bodyMd: "b", progress: { n: 7, of: 5 } }))).toMatchObject({ progress: { n: 5, of: 5 } });
   expect(sc(await call("teach_step", { titleMd: "x", bodyMd: "b", sideMd: "$\\N \\subset \\Z$" }))).toMatchObject({ sideMd: "$\\N \\subset \\Z$" });
   expect(text(await call("teach_step", { titleMd: "x", bodyMd: "word ".repeat(150), sideMd: "note ".repeat(100) }))).toMatch(/too long/); // the side note counts too
+  // "Explain differently": no question until the step is re-taught
+  await call("shalav_request", { kind: "step", action: "again" });
+  const mcq = { stageId: "S001", questionMd: "q", options: ["a", "b"], correctIndex: 0, explanationMd: "", conceptTags: [] };
+  expect(text(await call("present_mcq", mcq))).toMatch(/Explain differently: re-teach the same step/);
+  expect((await call("ask_open_question", { stageId: "S001", questionMd: "q" })).isError).toBe(true);
+  await call("teach_step", { titleMd: "x", bodyMd: "simpler" });
+  expect((await call("present_mcq", mcq)).isError).toBeFalsy();
   expect((await call("teach_step", { titleMd: "x", bodyMd: "b", figure: { kind: "plot", source: "nope" } })).isError).toBe(true);
   expect(text(start)).toContain("shalav_lesson_status");
   expect(text(start)).not.toContain("[START_LESSON]");

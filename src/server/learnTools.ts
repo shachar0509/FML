@@ -94,6 +94,9 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     return { s, n: active.n, stageId: stageId && s.plan.stages.some((x) => x.id === stageId) ? stageId : active.stageId };
   }
   const STEP_CHARS = 900;
+  /** Set by "Explain differently": the next tutor move must be the same step re-taught, not a question. */
+  let reexplain = false;
+  const REEXPLAIN = "The student pressed Explain differently: re-teach the same step first with teach_step (same topic, simpler words or another example or figure). Do not ask a question now.";
   const NO_LESSON = "No lesson is open. Call shalav_start_lesson first.";
 
   registerAppTool(
@@ -159,6 +162,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
 
   const hint = " The card is shown to the student: end your message now and wait for their reply.";
   registerAppTool(server, presentMcq.def.name, { title: "Multiple-choice question", description: presentMcq.def.description + hint, inputSchema: presentMcq.schema, _meta: withCard }, async (i) => {
+    if (reexplain) return fail(REEXPLAIN);
     const c = await ctx(i.stageId);
     if (!c) return fail(NO_LESSON);
     if (i.correctIndex >= i.options.length) return fail("correctIndex is outside options.");
@@ -169,6 +173,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     return out(`Question shown (check id ${checkId}). Never reveal the answer. The student's choice arrives as their next message.`, data);
   });
   registerAppTool(server, askOpenQuestion.def.name, { title: "Open question", description: askOpenQuestion.def.description + hint, inputSchema: askOpenQuestion.schema, _meta: withCard }, async (i) => {
+    if (reexplain) return fail(REEXPLAIN);
     const c = await ctx(i.stageId);
     if (!c) return fail(NO_LESSON);
     const checkId = newId();
@@ -225,6 +230,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
       if ((bodyMd + (sideMd ?? "")).replace(/\\[a-zA-Z]+|[{}$]/g, "").length > STEP_CHARS) return fail(`This step is too long (${bodyMd.length + (sideMd?.length ?? 0)} characters). Teach less at once: split it into smaller steps and send only the first one.`);
       const bad = f && badFigure(f.kind, f.source);
       if (bad) return fail(`${bad} Fix it and call teach_step again.`);
+      reexplain = false;
       const { language, theme } = sets();
       const data: StepData = { view: "step", language, theme, titleMd, bodyMd, figure: f ?? null, sideMd: sideMd?.trim() || null, progress: progress && { n: Math.min(progress.n, progress.of), of: progress.of } };
       return out("Step shown. End your message now (no more text) and wait: the student continues, asks for another explanation, or asks a question.", data);
@@ -232,6 +238,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
   );
 
   registerAppTool(server, assignExercise.def.name, { title: "Exercise", description: assignExercise.def.description + hint, inputSchema: assignExercise.schema, _meta: withCard }, async (i) => {
+    if (reexplain) return fail(REEXPLAIN);
     const c = await ctx(i.stageIds[0]);
     if (!c) return fail(NO_LESSON);
     let ex: Ex | null = i.source === "index" && i.exerciseId ? await resolveExercise(c.n, { source: "index", id: i.exerciseId }) : null;
@@ -337,4 +344,6 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     await appendEvent(number, { type: "stage_reopened", stageId });
     return out("reopened", lessonData((await load(number)) as S, stageId));
   });
+
+  return { reexplain: () => void (reexplain = true) };
 }

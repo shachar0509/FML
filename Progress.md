@@ -396,3 +396,8 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - `\boxed{}` results get a violet frame. Base board styles live in `src/index.css` (desktop renderer too); the notebook flavour in `src/cards/cards.css`.
 - Tutor prompt: a board toolkit (rows, boxes, sideMd, set-builder with `\middle|` + `\substack`, cases, aligned with reasons, `\underbrace` notes, `\boxed` results, tables).
 - Checks: typecheck/lint clean, 125 unit (splitRel incl. escaped braces, rows render, boxes, sideMd + length cap), 30 e2e (the step fixture is the real-numbers board: 4 rows with the "=" at the same x, definition box, sticky note, boxed result; axe AA; he/en, light/dark).
+
+### M20a — fixes: colour commands leaking into text; "Explain differently" answered with a quiz (done; 🧪 pending)
+- Claude wrote `\blue{מעבד (CPU)}` in plain text (outside `$…$`), so the raw command showed. The renderer now turns such stray `\blue{…}` / `\green{…}` / `\pink{…}` / `\orange{…}` in text into coloured words (code and math sources untouched), and the prompt says the colour commands work only inside math, only on symbols; words are stressed with **bold**.
+- "Explain differently" sometimes got a quiz question. The request text is stricter (same step, rewritten, no question), and the server enforces it: after the request, `present_mcq` / `ask_open_question` / `assign_exercise` are refused until Claude calls `teach_step`.
+- Checks: typecheck/lint clean, 126 unit, 30 e2e.

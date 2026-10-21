@@ -48,10 +48,20 @@ const rehypeBoxes = () => (tree: El) => {
         if (!t.value && p.children?.length === 1) n.children = n.children?.filter((c) => c !== p);
       }
     }
+    if (n.tagName === "code" || n.tagName === "pre" || n.tagName === "annotation") return;
+    // A colour macro written outside $…$ (e.g. "\\blue{מעבד}") would show as raw text: colour the words instead.
+    n.children = n.children?.flatMap((c) => {
+      if (c.type !== "text" || !COLOR_RE.test(c.value ?? "")) return [c];
+      return (c.value ?? "").split(COLOR_SPLIT).map((part, i, all): El =>
+        i % 3 === 1 ? { type: "element", tagName: "span", properties: { className: [`m-${part}`] }, children: [{ type: "text", value: all[i + 1] ?? "" }] } : { type: "text", value: i % 3 === 2 ? "" : part },
+      );
+    });
     n.children?.forEach(walk);
   };
   walk(tree);
 };
+const COLOR_RE = /\\(blue|green|pink|orange)\{[^{}]*\}/;
+const COLOR_SPLIT = /\\(blue|green|pink|orange)\{([^{}]*)\}/;
 
 function Blockquote(p: ComponentProps<"blockquote"> & { node?: unknown; "data-box"?: string; "data-title"?: string }) {
   const { t } = useTranslation();

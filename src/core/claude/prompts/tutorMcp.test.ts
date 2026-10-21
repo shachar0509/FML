@@ -18,4 +18,5 @@ it("MCP tutor prompt: show_figure formats, TA lesson flow, no fenced figures", (
   expect(s).toContain("```rows\nטבעיים | \\N = ");
   expect(s).toMatch(/\[!definition\]/);
   expect(s).toMatch(/sideMd/);
+  expect(s).toMatch(/work only inside math/);
 });
