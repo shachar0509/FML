@@ -469,6 +469,7 @@
     },
     "go": "▶️ Continue",
     "pressEnter": "Ready in the message box. Press Enter so Claude continues.",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "prev": "Back to the previous screen"
   }
 }

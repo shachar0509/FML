@@ -1,8 +1,6 @@
 /** Shared card building blocks (one visual language for every view). */
 export const panel = "rounded-card border border-border bg-card shadow-card";
 export const h2 = "text-base font-semibold";
-export const backLink =
-  "self-start rounded text-sm text-primary hover:underline focus-visible:outline-2 focus-visible:outline-primary";
 
 export const Bar = ({
   pct,

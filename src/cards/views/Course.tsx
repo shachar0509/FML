@@ -2,7 +2,7 @@ import { useState } from "react";
 import { BookOpen, Check, ChevronDown, Circle, Contrast, Dumbbell, Lock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
-import { Bar, Ring, backLink, h2, panel } from "../ui";
+import { Bar, Ring, h2, panel } from "../ui";
 import type { CourseData, Stage, Go } from "../types";
 import { Checklist } from "./Checklist";
 import { Files } from "./Files";
@@ -34,17 +34,15 @@ export function Course({
   callTool,
   go,
   reload,
-  back,
   practice,
 }: {
   data: CourseData;
   callTool: Tool;
   go: Go;
   reload: () => void;
-  back: () => void;
   practice: () => void;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [sel, setSel] = useState<string | null>(null);
   const running = data.build?.state === "running";
@@ -59,9 +57,6 @@ export function Course({
 
   return (
     <section className="flex flex-col gap-5" aria-label={data.name}>
-      <button className={backLink} onClick={back}>
-        {i18n.dir() === "rtl" ? "→" : "←"} {t("course.back")}
-      </button>
       <header className={`${panel} flex items-center gap-4 p-4`}>
         {data.hasPlan && <Ring pct={data.pct} />}
         <div className="flex min-w-0 flex-1 flex-col gap-1">

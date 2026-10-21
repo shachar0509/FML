@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { CornerDownLeft, GraduationCap, Pin, PinOff, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, CornerDownLeft, GraduationCap, Pin, PinOff, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { applyLanguage, applyTheme } from "@/core/lib/dom";
 import { AddCourse } from "./views/AddCourse";
@@ -23,11 +23,14 @@ export function Cards({ host }: { host: Host }) {
   const pinned = mode === "pip";
   const togglePin = async () =>
     setMode(await displayMode(pinned ? "inline" : "pip").catch(() => mode));
-  // Card-side navigation (open a course, add a course) sits on top of what the model last rendered.
-  // A new model result (data) replaces the card-side view.
-  const [navState, setNavState] = useState<{ on: CardData | null; v: CardData } | null>(null);
-  const setNav = (v: CardData) => setNavState({ on: data, v });
-  const shown = navState && navState.on === data ? navState.v : data;
+  // Card-side navigation is a history on top of what the model last rendered (h[0]);
+  // a new model result (data) starts a new history. Back pops it, or opens the screen above (course, home).
+  const [nav, setNavState] = useState<{ on: CardData | null; h: CardData[] } | null>(null);
+  const h = nav && nav.on === data ? nav.h : data ? [data] : [];
+  const shown = h.at(-1) ?? null;
+  const push = (v: CardData, replace = false) =>
+    setNavState({ on: data, h: [...(replace ? h.slice(0, -1) : h), v] });
+  const setNav = (v: CardData) => push(v);
   const language = data?.language ?? (ctx.locale?.startsWith("en") ? "en" : "he");
   // Host theme wins; the setting only applies when the host says nothing.
   const theme =
@@ -42,15 +45,20 @@ export function Cards({ host }: { host: Host }) {
   }, [asked, clearAsked]);
   useEffect(() => clearAsked(), [data, clearAsked]);
 
-  const go = useCallback(
-    async (name: string, args?: Record<string, unknown>) => {
-      const r = (await callTool(name, args)).structuredContent as CardData | undefined;
-      if (r && "view" in r) setNavState({ on: data, v: r });
-    },
-    [callTool, data],
-  );
+  const go = async (name: string, args?: Record<string, unknown>, replace = false) => {
+    const r = (await callTool(name, args)).structuredContent as CardData | undefined;
+    if (r && "view" in r) push(r, replace);
+  };
   const home = () => void go("shalav_home");
-  const open = (n: string) => void go("shalav_course", { number: n });
+  const open = (n: string, replace = false) => void go("shalav_course", { number: n }, replace);
+  // The screen above the current one when there is no history: a course's parts → the course, the rest → home.
+  const up =
+    !shown || shown.view === "home"
+      ? null
+      : "number" in shown && shown.view !== "course"
+        ? () => open(shown.number, true)
+        : () => void go("shalav_home", undefined, true);
+  const back = h.length > 1 ? () => setNavState({ on: data, h: h.slice(0, -1) }) : up;
 
   const view = () => {
     if (!shown || !data)
@@ -62,7 +70,7 @@ export function Cards({ host }: { host: Host }) {
       );
     if (shown.view === "add")
       return (
-        <AddCourse example={shown.example} callTool={callTool} go={ask} open={open} back={home} />
+        <AddCourse example={shown.example} callTool={callTool} go={ask} open={(n) => open(n, true)} back={back ?? home} />
       );
     if (shown.view === "course")
       return (
@@ -70,14 +78,13 @@ export function Cards({ host }: { host: Host }) {
           data={shown}
           callTool={callTool}
           go={ask}
-          reload={() => open(shown.number)}
-          back={home}
+          reload={() => open(shown.number, true)}
           practice={() => void go("shalav_practice", { courseNumber: shown.number })}
         />
       );
     if (shown.view === "practice")
-      return <Practice data={shown} callTool={callTool} go={ask} back={() => open(shown.number)} />;
-    if (shown.view === "settings") return <Settings data={shown} callTool={callTool} back={home} />;
+      return <Practice data={shown} callTool={callTool} go={ask} />;
+    if (shown.view === "settings") return <Settings data={shown} callTool={callTool} />;
     if (shown.view === "lesson") return <Lesson data={shown} callTool={callTool} go={ask} />;
     if (shown.view === "mcq") return <Mcq data={shown} callTool={callTool} go={ask} />;
     if (shown.view === "exercise") return <Exercise data={shown} callTool={callTool} go={ask} />;
@@ -99,6 +106,16 @@ export function Cards({ host }: { host: Host }) {
   return (
     <div className="cards mx-auto flex max-w-3xl flex-col">
       <header className="sticky top-0 z-10 flex items-center gap-2 bg-bg px-4 pt-3 pb-2">
+        {back && (
+          <button
+            className="grid size-8 place-items-center rounded-full text-muted transition-colors hover:bg-border/60 hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
+            aria-label={t("mcp.prev")}
+            title={t("mcp.prev")}
+            onClick={back}
+          >
+            <ArrowLeft className="size-5 rtl:rotate-180" aria-hidden />
+          </button>
+        )}
         <span
           className="grid size-6 place-items-center rounded-md bg-primary text-primary-fg"
           aria-hidden

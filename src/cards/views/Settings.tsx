@@ -33,11 +33,9 @@ const DEFAULTS: L = {
 export function Settings({
   data,
   callTool,
-  back,
 }: {
   data: SettingsData;
   callTool: Tool;
-  back: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const [d, setD] = useState(data);
@@ -48,12 +46,7 @@ export function Settings({
   const set = (patch: Partial<L>) => void save({ learning: { ...d.learning, ...patch } });
   return (
     <section className="flex flex-col gap-4" aria-label={t("mcp.settings.title")}>
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-bold">{t("mcp.settings.title")}</h1>
-        <Button variant="outline" size="sm" onClick={back}>
-          {t("mcp.back")}
-        </Button>
-      </div>
+      <h1 className="text-xl font-bold">{t("mcp.settings.title")}</h1>
       <div className={`${panel} flex flex-wrap items-center justify-between gap-3 p-4`}>
         <span className="font-medium">{t("settings.general.language")}</span>
         <div role="group" aria-label={t("settings.general.language")} className="flex gap-2">

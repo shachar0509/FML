@@ -335,3 +335,8 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - Fix: `function-plot` default-export interop (the plot threw "functionPlot is not a function" under Vite dev).
 - Checks: typecheck/lint clean, 123 unit, 29 e2e (the lesson e2e now covers the figure card, he/en, light/dark, axe).
 - 🧪 Claude Desktop: start a lesson → does Claude draw figures, ask MCQs, then assign a notebook exercise, and after grading go over the mistakes?
+
+### M16a — Back arrow at the top of every card (done; 🧪 pending)
+- The sticky card header has a back arrow (→ in Hebrew, ← in English) on every screen except the home list. It goes back through the screens opened inside the card; with no history it goes up (lesson/exercise/practice → the course, course/settings/add/questions/figures → home).
+- The in-view back links (course, practice, settings) are gone; a course reload or a finished plan build replaces the screen instead of adding history.
+- Checks: typecheck/lint clean, 123 unit, 30 e2e (new back-navigation test).

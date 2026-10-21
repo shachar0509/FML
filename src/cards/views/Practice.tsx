@@ -5,7 +5,7 @@ import { Button } from "@/core/components/ui/button";
 import { Markdown } from "@/core/render/Markdown";
 import type { PracticeData, Go } from "../types";
 import { Exercise } from "./Exercise";
-import { Skeleton, backLink, panel } from "../ui";
+import { Skeleton, panel } from "../ui";
 
 type Tool = (
   name: string,
@@ -19,12 +19,10 @@ export function Practice({
   data,
   callTool,
   go,
-  back,
 }: {
   data: PracticeData;
   callTool: Tool;
   go: Go;
-  back: () => void;
 }) {
   const { t } = useTranslation();
   const [d, setD] = useState(data);
@@ -71,9 +69,6 @@ export function Practice({
 
   return (
     <section className="flex flex-col gap-4" aria-label={t("nav.practice")}>
-      <button className={backLink} onClick={back}>
-        {t("practice.back")}
-      </button>
       {d.error && (
         <p className="text-sm text-danger" role="alert">
           {t(d.error, { defaultValue: d.error })}{" "}
