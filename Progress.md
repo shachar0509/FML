@@ -16,7 +16,7 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - [x] M8. Exercises and grading — DONE (see M-log; 🧪 check pending)
 - [x] M9. Practice — DONE (see M-log; 🧪 check pending)
 - [x] M10. Settings and context — DONE (see M-log)
-- [ ] M11. Packaging (MCPB) and docs (🧪)
+- [x] M11. Packaging (MCPB) and docs — DONE (see M-log; 🧪 install check pending)
 - [ ] M12. Cleanup (delete Tauri/sync/API code, move to src/core)
 - [ ] M13. Hardening + acceptance checklist v2
 
@@ -111,6 +111,16 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - Tests: `settingsTools.test.ts` (conflict-name table; settings round trip incl. out-of-range rejection; a conflicted events file is ignored and listed; `shalav_context` + unknown course); e2e settings card he/en × light/dark (axe, screenshot inspected). 174 unit + 34 e2e; typecheck/lint clean; cards 1.79 MB.
 - Not done / known: the language button changes the setting but the open card keeps its language until the next card; the data folder comes from MCPB `user_config` in M11 (until then `dataRoot` is the settings.json value); only data files (json/jsonl/md) are scanned for conflicts.
 - Next: M11 — Packaging (MCPB) and docs (🧪).
+
+### M11 — Packaging (MCPB) and docs (done; 🧪 pending)
+- `mcpb/manifest.json` (manifest 0.3; node server `server/server.mjs`; `user_config` `data_folder` (directory, default `${DOCUMENTS}/Shalav`) and `language` (he/en) passed as env `SHALAV_DATA_FOLDER` / `SHALAV_LANGUAGE`; platforms darwin + win32), `mcpb/icon.png` (512 px, copy of the placeholder Tauri icon). `initNode` applies the env: the folder always wins, the language only seeds the first run (settings.json absent); unresolved `${...}` values are ignored.
+- `pnpm pack:mcpb` (`scripts/pack-mcpb.mjs`): builds cards + server, stages `build/mcpb/` (manifest, icon, `server/{server.mjs,cards.html,pdf.worker.mjs,standard_fonts/}`, `@napi-rs/canvas` + darwin-arm64/x64 + win32-x64 binaries), `mcpb validate`, `mcpb pack` → `dist/shalav.mcpb` (41 MB). `pnpm smoke:mcpb` unpacks it and talks over stdio (44 tools, Home card, cards resource, data folder env). `@anthropic-ai/mcpb` 2.1.2 is a dev dependency; `pnpm-workspace.yaml` `supportedArchitectures` installs all OS canvas binaries (run `CI=true pnpm install` after changing it).
+- Bundle fixes found while packing: pdfjs needs `pdf.worker.mjs` next to `server.mjs`, and `standard_fonts/` (`SHALAV_PDF_FONTS`, set by `main.ts`) for PDFs without embedded fonts. Verified by hand: a PDF page's text and a JPEG render work from the unpacked bundle with the canvas native module.
+- `.github/workflows/release.yml` rewritten (tag `v*`: install, typecheck, test, pack, smoke, attach `shalav.mcpb`; never run). README, INSTALL.en.md, INSTALL.he.md rewritten for v2. eslint ignores `build`, node globals for `scripts/`.
+- Tests: `node.test.ts` env test (folder override, first-run language, `${...}` ignored); 175 unit pass, typecheck/lint clean.
+- 🧪 **User check in Claude Desktop** (on `dist/shalav.mcpb`: run `pnpm pack:mcpb`, or the release asset): double-click it and press Install; the settings dialog asks for a data folder and language and does NOT ask for an API key; type "Shalav" or pick the prompt "Shalav: my courses": the Home card opens (Hebrew, RTL). Then do the pending checks M4–M10 listed above (Add course 01040195, files, Learn, exercise, Practice, Settings). Also report whether Claude Desktop warns about an unsigned extension, and whether the data folder you chose was created. Windows: same install on a Windows machine, not tested.
+- Not done / not verified: install on a clean macOS user and on Windows; `pnpm pack:mcpb` on Linux CI (the workflow is untested); the `.mcpb` is unsigned; the icon is a placeholder; manifest `language` is a free string (no enum support in `user_config`).
+- Next: M12 — Cleanup (delete Tauri/sync/API code, move to src/core).
 
 ## Phase 1 — Desktop app (v1, frozen)
 

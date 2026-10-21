@@ -14,6 +14,8 @@
     "tauri": "tauri",
     "build:cards": "vite build -c vite.cards.config.ts",
     "build:server": "node scripts/build-server.mjs",
+    "pack:mcpb": "node scripts/pack-mcpb.mjs",
+    "smoke:mcpb": "node scripts/smoke-mcpb.mjs",
     "mcp:dev": "pnpm build:cards && pnpm build:server && npx @modelcontextprotocol/inspector node dist/server.mjs"
   },
   "dependencies": {
@@ -65,6 +67,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@anthropic-ai/mcpb": "2.1.2",
     "@axe-core/playwright": "^4.14.0",
     "@eslint/js": "^10.0.1",
     "@modelcontextprotocol/client": "2.3.1",

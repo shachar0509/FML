@@ -6,6 +6,7 @@ import { setFs } from "@/lib/fs/fs";
 import { nodeDirs } from "@/lib/platform";
 import { ensureDataRoot, ensureDevice } from "@/lib/firstRun";
 import { setDeviceId } from "@/lib/device";
+import { readJson } from "@/lib/storage";
 import { useSettings } from "@/stores/settings";
 import { enableNodeCanvas } from "./canvas";
 import { nodeFs } from "./nodeFs";
@@ -25,7 +26,14 @@ export async function initNode(): Promise<{ deviceId: string; dataRoot: string }
   enableNodeCanvas();
   const dirs = appDirs();
   Object.assign(nodeDirs, dirs);
+  const firstRun = (await readJson("settings.json")) === undefined;
   await useSettings.getState().load();
+  // MCPB user_config arrives as env (manifest.json). The folder always wins; the language only seeds the first run, after that the settings card owns it.
+  const env = (k: string) => { const v = process.env[k]?.trim(); return v && !v.includes("${") ? v : undefined; };
+  const { settings } = useSettings.getState();
+  const lang = env("SHALAV_LANGUAGE");
+  useSettings.setState({ settings: { ...settings, dataRoot: env("SHALAV_DATA_FOLDER") ?? settings.dataRoot, ...(firstRun && (lang === "he" || lang === "en") ? { language: lang } : {}) } });
+  if (firstRun) useSettings.getState().update({});
   const deviceId = await ensureDevice(dirs.config);
   setDeviceId(deviceId);
   const dataRoot = useSettings.getState().settings.dataRoot;

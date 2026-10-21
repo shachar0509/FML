@@ -1,2 +1,6 @@
 allowBuilds:
   esbuild: true
+# install the @napi-rs/canvas binaries of every OS we ship in the .mcpb
+supportedArchitectures:
+  os: [current, darwin, win32]
+  cpu: [current, arm64, x64]

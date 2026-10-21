@@ -1,3 +1,4 @@
+import { copyFile, cp } from "node:fs/promises";
 import { build } from "esbuild";
 
 await build({
@@ -12,3 +13,7 @@ await build({
   banner: { js: "import { createRequire as __cr } from 'node:module'; const require = __cr(import.meta.url);" },
   logLevel: "info",
 });
+
+await cp("node_modules/pdfjs-dist/standard_fonts", "dist/standard_fonts", { recursive: true });
+// pdfjs (legacy build) imports its worker next to the file that bundles it.
+await copyFile("node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs", "dist/pdf.worker.mjs");

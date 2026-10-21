@@ -18,7 +18,9 @@ const pdfjs = async () => {
 export async function openPdf(data: Uint8Array): Promise<PDFDocumentProxy> {
   const m = await pdfjs();
   try {
-    const doc = await m.getDocument({ data: data.slice() }).promise; // pdfjs transfers the buffer
+    // Node: the server points SHALAV_PDF_FONTS at the bundled standard_fonts/ (for PDFs that do not embed Helvetica/Times).
+    const fonts = typeof document === "undefined" ? process.env.SHALAV_PDF_FONTS : undefined;
+    const doc = await m.getDocument({ data: data.slice(), ...(fonts ? { standardFontDataUrl: fonts } : {}) }).promise; // pdfjs transfers the buffer
     if (doc.numPages > MAX_PAGES) {
       const n = doc.numPages;
       void doc.loadingTask.destroy();

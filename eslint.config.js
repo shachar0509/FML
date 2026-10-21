@@ -4,9 +4,10 @@ import reactHooks from "eslint-plugin-react-hooks";
 import globals from "globals";
 
 export default tseslint.config(
-  { ignores: ["dist", "src-tauri", "node_modules"] },
+  { ignores: ["dist", "build", "src-tauri", "node_modules"] },
   js.configs.recommended,
   ...tseslint.configs.strict,
+  { files: ["scripts/**/*.mjs"], languageOptions: { globals: globals.node } },
   {
     files: ["**/*.{ts,tsx}"],
     languageOptions: { globals: globals.browser },

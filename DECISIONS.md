@@ -120,3 +120,9 @@
 - `shalav_context` takes no stage-state from the lesson: stageId defaults to `progress.currentStageId`; the boundary is the v1 function unchanged. A bare call with several courses asks which one.
 - Conflict copies are detected by file name only (json/jsonl/md); a copy is never merged or deleted by Shalav, only ignored by `readJsonlDir` and listed in the settings card.
 - The settings card does not edit the data folder (plan §6.8); the other v1 settings fields (models, usage, sync) stay in the schema, ignored.
+
+## M11
+- MCPB manifest version 0.3 (the validated schema in `@anthropic-ai/mcpb` 2.1.2). The `language` user_config is a free string (the schema has no enum); `initNode` accepts only `he`/`en` and uses it for the first run only, so the settings card stays the owner afterwards. `data_folder` always wins over a saved `dataRoot` (it is the user's explicit extension setting).
+- Only darwin-arm64, darwin-x64 and win32-x64 canvas binaries ship (plan §10); Windows on ARM and Linux are out of `compatibility.platforms`. Binaries come from `pnpm-workspace.yaml` `supportedArchitectures`, so one Linux CI runner builds the whole package.
+- The .mcpb is unsigned (no certificate); `pdf.worker.mjs` and `standard_fonts/` sit next to `server.mjs` because pdfjs resolves them relative to the file that bundles it.
+- Claude Code install is documented as clone + build + `claude mcp add`, since there is no published npm package.

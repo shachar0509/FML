@@ -1,24 +1,25 @@
-<div dir="rtl">
+# התקנת שלב
 
-# התקנת שלב (Shalav)
+שלב היא תוסף ל-**Claude Desktop** (macOS או Windows). היא משתמשת במנוי Claude שלך: אין מפתח API ואין עלות נוספת.
 
-## Windows
-1. הורידו את הקובץ `Shalav_<גרסה>_x64-setup.exe` מדף ההוצאה (Release).
-2. הריצו אותו. אם מופיעה ההודעה "Windows protected your PC", לחצו **More info** ואז **Run anyway**.
-3. התוכנה מותקנת עבור המשתמש שלכם (בלי הרשאות מנהל) ונפתחת.
-
-## macOS
-1. הורידו את הקובץ `Shalav_<גרסה>_universal.dmg`.
-2. פתחו אותו וגררו את Shalav לתיקיית Applications, ואז פתחו את Shalav.
-3. כש-macOS מודיעה שאינה יכולה לאמת את התוכנה, לחצו **Done**. פתחו **System Settings ← Privacy & Security**, גללו להודעה על Shalav, לחצו **Open Anyway** ואשרו. צריך לעשות זאת פעם אחת בלבד.
-
-## הפעלה ראשונה
-1. בחרו שפה.
-2. צרו מפתח API של Anthropic בכתובת console.anthropic.com (Settings ← API keys), והגדירו שם תקרת הוצאה חודשית (Settings ← Limits). הדביקו את המפתח בשלב ולחצו **בדיקת מפתח**. המפתח נשמר רק בכספת המערכת.
-3. בחרו היכן תישמר תיקיית הנתונים.
-4. סנכרון עם Google Drive הוא אופציונלי, ואפשר לחבר אותו אחר כך בהגדרות ← סנכרון.
+1. התקינו את [Claude Desktop](https://claude.ai/download) והתחברו.
+2. הורידו את `shalav.mcpb` מעמוד ה-release האחרון.
+3. לחצו עליו פעמיים (או גררו אותו אל Claude Desktop ← Settings ← Extensions) ולחצו **Install**.
+4. בחרו את **תיקיית הנתונים** (ברירת מחדל `Documents/Shalav`) ואת השפה, והפעילו את התוסף.
+   - כדי לעבוד משני מחשבים, שימו את תיקיית הנתונים בתוך Google Drive / OneDrive / iCloud Drive לשולחן העבודה ובחרו את אותה תיקייה בשניהם.
+5. בכל שיחה כתבו **שלב**, או בחרו **Shalav ← My courses** מתפריט ה-prompts (כפתור **+**). כרטיס הבית ייפתח בשיחה.
 
 ## עדכונים
-התוכנה מתעדכנת מעצמה. כשיש גרסה חדשה, לחצו **עדכון והפעלה מחדש**.
+הורידו `shalav.mcpb` חדש והתקינו מעל הישן. תיקיית הנתונים לא נפגעת.
 
-</div>
+## Claude Code (אופציונלי)
+```bash
+git clone <repo> && cd <repo> && pnpm install && pnpm build:cards && pnpm build:server
+claude mcp add shalav -- node "$PWD/dist/server.mjs"
+```
+המשתנה `SHALAV_DATA_FOLDER` קובע את תיקיית הנתונים.
+
+## פתרון בעיות
+- **הכרטיס לא מופיע:** עדכנו את Claude Desktop וודאו שהתוסף מופעל (Settings ← Extensions).
+- **Claude לא ממשיך אחרי לחיצה בכרטיס:** כתבו "המשך" בשיחה.
+- **קונפליקטי סנכרון:** קובץ כמו `name (1).jsonl` או "(conflicted copy)" מתעלמים ממנו, והוא מופיע בכרטיס ההגדרות של שלב. מחקו אותו אחרי שבדקתם שלא חסר מידע.

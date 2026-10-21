@@ -111,3 +111,20 @@ describe("initNode", () => {
     expect((await initNode()).deviceId).toBe(r.deviceId);
   });
 });
+
+describe("MCPB user_config env", () => {
+  it("data folder overrides, language seeds only the first run, unresolved ${...} is ignored", async () => {
+    const { initNode } = await import("./platform");
+    const { useSettings } = await import("@/stores/settings");
+    Object.assign(process.env, { SHALAV_CONFIG_DIR: join(dir, "c3"), SHALAV_DATA_FOLDER: join(dir, "mine"), SHALAV_LANGUAGE: "en" });
+    expect((await initNode()).dataRoot).toBe(join(dir, "mine"));
+    expect(useSettings.getState().settings.language).toBe("en");
+    useSettings.getState().update({ language: "he" });
+    await new Promise((r) => setTimeout(r, 100)); // update() persists without awaiting
+    Object.assign(process.env, { SHALAV_DATA_FOLDER: "${user_config.data_folder}", SHALAV_LANGUAGE: "en" });
+    expect((await initNode()).dataRoot).toBe(join(dir, "mine")); // saved value kept
+    expect(useSettings.getState().settings.language).toBe("he");
+    delete process.env.SHALAV_DATA_FOLDER;
+    delete process.env.SHALAV_LANGUAGE;
+  });
+});

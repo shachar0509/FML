@@ -1,0 +1,44 @@
+{
+  "manifest_version": "0.3",
+  "name": "shalav",
+  "display_name": "Shalav (שלב)",
+  "version": "2.0.0",
+  "description": "Technion study tutor inside Claude Desktop: course plans, lessons, exercises and practice with your Claude subscription. No API key.",
+  "long_description": "Shalav turns Claude into a step-by-step tutor for Technion courses. Add a course by its number, upload lecture notes and past exercises, and learn stage by stage with interactive cards, graded exercises and spaced practice. Your data stays in a folder on your computer.",
+  "author": { "name": "Shalav" },
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "server/server.mjs",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/server.mjs"],
+      "env": {
+        "SHALAV_DATA_FOLDER": "${user_config.data_folder}",
+        "SHALAV_LANGUAGE": "${user_config.language}"
+      }
+    }
+  },
+  "tools_generated": true,
+  "prompts_generated": true,
+  "user_config": {
+    "data_folder": {
+      "type": "directory",
+      "title": "Data folder",
+      "description": "Where Shalav keeps your courses and progress. Put it inside Google Drive / OneDrive / iCloud to sync between computers.",
+      "default": "${DOCUMENTS}/Shalav",
+      "required": false
+    },
+    "language": {
+      "type": "string",
+      "title": "Language (he or en)",
+      "description": "Interface and tutoring language on first run: he (Hebrew) or en (English). Changeable later in the Shalav settings card.",
+      "default": "he",
+      "required": false
+    }
+  },
+  "compatibility": {
+    "platforms": ["darwin", "win32"],
+    "runtimes": { "node": ">=22.0.0" }
+  }
+}

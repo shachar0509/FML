@@ -1,47 +1,27 @@
-# Shalav
+# Shalav (שלב)
 
-Study app for Technion courses. **Transitioning (v2) from a Tauri desktop app to an MCP connector for Claude Desktop**: see `Shalav — MCP Connector Transition Plan v2.md`. The instructions below describe the v1 desktop build and will be rewritten in step M11. v1 spec: `Shalav — Product & Technical Specification v1.md`. Progress log: `Progress.md`.
+Study tutor for Technion courses, delivered as a **local MCP connector for Claude Desktop**. Students install `shalav.mcpb`; their own Claude subscription does the AI work (no API key, no cost to us). Cards inside the chat (MCP Apps) show the plan, lessons, exercises and practice.
 
-## 1. Prerequisites
-Rust stable, Node 22, pnpm. macOS: Xcode Command Line Tools. Windows: Visual Studio Build Tools (C++) and WebView2.
+- Install and use: [INSTALL.en.md](INSTALL.en.md) · [INSTALL.he.md](INSTALL.he.md)
+- Design: `Shalav — MCP Connector Transition Plan v2.md` (v1 spec `Shalav — Product & Technical Specification v1.md` stays normative where v2 is silent)
+- Progress and decisions: `Progress.md`, `DECISIONS.md`
+- The old Tauri desktop app is frozen at git tag `desktop-v1-final`.
 
-## 2. Develop
+## Develop
+Node 22 and pnpm.
 ```bash
 pnpm install
-pnpm tauri dev      # desktop app (needs Rust)
-pnpm dev            # UI only in a browser, http://localhost:1420 (no keychain/files/sync)
-pnpm test           # vitest, no network
-(cd src-tauri && cargo test)
+pnpm test            # vitest, no network
+pnpm e2e             # Playwright against the card bundle in a fake host (needs: pnpm exec playwright install chromium)
+pnpm typecheck && pnpm lint
+pnpm mcp:dev         # build cards + server, open the MCP Inspector
+pnpm pack:mcpb       # -> dist/shalav.mcpb
+pnpm smoke:mcpb      # unpack it and talk to it over stdio
 ```
-Optional `.env.local`:
-```
-VITE_GOOGLE_CLIENT_ID=...
-VITE_GOOGLE_CLIENT_SECRET=...
-VITE_SHALAV_DEV_MODEL=claude-haiku-5-5   # use one cheap model for every task
-```
-Without the Google variables the Sync UI is hidden.
+Env overrides: `SHALAV_DATA_FOLDER`, `SHALAV_LANGUAGE` (first run), `SHALAV_CONFIG_DIR`, `SHALAV_CACHE_DIR`, `SHALAV_DOCUMENTS_DIR`, `SHALAV_CARDS_HTML`.
 
-## 3. Google Cloud setup (free)
-1. Create a project and enable the **Google Drive API**.
-2. OAuth consent screen: **External**, app name Shalav, support email, scopes `drive.file`, `openid`, `email`.
-3. Publish the app to **In production**. These scopes are non-sensitive, so no verification review is needed. In Testing mode refresh tokens expire after 7 days and only test users can sign in.
-4. Create an OAuth client of type **Desktop app**; put the id and secret in `.env.local` and in the GitHub secrets.
+## Layout
+`src/server/` MCP server, tools and Host Bridge · `src/cards/` the single-file card UI · `src/domain/`, `src/claude/`, `src/lib/` shared logic from v1 · `mcpb/` manifest and icon · `scripts/` build and pack.
 
-## 4. Updater keys
-```bash
-pnpm tauri signer generate -w ~/.tauri/shalav.key
-```
-Store the private key and its password as GitHub secrets `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Put the public key in `src-tauri/tauri.conf.json` (`plugins.updater.pubkey`). Replace `<owner>/<repo>` in the updater endpoint and in `capabilities/default.json`.
-
-## 5. Icons
-`pnpm tauri icon path/to/1024px-source.png` (the current icons are placeholders).
-
-## 6. Pricing
-Fill `src/claude/pricing.json` from Anthropic's pricing page (until then the Usage tab shows tokens only).
-
-## 7. Release
-```bash
-pnpm version <x.y.z>      # bumps package.json and tags
-git push && git push --tags
-```
-CI (`.github/workflows/release.yml`) tests, builds the universal `.dmg` and the Windows NSIS `.exe`, and publishes them with `latest.json` to GitHub Releases. Required secrets: `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, `VITE_GOOGLE_CLIENT_ID`, `VITE_GOOGLE_CLIENT_SECRET`. Friends get one link: the release page. See `INSTALL.en.md` / `INSTALL.he.md`.
+## Release
+Push a tag `vX.Y.Z`: `.github/workflows/release.yml` tests, runs `pnpm pack:mcpb` + `pnpm smoke:mcpb`, and attaches `shalav.mcpb` to the GitHub release. The `.mcpb` bundles the macOS (arm64, x64) and Windows (x64) canvas binaries; it is unsigned, so Claude Desktop may show an "unverified extension" notice.

@@ -4,17 +4,9 @@ on:
     tags: ["v*"]
 jobs:
   release:
+    runs-on: ubuntu-latest
     permissions:
       contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-latest
-            args: --target universal-apple-darwin
-          - os: windows-latest
-            args: ""
-    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -22,24 +14,13 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
-      - uses: swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
+      # supportedArchitectures (pnpm-workspace.yaml) installs the macOS and Windows canvas binaries on this Linux runner
       - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
       - run: pnpm test
-      - uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
-          VITE_GOOGLE_CLIENT_SECRET: ${{ secrets.VITE_GOOGLE_CLIENT_SECRET }}
+      - run: pnpm pack:mcpb
+      - run: pnpm smoke:mcpb
+      - uses: softprops/action-gh-release@v2
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "Shalav ${{ github.ref_name }}"
-          releaseDraft: false
-          includeUpdaterJson: true
-          args: ${{ matrix.args }}
+          name: "Shalav ${{ github.ref_name }}"
+          files: dist/shalav.mcpb
