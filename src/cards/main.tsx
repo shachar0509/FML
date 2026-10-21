@@ -1,7 +1,5 @@
-import "@fontsource/heebo/400.css";
-import "@fontsource/heebo/500.css";
-import "@fontsource/heebo/700.css";
 import "@/index.css";
+import "./cards.css";
 import "@/core/i18n";
 import { createRoot } from "react-dom/client";
 import { Cards } from "./Cards";

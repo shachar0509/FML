@@ -3,9 +3,9 @@ import { Markdown } from "@/core/render/Markdown";
 import type { FigureData } from "../types";
 import { panel } from "../ui";
 
-export function FigureCard({ data }: { data: FigureData }) {
+export function FigureCard({ data, bare }: { data: FigureData; bare?: boolean }) {
   return (
-    <figure className={`${panel} flex flex-col gap-2 p-4`}>
+    <figure className={`${bare ? "" : `${panel} p-4`} flex flex-col gap-2`}>
       <div dir="ltr">
         <Figure tag={data.kind} source={data.source} />
       </div>

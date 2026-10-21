@@ -17,6 +17,7 @@
     "mcp:dev": "pnpm build:cards && pnpm build:server && npx @modelcontextprotocol/inspector node dist/server.mjs"
   },
   "dependencies": {
+    "@fontsource-variable/rubik": "^5.3.0",
     "@fontsource/heebo": "^5.3.0",
     "@modelcontextprotocol/core": "2.3.1",
     "@modelcontextprotocol/ext-apps": "2.0.3",

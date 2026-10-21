@@ -37,26 +37,22 @@ export function Lesson({ data, callTool, go }: { data: LessonData; callTool: Too
 
   return (
     <section className="flex flex-col gap-4" aria-label={d.title}>
-      <header className={`${panel} flex flex-col gap-3 p-4`}>
-        <div className="flex flex-col gap-1">
+      <header className="hero flex flex-col gap-4 p-5">
+        <div className="flex flex-col gap-1.5">
           <span
-            className="self-start rounded-full bg-primary/10 px-2 py-0.5 font-mono text-xs font-medium text-primary"
+            className="self-start rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-semibold tabular-nums"
             dir="ltr"
           >
             {d.stageId}
           </span>
-          <h1 className="text-xl font-bold">{d.title}</h1>
+          <h1 className="text-2xl leading-snug font-bold">{d.title}</h1>
         </div>
         <div className="flex flex-col gap-1.5">
           <div className="flex justify-between text-sm">
-            <span className="text-muted">{t("learn.mastery")}</span>
+            <span className="text-white/85">{t("learn.mastery")}</span>
             <span className="font-semibold tabular-nums">{d.mastery}%</span>
           </div>
-          <Bar
-            pct={d.mastery}
-            label={t("learn.mastery")}
-            tone={done ? "bg-success" : "bg-primary"}
-          />
+          <Bar pct={d.mastery} label={t("learn.mastery")} tone="bg-white" track="bg-white/25" />
         </div>
       </header>
       <div className={`${panel} p-4`}>

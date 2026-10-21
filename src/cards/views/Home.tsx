@@ -5,6 +5,10 @@ import { UNIVERSITIES, UNIVERSITY_IDS, type UniversityId } from "@/core/universi
 import type { HomeData } from "../types";
 import { Bar, panel } from "../ui";
 
+/** Each course keeps one colour (from its number) so the student can spot it at a glance. */
+const TINTS = ["bg-[var(--m-blue)]", "bg-[var(--m-green)]", "bg-[var(--m-pink)]", "bg-[var(--m-orange)]", "bg-primary"];
+const tint = (n: string) => TINTS[[...n].reduce((a, c) => a + c.charCodeAt(0), 0) % TINTS.length];
+
 function PickUniversity({ choose }: { choose: (id: UniversityId) => void }) {
   const { t, i18n } = useTranslation();
   const he = i18n.language.startsWith("he");
@@ -57,7 +61,7 @@ export function Home({
   return (
     <section className="flex flex-col gap-4" aria-label={t("screens.home")}>
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-bold">{t("screens.home")}</h1>
+        <h1 className="text-2xl font-bold">{t("screens.home")}</h1>
         <div className="flex gap-2">
           <Button
             variant="outline"
@@ -92,8 +96,14 @@ export function Home({
         {data.courses.map((c) => (
           <li
             key={c.number}
-            className={`${panel} flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-5`}
+            className={`${panel} flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4`}
           >
+            <span
+              className={`hidden size-12 shrink-0 place-items-center rounded-2xl text-xl font-bold text-white sm:grid dark:text-[var(--bg)] ${tint(c.number)}`}
+              aria-hidden
+            >
+              {[...c.name.trim()][0]}
+            </span>
             <div className="flex min-w-0 flex-1 flex-col gap-2">
               <div className="flex items-baseline justify-between gap-3">
                 <p className="truncate font-semibold">{c.name}</p>

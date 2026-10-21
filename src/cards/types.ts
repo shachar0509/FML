@@ -68,7 +68,7 @@ export type OpenData = Base & { view: "open"; checkId: string; questionMd: strin
 /** A drawing the tutor shows in the chat (show_figure). */
 export type FigureData = Base & { view: "figure"; kind: "plot" | "geometry" | "svg"; source: string; captionMd: string };
 /** One small lesson step (teach_step). */
-export type StepData = Base & { view: "step"; titleMd: string; bodyMd: string; figure: Omit<FigureData, keyof Base | "view"> | null };
+export type StepData = Base & { view: "step"; titleMd: string; bodyMd: string; figure: Omit<FigureData, keyof Base | "view"> | null; progress?: { n: number; of: number } | null };
 /** Exercise card (assign_exercise / app-only exercise_state). */
 export type ExerciseData = Base & {
   view: "exercise";

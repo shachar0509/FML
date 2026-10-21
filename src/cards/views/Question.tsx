@@ -29,7 +29,7 @@ export function Mcq({ data, callTool, go }: { data: McqData; callTool: Tool; go:
   }
   return (
     <section className="flex flex-col gap-3" aria-label={t("learn.exercise")}>
-      <div className="lesson-text">
+      <div className="board rounded-card border border-border bg-card p-5 text-lg font-medium shadow-card">
         <Markdown>{data.questionMd}</Markdown>
       </div>
       <ul className="flex flex-col gap-2">
@@ -43,7 +43,7 @@ export function Mcq({ data, callTool, go }: { data: McqData; callTool: Tool; go:
                 onClick={() => void pick(i)}
                 className={`flex w-full items-center gap-3 rounded-card border bg-card p-3 text-start text-sm shadow-card transition-colors focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-default ${good ? "border-success bg-success/10" : bad ? "border-danger bg-danger/10" : "border-border enabled:hover:border-primary/60 enabled:hover:bg-primary/5"}`}
               >
-                <span className="grid size-6 shrink-0 place-items-center rounded-full bg-border/70 text-xs font-semibold">
+                <span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
                   {letter(i)}
                 </span>
                 <span className="grow">
@@ -80,7 +80,7 @@ export function OpenQ({ data, go }: { data: OpenData; go: Go }) {
   const [sent, setSent] = useState(false);
   return (
     <section className="flex flex-col gap-3" aria-label={t("learn.exercise")}>
-      <div className="lesson-text">
+      <div className="board rounded-card border border-border bg-card p-5 text-lg font-medium shadow-card">
         <Markdown>{data.questionMd}</Markdown>
       </div>
       {sent ? (

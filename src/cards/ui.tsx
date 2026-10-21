@@ -6,13 +6,15 @@ export const Bar = ({
   pct,
   label,
   tone = "bg-primary",
+  track = "bg-border",
 }: {
   pct: number;
   label?: string;
   tone?: string;
+  track?: string;
 }) => (
   <div
-    className="h-2 w-full overflow-hidden rounded-full bg-border"
+    className={`h-2 w-full overflow-hidden rounded-full ${track}`}
     role="progressbar"
     aria-label={label ?? `${pct}%`}
     aria-valuenow={pct}
@@ -26,7 +28,8 @@ export const Bar = ({
   </div>
 );
 
-export function Ring({ pct }: { pct: number }) {
+/** `hero`: drawn on the violet hero band (white ink). */
+export function Ring({ pct, hero }: { pct: number; hero?: boolean }) {
   const r = 20;
   const c = 2 * Math.PI * r;
   return (
@@ -36,7 +39,7 @@ export function Ring({ pct }: { pct: number }) {
       role="img"
       aria-label={`${pct}%`}
     >
-      <circle cx="24" cy="24" r={r} fill="none" strokeWidth="4.5" className="stroke-border" />
+      <circle cx="24" cy="24" r={r} fill="none" strokeWidth="4.5" className={hero ? "stroke-white/25" : "stroke-border"} />
       <circle
         cx="24"
         cy="24"
@@ -44,7 +47,7 @@ export function Ring({ pct }: { pct: number }) {
         fill="none"
         strokeWidth="4.5"
         strokeLinecap="round"
-        className="stroke-primary"
+        className={hero ? "stroke-white" : "stroke-primary"}
         strokeDasharray={c}
         strokeDashoffset={c * (1 - pct / 100)}
       />
@@ -53,7 +56,7 @@ export function Ring({ pct }: { pct: number }) {
         y="24"
         textAnchor="middle"
         dominantBaseline="central"
-        className="origin-center rotate-90 fill-fg text-[11px] font-semibold"
+        className={`origin-center rotate-90 text-[11px] font-semibold ${hero ? "fill-white" : "fill-fg"}`}
       >
         {pct}%
       </text>

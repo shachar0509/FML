@@ -63,19 +63,19 @@ export function Course({
 
   return (
     <section className="flex flex-col gap-5" aria-label={data.name}>
-      <header className={`${panel} flex items-center gap-4 p-4`}>
-        {data.hasPlan && <Ring pct={data.pct} />}
+      <header className="hero flex items-center gap-4 p-5">
+        {data.hasPlan && <Ring pct={data.pct} hero />}
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <h1 className="text-xl leading-snug font-bold">{data.name}</h1>
-          <p className="text-sm text-muted">
+          <h1 className="text-2xl leading-snug font-bold">{data.name}</h1>
+          <p className="text-sm text-white/85">
             <span dir="ltr">{data.number}</span> · {t("home.credits", { count: data.credits })}
           </p>
           {data.hasPlan && (
             <div className="mt-1 flex flex-col gap-1.5">
-              <p className="text-xs text-muted">
+              <p className="text-xs text-white/85">
                 {t("courseHome.stagesOf", { k: data.stagesDone, n: data.stagesTotal })}
               </p>
-              <Bar pct={data.pct} />
+              <Bar pct={data.pct} tone="bg-white" track="bg-white/25" />
             </div>
           )}
         </div>
@@ -106,6 +106,7 @@ export function Course({
       {data.hasPlan && (
         <div className="flex flex-wrap gap-2">
           <Button
+            className="h-11 px-6 text-[15px]"
             disabled={!cur}
             onClick={() => cur && void go({ kind: "learn", stageId: cur.id, title: cur.title })}
           >

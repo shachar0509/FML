@@ -14,6 +14,7 @@
   --muted: #5b6474;
   --border: #e3e6ee;
   --radius-card: 14px;
+  --radius-btn: 0.5rem;
   --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.06);
 }
 .dark {
@@ -118,6 +119,11 @@ body {
   direction: ltr;
   unicode-bidi: isolate;
 }
+/* Colored math terms (\\blue{a}, \\green{b}, \\pink{c}, \\orange{d} in KaTeX); the cards override the shades. */
+.m-blue { color: var(--m-blue, #2563eb); }
+.m-green { color: var(--m-green, #15803d); }
+.m-pink { color: var(--m-pink, #db2777); }
+.m-orange { color: var(--m-orange, #c2410c); }
 .md .katex-display {
   text-align: center;
   overflow-x: auto;

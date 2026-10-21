@@ -10,8 +10,12 @@ import { Figure, isFigureTag } from "./Figure";
 export const KATEX = {
   throwOnError: false,
   strict: "ignore",
-  trust: false,
-  macros: { "\\R": "\\mathbb{R}", "\\N": "\\mathbb{N}", "\\Z": "\\mathbb{Z}", "\\Q": "\\mathbb{Q}", "\\C": "\\mathbb{C}" },
+  // Only \htmlClass is trusted: the colour macros below set a class (themeable), never raw HTML or styles.
+  trust: (c: { command: string }) => c.command === "\\htmlClass",
+  macros: {
+    "\\R": "\\mathbb{R}", "\\N": "\\mathbb{N}", "\\Z": "\\mathbb{Z}", "\\Q": "\\mathbb{Q}", "\\C": "\\mathbb{C}",
+    "\\blue": "\\htmlClass{m-blue}{#1}", "\\green": "\\htmlClass{m-green}{#1}", "\\pink": "\\htmlClass{m-pink}{#1}", "\\orange": "\\htmlClass{m-orange}{#1}",
+  },
 } as const;
 
 const bare = <P extends { node?: unknown }>(p: P): Omit<P, "node"> => {
