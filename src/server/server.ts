@@ -1,5 +1,6 @@
 import { chooseUniversity } from "@/core/lib/firstRun";
-import { UNIVERSITIES, UNIVERSITY_IDS, university } from "@/core/universities";
+import { COURSE_ID_RE, UNIVERSITIES, UNIVERSITY_IDS, university } from "@/core/universities";
+import { loadImageB64 } from "@/core/lib/attachments";
 import { getUiCapability, registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 import { McpServer } from "@modelcontextprotocol/server";
 import { listCourses } from "@/core/domain/courses/courses";
@@ -22,6 +23,18 @@ import { CARDS_URI, readCards } from "./resources";
 /** Transport-agnostic: tests connect it to an in-memory transport, main.ts to stdio. */
 export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSource, moodleMake?: (profileDir: string) => Moodle): McpServer {
   const server = new McpServer({ name: "shalav", version: "2.0.0" }, { instructions: INSTRUCTIONS });
+  // Every card result carries its own number (M31). A card claims the number of the result it was created with, so a
+  // card the host mounts again (Claude Desktop re-renders the chat after a card's own tool call) keeps its old number
+  // and never outranks the newest card; results of a card's own calls (Back, open course) are never a card's first data.
+  // Date.now() keeps the numbers rising across server restarts, so old cards still lose to new ones.
+  let cardSeq = 0;
+  const register = server.registerTool.bind(server);
+  server.registerTool = ((name: string, config: unknown, cb: (...a: unknown[]) => unknown) =>
+    register(name, config as never, (async (...a: unknown[]) => {
+      const r = (await cb(...a)) as { structuredContent?: Record<string, unknown> };
+      if (typeof r?.structuredContent?.view === "string") r.structuredContent.card = cardSeq = Math.max(cardSeq + 1, Date.now());
+      return r;
+    }) as never)) as typeof server.registerTool;
 
   registerAppResource(server, "Shalav cards", CARDS_URI, { description: "Shalav study cards" }, async () => ({
     contents: [{ uri: CARDS_URI, mimeType: RESOURCE_MIME_TYPE, text: await readCards() }],
@@ -80,7 +93,8 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
   registerSettingsTools(server);
 
   // Card requests (M15): the card posts only "▶️ Continue" in the chat; what it wants waits here for shalav_next_job.
-  const inbox: string[] = [];
+  // A card request, with the photos of a handwritten answer (stored attachments of that course).
+  const inbox: { text: string; images?: { number: string; shas: string[] } }[] = [];
   registerAppTool(
     server,
     "shalav_request",
@@ -90,7 +104,8 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
       inputSchema: z.discriminatedUnion("kind", [
         z.object({ kind: z.literal("learn"), stageId: z.string().regex(/^S\d{3}$/), title: z.string().max(200) }),
         z.object({ kind: z.literal("relearn"), stageId: z.string().regex(/^S\d{3}$/), title: z.string().max(200) }),
-        z.object({ kind: z.literal("answer"), text: z.string().min(1).max(4000) }),
+        // a written answer, or photos / a PDF of one solved on paper (attachment_upload of that course), or both
+        z.object({ kind: z.literal("answer"), text: z.string().max(4000), number: z.string().regex(COURSE_ID_RE).optional(), files: z.array(z.string().regex(/^[0-9a-f]{64}$/)).max(12).optional() }),
         z.object({ kind: z.literal("step"), action: z.enum(["next", "again", "question"]), text: z.string().max(4000).optional() }),
       ]),
       _meta: { ui: { resourceUri: CARDS_URI, visibility: ["app"] } },
@@ -99,10 +114,12 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
       if (r.kind === "step" && r.action === "again") learn.reexplain();
       // Only the newest click counts: an older one that was never fetched belongs to a card already gone, and serving it
       // later made every answer lag a few steps behind.
+      if (r.kind === "answer" && !r.text.trim() && !(r.number && r.files?.length)) return { content: [{ type: "text" as const, text: "An answer needs text or files." }], isError: true };
+      const images = r.kind === "answer" && r.number && r.files?.length ? { number: r.number, shas: r.files } : undefined;
       inbox.length = 0;
-      inbox.push(
+      inbox.push({ images, text:
         r.kind === "answer"
-          ? `The student answered the current question in the card:\n<answer>\n${r.text}\n</answer>\nRespond to it and continue the lesson.`
+          ? `The student answered the current question in the card${images ? ` (${images.shas.length} page image(s) of their handwritten solution follow; read them as their answer)` : ""}:\n<answer>\n${r.text.trim() || "(see the images)"}\n</answer>\nRespond to it and continue the lesson.`
           : r.kind === "step"
             ? r.action === "next"
               ? "The student understood the last lesson step and pressed Continue. Teach the next small step with teach_step (or, after 2-3 steps, check with one quick question)."
@@ -110,24 +127,23 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
                 ? "The student did not understand the last lesson step and pressed Explain differently. Call teach_step now for the SAME step, rewritten: same topic, simpler words, a different example or a figure. Do not ask a question, do not quiz, do not move on to the next idea."
                 : `The student asked about the lesson step on screen (the step card stays open):\n<question>\n${r.text ?? ""}\n</question>\nAnswer with answer_question: short and direct, about this step and the course material (consult_materials if the step does not cover it). Do not call teach_step and do not move on; then end your message and wait.`
             : `The student wants to ${r.kind === "learn" ? "learn" : "learn again"} ${r.stageId} · ${r.title}. Call shalav_start_lesson with stageId ${r.stageId} and teach it.`,
-      );
+      });
       return { content: [{ type: "text" as const, text: "ok" }], structuredContent: { ok: true } };
     },
   );
-  // One card on screen (M23): every card the model renders claims a number; an older card sees a newer one and folds away.
+  // One card on screen (M23): a card claims the number of the result it was created with; an older card sees a newer one and folds away.
   let latestCard = 0;
   registerAppTool(
     server,
     "shalav_card",
     {
       title: "Card number",
-      description: "Card-only: claim a number for a newly shown card, or read the newest one.",
-      inputSchema: z.object({ claim: z.boolean() }),
+      description: "Card-only: claim the number of a shown card's result, or read the newest one.",
+      inputSchema: z.object({ claim: z.boolean(), card: z.number().optional() }),
       _meta: { ui: { resourceUri: CARDS_URI, visibility: ["app"] } },
     },
-    async ({ claim }) => {
-      // Date.now() keeps it rising across server restarts, so old cards still lose to new ones.
-      if (claim) latestCard = Math.max(latestCard + 1, Date.now());
+    async ({ claim, card }) => {
+      if (claim) latestCard = Math.max(latestCard, card ?? Date.now()); // no number (a result from before M31): a new card
       return { content: [{ type: "text" as const, text: String(latestCard) }], structuredContent: { latest: latestCard } };
     },
   );
@@ -137,7 +153,12 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
     async () => {
       // Pending AI jobs first: a lesson started mid-build would end the turn and stall the build.
       const req = bridge.idle() ? inbox.shift() : undefined;
-      if (req) return { content: [{ type: "text" as const, text: `Student request from the card:\n${req}${bridge.pending() || inbox.length ? "\n\nAfterwards call shalav_next_job again: more is pending." : ""}` }] };
+      if (req) {
+        const im = req.images;
+        const load = im && loadImageB64(im.number);
+        const images = im && load ? await Promise.all(im.shas.map(async (sha) => ({ type: "image" as const, mimeType: "image/jpeg", data: await load(sha, "image/jpeg") }))) : [];
+        return { content: [{ type: "text" as const, text: `Student request from the card:\n${req.text}${bridge.pending() || inbox.length ? "\n\nAfterwards call shalav_next_job again: more is pending." : ""}` }, ...images] };
+      }
       const c = await bridge.nextWait();
       return { content: inbox.length && bridge.idle() ? [...c, { type: "text" as const, text: "Then call shalav_next_job again: the student asked for something in a card." }] : c };
     },

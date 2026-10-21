@@ -396,6 +396,8 @@
     "sendAnswer": "Send answer",
     "answerPlaceholder": "Write your answer here…",
     "yourAnswer": "Your answer",
+    "dropAnswer": "Solved it on paper? Drop a photo or PDF of your solution here, or choose a file",
+    "uploading": "Uploading…",
     "correct": "Correct",
     "wrong": "Not quite",
     "exercise": "Exercise",

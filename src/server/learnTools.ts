@@ -179,8 +179,8 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     const checkId = newId();
     checks.set(checkId, { kind: "open", n: c.n, stageId: c.stageId });
     const { language, theme } = sets();
-    const data: OpenData = { view: "open", language, theme, checkId, questionMd: i.questionMd };
-    return out(`Question shown (check id ${checkId}). The student's written answer arrives as their next message; evaluate it, then call record_check_result with checkToolUseId "${checkId}".`, data);
+    const data: OpenData = { view: "open", language, theme, checkId, number: c.s.course.courseNumber, questionMd: i.questionMd };
+    return out(`Question shown (check id ${checkId}). The student's answer arrives as their next message, typed or as page images of a solution written on paper (read those as the answer); evaluate it, then call record_check_result with checkToolUseId "${checkId}".`, data);
   });
 
   /** Checks a figure source; returns the error text or null. */

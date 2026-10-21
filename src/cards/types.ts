@@ -66,7 +66,7 @@ export type LessonData = Base & {
 };
 /** Question cards of present_mcq / ask_open_question; the answer key stays on the server. */
 export type McqData = Base & { view: "mcq"; checkId: string; questionMd: string; options: string[] };
-export type OpenData = Base & { view: "open"; checkId: string; questionMd: string };
+export type OpenData = Base & { view: "open"; checkId: string; number: string; questionMd: string };
 /** A drawing the tutor shows in the chat (show_figure). */
 export type FigureData = Base & { view: "figure"; kind: "plot" | "geometry" | "svg"; source: string; captionMd: string };
 /** One small lesson step (teach_step). */
@@ -119,7 +119,7 @@ export type CardData = HomeData | AddData | CourseData | LessonData | McqData | 
 /** What a card button asks Claude for (shalav_request); no request = "do the pending Shalav work". */
 export type Req =
   | { kind: "learn" | "relearn"; stageId: string; title: string }
-  | { kind: "answer"; text: string }
+  | { kind: "answer"; text: string; number?: string; files?: string[] }
   | { kind: "step"; action: "next" | "again" }
   | { kind: "step"; action: "question"; text: string };
 export type Go = (req?: Req) => Promise<void>;

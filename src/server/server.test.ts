@@ -32,6 +32,14 @@ it("lists tools/prompts and calls shalav_home", async () => {
   await client.callTool({ name: "shalav_request", arguments: { kind: "step", action: "question", text: "why 0+0=0?" } });
   expect(JSON.stringify((await client.callTool({ name: "shalav_next_job", arguments: {} })).content)).toMatch(/asked about the lesson step on screen.*why 0\+0=0\?.*answer_question/);
   expect(JSON.stringify((await client.callTool({ name: "shalav_next_job", arguments: {} })).content)).toContain("No Shalav job");
+  // an answer solved on paper: the uploaded photo reaches the model as an image next to the request
+  const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==";
+  const up = (await client.callTool({ name: "attachment_upload", arguments: { number: "01040195", name: "p.png", mime: "image/png", base64: PNG } })).structuredContent as { files: { sha256: string }[] };
+  expect((await client.callTool({ name: "shalav_request", arguments: { kind: "answer", text: " " } })).isError).toBe(true); // neither text nor files
+  await client.callTool({ name: "shalav_request", arguments: { kind: "answer", text: "", number: "01040195", files: up.files.map((f) => f.sha256) } });
+  const paper = (await client.callTool({ name: "shalav_next_job", arguments: {} })).content as { type: string; text?: string; mimeType?: string }[];
+  expect(paper[0]?.text).toMatch(/1 page image\(s\) of their handwritten solution/);
+  expect(paper[1]).toMatchObject({ type: "image", mimeType: "image/jpeg" });
   const bad = await client.callTool({ name: "shalav_submit_job", arguments: { jobId: 5, text: "x" } });
   expect(bad.isError).toBe(true);
   expect((await client.listPrompts()).prompts.map((p) => p.title)).toEqual(["Shalav: my courses", "Shalav: continue learning"]);
@@ -57,4 +65,15 @@ it("lists tools/prompts and calls shalav_home", async () => {
   expect((await client.listResources()).resources.map((x) => x.uri)).toContain("ui://shalav/cards.html");
   const html = await client.readResource({ uri: "ui://shalav/cards.html" });
   expect(html.contents[0]).toMatchObject({ mimeType: "text/html;profile=mcp-app" });
+  // one card on screen (M31): a card claims the number of the result it was created with; mounting an older card again
+  // (or a card's own Back call) never outranks the newest card
+  const num = async (name: string) => ((await client.callTool({ name, arguments: {} })).structuredContent as { card: number }).card;
+  const latest = async (card?: number) => ((await client.callTool({ name: "shalav_card", arguments: { claim: card !== undefined, ...(card ? { card } : {}) } })).structuredContent as { latest: number }).latest;
+  const older = await num("shalav_home");
+  const newer = await num("shalav_home");
+  expect(newer).toBeGreaterThan(older);
+  expect(await latest(newer)).toBe(newer);
+  expect(await latest(older)).toBe(newer); // the older card mounted again: still older
+  await num("shalav_home"); // the newest card's own call (Back): its result is not a new card
+  expect(await latest()).toBe(newer);
 });

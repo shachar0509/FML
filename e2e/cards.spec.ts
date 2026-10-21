@@ -147,6 +147,20 @@ for (const lang of ["he", "en"] as const)
       await axe();
       await send.click();
       expect((await said()).at(-1)).toContain("Because");
+      // solved on paper: a photo dropped on the zone is the answer (no typing needed)
+      await page.goto(url("open"));
+      const zone = page.getByText(lang === "he" ? /פתרתם במחברת/ : /Solved it on paper/);
+      await expect(zone).toBeVisible();
+      await page.screenshot({ path: `e2e/shots/card-open-${lang}-${theme}.png` });
+      const drop = await page.evaluateHandle(() => {
+        const dt = new DataTransfer();
+        dt.items.add(new File([new Uint8Array([137, 80, 78, 71])], "proof.png", { type: "image/png" }));
+        return dt;
+      });
+      await zone.locator("..").dispatchEvent("drop", { dataTransfer: drop });
+      await expect(page.getByText("proof.png")).toBeVisible();
+      await send.click();
+      expect((await said()).at(-1)).toMatch(/"files":\["a{64}"\]/);
 
       await page.goto(url("figure"));
       await expect(page.locator("figure svg").first()).toBeVisible();

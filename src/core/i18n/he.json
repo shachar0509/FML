@@ -396,6 +396,8 @@
     "sendAnswer": "שליחת התשובה",
     "answerPlaceholder": "כתוב כאן את התשובה…",
     "yourAnswer": "התשובה שלך",
+    "dropAnswer": "פתרתם במחברת? גררו לכאן תמונה או PDF של הפתרון, או בחרו קובץ",
+    "uploading": "מעלה…",
     "correct": "נכון",
     "wrong": "לא נכון",
     "exercise": "תרגיל",

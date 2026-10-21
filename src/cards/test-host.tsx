@@ -43,7 +43,7 @@ const lesson: LessonData = {
   criteria: { met: false, missing: [L("לפתור עוד 2 תרגילים בציון 85 לפחות", "Solve 2 more exercises with score ≥ 85")] },
 };
 const mcq: McqData = { ...base, view: "mcq", checkId: "c1", questionMd: L("מה נכון לגבי $a_n = 1/n$?", "Which holds for $a_n = 1/n$?"), options: ["$a_n \\to 0$", "$a_n \\to 1$", L("מתבדרת", "diverges"), L("$a_n \\to 0$ רק אם $n$ זוגי", "$a_n \\to 0$ only for even $n$")] };
-const open: OpenData = { ...base, view: "open", checkId: "c2", questionMd: L("הסבירו למה $\\lim 1/n = 0$.", "Explain why $\\lim 1/n = 0$.") };
+const open: OpenData = { ...base, view: "open", checkId: "c2", number: "01040195", questionMd: L("הסבירו למה $\\lim 1/n = 0$.", "Explain why $\\lim 1/n = 0$.") };
 const exercise: ExerciseData = {
   ...base, view: "exercise", number: "01040195", runId: "r1", difficulty: 3, statementMd: L("הוכיחו ש-$\\lim 1/n = 0$.", "Prove that $\\lim 1/n = 0$."), figures: [], hints: [], solutionMd: null, grade: null, canReveal: false, busy: null, error: null,
 };

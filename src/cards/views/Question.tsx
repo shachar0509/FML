@@ -3,7 +3,8 @@ import { Check, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Markdown } from "@/core/render/Markdown";
-import type { McqData, OpenData, Go } from "../types";
+import type { Go, Host, McqData, OpenData } from "../types";
+import { AnswerFiles, type FileRef } from "./AnswerFiles";
 
 type Tool = (
   name: string,
@@ -74,10 +75,17 @@ export function Mcq({ data, callTool, go }: { data: McqData; callTool: Tool; go:
   );
 }
 
-export function OpenQ({ data, go }: { data: OpenData; go: Go }) {
+export function OpenQ({ data, go, callTool }: { data: OpenData; go: Go; callTool: Host["callTool"] }) {
   const { t } = useTranslation();
   const [a, setA] = useState("");
+  const [files, setFiles] = useState<FileRef[]>([]);
+  const [up, setUp] = useState(false);
   const [sent, setSent] = useState(false);
+  // An answer solved on paper (a proof, a drawing) goes as photos or a PDF, with or without typed text.
+  const send = () => (
+    setSent(true),
+    void go({ kind: "answer", text: a.trim(), ...(files.length ? { number: data.number, files: files.map((f) => f.sha256) } : {}) })
+  );
   return (
     <section className="flex flex-col gap-3" aria-label={t("learn.exercise")}>
       <div className="board-surface board mb-3 px-5 py-5 text-lg font-medium sm:px-7">
@@ -89,9 +97,12 @@ export function OpenQ({ data, go }: { data: OpenData; go: Go }) {
           role="status"
         >
           <p className="font-medium">{t("learn.yourAnswer")}</p>
-          <p dir="auto" className="whitespace-pre-wrap">
-            {a}
-          </p>
+          {a.trim() && (
+            <p dir="auto" className="whitespace-pre-wrap">
+              {a}
+            </p>
+          )}
+          {files.length > 0 && <p className="text-muted">{files.map((f) => f.name).join(", ")}</p>}
         </div>
       ) : (
         <>
@@ -104,11 +115,10 @@ export function OpenQ({ data, go }: { data: OpenData; go: Go }) {
             aria-label={t("learn.yourAnswer")}
             className="rounded-card border border-border bg-card p-3 text-sm shadow-card focus-visible:outline-2 focus-visible:outline-primary"
           />
-          <Button
-            className="self-start"
-            disabled={!a.trim()}
-            onClick={() => (setSent(true), void go({ kind: "answer", text: a.trim() }))}
-          >
+          {data.number && (
+            <AnswerFiles number={data.number} callTool={callTool} files={files} setFiles={setFiles} onBusy={setUp} hint={t("learn.dropAnswer")} />
+          )}
+          <Button className="self-start" disabled={up || (!a.trim() && !files.length)} onClick={send}>
             {t("learn.sendAnswer")}
           </Button>
         </>
