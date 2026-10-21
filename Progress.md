@@ -479,3 +479,17 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
   - removing repeated tool-description rules: they guard against model misbehaviour fixed in M15/M22;
   - page-text dedupe between the indexing passes: those jobs are too far apart to point back to safely.
 - Checks: typecheck/lint clean, 133 unit, lesson e2e (4 variants) ok.
+
+## M26 — the board follows the reading direction
+
+- Rows blocks have up to 7 columns, ordered by reading direction:
+  - Hebrew: reason · lhs rel rhs · words · name;
+  - English: the mirror image.
+  - The formula is always left to right, and every row is lined up at its relation.
+- Words before a formula ("בדיוק אחד מהבאים: a<b, …") get their own column. After a ":" they get their own line and the formula goes on the next line, still lined up.
+- A display formula with Hebrew, or an English derivation with `&& \text{…}` reasons, becomes a rows block (`displayToRows`).
+- Reasons are right-to-left Markdown (so "מ-x=x+x" reads right), drawn as handwritten notes in the ink colour.
+- These stay KaTeX: `\underbrace{…}_{\text{…}}`, `cases` and other environments.
+- In paragraphs, "…: $a$" breaks the line after the colon.
+- When side by side does not fit (measured), names go above their formula and reasons below it.
+- Checks: typecheck/lint clean, 136 unit, 31 e2e.
