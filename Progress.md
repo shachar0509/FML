@@ -615,3 +615,16 @@ Edge cases found with the sample slides, and fixed in the renderer:
 - Known limit: exercises are read in 6-page batches with a 1-page overlap. A solution printed more than ~5 pages after its question (a solutions appendix) or in a separate solutions file is not linked, so that exercise counts as unsolved.
 - Hebrew plural keys include the `_two` form.
 - **Checks:** the course e2e asserts "3 solved · 2 unsolved" in he and en; 139 unit tests; 77 e2e passed on two runs in a row (an earlier run had one failure that did not come back); lint and tsc clean.
+
+## M36 — import progress, plainer "not read" label, Update plan only when needed, delete asks first ✅
+- **Import progress:** a bar labelled "Importing files…" ("מייבא קבצים…") with the whole percentage above it:
+  - **Local files:** counts the bytes sent in chunks, across every file picked or dropped at once.
+  - **Moodle:** `sync` reports the links it has handled out of all it found (a folder's files are added to the total when the folder page is read). This goes through `MoodleState.progress` and is cleared when the import ends. The import step after the downloads takes seconds and has no count of its own. The login step keeps its text, since there is nothing to count.
+- **Label:** a file not indexed yet says "Not read yet — press Update plan" ("עוד לא נקרא — לחצו על ״עדכון התוכנית״"), or "Build plan" before a plan exists.
+- **Update plan** is disabled once every course file (study materials and sample exercises) has been read. The hint above it then says the plan is up to date and that new files will enable it again. A failed file still counts as unread, so Update plan stays enabled to retry it.
+- **Delete:** the trash icon opens an inline confirmation: "Are you sure you want to delete <file> from <Study materials | Sample exercises>?", with Remove and Cancel buttons. It is inline rather than `window.confirm` because the card's iframe may block browser dialogs.
+- **Checks:**
+  - The course e2e covers the new label, delete with Cancel and with Remove, Update plan disabled when everything has been read (`?files=read`), and the Moodle bar at 3 of 8 = 38% (`?files=importing`).
+  - The Moodle import unit test checks that progress starts at 0, ends at done = total, and clears.
+  - 139 unit, 79 e2e; lint and tsc clean.
+  - Not covered by a test: the local-upload bar, because the test host answers upload chunks instantly.

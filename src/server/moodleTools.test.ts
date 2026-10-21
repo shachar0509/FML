@@ -101,9 +101,14 @@ it("moodle_import logs in once, downloads by role, is repeatable, and can forget
   await initNode();
   setClaude(new FakeClaudeGateway([toolCall("submit_plan_outline", { courseKind: "mixed", units: [unit(18), unit(18)] }), details, details]));
   await createCourse({ courseNumber: "01040195", nameHe: "קורס", credits: 2, faculty: "f", syllabusHe: "s", prerequisitesRaw: "" }, () => {});
+  const ticks: [number, number][] = [];
   const [a, b] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: "t", version: "0" });
-  await Promise.all([createServer(undefined, undefined, (profileDir) => createMoodle({ profileDir, headedLogin: false, delayMs: 0 })).connect(a), client.connect(b)]);
+  await Promise.all([createServer(undefined, undefined, (profileDir) => {
+    const m = createMoodle({ profileDir, headedLogin: false, delayMs: 0 });
+    // record the download progress the card shows
+    return { ...m, sync: (...x: Parameters<typeof m.sync>) => m.sync(x[0], x[1], x[2], x[3], x[4], x[5], (done, total) => (ticks.push([done, total]), x[6]?.(done, total))) };
+  }).connect(a), client.connect(b)]);
   const call = (name: string, args: Record<string, unknown> = {}) => client.callTool({ name, arguments: args });
   const files = async () => {
     for (let i = 0; i < 120; i++) {
@@ -118,7 +123,10 @@ it("moodle_import logs in once, downloads by role, is repeatable, and can forget
   expect((await call("moodle_import", { number: "01040195" })).structuredContent).toMatchObject({ needUrl: true }); // technion default exists only as https, tests have no university chosen
   await call("moodle_import", { number: "01040195", url: base });
   let f = await files();
-  expect(f.moodle).toMatchObject({ connected: true, last: { added: 5, duplicate: 0, skipped: 1, error: null } });
+  expect(f.moodle).toMatchObject({ connected: true, progress: null, last: { added: 5, duplicate: 0, skipped: 1, error: null } });
+  expect(ticks[0]?.[0]).toBe(0);
+  expect(ticks.at(-1)?.[0]).toBe(ticks.at(-1)?.[1]); // ends at 100%
+  expect(ticks.every(([d, t]) => d <= t)).toBe(true);
   expect(f.materials.map((x) => x.name).sort()).toEqual(["landing-notes.txt", "lecture1.txt"]);
   expect(f.exercises.map((x) => x.name).sort()).toEqual(["exam-2024.txt", "exam-moed-a.txt", "sheet1.txt"]);
 

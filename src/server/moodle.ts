@@ -84,7 +84,7 @@ export function createMoodle(o: { profileDir: string; channel?: string; headedLo
    * Downloads the supported files of every Moodle course whose name has the course number (all its sections) into `dir`. Same host only, PARALLEL requests at a time; each file's folder is chosen by a brief look at its first pages (briefRole).
    * `login`: open a window and wait for the student to log in, then download in that same browser (Moodle's session cookie dies with the browser).
    */
-  async function sync(baseUrl: string, number: string, dir: string, login = false, onLoggedIn?: () => void, loginTimeoutMs = 5 * 60_000): Promise<{ course: string; files: Downloaded[]; skipped: number }> {
+  async function sync(baseUrl: string, number: string, dir: string, login = false, onLoggedIn?: () => void, loginTimeoutMs = 5 * 60_000, onProgress?: (done: number, total: number) => void): Promise<{ course: string; files: Downloaded[]; skipped: number }> {
     const ctx = await open(!(login && (o.headedLogin ?? true)));
     try {
       let origin: string;
@@ -130,13 +130,26 @@ export function createMoodle(o: { profileDir: string; channel?: string; headedLo
       const seen = new Set<string>();
       let skipped = 0;
       let slot = 0;
+      // Progress counts links: a folder's files join the total when the folder page is read.
+      let done = 0, total = 0;
       const grab = async (url: string, hint: { text: string; section: string }, depth: number): Promise<void> => {
+        try {
+          await grabOne(url, hint, depth);
+        } finally {
+          onProgress?.(++done, total);
+        }
+      };
+      const grabOne = async (url: string, hint: { text: string; section: string }, depth: number): Promise<void> => {
         if (new URL(url).origin !== origin || seen.has(url)) return;
         seen.add(url);
         const r = await get(url, 120_000).catch(() => null);
         if (!r?.ok()) return void skipped++;
         if ((r.headers()["content-type"] ?? "").includes("text/html")) {
-          if (depth < 2) await Promise.all(parsePluginfiles(await r.text(), r.url()).map((u) => grab(u, hint, depth + 1)));
+          if (depth < 2) {
+            const inner = parsePluginfiles(await r.text(), r.url());
+            total += inner.length;
+            await Promise.all(inner.map((u) => grab(u, hint, depth + 1)));
+          }
           return;
         }
         const name = fileName(r.url(), r.headers()["content-disposition"]);
@@ -160,7 +173,10 @@ export function createMoodle(o: { profileDir: string; channel?: string; headedLo
           }),
         )
       ).flat();
-      await Promise.all(pages.flatMap((p) => parseCourse(p.text, p.url)).map((l) => grab(l.url, l, 0)));
+      const links = pages.flatMap((p) => parseCourse(p.text, p.url));
+      total = links.length;
+      onProgress?.(0, total);
+      await Promise.all(links.map((l) => grab(l.url, l, 0)));
       return { course: hits.map((h) => h.text).join(", "), files, skipped };
     } finally {
       await ctx.close().catch(() => undefined);

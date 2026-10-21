@@ -49,6 +49,8 @@ export type MoodleState = {
   connected: boolean;
   busy: "login" | "sync" | null;
   /** `code` names the failure for the card (i18n moodle.err.*); `error` is the English detail for the model. */
+  /** Moodle links handled so far while syncing (download only; the import after it takes seconds). */
+  progress?: { done: number; total: number } | null;
   last: { course: string; added: number; duplicate: number; skipped: number; error: string | null; code?: MoodleError } | null;
 };
 export type MoodleError = "chrome" | "closed" | "timeout" | "http" | "noCourse" | "login" | "failed";

@@ -28,13 +28,14 @@ export function registerMoodleTools(server: McpServer, make?: (profileDir: strin
   let connected: boolean | null = null; // null = not read yet
   let busy: MoodleState["busy"] = null;
   let last: MoodleState["last"] = null;
+  let progress: MoodleState["progress"] = null;
 
   const url = () => useSettings.getState().settings.moodleUrl || university()?.moodleUrl || null;
   const isConnected = () => (connected ??= existsSync(marker())); // the marker survives restarts; the browser profile keeps the cookies
 
   /** Cheap sync read for files_list. */
   function state(): MoodleState {
-    return { url: url(), connected: isConnected(), busy, last };
+    return { url: url(), connected: isConnected(), busy, last, progress };
   }
 
   async function run(number: string, base: string) {
@@ -49,7 +50,7 @@ export function registerMoodleTools(server: McpServer, make?: (profileDir: strin
             busy = "sync";
             connected = true;
             void writeFile(marker(), new Date().toISOString());
-          });
+          }, undefined, (done, total) => (progress = { done, total }));
           let added = 0, duplicate = 0, skipped = r.skipped;
           for (const role of ["material", "exercises"] as const) {
             const paths = r.files.filter((f) => f.role === role).map((f) => f.path);
@@ -74,6 +75,7 @@ export function registerMoodleTools(server: McpServer, make?: (profileDir: strin
       last = { course: "", added: 0, duplicate: 0, skipped: 0, error: e instanceof Error ? e.message : String(e), code };
     } finally {
       busy = null;
+      progress = null;
       await rm(dir, { recursive: true, force: true });
     }
   }

@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Input } from "@/core/components/ui/input";
 import type { FileRow, FilesData } from "../types";
-import { h2, panel } from "../ui";
+import { Bar, h2, panel } from "../ui";
 
 type Tool = (
   name: string,
@@ -20,7 +20,7 @@ const b64 = (buf: ArrayBuffer) => {
   return btoa(s);
 };
 
-function Chip({ f }: { f: FileRow }) {
+function Chip({ f, hasPlan }: { f: FileRow; hasPlan: boolean }) {
   const { t } = useTranslation();
   const pill = "flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium";
   if (f.status === "indexed")
@@ -45,7 +45,26 @@ function Chip({ f }: { f: FileRow }) {
           : t("files.indexing")}
       </span>
     );
-  return <span className={`${pill} bg-border/60 text-muted`}>{t("files.waiting")}</span>;
+  return (
+    <span className={`${pill} bg-border/60 text-muted`}>
+      {t("files.waiting", { button: t(hasPlan ? "plan.update" : "plan.build") })}
+    </span>
+  );
+}
+
+/** "Importing…" with the percentage above a bar. */
+function Importing({ done, total }: { done: number; total: number }) {
+  const { t } = useTranslation();
+  const pct = total ? Math.round((100 * done) / total) : 0;
+  return (
+    <div className="flex flex-col gap-1" role="status">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-muted">{t("files.importing")}</span>
+        <span className="font-medium tabular-nums">{pct}%</span>
+      </div>
+      <Bar pct={pct} label={t("files.importing")} />
+    </div>
+  );
 }
 
 /** Share of a section's files that are indexed, as a ring with the whole percentage inside. */
@@ -86,17 +105,24 @@ export function Files({
   callTool,
   reload,
   live = false,
+  hasPlan = false,
+  onFiles,
 }: {
   number: string;
   callTool: Tool;
   reload: () => void;
   /** a plan build is running: follow the indexing statuses */
   live?: boolean;
+  hasPlan?: boolean;
+  /** called with every fresh file list (the course card enables Update plan only when something is left to read) */
+  onFiles?: (d: FilesData) => void;
 }) {
   const { t } = useTranslation();
   const [d, setD] = useState<FilesData | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState<{ done: number; total: number } | null>(null); // upload bytes
+  const [del, setDel] = useState<string | null>(null); // sha awaiting "are you sure"
   const [url, setUrl] = useState("");
   const [shut, setShut] = useState<Partial<Record<Role, boolean>>>({});
   const refresh = useCallback(async () => {
@@ -110,6 +136,9 @@ export function Files({
     );
     return () => void (on = false);
   }, [callTool, number]);
+  useEffect(() => {
+    if (d) onFiles?.(d);
+  }, [d, onFiles]);
   const active = !!d && [...d.materials, ...d.exercises].some((f) => f.status === "indexing");
   const moodleBusy = !!d?.moodle?.busy;
   useEffect(() => {
@@ -126,6 +155,9 @@ export function Files({
   async function upload(role: Role, files: File[]) {
     setBusy(true);
     setMsg(null);
+    const total = files.reduce((n, f) => n + f.size, 0);
+    let done = 0;
+    setSent({ done, total });
     try {
       for (const file of files) {
         const total = Math.max(1, Math.ceil(file.size / CHUNK));
@@ -138,6 +170,8 @@ export function Files({
             total,
             data: b64(await file.slice(i * CHUNK, (i + 1) * CHUNK).arrayBuffer()),
           });
+          done += Math.min(CHUNK, file.size - i * CHUNK);
+          setSent({ done, total });
           const s = r.structuredContent as
             { done?: boolean; status?: string; error?: string } | undefined;
           if (r.isError || (s?.done && s.status !== "added" && s.status !== "duplicate")) {
@@ -153,6 +187,7 @@ export function Files({
       }
     } finally {
       setBusy(false);
+      setSent(null);
       await refresh();
     }
   }
@@ -213,19 +248,42 @@ export function Files({
             {role === "exercises" && f.status === "indexed" && (
               <span className="text-xs text-muted">
                 {t("files.exercisesFound", { count: f.exercises })}
-              {f.exercises > 0 &&
-                ` · ${t("files.solved", { count: f.solved })} · ${t("files.unsolved", { count: f.exercises - f.solved })}`}
+                {f.exercises > 0 &&
+                  ` · ${t("files.solved", { count: f.solved })} · ${t("files.unsolved", { count: f.exercises - f.solved })}`}
               </span>
             )}
             <span className="text-xs text-muted">{t("files.pages", { count: f.pages })}</span>
-            <Chip f={f} />
+            <Chip f={f} hasPlan={hasPlan} />
             <button
               className="rounded text-muted hover:text-danger focus-visible:outline-2 focus-visible:outline-primary"
               aria-label={`${t("files.remove")} ${f.name}`}
-              onClick={() => void callTool("file_remove", { number, sha: f.sha }).then(refresh)}
+              onClick={() => setDel(f.sha)}
             >
               <Trash2 className="size-4" aria-hidden />
             </button>
+            {del === f.sha && (
+              <div
+                className="flex w-full flex-col gap-2 rounded-lg border border-danger/50 p-3"
+                role="alertdialog"
+                aria-label={t("files.removeTitle")}
+              >
+                <p className="text-sm">{t("files.removeAsk", { name: f.name, folder: title })}</p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="danger"
+                    onClick={() => {
+                      setDel(null);
+                      void callTool("file_remove", { number, sha: f.sha }).then(refresh);
+                    }}
+                  >
+                    {t("files.remove")}
+                  </Button>
+                  <Button variant="outline" onClick={() => setDel(null)}>
+                    {t("files.keep")}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         ))}
       <div className="mt-1 flex flex-wrap items-center gap-3">
@@ -273,11 +331,15 @@ export function Files({
               onChange={(e) => setUrl(e.target.value)}
             />
           )}
-          {d.moodle.busy && (
-            <p className="text-sm text-muted" role="status">
-              <Loader2 className="me-1 inline size-4 animate-spin" aria-hidden />
-              {t(d.moodle.busy === "login" ? "moodle.login" : "moodle.syncing")}
-            </p>
+          {d.moodle.busy === "sync" && d.moodle.progress ? (
+            <Importing {...d.moodle.progress} />
+          ) : (
+            d.moodle.busy && (
+              <p className="text-sm text-muted" role="status">
+                <Loader2 className="me-1 inline size-4 animate-spin" aria-hidden />
+                {t(d.moodle.busy === "login" ? "moodle.login" : "moodle.syncing")}
+              </p>
+            )
           )}
           {!d.moodle.busy && d.moodle.last?.error && (
             <p className="text-sm text-danger" role="alert">
@@ -308,12 +370,7 @@ export function Files({
           </div>
         </div>
       )}
-      {busy && (
-        <p className="text-sm text-muted" role="status">
-          <Loader2 className="me-1 inline size-4 animate-spin" aria-hidden />
-          {t("files.uploading")}
-        </p>
-      )}
+      {sent && <Importing {...sent} />}
       {msg && (
         <p className="text-sm text-danger" role="alert">
           {msg}

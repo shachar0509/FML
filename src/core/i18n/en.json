@@ -160,6 +160,7 @@
     "firstTitle": "Next: your course files",
     "firstBody": "Add lecture notes and example exercises below, or import them from Moodle. When you are ready, press Build plan; Shalav builds it from the syllabus and your files so no topic is left out.",
     "buildHint": "Ready? The plan is built from the syllabus and all the files above.",
+    "upToDate": "Every file has been read and the plan is up to date. Add new files to update it.",
     "updateHint": "Added files? Update the plan: Shalav reads the new files and makes sure every topic in them and in the example exercises has a stage.",
     "build": "Build plan",
     "update": "Update plan",
@@ -351,7 +352,7 @@
     "solved": "{{count}} solved",
     "unsolved": "{{count}} unsolved",
     "pages": "{{count}} pages",
-    "waiting": "Indexed on the next plan build",
+    "waiting": "Not read yet — press {{button}}",
     "indexedPct": "{{pct}}% indexed",
     "indexing": "Indexing",
     "indexingN": "Indexing {{done}}/{{total}}",
@@ -365,7 +366,10 @@
     "chooser": "What are these files?",
     "rejected": "{{name}}: {{error}}",
     "largeConfirm": "{{name}} has {{pages}} pages. Indexing will use about {{tokens}} input tokens. Continue?",
-    "uploading": "Adding files…",
+    "importing": "Importing files…",
+    "removeTitle": "Delete file",
+    "removeAsk": "Are you sure you want to delete {{name}} from {{folder}}?",
+    "keep": "Cancel",
     "openFolder": "Open folder"
   },
   "render": {

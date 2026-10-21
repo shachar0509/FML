@@ -33,7 +33,18 @@ for (const lang of LANGS)
       await expect(page.getByText("lecture2.pdf")).toBeVisible(); // Files section
       await expect(page.getByRole("img", { name: lang === "he" ? "50% אונדקסו" : "50% indexed" })).toBeVisible();
       await expect(page.getByRole("img", { name: lang === "he" ? "100% אונדקסו" : "100% indexed" })).toBeVisible();
-      await expect(page.getByText(lang === "he" ? "יאונדקס בבניית התוכנית הבאה" : "Indexed on the next plan build")).toBeVisible();
+      await expect(page.getByText(lang === "he" ? "עוד לא נקרא — לחצו על ״עדכון התוכנית״" : "Not read yet — press Update plan")).toBeVisible();
+      // delete asks first; Cancel keeps the file
+      await page.getByRole("button", { name: `${lang === "he" ? "הסרה" : "Remove"} lecture2.pdf` }).click();
+      const ask = page.getByRole("alertdialog");
+      await expect(ask).toContainText(lang === "he" ? "בטוחים שאתם רוצים למחוק את lecture2.pdf מתוך חומרי לימוד?" : "Are you sure you want to delete lecture2.pdf from Study materials?");
+      await axe(page);
+      await page.getByRole("region", { name: lang === "he" ? "קבצי לימוד" : "Study files" }).screenshot({ path: `e2e/tests_output/course/card-files-delete-${lang}-${theme}.png` });
+      await ask.getByRole("button", { name: lang === "he" ? "ביטול" : "Cancel" }).click();
+      await expect(ask).toBeHidden();
+      await page.getByRole("button", { name: `${lang === "he" ? "הסרה" : "Remove"} lecture2.pdf` }).click();
+      await ask.getByRole("button", { name: lang === "he" ? "הסרה" : "Remove" }).click();
+      await expect(ask).toBeHidden();
       const filesSection = page.getByRole("region", { name: lang === "he" ? "קבצי לימוד" : "Study files" });
       await filesSection.screenshot({ path: `e2e/tests_output/course/card-files-${lang}-${theme}.png` });
       const mats = page.getByRole("button", { name: lang === "he" ? /חומרי לימוד/ : /Study materials/ });
@@ -56,3 +67,21 @@ for (const lang of LANGS)
       await expect(page.getByText(lang === "he" ? "תקציר: גבולות" : "Limits summary")).toBeVisible();
       expect(errors).toEqual([]);
     });
+
+for (const lang of LANGS)
+  test(`course files: all read, Moodle import progress (${lang})`, async ({ page }) => {
+    const errors = pageErrors(page);
+    await page.goto(host(`lang=${lang}&files=read`));
+    await page.locator("ul button").first().click();
+    await expect(page.getByRole("button", { name: lang === "he" ? "עדכון התוכנית" : "Update plan" })).toBeDisabled();
+    await expect(page.getByText(lang === "he" ? "כל הקבצים נקראו" : "Every file has been read")).toBeVisible();
+    await page.goto(host(`lang=${lang}&files=importing`));
+    await page.locator("ul button").first().click();
+    const bar = page.getByRole("progressbar", { name: lang === "he" ? "מייבא קבצים…" : "Importing files…" });
+    await expect(bar).toHaveAttribute("aria-valuenow", "38"); // 3 of 8
+    await expect(page.getByText("38%")).toBeVisible();
+    await page.waitForTimeout(400); // card fade-in
+    await axe(page);
+    await page.getByRole("region", { name: lang === "he" ? "קבצי לימוד" : "Study files" }).screenshot({ path: `e2e/tests_output/course/card-files-importing-${lang}.png` });
+    expect(errors).toEqual([]);
+  });

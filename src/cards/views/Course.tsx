@@ -1,9 +1,18 @@
-import { useState } from "react";
-import { BookOpen, Check, ChevronDown, Circle, Contrast, Dumbbell, Lock, Sparkles } from "lucide-react";
+import { useCallback, useState } from "react";
+import {
+  BookOpen,
+  Check,
+  ChevronDown,
+  Circle,
+  Contrast,
+  Dumbbell,
+  Lock,
+  Sparkles,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Bar, Ring, h2, panel } from "../ui";
-import type { CourseData, Stage, Go } from "../types";
+import type { CourseData, FilesData, Stage, Go } from "../types";
 import { Checklist } from "./Checklist";
 import { Files } from "./Files";
 import { useBuild } from "./useBuild";
@@ -46,6 +55,13 @@ export function Course({
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [sel, setSel] = useState<string | null>(null);
   const running = data.build?.state === "running";
+  const [unread, setUnread] = useState<number | null>(null); // files the next build would read
+  const onFiles = useCallback(
+    (d: FilesData) =>
+      setUnread([...d.materials, ...d.exercises].filter((f) => f.status !== "indexed").length),
+    [],
+  );
+  const upToDate = data.hasPlan && unread === 0;
   const live = useBuild(running ? data.number : null, callTool, reload);
   const cur = data.units.flatMap((u) => u.stages).find((s) => s.id === data.current);
 
@@ -55,7 +71,12 @@ export function Course({
     void go();
   }
   const buildButton = (
-    <Button className="self-start" variant={data.hasPlan ? "outline" : "default"} disabled={running} onClick={() => void build()}>
+    <Button
+      className="self-start"
+      variant={data.hasPlan ? "outline" : "default"}
+      disabled={running || upToDate}
+      onClick={() => void build()}
+    >
       <Sparkles className="size-4" aria-hidden />
       {t(data.hasPlan ? "plan.update" : "plan.build")}
     </Button>
@@ -88,7 +109,9 @@ export function Course({
       )}
       {!running && data.build?.state === "failed" && (
         <div className={`${panel} flex flex-col gap-2 border-danger/50 p-4`} role="alert">
-          <p className="font-medium" title={data.build.error ?? undefined}>{t("plan.failed")}</p>
+          <p className="font-medium" title={data.build.error ?? undefined}>
+            {t("plan.failed")}
+          </p>
         </div>
       )}
       {!data.hasPlan && !running && (
@@ -204,10 +227,19 @@ export function Course({
           })}
         </section>
       )}
-      <Files number={data.number} callTool={callTool} reload={reload} live={running} />
+      <Files
+        number={data.number}
+        callTool={callTool}
+        reload={reload}
+        live={running}
+        hasPlan={data.hasPlan}
+        onFiles={onFiles}
+      />
       {!running && (
         <div className={`${panel} flex flex-col gap-2 p-4`}>
-          <p className="text-sm text-muted">{t(data.hasPlan ? "plan.updateHint" : "plan.buildHint")}</p>
+          <p className="text-sm text-muted">
+            {t(upToDate ? "plan.upToDate" : data.hasPlan ? "plan.updateHint" : "plan.buildHint")}
+          </p>
           {buildButton}
         </div>
       )}
