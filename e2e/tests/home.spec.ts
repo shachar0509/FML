@@ -11,7 +11,7 @@ for (const lang of LANGS)
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       await expect(page.getByText(lang === "he" ? "חשבון אינפיניטסימלי 1" : "Infinitesimal Calculus 1")).toBeVisible();
       await page.waitForTimeout(400);
-      await page.screenshot({ path: `e2e/shots/card-home-${lang}-${theme}.png` });
+      await page.screenshot({ path: `e2e/tests_output/home/card-home-${lang}-${theme}.png` });
       await axe(page);
       expect(errors).toEqual([]);
     });

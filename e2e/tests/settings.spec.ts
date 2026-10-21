@@ -13,6 +13,6 @@ for (const lang of LANGS)
       await page.getByRole("spinbutton").first().fill("3");
       await expect(page.getByRole("spinbutton").first()).toHaveValue("3");
       await axe(page);
-      await page.screenshot({ path: `e2e/shots/card-settings-${lang}-${theme}.png` });
+      await page.screenshot({ path: `e2e/tests_output/settings/card-settings-${lang}-${theme}.png` });
       expect(errors).toEqual([]);
     });

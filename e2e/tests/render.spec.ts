@@ -1,12 +1,11 @@
 import { expect, test } from "@playwright/test";
 
 // Advanced lesson steps (src/cards/test-advanced.ts) from אינפי 2 and electrical engineering: mixed Hebrew and math,
-// heavy notation, graphs and drawn pictures. Screenshots land in e2e/shots/test6/; the checks catch what a screenshot
+// heavy notation, graphs and drawn pictures. Screenshots land in e2e/tests_output/render-*/; the checks catch what a screenshot
 // would only show.
-// test6: אינפי 2 and electrical engineering; test7: law, biology, chemistry, finance, architecture
-const SAMPLES = ["taylor", "series", "gradient", "double", "green", "rlc", "fourier", "bode", "maxwell"].map((s) => [s, "test6"] as const);
-const OTHER = ["law", "biology", "chemistry", "finance", "architecture"].map((s) => [s, "test7"] as const);
-const FIXES = [["fences", "display alignment problems"]] as const; // "$$" on the \\begin / \\end line
+const SAMPLES = ["taylor", "series", "gradient", "double", "green", "rlc", "fourier", "bode", "maxwell"].map((s) => [s, "render-infi2-electrical"] as const);
+const OTHER = ["law", "biology", "chemistry", "finance", "architecture"].map((s) => [s, "render-law-bio-chem-finance-arch"] as const);
+const FIXES = [["fences", "render-display-fences"]] as const; // "$$" on the \\begin / \\end line
 for (const [sample, dir] of [...SAMPLES, ...OTHER, ...FIXES])
   for (const theme of ["light", "dark"] as const)
     test(`advanced step ${sample} (${theme})`, async ({ page }) => {
@@ -16,7 +15,7 @@ for (const [sample, dir] of [...SAMPLES, ...OTHER, ...FIXES])
       const board = page.locator("article.board");
       await expect(board.locator(sample === "law" ? ".md p" : ".katex").first()).toBeVisible(); // law has no formulas
       await page.waitForTimeout(500); // graphs finish drawing
-      await page.screenshot({ path: `e2e/shots/${dir}/${sample}-he-${theme}.png`, fullPage: true });
+      await page.screenshot({ path: `e2e/tests_output/${dir}/${sample}-he-${theme}.png`, fullPage: true });
       await expect(board.locator(".katex-error")).toHaveCount(0); // every formula renders
       await expect(board.locator(".figure-error, [role=alert]")).toHaveCount(0);
       // no formula shows raw TeX or stray dollars

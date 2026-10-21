@@ -12,7 +12,7 @@ for (const lang of LANGS)
       await expect(page.locator("figure svg").first()).toBeVisible();
       await expect(page.locator("figcaption .katex").first()).toBeVisible();
       await axe(page);
-      await page.screenshot({ path: `e2e/shots/card-figure-${lang}-${theme}.png` });
+      await page.screenshot({ path: `e2e/tests_output/step/card-figure-${lang}-${theme}.png` });
       expect(errors).toEqual([]);
     });
 
@@ -56,7 +56,7 @@ for (const lang of LANGS)
       await expect(page.locator(".sticky-note .katex")).toBeVisible();
       await expect(page.locator("article .katex .fbox")).toBeVisible();
       await axe(page);
-      await page.screenshot({ path: `e2e/shots/card-step-${lang}-${theme}.png`, fullPage: true });
+      await page.screenshot({ path: `e2e/tests_output/step/card-step-${lang}-${theme}.png`, fullPage: true });
       await page.getByRole("button", { name: lang === "he" ? "יש לי שאלה" : "I have a question" }).click();
       await page.getByRole("textbox").fill("Why?");
       await page.getByRole("button", { name: lang === "he" ? "שליחת השאלה" : "Send question" }).click();

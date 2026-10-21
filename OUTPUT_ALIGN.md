@@ -137,8 +137,8 @@ A ```` ```rows ```` block holds one line per row: `name | formula`. It comes fro
   - no `.katex-error`;
   - no raw TeX or stray `$` in text;
   - no sideways overflow.
-- **Screenshots:**
-  - `e2e/shots/test6/`: אינפי 2 and electrical engineering;
-  - `e2e/shots/test7/`: law, biology, chemistry, finance, architecture;
-  - `e2e/shots/display alignment problems/`: the `$$\begin` / `\end$$` case (`fences-he-*.png`, next to the original bug, `image.png`).
+- **Screenshots** (not committed; written by each run):
+  - `e2e/tests_output/render-infi2-electrical/`: אינפי 2 and electrical engineering;
+  - `e2e/tests_output/render-law-bio-chem-finance-arch/`: law, biology, chemistry, finance, architecture;
+  - `e2e/tests_output/render-display-fences/`: the `$$\begin` / `\end$$` case (`fences-he-*.png`).
 - **Adding a case:** add a sample to `ADVANCED` and its name to a list in `e2e/tests/render.spec.ts`.

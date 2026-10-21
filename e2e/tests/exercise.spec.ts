@@ -16,6 +16,6 @@ for (const lang of LANGS)
       expect((await said(page)).at(-1)).toBe(lang === "he" ? "▶️ המשך" : "▶️ Continue");
       await expect(page.getByRole("button", { name: lang === "he" ? "הצגת פתרון מלא" : "Show full solution" })).toBeVisible();
       await axe(page);
-      await page.screenshot({ path: `e2e/shots/card-exercise-${lang}-${theme}.png` });
+      await page.screenshot({ path: `e2e/tests_output/exercise/card-exercise-${lang}-${theme}.png` });
       expect(errors).toEqual([]);
     });

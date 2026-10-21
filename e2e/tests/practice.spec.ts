@@ -14,7 +14,7 @@ for (const lang of LANGS)
       await expect(page.getByRole("status").last()).toBeVisible();
       await expect(page.getByLabel(lang === "he" ? "נכון" : "Correct")).toBeVisible(); // the right option is marked
       await axe(page);
-      await page.screenshot({ path: `e2e/shots/card-practice-${lang}-${theme}.png` });
+      await page.screenshot({ path: `e2e/tests_output/practice/card-practice-${lang}-${theme}.png` });
       await page.getByRole("button", { name: lang === "he" ? "סיום תרגול" : "End session" }).click();
       await expect(page.getByText(lang === "he" ? "טעות סימן" : "Sign slip")).toBeVisible();
       await page.getByRole("button", { name: lang === "he" ? "ללמוד שוב" : "Learn again" }).click();

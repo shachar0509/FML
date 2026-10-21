@@ -10,7 +10,7 @@ for (const lang of LANGS)
     await expect(page.getByText(lang === "he" ? "תיאור הקורס מהקטלוג" : "Catalog description")).toBeVisible();
     await expect(page.getByText(lang === "he" ? /ואז לבנות את תוכנית הלימוד/ : /then build the study plan/)).toBeVisible();
     await axe(page);
-    await page.screenshot({ path: `e2e/shots/card-add-${lang}.png` });
+    await page.screenshot({ path: `e2e/tests_output/course/card-add-${lang}.png` });
     await page.getByRole("button", { name: lang === "he" ? /הוספת קורס/ : /Add course/ }).click();
     // the course opens without a plan and nothing is sent to Claude: files first, Build plan when ready
     await expect(page.getByText(lang === "he" ? "השלב הבא: קבצי הקורס" : "Next: your course files")).toBeVisible();
@@ -36,7 +36,7 @@ for (const lang of LANGS)
       await page.getByRole("button", { name: lang === "he" ? "עדכון התוכנית" : "Update plan" }).click();
       expect((await said(page)).at(-1)).toBe(lang === "he" ? "▶️ המשך" : "▶️ Continue");
       await page.waitForTimeout(400);
-      await page.screenshot({ path: `e2e/shots/card-course-${lang}-${theme}.png` });
+      await page.screenshot({ path: `e2e/tests_output/course/card-course-${lang}-${theme}.png` });
       await axe(page);
       await page.getByRole("button", { name: lang === "he" ? /גבולות/ : /Limits/ }).click();
       await expect(page.getByText(lang === "he" ? "תקציר: גבולות" : "Limits summary")).toBeVisible();

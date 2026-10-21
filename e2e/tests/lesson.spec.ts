@@ -12,7 +12,7 @@ for (const lang of LANGS)
       await expect(page.getByRole("heading", { level: 1 })).toHaveText(lang === "he" ? "גבולות של סדרות" : "Limits of sequences");
       await expect(page.locator(".katex").first()).toBeVisible(); // objectives render math
       await axe(page);
-      await page.screenshot({ path: `e2e/shots/card-lesson-${lang}-${theme}.png` });
+      await page.screenshot({ path: `e2e/tests_output/lesson/card-lesson-${lang}-${theme}.png` });
       await page.getByRole("button", { name: lang === "he" ? "להשלים בכל זאת" : "Complete anyway" }).click();
       await expect(page.getByText(lang === "he" ? "לפתור עוד 2 תרגילים" : "Solve 2 more exercises")).toBeVisible();
       await page.getByRole("button", { name: lang === "he" ? "כן, להמשיך" : "Yes, continue" }).click();
@@ -31,7 +31,7 @@ for (const lang of LANGS)
       await expect(page.getByRole("status")).toContainText(lang === "he" ? "לא נכון" : "Not quite");
       expect(await lastReq(page)).toContain(lang === "he" ? "C) מתבדרת" : "C) diverges");
       await axe(page);
-      await page.screenshot({ path: `e2e/shots/card-mcq-${lang}-${theme}.png` });
+      await page.screenshot({ path: `e2e/tests_output/lesson/card-mcq-${lang}-${theme}.png` });
       expect(errors).toEqual([]);
     });
 
@@ -50,7 +50,7 @@ for (const lang of LANGS)
       await page.goto(url("open"));
       const zone = page.getByText(lang === "he" ? /פתרתם במחברת/ : /Solved it on paper/);
       await expect(zone).toBeVisible();
-      await page.screenshot({ path: `e2e/shots/card-open-${lang}-${theme}.png` });
+      await page.screenshot({ path: `e2e/tests_output/lesson/card-open-${lang}-${theme}.png` });
       const drop = await page.evaluateHandle(() => {
         const dt = new DataTransfer();
         dt.items.add(new File([new Uint8Array([137, 80, 78, 71])], "proof.png", { type: "image/png" }));
