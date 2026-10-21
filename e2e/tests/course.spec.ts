@@ -45,6 +45,7 @@ for (const lang of LANGS)
       await mats.click();
       await expect(page.getByText("lecture2.pdf")).toBeVisible();
       await expect(page.getByText(lang === "he" ? "5 תרגילים" : "5 exercises found")).toBeVisible();
+      await expect(page.getByText(lang === "he" ? "3 פתורים · 2 לא פתורים" : "3 solved · 2 unsolved")).toBeVisible();
       await expect(page.getByRole("button", { name: lang === "he" ? "ייבוא קבצי הקורס" : "Import course files" })).toBeEnabled();
       await page.getByRole("button", { name: lang === "he" ? "עדכון התוכנית" : "Update plan" }).click();
       expect((await said(page)).at(-1)).toBe(lang === "he" ? "▶️ המשך" : "▶️ Continue");

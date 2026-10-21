@@ -607,3 +607,11 @@ Edge cases found with the sample slides, and fixed in the renderer:
 - The Study materials and Sample exercises headers are buttons (`aria-expanded`) that collapse or expand their file list. The Add and Open folder buttons stay visible.
 - Each header has a ring with the share of its files that are indexed, rounded to a whole percent. It turns green at 100%. Screen readers hear "50% indexed".
 - **Checks:** the course e2e checks the 50% and 100% rings, the new label, and collapse and expand. 77 e2e passed (the i18n change runs every spec); lint and tsc clean.
+
+## M35 — sample exercises: solved vs unsolved ✅
+- Each indexed exercise file now shows how many of its exercises are solved and unsolved, e.g. "5 exercises found · 3 solved · 2 unsolved".
+- "Solved" means indexing found a solution printed in the file for that exercise (`referenceSolutionMd`, already extracted for each question part since 5.6). `files_list` counts it when it builds the list, so files indexed before this change show the split with no re-index and no schema change.
+- The decision is made during indexing (Build plan or Update plan), not at upload. Upload has no model turn, and a check by Claude at upload would cost tokens for every file.
+- Known limit: exercises are read in 6-page batches with a 1-page overlap. A solution printed more than ~5 pages after its question (a solutions appendix) or in a separate solutions file is not linked, so that exercise counts as unsolved.
+- Hebrew plural keys include the `_two` form.
+- **Checks:** the course e2e asserts "3 solved · 2 unsolved" in he and en; 139 unit tests; 77 e2e passed on two runs in a row (an earlier run had one failure that did not come back); lint and tsc clean.

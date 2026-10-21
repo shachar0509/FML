@@ -48,7 +48,7 @@ export function registerFileTools(server: McpServer, o: { openFolder?: (p: strin
   async function list(number: string): Promise<FilesData> {
     await scanCourse(number, deps());
     const recs = await listFileIndexes(number);
-    const row = (r: (typeof recs)[number]) => ({ sha: r.sha256, name: r.fileName, pages: r.pageCount, status: r.status, error: r.error, exercises: r.exercises.length, ...prog.get(r.sha256) });
+    const row = (r: (typeof recs)[number]) => ({ sha: r.sha256, name: r.fileName, pages: r.pageCount, status: r.status, error: r.error, exercises: r.exercises.length, solved: r.exercises.filter((e) => e.referenceSolutionMd).length, ...prog.get(r.sha256) });
     const { language, theme } = useSettings.getState().settings;
     return {
       view: "files", language, theme, number,

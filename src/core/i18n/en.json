@@ -348,6 +348,8 @@
     "addExercises": "Add sample exercises",
     "dropHint": "Drop files here or use the button.",
     "exercisesFound": "{{count}} exercises found",
+    "solved": "{{count}} solved",
+    "unsolved": "{{count}} unsolved",
     "pages": "{{count}} pages",
     "waiting": "Indexed on the next plan build",
     "indexedPct": "{{pct}}% indexed",

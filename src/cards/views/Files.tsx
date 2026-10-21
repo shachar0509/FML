@@ -213,6 +213,8 @@ export function Files({
             {role === "exercises" && f.status === "indexed" && (
               <span className="text-xs text-muted">
                 {t("files.exercisesFound", { count: f.exercises })}
+              {f.exercises > 0 &&
+                ` · ${t("files.solved", { count: f.solved })} · ${t("files.unsolved", { count: f.exercises - f.solved })}`}
               </span>
             )}
             <span className="text-xs text-muted">{t("files.pages", { count: f.pages })}</span>

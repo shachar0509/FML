@@ -33,8 +33,8 @@ const course: CourseData = {
 const found: LookupResult = { status: "found", entry: { courseNumber: "01040195", nameHe: "חשבון אינפיניטסימלי 1", credits: 5.5, faculty: "מתמטיקה", syllabusHe: "קדם: 01040031\nסדרות, גבולות, רציפות" } };
 const files: FilesData = {
   view: "files", language: lang, theme: "system", number: "01040195", moodle: { url: "https://moodle.example.ac.il/", connected: false, busy: null, last: null },
-  materials: [{ sha: "a1", name: "lecture1.pdf", pages: 12, status: "indexed", error: null, exercises: 0 }, { sha: "a2", name: "lecture2.pdf", pages: 9, status: "pending", error: null, exercises: 0 }],
-  exercises: [{ sha: "b1", name: "hw1.pdf", pages: 3, status: "indexed", error: null, exercises: 5 }],
+  materials: [{ sha: "a1", name: "lecture1.pdf", pages: 12, status: "indexed", error: null, exercises: 0, solved: 0 }, { sha: "a2", name: "lecture2.pdf", pages: 9, status: "pending", error: null, exercises: 0, solved: 0 }],
+  exercises: [{ sha: "b1", name: "hw1.pdf", pages: 3, status: "indexed", error: null, exercises: 5, solved: 3 }],
 };
 const base = { language: lang, theme: "system" } as const;
 const lesson: LessonData = {
