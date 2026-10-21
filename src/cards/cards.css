@@ -193,6 +193,16 @@ body {
 .board-surface .board-label {
   color: var(--board-fg);
 }
+/* Reasons beside a derivation: handwritten in the second marker / chalk colour, like a lecturer's margin notes. */
+.board-surface .board-note {
+  font-family: "Gveret Levin", "Rubik", cursive;
+  font-size: 1.12em;
+  color: var(--board-ink);
+}
+.board-surface .board-note .katex {
+  color: var(--board-ink);
+  font-size: 0.9em;
+}
 .board-surface .board-box {
   background: transparent;
   border-width: 2px;

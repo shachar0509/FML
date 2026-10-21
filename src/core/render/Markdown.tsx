@@ -64,6 +64,13 @@ const rehypeBoxes = () => (tree: El) => {
         i % 3 === 1 ? { type: "element", tagName: "span", properties: { className: [`m-${part}`] }, children: [{ type: "text", value: all[i + 1] ?? "" }] } : { type: "text", value: i % 3 === 2 ? "" : part },
       );
     });
+    // "…: $a$, $b$" lists symbols: they start on a new line, apart from the words that introduce them.
+    if (n.type === "element" && BLOCKS.has(n.tagName ?? ""))
+      n.children = n.children?.flatMap((c, i, all): El[] => {
+        const next = all[i + 1];
+        const math = next?.type === "element" && (next.properties?.className as string[] | undefined)?.includes("katex");
+        return c.type === "text" && math && /:\s*$/.test(c.value ?? "") ? [{ ...c, value: (c.value ?? "").trimEnd() }, { type: "element", tagName: "br", properties: {}, children: [] }] : [c];
+      });
     // A short word right before inline math ("אם $a<b$", "של $x$") stays on the math's line.
     n.children?.forEach((c, i) => {
       const next = n.children?.[i + 1];
@@ -125,21 +132,89 @@ const components: Components = {
 
 /** "$\\varepsilon$-$N$" is two formulas around a hyphen; in a right-to-left line they swap places ("N-ε"). One formula keeps the order. */
 const HEB = /[\u0590-\u05FF]/;
-/** Hebrew inside a formula renders reversed (KaTeX lays text left to right): pull it out as text, keeping the math pieces as formulas. */
-export function hebrewOutOfMath(tex: string): string {
-  const out: string[] = [];
+export type Piece = { words: boolean; s: string };
+/** A formula cut into its words (\\text{…} with letters, or bare Hebrew) and its math pieces, in order; punctuation alone counts as words. */
+export function mathPieces(tex: string): Piece[] {
+  const out: Piece[] = [];
   const math = (m: string) => {
-    const t = m.trim();
-    if (t) out.push(/^[\s,.:;]*$/.test(t) ? t : `$${t}$`);
+    const t = m.trim().replace(/^(?:\\[,;:! ]|~)+|(?:\\[,;:! ]|~)+$/g, "").trim();
+    if (t) out.push(/^[\s,.:;]*$/.test(t) ? { words: true, s: t } : { words: false, s: t });
   };
   let at = 0;
-  for (const m of tex.matchAll(/\\text\{([^{}]*[\u0590-\u05FF][^{}]*)\}|[\u0590-\u05FF][\u0590-\u05FF\s"'׳״,.:;!?-]*/g)) {
+  for (const m of tex.matchAll(/\\text\{([^{}]*[\u0590-\u05FFA-Za-z][^{}]*)\}|[\u0590-\u05FF][\u0590-\u05FF\s"'׳״,.:;!?-]*/g)) {
     math(tex.slice(at, m.index));
-    out.push((m[1] ?? m[0]).trim());
+    out.push({ words: true, s: (m[1] ?? m[0]).trim() });
     at = m.index + m[0].length;
   }
   math(tex.slice(at));
-  return out.join(" ");
+  return out;
+}
+/** Hebrew inside a formula renders reversed (KaTeX lays text left to right): pull it out as text, keeping the math pieces as formulas. */
+export const hebrewOutOfMath = (tex: string): string => joinPieces(mathPieces(tex));
+/** Pieces back to Markdown: words as text, math as $…$. */
+export const joinPieces = (ps: Piece[]): string =>
+  ps.reduce((acc, p) => {
+    const s = p.words ? p.s : `$${p.s}$`;
+    // "מ-" + "$x$" is one word ("מ-x"); a punctuation mark sticks to what came before
+    return !acc ? s : acc.endsWith("-") || (p.words && /^[,.:;]/.test(p.s)) ? acc + s : `${acc} ${s}`;
+  }, "");
+/** Hebrew nested in a structure (\\underbrace{…}_{\\text{…}}, \\frac{…}{…}) belongs to that structure, not to the line. */
+const deepHebrew = (tex: string) => {
+  let depth = 0;
+  for (let i = 0; i < tex.length; i++) {
+    const c = tex[i];
+    if (c === "\\") {
+      if (tex.startsWith("text{", i + 1) && depth === 0) {
+        const end = tex.indexOf("}", i);
+        if (end < 0) return true;
+        i = end;
+        continue;
+      }
+      i++;
+    } else if (c === "{") depth++;
+    else if (c === "}") depth--;
+    else if (depth > 0 && HEB.test(c as string)) return true;
+  }
+  return false;
+};
+/** Lines of a display formula: split at top-level "\\\\" (not inside {…}, like \\substack{a \\\\ b}). */
+const texLines = (tex: string) => {
+  const out: string[] = [];
+  let depth = 0;
+  let at = 0;
+  for (let i = 0; i < tex.length; i++) {
+    const c = tex[i];
+    if (c === "{") depth++;
+    else if (c === "}") depth--;
+    else if (c === "\\") {
+      if (tex[i + 1] === "\\" && depth === 0) {
+        out.push(tex.slice(at, i));
+        i++;
+        if (tex[i + 1] === "[") i = tex.indexOf("]", i) < 0 ? i : tex.indexOf("]", i); // \\\\[4pt]
+        at = i + 1;
+      } else i++;
+    }
+  }
+  out.push(tex.slice(at));
+  return out.map((l) => l.trim()).filter(Boolean);
+};
+/** A reason written after a derivation line: "&& \\text{…}", "\\quad (\\text{…})". */
+export const REASON = /(?:&&|\\q?quad)\s*\(?\s*\\text\{/;
+/**
+ * Display math with Hebrew in it (an aligned derivation with a reason per line) becomes a rows block: KaTeX lays a
+ * formula out left to right, so Hebrew reasons inside it read in the wrong order; in a rows block the formulas stay
+ * lined up and the reasons are right-to-left text beside them. Other environments (cases, matrices) stay KaTeX.
+ */
+export function displayToRows(tex: string): string | null {
+  const t = tex.trim();
+  const env = /^\\begin\{(aligned|align\*?|split|gathered|gather\*?|eqnarray\*?)\}([\s\S]*)\\end\{\1\}$/.exec(t);
+  const inner = env ? (env[2] as string) : t;
+  if (inner.includes("\\begin{") || deepHebrew(inner)) return null;
+  // without Hebrew only a derivation with written reasons changes; "x \\text{ if } y" reads fine in KaTeX
+  if (!HEB.test(inner) && !texLines(inner).every((l) => REASON.test(l) || !/\\text\{/.test(l))) return null;
+  return texLines(inner)
+    .map((l) => `| ${l.replace(/\n/g, " ")}`)
+    .join("\n");
 }
 /** Bare Hebrew letters in a formula are separate symbols (reversed); wrapped in \\text{…} a phrase stays one run and reads right. */
 export const wrapHebrew = (tex: string) =>
@@ -158,6 +233,11 @@ export const fixMath = (md: string) =>
         ? part
         : joinHyphenatedMath(
             balanceDollars(part)
+              .replace(/^([ \t]*(?:>[ \t]?)*)\$\$([\s\S]*?)\$\$[ \t]*$/gm, (all, pre: string, t: string) => {
+                const body = t.split("\n").map((l, k) => (k ? l.replace(/^[ \t]*(?:>[ \t]?)*/, "") : l)).join("\n");
+                const rows = HEB.test(body) || REASON.test(body) ? displayToRows(body) : null;
+                return rows === null ? all : [`${pre}\`\`\`rows`, ...rows.split("\n").map((l) => pre + l), `${pre}\`\`\``].join("\n");
+              })
               .replace(/\$\$([\s\S]+?)\$\$/g, (all, t: string) => (HEB.test(t) ? `$$${wrapHebrew(t)}$$` : all))
               .replace(/(?<![$\\])\$([^$\n]+)\$(?!\$)/g, (all, t: string) =>
                 !HEB.test(t) ? all : /\\begin|&|\\\\/.test(t) ? `$${wrapHebrew(t)}$` : hebrewOutOfMath(t),

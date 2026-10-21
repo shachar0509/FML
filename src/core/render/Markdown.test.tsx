@@ -69,12 +69,14 @@ describe("Markdown", () => {
     expect(hebrewOutOfMath(String.raw`a < b \text{ וגם } b < c \Rightarrow a < c`)).toBe(String.raw`$a < b$ וגם $b < c \Rightarrow a < c$`);
     expect(hebrewOutOfMath("בדיוק אחד מהבאים: a<b, a=b")).toBe("בדיוק אחד מהבאים: $a<b, a=b$");
     expect(fixMath("אם $a<b \\text{ אז } c$ ו-`$x$ שלום`")).toBe("אם $a<b$ אז $c$ ו-`$x$ שלום`"); // code untouched
-    expect(fixMath("$$\na \\text{ כאשר } b\n$$")).toBe("$$\na \\text{ כאשר } b\n$$"); // display math stays whole
+    expect(fixMath("$$\na \\text{ כאשר } b\n$$")).toBe("```rows\n| a \\text{ כאשר } b\n```"); // Hebrew in display math: a rows line
+    expect(fixMath("$$\\underbrace{x}_{\\text{חיובי}} > 0$$")).toBe("$$\\underbrace{x}_{\\text{חיובי}} > 0$$"); // a note under a term stays KaTeX
     // "$…$$" / "$$…$" (mismatched delimiters) showed raw; matched ones are untouched
     expect(balanceDollars("($a \\cdot a^{-1} = 1$ לכל $a \\neq 0$$)")).toBe("($a \\cdot a^{-1} = 1$ לכל $a \\neq 0$)");
     expect(balanceDollars("$$x$ ו-$y$")).toBe("$x$ ו-$y$");
     for (const ok of ["$a$ $b$", "$$a$$ ו-$b$", "$$\na\n$$", "\\$5$$"]) expect(balanceDollars(ok)).toBe(ok);
-    expect(fixMath("$$x = 1 \\quad איבר אפס$$")).toBe("$$x = 1 \\quad \\text{איבר אפס}$$"); // bare Hebrew wrapped as one run
+    expect(fixMath("$$x = 1 \\quad איבר אפס$$")).toBe("```rows\n| x = 1 \\quad איבר אפס\n```");
+    expect(fixMath("$$\\begin{cases} 1 & \\text{אם } x>0 \\\\ 0 \\end{cases}$$")).toBe("$$\\begin{cases} 1 & \\text{אם } x>0 \\\\ 0 \\end{cases}$$"); // other environments stay KaTeX
     const { container } = render(<Markdown>{"$a<b$ ו-$0<c$ גוררים $a c < b c$"}</Markdown>);
     expect(container.querySelector("p")?.getAttribute("dir")).toBe("rtl"); // the words decide, not the leading formula
     expect(render(<Markdown>{"$a_n \\to 0$"}</Markdown>).container.querySelector("p")?.hasAttribute("dir")).toBe(false); // formulas only: the card's direction
@@ -103,6 +105,42 @@ describe("Markdown", () => {
     expect(container.querySelector(".katex-error")).toBeNull();
     expect(container.querySelector(".board-box-proof .katex-display")).toBeTruthy();
     expect(container.querySelector(".board-box-theorem .board-box-title")).toBeNull();
+  });
+
+  it("an aligned derivation with Hebrew reasons: formulas lined up, reasons as right-to-left notes beside them", () => {
+    const md = ["> [!proof]", "> $$", "> \\begin{aligned}", "> 0 &= x + (-x) && \\text{איבר נגדי} \\\\", "> &= (x+x) + (-x) && \\text{מ-} x = x+x \\\\", "> &= x + 0 \\quad (\\text{קיבוץ})", "> \\end{aligned}", "> $$"].join("\n");
+    const { container } = render(<Markdown>{md}</Markdown>);
+    const rows = container.querySelector(".board-box-proof .board-rows");
+    expect(rows?.getAttribute("data-dir")).toBe("rtl");
+    expect(rows?.querySelectorAll(".board-rel .katex")).toHaveLength(3); // every line lined up at "="
+    const notes = [...(rows?.querySelectorAll(".board-note") ?? [])];
+    expect(notes.map((n) => n.textContent?.replace(/\s+/g, ""))).toEqual(["איברנגדי", expect.stringMatching(/^מ-x=x\+x/), "קיבוץ"]);
+    expect(notes[1]?.querySelector("p")?.getAttribute("dir")).toBe("rtl"); // "מ-x=x+x" reads right to left
+    expect(container.querySelector(".katex-error")).toBeNull();
+  });
+
+  it("rows: a Hebrew name sits on the right; words before a formula get their own column, after a colon their own line", () => {
+    const { container } = render(<Markdown>{"```rows\nטריכוטומיה | \\text{בדיוק אחד מהבאים:} a<b,\\ a=b,\\ b<a\nטרנזיטיביות | a<b \\land b<c \\Rightarrow a<c\nלכן | \\text{לכן} x = 0\n```"}</Markdown>);
+    const rows = [...container.querySelectorAll(".board-row")];
+    expect(container.querySelector(".board-rows")?.getAttribute("data-dir")).toBe("rtl");
+    expect(rows).toHaveLength(4); // the ":" line is split into two
+    expect(rows[0]?.querySelector(".board-lead")?.textContent).toBe("בדיוק אחד מהבאים:");
+    expect(rows[1]?.querySelector(".board-label")?.textContent).toBe("");
+    expect(rows[1]?.querySelector(".board-rel .katex")).toBeTruthy(); // the formula is lined up with the others
+    expect(rows[3]?.querySelector(".board-pre")?.textContent).toBe("לכן");
+    expect(container.querySelectorAll(".board-rel .katex")).toHaveLength(3);
+    const bare = render(<Markdown>{"$$\n\\begin{aligned} x &= y \\text{ פילוג} \\\\ &= z \\end{aligned}\n$$"}</Markdown>).container; // no && before the reason
+    expect(bare.querySelector(".board-note")?.textContent).toBe("פילוג");
+    expect(bare.querySelectorAll(".board-rel .katex")).toHaveLength(2);
+    expect(render(<Markdown>{"```rows\nClosure | a + b \\in F\n```"}</Markdown>).container.querySelector(".board-rows")?.getAttribute("data-dir")).toBe("ltr");
+  });
+
+  it("words that end with a colon before symbols: the symbols start on the next line", () => {
+    const { container } = render(<Markdown>{"בדיוק אחד מהבאים: $a<b$, $a=b$\n\nלכל $c$: אם $a<b$"}</Markdown>);
+    const [p1, p2] = [...container.querySelectorAll("p")];
+    expect(p1?.innerHTML).toMatch(/מהבאים:<br><span class="katex"/);
+    expect(p2?.querySelector("br")).toBeNull(); // ": אם" — words follow the colon, no break
+    expect(hebrewOutOfMath("\\text{מ-} x = x+x")).toBe("מ-$x = x+x$");
   });
 
   it("dispatches only the five figure tags", () => {

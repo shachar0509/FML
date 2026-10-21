@@ -129,30 +129,79 @@ body {
 .m-pink { color: var(--m-pink, #db2777); }
 .m-orange { color: var(--m-orange, #c2410c); }
 /* Board layouts (M20): ```rows lines up the relation across rows; [!kind] blockquotes are boxes. */
+/* Columns in reading order: LTR  name · words · lhs rel rhs · reason;  RTL  reason · lhs rel rhs · words · name.
+   The formula itself is always left to right and every row is lined up at its relation. */
 .board-rows {
   display: grid;
-  grid-template-columns: max-content max-content max-content minmax(0, 1fr);
+  /* LTR: name · words · lhs rel rhs · reason · slack.  The slack column takes what a line woven with words needs
+     beyond the formula columns, so such a line never widens (and misaligns) them; a reason wraps when space is short. */
+  grid-template-columns: max-content max-content max-content max-content max-content auto minmax(0, 1fr);
   align-items: center;
-  column-gap: 0.5em;
-  row-gap: 0.15em;
   margin: 1em 0;
   overflow-x: auto;
+}
+.board-rows[data-dir="rtl"] {
+  /* RTL: slack · reason · lhs rel rhs · words · name, pushed to the right edge */
+  grid-template-columns: minmax(0, 1fr) auto max-content max-content max-content max-content max-content;
 }
 .board-row {
   display: contents;
 }
-.board-mixed {
-  grid-column: 2 / -1;
+/* Three grid lines per row: name (stacked only), the line itself, reason (stacked only). Empty lines take no space. */
+.board-row > * {
+  grid-row: calc(var(--row) * 3 - 1);
+  padding-block: 0.08em;
 }
-/* Like \begin{aligned}: the left side hugs the relation, the gap opens between the name and the formula. */
+.board-label {
+  font-weight: 500;
+  color: var(--primary);
+}
+.board-rows .md p {
+  margin: 0;
+}
+/* Like \begin{aligned}: the left side hugs the relation; the name hugs the formula from its side. */
 .board-lhs {
   justify-self: end;
 }
-.board-label {
-  justify-self: end;
-  padding-inline-end: 1.25em;
-  font-weight: 500;
-  color: var(--primary);
+.board-rel {
+  padding: 0 0.3em;
+}
+.board-rows[data-dir="ltr"] .board-label { grid-column: 1; justify-self: end; padding-right: 1.25em; }
+.board-rows[data-dir="ltr"] .board-pre { grid-column: 2; padding-right: 0.6em; }
+.board-rows[data-dir="ltr"] .board-lhs { grid-column: 3; }
+.board-rows[data-dir="ltr"] .board-rel { grid-column: 4; }
+.board-rows[data-dir="ltr"] .board-rhs { grid-column: 5; }
+.board-rows[data-dir="ltr"] .board-note { grid-column: 6; padding-left: 1.75em; }
+.board-rows[data-dir="ltr"] :is(.board-mixed, .board-lead) { grid-column: 2 / -1; }
+.board-rows[data-dir="rtl"] .board-note { grid-column: 2; justify-self: end; padding-right: 1.75em; }
+.board-rows[data-dir="rtl"] .board-lhs { grid-column: 3; }
+.board-rows[data-dir="rtl"] .board-rel { grid-column: 4; }
+.board-rows[data-dir="rtl"] .board-rhs { grid-column: 5; }
+.board-rows[data-dir="rtl"] .board-pre { grid-column: 6; padding-left: 0.6em; }
+.board-rows[data-dir="rtl"] .board-label { grid-column: 7; justify-self: start; padding-left: 1.25em; }
+.board-rows[data-dir="rtl"] :is(.board-mixed, .board-lead) { grid-column: 1 / 7; justify-self: end; }
+/* Stacked (narrow): the name above its line, the reason below it, on the reading side. */
+.board-rows[data-stack="true"] .board-label {
+  grid-row: calc(var(--row) * 3 - 2);
+  grid-column: 1 / -1;
+  padding: 0.5em 0 0;
+}
+.board-rows[data-stack="true"] .board-note {
+  grid-row: calc(var(--row) * 3);
+  grid-column: 1 / -1;
+  padding: 0 0 0.25em;
+}
+.board-rows[data-stack="true"][data-dir="ltr"] :is(.board-label, .board-note) { justify-self: start; }
+.board-rows[data-stack="true"][data-dir="rtl"] :is(.board-label, .board-note) { justify-self: end; }
+/* A reason written beside a line: smaller and quieter than the formula, so it reads as an explanation. */
+.board-note {
+  overflow-wrap: normal; /* break between words only; a word that does not fit stacks the block instead */
+  color: var(--muted);
+  font-size: 0.92em;
+  line-height: 1.5;
+}
+.board-rows .board-note .katex {
+  font-size: 1em;
 }
 .md .board-rows .katex-display {
   margin: 0;
@@ -208,7 +257,17 @@ body {
   --box: var(--muted);
   border-style: dashed;
 }
-.board-box-proof > :last-child::after {
+/* After a rows block the ∎ is its own last grid line, at the end of the reading direction. */
+.board-box-proof > .board-rows:last-child::after {
+  content: "∎";
+  grid-row: calc(var(--rows) * 3 + 1);
+  grid-column: 1 / -1;
+  justify-self: end;
+}
+.board-box-proof > .board-rows[data-dir="rtl"]:last-child::after {
+  justify-self: start;
+}
+.board-box-proof > :last-child:not(.board-rows)::after {
   content: " ∎";
   float: inline-end;
 }

@@ -73,6 +73,7 @@ ${L("חילופיות", "Commutativity")} | a \\cdot b = b \\cdot a
 ${L("איבר יחידה", "Identity")} | a \\cdot 1 = a, \\quad 1 \\neq 0
 ${L("איבר הופכי", "Inverse")} | a \\cdot a^{-1} = 1, \\quad a \\neq 0
 ${L("טרנזיטיביות", "Transitivity")} | a < b \\text{ ${L("וגם", "and")} } b < c \\Rightarrow a < c
+${L("טריכוטומיה", "Trichotomy")} | \\text{${L("בדיוק אחד מהבאים:", "exactly one of:")}} a<b,\\ a=b,\\ b<a
 \`\`\`
 
 > [!definition] ${L("שדה סדור", "Ordered field")}
@@ -89,7 +90,8 @@ $$
 > $$
 > \\begin{aligned}
 > 0 \\cdot a &= (0 + 0) \\cdot a && \\text{${L("איבר אפס", "zero")}} \\\\
-> &= 0 \\cdot a + 0 \\cdot a && \\text{${L("פילוג", "distributivity")}}
+> &= 0 \\cdot a + 0 \\cdot a && \\text{${L("פילוג", "distributivity")}} \\\\
+> &= x + x && \\text{${L("מ-", "from ")}} x = 0 \\cdot a
 > \\end{aligned}
 > $$`,
   sideMd: `$\\N \\subset \\Z$\n\n${L("כל טבעי הוא גם שלם.", "Every natural number is an integer.")}`,
