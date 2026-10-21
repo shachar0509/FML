@@ -567,3 +567,18 @@ Edge cases found with the sample slides, and fixed in the renderer:
 - **Checks:**
   - sample `fences`, with screenshots in `e2e/shots/display alignment problems/`;
   - unit tests; 138 unit and 61 e2e pass.
+
+## M31 — Back keeps the card; answers solved on paper ✅
+- **Bug:** pressing Back in a card folded it away ("this card was replaced by a newer card").
+  - **Cause:** a card claimed a fresh number each time it mounted. When the host mounted a card again (Claude Desktop re-renders the chat after a card's own tool call), an older card outranked the one in use.
+  - **Fix:**
+    - every card result now carries a rising number (`card`), stamped by one wrapper around `registerTool`;
+    - a card claims the number of the result it was created with, so mounting it again keeps its old number;
+    - results of a card's own calls (Back, open course) are never a card's first data, so only a new model render replaces a card.
+- **Answers solved on paper:**
+  - the open-question card has a drop zone and an "Upload solution" button for photos or a PDF; a PDF becomes one image per page, max 12;
+  - the answer can be text, files or both;
+  - `shalav_request` answer takes `number` and `files`; `shalav_next_job` returns the pages as image blocks with the request;
+  - the exercise card uses the same `AnswerFiles` component, so its drop zone now really accepts dropped files.
+- **Checks:** server tests for card numbers and paper answers, e2e for dropping a file. 139 unit and 61 e2e pass.
+- 🧪 In Claude Desktop: press Back on an open question (the card should stay), then drop a photo of a handwritten proof.
