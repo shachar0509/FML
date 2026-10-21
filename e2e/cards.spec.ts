@@ -136,6 +136,8 @@ for (const lang of ["he", "en"] as const)
 
       await page.goto(url("step"));
       await expect(page.locator("article .katex").first()).toBeVisible();
+      // \neq overlays a slash on "="; it shows as "/=" when KaTeX's CSS and JS versions differ
+      expect(await page.locator("article .katex .katex-thinbox").first().evaluate((e) => getComputedStyle(e).maxWidth)).toBe("0px");
       await expect(page.locator("figure svg").first()).toBeVisible();
       await axe();
       await page.screenshot({ path: `e2e/shots/card-step-${lang}-${theme}.png`, fullPage: true });

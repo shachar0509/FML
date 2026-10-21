@@ -89,6 +89,28 @@ body {
   font-size: 16px;
   line-height: 1.7;
 }
+/* A lesson step written like a tutor on a board: roomy lines, formulas on their own lines, clear gaps between blocks. */
+.board {
+  font-size: 17px;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+.board .md p,
+.board .md ul,
+.board .md ol,
+.board .md blockquote {
+  margin: 1em 0;
+}
+.board .md li + li {
+  margin-top: 0.5em;
+}
+.board .md .katex {
+  font-size: 1.12em;
+}
+.board .md .katex-display {
+  margin: 1em 0;
+  padding: 0.5em 0;
+}
 
 /* Rendered Claude text (11.1) */
 .md .katex,

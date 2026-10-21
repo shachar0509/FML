@@ -64,7 +64,7 @@ const practiceSummary: PracticeData = { ...practiceBase, mode: "summary", summar
 const practiceReply: Record<string, PracticeData> = { practice_start_request: mcqItem, practice_next_request: mcqItem, practice_answer_mcq: mcqDone, practice_end: practiceSummary, practice_state: practiceBase };
 const settings: SettingsData = { ...base, view: "settings", university: "technion", dataRoot: "/Users/me/Documents/Shalav", learning: { minExercises: 2, minExerciseScore: 85, masteryThreshold: 0.85, requireAllObjectives: true, hintsBeforeSolution: 3 }, conflicts: ["courses/01040195/.shalav/events/dev1 (1).jsonl"] };
 const figure: FigureData = { ...base, view: "figure", kind: "plot", source: JSON.stringify({ xDomain: [-2, 2], yDomain: [-1, 4], data: [{ fn: "x^2", label: "f" }] }), captionMd: "$f(x)=x^2$" };
-const step: StepData = { ...base, view: "step", titleMd: "What is a field?", bodyMd: "A **field** is a set $F$ with $+$ and $\\cdot$ where:\n\n$$a+b=b+a$$", figure: { kind: figure.kind, source: figure.source, captionMd: "" } };
+const step: StepData = { ...base, view: "step", titleMd: "אקסיומות הכפל", bodyMd: "לכל $a, b, c \\in \\R$:\n\n9. **איבר יחידה:** קיים $1 \\neq 0$ כך ש-$a \\cdot 1 = a$\n10. **איבר הופכי:** לכל $a \\ne 0$ קיים $a^{-1}$ כך ש-$a \\cdot a^{-1} = 1$\n\n$$\n\\begin{aligned} 0 \\cdot a &= (0+0) \\cdot a && \\text{(4)} \\\\ &= 0 \\cdot a + 0 \\cdot a && \\text{(11)} \\end{aligned}\n$$\n\nלכן $0 \\cdot a = 0$, ו-$0 \\not= 1$.", figure: { kind: figure.kind, source: figure.source, captionMd: "" } };
 const initial: CardData = ({ lesson, mcq, open, figure, step, exercise, practice: practiceBase, settings } as Record<string, CardData>)[q.get("view") ?? ""] ?? home;
 const said: string[] = [];
 let mode = "inline";

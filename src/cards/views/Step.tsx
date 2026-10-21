@@ -16,8 +16,8 @@ export function Step({ data, go }: { data: StepData; go: Go }) {
   const send = (label: string, req: Parameters<Go>[0]) => (setSent(label), void go(req));
   return (
     <section className="flex flex-col gap-3" aria-label={data.titleMd}>
-      <article className={`${panel} lesson-text flex flex-col gap-2 p-4`}>
-        <h2 className="text-lg font-bold">
+      <article className={`${panel} board flex min-w-0 flex-col gap-3 overflow-x-auto px-5 py-5 sm:px-7`}>
+        <h2 className="border-b border-border pb-2 text-xl font-bold">
           <Markdown>{data.titleMd}</Markdown>
         </h2>
         <Markdown>{data.bodyMd}</Markdown>

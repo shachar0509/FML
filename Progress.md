@@ -375,3 +375,9 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - Tutor prompt (MCP): all lesson content goes in teach_step, the chat text is at most one sentence; one step per message, then wait; one idea per step (~120 words); a list of axioms or a long proof spans several steps; a quick check every 2-3 steps; questions answered briefly in a step; "explain differently" re-explains with simpler words/another example/a figure. Rules 1-2 follow this in MCP mode. `show_figure` stays for figures outside a step.
 - Checks: typecheck/lint clean, 123 unit (teach_step cases, step request), 30 e2e (step card: math, figure, question flow, axe; he/en, light/dark).
 - 🧪 Claude Desktop: start a lesson → short step cards, one per message; Continue / Explain differently / question each need one Enter.
+
+### M18a — Board-like step cards; ≠ and other negated symbols fixed (done; 🧪 pending)
+- Bug: `\neq` (and every `\not…`) showed as "/=". rehype-katex rendered with its own KaTeX 0.16 (classes `.inner`, `.thinbox`), but the CSS came from our KaTeX 0.19 (renamed `.katex-inner`, `.katex-thinbox`), so the slash overlay had no styles. Fix: `overrides: katex: 0.19.0` in `pnpm-workspace.yaml` (one KaTeX everywhere, desktop app too). e2e asserts the overlay is styled.
+- Step card styled like a board (`.board`): 17px text, line-height 1.9, 1em gaps between paragraphs/lists/display math, spaced list items, slightly larger math, a ruled heading, more padding; long lines scroll inside the card instead of being clipped.
+- Tutor prompt: write each step like a tutor on a board (heading, one short sentence per line, key formulas as display math on their own lines, derivations in `aligned` with a reason per line, numbered lists for axioms/cases, real symbols, never ASCII like /= or <=).
+- Checks: typecheck/lint clean, 123 unit, 30 e2e (screenshots checked he/en, light/dark).
