@@ -130,14 +130,14 @@ const rehypeBoxes = () => (tree: El) => {
             : { type: "text", value: i % 3 === 2 ? "" : part },
         );
     });
-    // "…: $a$, $b$" lists symbols: they start on a new line, apart from the words that introduce them.
+    // "…: $a$, $b$" lists symbols: they start on a new line, apart from the words that introduce them (not inside "(…: $a$)").
     if (n.type === "element" && BLOCKS.has(n.tagName ?? ""))
       n.children = n.children?.flatMap((c, i, all): El[] => {
         const next = all[i + 1];
         const math =
           next?.type === "element" &&
           (next.properties?.className as string[] | undefined)?.includes("katex");
-        return c.type === "text" && math && /:\s*$/.test(c.value ?? "")
+        return c.type === "text" && math && /:\s*$/.test(c.value ?? "") && !/\([^()]*:\s*$/.test(c.value ?? "")
           ? [
               { ...c, value: (c.value ?? "").trimEnd() },
               { type: "element", tagName: "br", properties: {}, children: [] },
@@ -271,7 +271,7 @@ const braceDepth = (tex: string) => {
   }
   return d;
 };
-/** A formula cut into its words (\\text{…} with letters, or bare Hebrew) and its math pieces, in order; punctuation alone counts as words. */
+/** A formula cut into its words (\\text{…} with letters, or bare Hebrew) and its math pieces, in order; punctuation alone counts as words, also as \\text{)} beside Hebrew. */
 export function mathPieces(tex: string): Piece[] {
   const out: Piece[] = [];
   const math = (m: string) => {
@@ -283,11 +283,13 @@ export function mathPieces(tex: string): Piece[] {
   };
   let at = 0;
   for (const m of tex.matchAll(
-    /\\text\{([^{}]*[\u0590-\u05FFA-Za-z][^{}]*)\}|[\u0590-\u05FF][\u0590-\u05FF\s"'׳״,.:;!?-]*/g,
+    /\\text\{([^{}]*[\u0590-\u05FFA-Za-z][^{}]*|[\s()[\].,:;!?]+)\}|[\u0590-\u05FF][\u0590-\u05FF\s"'׳״,.:;!?-]*/g,
   )) {
-    if (braceDepth(tex.slice(0, m.index))) continue; // words inside a structure (|H|_{\\text{dB}}) belong to the formula
+    if (braceDepth(tex.slice(0, m.index))) continue;
+    const punct = /^[\s()[\].,:;!?]+$/.test(m[1] ?? "");
+    if (punct && !HEB.test(tex)) continue; // \\text{(} in a formula without words stays in it // words inside a structure (|H|_{\\text{dB}}) belong to the formula
     // Latin \\text{…} counts as words only as a phrase ("exactly one of:"); a unit ("\\text{ dB}", "m/s") is the formula's
-    if (!HEB.test(m[0]) && !/\S\s+\S|:$/.test((m[1] ?? "").trim())) continue;
+    if (!punct && !HEB.test(m[0]) && !/\S\s+\S|:$/.test((m[1] ?? "").trim())) continue;
     math(tex.slice(at, m.index));
     out.push({ words: true, s: (m[1] ?? m[0]).trim() });
     at = m.index + m[0].length;
@@ -304,7 +306,7 @@ export const joinPieces = (ps: Piece[], rtl = false): string =>
     // "מ-" + "$x$" is one word ("מ-x"); a punctuation mark sticks to what came before
     return !acc
       ? s
-      : acc.endsWith("-") || (p.words && /^[,.:;]/.test(p.s))
+      : acc.endsWith("-") || acc.endsWith("(") || (p.words && /^[,.:;)\]]/.test(p.s))
         ? acc + s
         : `${acc} ${s}`;
   }, "");
@@ -430,7 +432,7 @@ export const REASON = /(?:&&|\\q?quad)\s*\(?\s*\\text\{/;
 export function displayToRows(tex: string): string | null {
   const t = tex.trim();
   const env =
-    /^\\begin\{(aligned|align\*?|split|gathered|gather\*?|eqnarray\*?)\}([\s\S]*)\\end\{\1\}$/.exec(
+    /^\\begin\{(aligned|align\*?|split|gathered|gather\*?|eqnarray\*?)\}([\s\S]*)\\end\{\1\}\s*[.,;:]?$/.exec(
       t,
     );
   const inner = env ? (env[2] as string) : t;
@@ -449,6 +451,27 @@ export const wrapHebrew = (tex: string) =>
     (all, run?: string, one?: string) => (run || one ? `\\text{${run ?? one}}` : all),
   );
 /**
+ * remark-math reads "$$" like a code fence: text after an opening "$$" is dropped (like a language name) and only a line
+ * that is just "$$" closes the block. "$$\\begin{aligned} … \\end{aligned}$$" would lose its \\begin and swallow the rest
+ * (a KaTeX error). Puts a multi-line display's fences on lines of their own, in the same blockquote; punctuation after
+ * the closing "$$" moves inside the formula, other text to the next line.
+ */
+export const fenceDisplays = (md: string) =>
+  md.replace(
+    /^([ \t]*(?:>[ \t]?)*)\$\$([^\n$]*)\n([\s\S]*?)\$\$([^\n]*)$/gm,
+    (_, pre: string, head: string, body: string, tail: string) => {
+      const last = body.slice(body.lastIndexOf("\n") + 1).replace(/^[ \t]*(?:>[ \t]?)*/, "");
+      const punct = /^\s*[.,;:]?\s*$/.test(tail);
+      const lines = [`${pre}$$`, ...(head.trim() ? [pre + head.trim()] : [])];
+      return [
+        ...lines,
+        (last.trim() ? body : body.replace(/\n[^\n]*$/, "")) + (punct ? tail.trim() : ""),
+        `${pre}$$`,
+        ...(punct ? [] : [pre + tail.trim()]),
+      ].join("\n");
+    },
+  );
+/**
  * Applies the bidi fixes to Claude's Markdown outside code blocks. An inline formula with Hebrew words is split into
  * text + formulas; a display formula or an environment (aligned with Hebrew reasons) is kept whole, its bare Hebrew wrapped.
  */
@@ -460,7 +483,7 @@ export const fixMath = (md: string) =>
         ? part
         : glueArrows(
             joinHyphenatedMath(
-              balanceDollars(escapeCurrency(part))
+              balanceDollars(escapeCurrency(fenceDisplays(part)))
                 .replace(
                   /^([ \t]*(?:>[ \t]?)*)\$\$([\s\S]*?)\$\$[ \t]*$/gm,
                   (all, pre: string, t: string) => {

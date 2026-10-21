@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import "@/core/i18n";
-import { balanceDollars, escapeCurrency, mathPieces, fixMath, rtlArrows, rtlTextArrows, hebrewOutOfMath, joinHyphenatedMath, Markdown } from "./Markdown";
+import { balanceDollars, escapeCurrency, fenceDisplays, mathPieces, fixMath, rtlArrows, rtlTextArrows, hebrewOutOfMath, joinHyphenatedMath, Markdown } from "./Markdown";
 import { isFigureTag } from "./Figure";
 import { splitRel } from "./Rows";
 
@@ -192,5 +192,22 @@ describe("Markdown", () => {
 
   it("dispatches only the five figure tags", () => {
     expect(["mermaid", "plot", "geometry", "wavedrom", "svg", "python"].filter(isFigureTag)).toHaveLength(5);
+  });
+
+  it("display fences: \\begin and \\end on the $$ lines never reach KaTeX as raw source", () => {
+    // remark-math drops text after an opening "$$" and closes only on a "$$" line of its own
+    expect(fenceDisplays("> $$\\begin{aligned}\n> x &= 1\n> \\end{aligned}$$.")).toBe("> $$\n> \\begin{aligned}\n> x &= 1\n> \\end{aligned}.\n> $$");
+    expect(fenceDisplays("$$\\begin{cases}\n1\n\\end{cases}$$ היא $|x|$")).toBe("$$\n\\begin{cases}\n1\n\\end{cases}\n$$\nהיא $|x|$");
+    expect(fenceDisplays("$$x = 1$$ and $$\ny\n$$")).toBe("$$x = 1$$ and $$\ny\n$$");
+    const proof = "> [!proof]\n> $$\\begin{aligned}\n> b &= b + 0 && \\text{(איבר האפס)} \\\\\n> &= c && \\text{(הנחה: } a + c = 0\\text{)}\n> \\end{aligned}$$.";
+    const { container } = render(<Markdown>{`${proof}\n\n$$\\begin{cases}\n-x & x<0 \\\\\nx & \\text{אחרת}\n\\end{cases}$$ היא $|x|$`}</Markdown>);
+    expect(container.querySelector(".katex-error")).toBeNull();
+    expect(container.querySelectorAll(".board-rows")).toHaveLength(1); // the proof stays a rows block
+    // a reason "(הנחה: a+c=0)": the parentheses are text (they follow the Hebrew), the colon does not break the line
+    const note = container.querySelectorAll(".board-note")[1] as HTMLElement;
+    expect(note.querySelector("br")).toBeNull();
+    expect(note.querySelector(".nobr")?.textContent?.endsWith(")")).toBe(true);
+    expect(mathPieces("\\text{(הנחה: } a + c = 0\\text{)}")).toEqual([{ words: true, s: "(הנחה:" }, { words: false, s: "a + c = 0" }, { words: true, s: ")" }]);
+    expect(mathPieces("f\\text{(}x\\text{)}")).toEqual([{ words: false, s: "f\\text{(}x\\text{)}" }]); // no Hebrew: one formula
   });
 });

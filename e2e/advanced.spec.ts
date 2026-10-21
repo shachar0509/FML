@@ -6,7 +6,8 @@ import { expect, test } from "@playwright/test";
 // test6: אינפי 2 and electrical engineering; test7: law, biology, chemistry, finance, architecture
 const SAMPLES = ["taylor", "series", "gradient", "double", "green", "rlc", "fourier", "bode", "maxwell"].map((s) => [s, "test6"] as const);
 const OTHER = ["law", "biology", "chemistry", "finance", "architecture"].map((s) => [s, "test7"] as const);
-for (const [sample, dir] of [...SAMPLES, ...OTHER])
+const FIXES = [["fences", "display alignment problems"]] as const; // "$$" on the \\begin / \\end line
+for (const [sample, dir] of [...SAMPLES, ...OTHER, ...FIXES])
   for (const theme of ["light", "dark"] as const)
     test(`advanced step ${sample} (${theme})`, async ({ page }) => {
       const errors: string[] = [];
@@ -31,7 +32,7 @@ for (const [sample, dir] of [...SAMPLES, ...OTHER])
       );
       expect(raw).toEqual([]);
       // a figure in the body or beside it is drawn (svg); series and maxwell are formulas only
-      if (!["series", "maxwell"].includes(sample)) await expect(board.locator("svg").first()).toBeVisible();
+      if (!["series", "maxwell", "fences"].includes(sample)) await expect(board.locator("svg").first()).toBeVisible();
       // an svg picture keeps its left-to-right coordinates in a Hebrew card (labels start where the author put them)
       if (sample === "rlc") expect(await board.locator("svg text").first().evaluate((t) => getComputedStyle(t).direction)).toBe("ltr");
       // the board fits: nothing scrolls sideways (formulas are not cut off)

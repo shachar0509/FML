@@ -317,6 +317,33 @@ $$
     progress: { n: 9, of: 9 },
   },
   // Law — statute quotes, nested citations, English case names, §, percentages, a table, text arrows, a Hebrew-labelled picture
+  // "$$" on the same line as \begin / \end (e2e/shots/display alignment problems/image.png showed KaTeX's raw-source error)
+  fences: {
+    titleMd: "יחידות האיבר הנגדי",
+    bodyMd: String.raw`נניח $a + b = 0$ וגם $a + c = 0$. נראה ש-$b = c$.
+
+> [!proof]
+> $$\begin{aligned}
+> b &= b + 0 && \text{(איבר האפס)} \\
+> &= b + (a + c) && \text{(הנחה: } a + c = 0\text{)} \\
+> &= (b + a) + c && \text{(קיבוץ)} \\
+> &= 0 + c && \text{(הנחה: } a + b = 0\text{)} \\
+> &= c && \text{(איבר האפס וחילוף)}
+> \end{aligned}$$.
+
+$$\begin{cases}
+-x & \text{אם } x < 0 \\
+x & \text{אחרת}
+\end{cases}$$ היא ההגדרה של $|x|$, ובלי עברית:
+
+$$\begin{aligned}
+(a+b)^{2} &= (a+b)(a+b) \\
+&= a^{2} + 2ab + b^{2}
+\end{aligned}$$`,
+    sideMd: null,
+    figure: null,
+    progress: { n: 1, of: 9 },
+  },
   law: {
     titleMd: "תום לב במשא ומתן — סעיף 12 לחוק החוזים",
     bodyMd: String.raw`> [!definition] סעיף 12(א) לחוק החוזים (חלק כללי), התשל"ג–1973
