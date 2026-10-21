@@ -39,7 +39,7 @@ export class BridgeGateway implements ClaudeGateway {
   private opSeq = 0;
   private als = new AsyncLocalStorage<Op>();
   private listeners = new Set<() => void>();
-  /** Dedupe (5.2): text already shown in this server session -> job number. */
+  /** Dedupe (5.2): `${opId}:${text}` already shown -> job number. Per op, not per server: the server outlives a chat. */
   private seen = new Map<string, number>();
 
   /** Run a domain operation; every send() made inside it belongs to it and can be cancelled together. */
@@ -189,6 +189,7 @@ export class BridgeGateway implements ClaudeGateway {
     const out: Content[] = [];
     const text: string[] = [`# Shalav job #${job.id}${job.opId ? ` (${this.ops.get(job.opId)?.label})` : ""} — ${req.task}`];
     const dup = (key: string, label: string): string | undefined => {
+      key = `${job.opId ?? "-"}:${key}`;
       const n = this.seen.get(key);
       if (n !== undefined && n !== job.id) return `Same ${label} as job #${n}.`;
       this.seen.set(key, job.id);

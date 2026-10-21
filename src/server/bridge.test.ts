@@ -47,6 +47,18 @@ describe("BridgeGateway", () => {
     expect((await done).map((v) => v.value.n)).toEqual([1, 2]);
   });
 
+  it("dedupe is per operation: a later op (maybe a new chat) gets the full instructions", async () => {
+    const b = new BridgeGateway();
+    b.run("op1", () => b.send(req));
+    await new Promise((r) => setImmediate(r));
+    await b.submit({ jobId: idOf(b.next()), text: "x" });
+    b.run("op2", () => b.send(req));
+    await new Promise((r) => setImmediate(r));
+    const j = text(b.next());
+    expect(j).toContain("SYS");
+    expect(j).not.toContain("Same");
+  });
+
   it("cancel rejects every job of the operation", async () => {
     const b = new BridgeGateway();
     const { opId, done } = b.run("op", () => Promise.all([b.send(req), b.send(req)]));
