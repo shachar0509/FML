@@ -1,3 +1,4 @@
+import { COURSE_ID_RE } from "@/core/universities";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import type { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod";
@@ -13,7 +14,7 @@ import type { BridgeGateway, Content } from "./bridge";
 import { CARDS_URI } from "./resources";
 
 const appOnly = { ui: { resourceUri: CARDS_URI, visibility: ["app" as const] } };
-const num = z.string().regex(/^\d{8}$/);
+const num = z.string().regex(COURSE_ID_RE);
 const run_ = z.object({ runId: z.string() });
 const files = z.array(z.object({ sha256: z.string().regex(/^[0-9a-f]{64}$/), mediaType: z.enum(["image/jpeg", "image/png"]) })).max(12);
 const out = (text: string, structuredContent?: object) => ({ content: [{ type: "text" as const, text }], ...(structuredContent ? { structuredContent: structuredContent as Record<string, unknown> } : {}) });

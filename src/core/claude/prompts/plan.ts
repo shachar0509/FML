@@ -1,3 +1,4 @@
+import { uniName } from "@/core/universities";
 // Spec 10.3 (verbatim apart from placeholders).
 import type { CourseJson } from "@/core/domain/dataSchemas";
 
@@ -21,7 +22,7 @@ S016 Uniqueness of the limit and boundedness of convergent sequences`;
 type Head = Pick<CourseJson, "courseNumber" | "nameHe" | "credits" | "faculty" | "syllabusHe" | "prerequisitesRaw">;
 
 const header = (c: Head) =>
-  `You are designing a study plan for Technion course ${c.courseNumber} "${c.nameHe}" (${c.credits} credits, faculty: ${c.faculty}).
+  `You are designing a study plan for ${uniName()} course ${c.courseNumber} "${c.nameHe}" (${c.credits} credits, faculty: ${c.faculty}).
 Official syllabus:
 ${c.syllabusHe}
 Prerequisite courses (not to be taught): ${c.prerequisitesRaw || "none"}`;

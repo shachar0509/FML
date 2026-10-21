@@ -10,7 +10,7 @@ type Entry = Extract<LookupResult, { status: "found" }>["entry"];
 type Phase = "input" | "looking" | "preview" | "manual" | "building";
 type Tool = (name: string, args?: Record<string, unknown>) => Promise<{ structuredContent?: unknown; isError?: boolean }>;
 
-export function AddCourse({ callTool, say, open, back }: { callTool: Tool; say: (t: string) => Promise<void>; open: (n: string) => void; back: () => void }) {
+export function AddCourse({ example, callTool, say, open, back }: { example: string; callTool: Tool; say: (t: string) => Promise<void>; open: (n: string) => void; back: () => void }) {
   const { t } = useTranslation();
   const [phase, setPhase] = useState<Phase>("input");
   const [raw, setRaw] = useState("");
@@ -58,7 +58,7 @@ export function AddCourse({ callTool, say, open, back }: { callTool: Tool; say: 
         <form className="flex flex-col gap-3" onSubmit={(e) => (e.preventDefault(), void lookup())}>
           <label className={lbl}>
             {t("home.addDesc")}
-            <Input autoFocus dir="ltr" placeholder="01040195" value={raw} onChange={(e) => setRaw(e.target.value)} />
+            <Input autoFocus dir="ltr" placeholder={example} value={raw} onChange={(e) => setRaw(e.target.value)} />
           </label>
           {error && <p className="text-sm text-danger">{error}</p>}
           <div className="flex justify-end gap-2">

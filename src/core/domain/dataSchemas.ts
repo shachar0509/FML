@@ -2,12 +2,13 @@
 import { z } from "zod";
 
 const ts = z.string();
-const courseNumber = z.string().regex(/^\d{8}$/);
+const courseNumber = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{1,31}$/);
 const stageId = z.string().regex(/^S\d{3}$/);
 const unitId = z.string().regex(/^U\d{2}$/);
 const context = z.enum(["learn", "practice"]);
 
-export const ShalavJsonSchema = z.object({ formatVersion: z.literal(1), createdAt: ts });
+// `university` is written once and never changed (reset = delete the data folder); older files have none.
+export const ShalavJsonSchema = z.object({ formatVersion: z.literal(1), createdAt: ts, university: z.enum(["technion", "huji", "reichman", "braude"]).optional() });
 export type ShalavJson = z.infer<typeof ShalavJsonSchema>;
 export const DeviceJsonSchema = z.object({ deviceId: z.string().min(1) });
 export type DeviceJson = z.infer<typeof DeviceJsonSchema>;

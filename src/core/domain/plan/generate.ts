@@ -1,3 +1,4 @@
+import { uniName } from "@/core/universities";
 import { z } from "zod";
 import { callStructured } from "@/core/claude/structured";
 import { detailsPrompt, outlinePrompt, tooFewMsg, tooManyMsg } from "@/core/claude/prompts/plan";
@@ -22,7 +23,7 @@ async function passA({ gw, course, lang, signal }: Opts) {
   let messages: Message[] = [{ role: "user", content: outlinePrompt(course, r, langName(lang)) }];
   for (let fix = 0; ; fix++) {
     const { value, response } = await callStructured(gw, submitPlanOutline, {
-      task: "plan", courseNumber: course.courseNumber, system: "You are an expert Technion curriculum designer.", messages, signal,
+      task: "plan", courseNumber: course.courseNumber, system: `You are an expert ${uniName()} curriculum designer.`, messages, signal,
     });
     const n = count(value);
     const msg = n < r.min ? tooFewMsg(n, r.min) : n > r.max ? tooManyMsg(n, r.max) : null;
@@ -63,7 +64,7 @@ export async function detailUnit(opts: Opts, outline: string, unit: Unit): Promi
   let messages: Message[] = [{ role: "user", content: detailsPrompt(course, outline, unit, langName(lang)) }];
   for (let attempt = 0; ; attempt++) {
     const { value, response } = await callStructured(gw, submitUnitDetails, {
-      task: "plan", courseNumber: course.courseNumber, system: "You are an expert Technion curriculum designer.", messages, signal,
+      task: "plan", courseNumber: course.courseNumber, system: `You are an expert ${uniName()} curriculum designer.`, messages, signal,
     });
     const got = value.stages.map((s) => s.id);
     const ok = got.length === unit.stageIds.length && unit.stageIds.every((id) => got.includes(id));

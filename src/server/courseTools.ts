@@ -1,9 +1,10 @@
+import { COURSE_ID_RE, university } from "@/core/universities";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import type { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod";
 import type { BuildStatus, CourseData, LookupResult } from "@/cards/types";
 import { setClaude } from "@/core/claude/runtime";
-import { normalizeCourseNumber, type CatalogSource } from "@/core/domain/catalog/catalog";
+import { type CatalogSource } from "@/core/domain/catalog/catalog";
 import { buildPlan, courseExists, createCourse, loadCourse, type CreateProgress, type ManualEntry } from "@/core/domain/courses/courses";
 import { useSettings } from "@/stores/settings";
 import type { BridgeGateway } from "./bridge";
@@ -12,7 +13,7 @@ import { nodeCatalog } from "./platform";
 
 const both = { ui: { resourceUri: CARDS_URI, visibility: ["model" as const, "app" as const] } }; // also usable as plain tools in hosts without cards (Claude Code)
 const lookupIn = z.object({ number: z.string() });
-const numIn = z.object({ number: z.string().regex(/^\d{8}$/) });
+const numIn = z.object({ number: z.string().regex(COURSE_ID_RE) });
 type Build = { state: "running" | "done" | "failed"; progress: CreateProgress | null; error: string | null };
 const out = (text: string, structuredContent: object) => ({ content: [{ type: "text" as const, text }], structuredContent: structuredContent as Record<string, unknown> });
 
@@ -50,10 +51,13 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, so
     return { state: b.state, step: b.progress?.step, unit: b.progress?.unit, error: b.error, pending: bridge.pending() };
   };
 
-  registerAppTool(server, "course_lookup", { title: "Look up a course", description: "look a course number up in the Technion catalog.", inputSchema: lookupIn, _meta: both }, async ({ number }) => {
-    const n = normalizeCourseNumber(number);
+  registerAppTool(server, "course_lookup", { title: "Look up a course", description: "look a course number up in the university catalog (Technion only; other universities need manual entry).", inputSchema: lookupIn, _meta: both }, async ({ number }) => {
+    const uni = university();
+    if (!uni) return { ...out("Choose a university first (shalav_choose_university).", { status: "invalid" }), isError: true };
+    const n = uni.normalize(number);
     let r: LookupResult;
     if (!n) r = { status: "invalid" };
+    else if (!uni.catalog) r = (await courseExists(n)) ? { status: "exists", number: n } : { status: "notfound" }; // no online catalog: manual entry
     else if (await courseExists(n)) r = { status: "exists", number: n };
     else {
       try {
@@ -76,7 +80,7 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, so
       _meta: both,
     },
     async ({ number, manual }) => {
-      const n = normalizeCourseNumber(number);
+      const n = university()?.normalize(number);
       if (!n) return { ...out("Invalid course number.", { ok: false }), isError: true };
       if (await courseExists(n)) return { ...out("Course already exists.", { ok: false }), isError: true };
       const entry = manual

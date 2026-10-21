@@ -32,7 +32,7 @@ export function Cards({ host }: { host: Host }) {
   const open = (n: string) => void go("shalav_course", { number: n });
 
   if (!shown || !data) return <p className="p-4 text-muted" role="status">…</p>;
-  if (shown.view === "add") return <AddCourse callTool={callTool} say={say} open={open} back={home} />;
+  if (shown.view === "add") return <AddCourse example={shown.example} callTool={callTool} say={say} open={open} back={home} />;
   if (shown.view === "course") return <Course data={shown} callTool={callTool} say={say} reload={() => open(shown.number)} back={home} practice={() => void go("shalav_practice", { courseNumber: shown.number })} />;
   if (shown.view === "practice") return <Practice data={shown} callTool={callTool} say={say} back={() => open(shown.number)} />;
   if (shown.view === "settings") return <Settings data={shown} callTool={callTool} back={home} />;
@@ -40,5 +40,5 @@ export function Cards({ host }: { host: Host }) {
   if (shown.view === "mcq") return <Mcq data={shown} callTool={callTool} say={say} />;
   if (shown.view === "exercise") return <Exercise data={shown} callTool={callTool} say={say} />;
   if (shown.view === "open") return <OpenQ data={shown} say={say} />;
-  return <Home data={shown} add={() => setNav({ view: "add", language: data.language, theme: data.theme })} open={open} settings={() => void go("shalav_settings")} />;
+  return <Home data={shown} add={(example) => setNav({ view: "add", language: data.language, theme: data.theme, example })} open={open} settings={() => void go("shalav_settings")} choose={(id) => void go("shalav_choose_university", { university: id })} />;
 }

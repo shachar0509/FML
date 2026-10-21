@@ -1,3 +1,4 @@
+import { uniName } from "@/core/universities";
 // Spec 10.5-10.8 (placeholders filled by the caller).
 import { EXAM_CONVENTIONS, languageRules, type Lang } from "./shared";
 
@@ -11,9 +12,9 @@ export type GradeArgs = {
 };
 
 export const gradingPrompt = (a: GradeArgs) =>
-  `You are a strict, fair Technion exam grader for course ${a.course.courseNumber} "${a.course.nameHe}". Grade the student's handwritten solution in the images.
+  `You are a strict, fair ${uniName()} exam grader for course ${a.course.courseNumber} "${a.course.nameHe}". Grade the student's handwritten solution in the images.
 
-Scoring (0-100), as in a Technion exam:
+Scoring (0-100), as in a ${uniName()} exam:
 - 100 only for a complete, correct and fully justified solution.
 - Unjustified step: -5 to -15 each. Missing case or edge case: -5 to -20. Computational slip with a correct method: -3 to -5. Wrong method or invalid reasoning: major deduction. A correct final answer reached by invalid reasoning: at most 40.
 - Results from the completed stages listed below may be cited without proof. A valid argument that uses material beyond them is not penalized; list it in usesMaterialBeyondCompleted.
@@ -44,7 +45,7 @@ ${DATA}
 You must finish by calling submit_grade exactly once.`;
 
 export const checkGradingPrompt = (a: Pick<GradeArgs, "course" | "lang" | "mistakeTags" | "boundary"> & { question: string; expectedPoints: string[] }) =>
-  `You are a strict, fair Technion exam grader for course ${a.course.courseNumber} "${a.course.nameHe}". Grade the student's short answer (typed and/or in the images) to the question below.
+  `You are a strict, fair ${uniName()} exam grader for course ${a.course.courseNumber} "${a.course.nameHe}". Grade the student's short answer (typed and/or in the images) to the question below.
 Score 0-100 by how many of the expected key points are present and correct; correct = true only if the answer is essentially right. Mistakes use kebab-case tags; reuse an existing tag when it fits. Write feedback in ${a.lang}.
 ${languageRules(a.lang)}
 Question: <exercise>${a.question}</exercise>
@@ -57,7 +58,7 @@ ${DATA}
 You must finish by calling submit_check_grade exactly once.`;
 
 export const solvePrompt = (lang: Lang, requiredStages: string, boundary: string, digest: string) =>
-  `Write a complete, exam-level reference solution in ${lang} for the exercise below, as a Technion course staff member would publish it. Justify every step. Use only results from these stages: ${requiredStages}.
+  `Write a complete, exam-level reference solution in ${lang} for the exercise below, as a ${uniName()} course staff member would publish it. Justify every step. Use only results from these stages: ${requiredStages}.
 ${boundary}
 Follow the notation and conventions of this course material digest:
 <materials>${digest}</materials>
@@ -68,7 +69,7 @@ export type GenArgs = {
   styleRefs: string; digest: string; boundary: string; mistakes: string; issues?: string[];
 };
 export const generationPrompt = (a: GenArgs) =>
-  `Create one new ${a.type} exercise for Technion course ${a.course.courseNumber} "${a.course.nameHe}" at difficulty ${a.difficulty} (1-5 scale: ${DIFFICULTY_SCALE}).
+  `Create one new ${a.type} exercise for ${uniName()} course ${a.course.courseNumber} "${a.course.nameHe}" at difficulty ${a.difficulty} (1-5 scale: ${DIFFICULTY_SCALE}).
 It must be solvable using only these stages:
 ${a.requiredStages}
 Focus stage: ${a.focusJson}

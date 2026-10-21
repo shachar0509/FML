@@ -136,3 +136,8 @@
 ## M13
 - Nudge button after a fixed 20 s (no per-card tuning). Role `status` stays on the parent; `Waiting` uses `aria-live` only.
 - Text hosts: the course/files tools are model-visible instead of adding duplicate "text" tools; upload, photo grading and chunk tools stay card-only.
+
+## M14a
+- Course id format: Technion strict (8 digits); HUJI/Reichman/Braude formats could not be verified (web search found nothing official), so they accept short alphanumeric codes and uppercase them. Tighten per university when real numbers are known.
+- The university is stored in `shalav.json` (shared by all devices on the data folder), not per device, so two machines cannot disagree. No in-app reset: deleting the data folder is the reset.
+- Prompts use `uniName()`; module-level constant prompts say "university" generically.

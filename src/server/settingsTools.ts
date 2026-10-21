@@ -1,3 +1,4 @@
+import { COURSE_ID_RE } from "@/core/universities";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import type { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod";
@@ -34,7 +35,7 @@ export function registerSettingsTools(server: McpServer) {
     {
       title: "Study context",
       description: "For side questions during study: the student's knowledge boundary (what they have and have not learned), the current stage and the nearby plan. Answer only with what the boundary allows. courseNumber defaults to the only course; stageId to the current stage.",
-      inputSchema: z.object({ courseNumber: z.string().regex(/^\d{8}$/).optional(), stageId: z.string().optional() }),
+      inputSchema: z.object({ courseNumber: z.string().regex(COURSE_ID_RE).optional(), stageId: z.string().optional() }),
     },
     async ({ courseNumber, stageId }) => {
       const all = await listCourses();

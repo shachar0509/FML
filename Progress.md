@@ -142,6 +142,13 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - Not fixed: jobs 2–8 repeat ~3k tokens (outline + syllabus) each; "Same instructions as job #1" dedupe may confuse a model that lost job 1; exam-prep stages S099–S101 sit at the end of the last unit; text fallback options of shalav_home/shalav_course are invisible in Claude Code for the same structuredContent reason.
 - Still 🧪: the cards in Claude Desktop (needs the Mac screen).
 
+### M14a — Universities (done)
+- `src/core/universities.ts`: registry for technion / huji / reichman / braude (names he/en, example number, Moodle URL, `catalog` flag, `normalize`). Technion keeps the 8-digit rule (6-digit legacy padded); the others accept any 2–32 char `[A-Za-z0-9._-]` code (**formats unverified**, see DECISIONS). `COURSE_ID_RE` replaces every `\d{8}` (schemas, tools, course dir filter). `uniName()` feeds the prompts instead of "Technion".
+- The choice lives in the data folder's `shalav.json` (`university`), written once by `shalav_choose_university` (model + card) and refused afterwards ("locked; reset = delete the data folder"). v1 data (courses but no choice) is locked as Technion on load (`lib/firstRun.ts` `loadUniversity`/`chooseUniversity`). `shalav_home` returns `university: null` until chosen; the Home card then shows the picker; lookup/create refuse before a choice.
+- Only Technion has an online catalog; other universities skip the lookup (`notfound` → manual entry form).
+- Tests: tool flow + lock, v1→technion, loose ids, picker e2e (28 e2e), 120 unit. Docs: README/manifest text.
+- Not done: Moodle per university (next, M14b); settings card does not show the university yet.
+
 ## Phase 1 — Desktop app (v1, frozen)
 
 ### Steps (v1 spec §19)

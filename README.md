@@ -1,6 +1,6 @@
 # Shalav (שלב)
 
-Study tutor for Technion courses, delivered as a **local MCP connector for Claude Desktop**. Students install `shalav.mcpb`; their own Claude subscription does the AI work (no API key, no cost to us). Cards inside the chat (MCP Apps) show the plan, lessons, exercises and practice.
+Study tutor for university courses (Technion, Hebrew University, Reichman, Braude; the student picks one on first use and it is locked), delivered as a **local MCP connector for Claude Desktop**. Students install `shalav.mcpb`; their own Claude subscription does the AI work (no API key, no cost to us). Cards inside the chat (MCP Apps) show the plan, lessons, exercises and practice.
 
 - Install and use: [INSTALL.en.md](INSTALL.en.md) · [INSTALL.he.md](INSTALL.he.md)
 - Design: `Shalav — MCP Connector Transition Plan v2.md` (v1 spec `Shalav — Product & Technical Specification v1.md` stays normative where v2 is silent)

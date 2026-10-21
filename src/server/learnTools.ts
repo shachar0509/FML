@@ -1,3 +1,4 @@
+import { COURSE_ID_RE } from "@/core/universities";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import type { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod";
@@ -25,7 +26,7 @@ import { CARDS_URI } from "./resources";
 
 const appOnly = { ui: { resourceUri: CARDS_URI, visibility: ["app" as const] } };
 const withCard = { ui: { resourceUri: CARDS_URI } };
-const num = z.string().regex(/^\d{8}$/);
+const num = z.string().regex(COURSE_ID_RE);
 const MATERIAL_CHARS = 6000;
 const out = (text: string, structuredContent?: object) => ({ content: [{ type: "text" as const, text }], ...(structuredContent ? { structuredContent: structuredContent as Record<string, unknown> } : {}) });
 const fail = (text: string) => ({ ...out(text), isError: true as const });

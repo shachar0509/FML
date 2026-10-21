@@ -1,8 +1,9 @@
+import { uniName } from "@/core/universities";
 // Spec 4.6.
 import type { CourseJson } from "@/core/domain/dataSchemas";
 
 export const refinePrompt = (c: Pick<CourseJson, "courseNumber" | "nameHe" | "credits" | "syllabusHe">, plan: string, materials: string, lang: string) =>
-  `You are improving the study plan of Technion course ${c.courseNumber} "${c.nameHe}" (${c.credits} credits) using the student's own course materials.
+  `You are improving the study plan of ${uniName()} course ${c.courseNumber} "${c.nameHe}" (${c.credits} credits) using the student's own course materials.
 Official syllabus:
 ${c.syllabusHe}
 

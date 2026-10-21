@@ -14,6 +14,7 @@ const home: HomeData = {
   view: "home",
   language: lang,
   theme: "system",
+  university: q.get("nouni") ? null : "technion",
   courses: q.get("empty")
     ? []
     : [

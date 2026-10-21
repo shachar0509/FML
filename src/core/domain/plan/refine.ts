@@ -14,7 +14,7 @@ import { detailUnit, type PlanProgress, type UnitDetails } from "./generate";
 import { outlineText, renderPlanMd, validatePlan } from "./plan";
 import { submitPlanRevision, type PlanRevision } from "./refineTool";
 
-const SYSTEM = "You are an expert Technion curriculum designer.";
+const SYSTEM = "You are an expert university curriculum designer.";
 
 /** Rule check on the model's revision (4.6); returns correction lines. */
 export function revisionErrors(old: PlanJson, rev: PlanRevision): string[] {

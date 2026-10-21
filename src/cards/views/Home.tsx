@@ -1,6 +1,7 @@
 import { Plus, Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
+import { UNIVERSITIES, UNIVERSITY_IDS, type UniversityId } from "@/core/universities";
 import type { HomeData } from "../types";
 
 function Ring({ pct }: { pct: number }) {
@@ -15,8 +16,27 @@ function Ring({ pct }: { pct: number }) {
   );
 }
 
-export function Home({ data, add, open, settings }: { data: HomeData; add: () => void; open: (n: string) => void; settings: () => void }) {
+function PickUniversity({ choose }: { choose: (id: UniversityId) => void }) {
+  const { t, i18n } = useTranslation();
+  const he = i18n.language.startsWith("he");
+  return (
+    <section className="flex flex-col gap-4 p-4" aria-label={t("university.title")}>
+      <h1 className="text-xl font-bold">{t("university.title")}</h1>
+      <p className="text-muted">{t("university.hint")}</p>
+      <ul className="grid gap-3 sm:grid-cols-2">
+        {UNIVERSITY_IDS.map((id) => (
+          <li key={id}>
+            <Button className="w-full" variant="outline" onClick={() => choose(id)}>{he ? UNIVERSITIES[id].nameHe : UNIVERSITIES[id].nameEn}</Button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+export function Home({ data, add, open, settings, choose }: { data: HomeData; add: (example: string) => void; open: (n: string) => void; settings: () => void; choose: (id: UniversityId) => void }) {
   const { t } = useTranslation();
+  if (!data.university) return <PickUniversity choose={choose} />;
   return (
     <section className="flex flex-col gap-4 p-4" aria-label={t("screens.home")}>
       <div className="flex items-center justify-between gap-3">
@@ -25,7 +45,7 @@ export function Home({ data, add, open, settings }: { data: HomeData; add: () =>
           <Button variant="outline" onClick={settings} aria-label={t("screens.settings")}>
             <Settings className="size-4" aria-hidden />
           </Button>
-          <Button onClick={add}>
+          <Button onClick={() => add(UNIVERSITIES[data.university as UniversityId].example)}>
             <Plus className="size-4" aria-hidden /> {t("home.add")}
           </Button>
         </div>

@@ -24,9 +24,23 @@ it("lists tools/prompts and calls shalav_home", async () => {
   const bad = await client.callTool({ name: "shalav_submit_job", arguments: { jobId: 5, text: "x" } });
   expect(bad.isError).toBe(true);
   expect((await client.listPrompts()).prompts.map((p) => p.title)).toEqual(["Shalav: my courses", "Shalav: continue learning"]);
+  const first = await client.callTool({ name: "shalav_home", arguments: {} });
+  expect(first.structuredContent).toMatchObject({ view: "home", university: null, courses: [] });
+  expect(JSON.stringify(first.content)).toMatch(/shalav_choose_university/);
+  // the choice is written once and then locked
+  const picked = await client.callTool({ name: "shalav_choose_university", arguments: { university: "huji" } });
+  expect(picked.structuredContent).toMatchObject({ university: "huji" });
+  expect((await client.callTool({ name: "shalav_choose_university", arguments: { university: "huji" } })).isError).toBeFalsy();
+  const locked = await client.callTool({ name: "shalav_choose_university", arguments: { university: "technion" } });
+  expect(locked.isError).toBe(true);
+  expect(JSON.stringify(locked.content)).toMatch(/locked/);
+  // other universities have no catalog: lookup goes straight to manual entry, ids are normalised loosely
+  const look = await client.callTool({ name: "course_lookup", arguments: { number: " 80 131 " } });
+  expect(look.structuredContent).toMatchObject({ status: "notfound" });
+  expect((await client.callTool({ name: "course_lookup", arguments: { number: "a/b" } })).structuredContent).toMatchObject({ status: "invalid" });
   const r = await client.callTool({ name: "shalav_home", arguments: {} });
   expect(JSON.stringify(r.content)).toMatch(/No courses yet/);
-  expect(r.structuredContent).toMatchObject({ view: "home", courses: [] });
+  expect(r.structuredContent).toMatchObject({ view: "home", university: "huji", courses: [] });
   const home = (await client.listTools()).tools.find((t) => t.name === "shalav_home");
   expect(home?._meta).toMatchObject({ ui: { resourceUri: "ui://shalav/cards.html" } });
   expect((await client.listResources()).resources.map((x) => x.uri)).toContain("ui://shalav/cards.html");

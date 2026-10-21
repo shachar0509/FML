@@ -28,6 +28,8 @@ it("looks up, creates a course through the bridge with fake jobs, shows the cour
   const client = new Client({ name: "t", version: "0" });
   await Promise.all([createServer(undefined, { id: "technion", lookup: async (n) => (n === entry.courseNumber ? entry : null) }).connect(a), client.connect(b)]);
   const call = (name: string, args: Record<string, unknown> = {}) => client.callTool({ name, arguments: args });
+  expect((await call("course_lookup", { number: "104066" })).isError).toBe(true); // no university yet
+  await call("shalav_choose_university", { university: "technion" });
   const text = (r: { content?: unknown }) => JSON.stringify(r.content);
 
   // the course flow is also open to the model (Claude Code has no cards)

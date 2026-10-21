@@ -140,7 +140,7 @@
   },
   "course": {
     "invalidNumber": "A course number has 8 digits (e.g. 01040195)",
-    "notFound": "We couldn't find this course in the Technion catalog. You can enter the details manually.",
+    "notFound": "We couldn't find this course in the catalog. You can enter the details manually.",
     "catalogLabel": "Catalog description",
     "afterAdd": "After you add the course, Shalav builds a detailed step-by-step study plan (a few minutes).",
     "back": "Back to courses",
@@ -244,7 +244,7 @@
   },
   "onboarding": {
     "step": "Step {{n}} of {{total}}",
-    "welcomeText": "Shalav helps you study Technion courses: a study plan, explanations and practice, with Claude as your private tutor.",
+    "welcomeText": "Shalav helps you study university courses: a study plan, explanations and practice, with Claude as your private tutor.",
     "start": "Start",
     "next": "Next",
     "back": "Back",
@@ -267,6 +267,7 @@
     "skip": "Skip for now",
     "finish": "Finish"
   },
+  "university": { "title": "Choose your university", "hint": "This sets the course number format. It cannot be changed later." },
   "home": {
     "add": "Add course",
     "addDesc": "Add a new course by its number",

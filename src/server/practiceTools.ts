@@ -1,3 +1,4 @@
+import { COURSE_ID_RE } from "@/core/universities";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import type { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod";
@@ -12,7 +13,7 @@ import type { registerExerciseTools } from "./exerciseTools";
 import { CARDS_URI } from "./resources";
 
 const appOnly = { ui: { resourceUri: CARDS_URI, visibility: ["app" as const] } };
-const num = z.string().regex(/^\d{8}$/);
+const num = z.string().regex(COURSE_ID_RE);
 const scopeSchema = z.union([z.object({ kind: z.enum(["all", "weak"]) }), z.object({ kind: z.literal("unit"), unitId: z.string() }), z.object({ kind: z.literal("stage"), stageId: z.string() })]);
 const out = (text: string, structuredContent?: object) => ({ content: [{ type: "text" as const, text }], ...(structuredContent ? { structuredContent: structuredContent as Record<string, unknown> } : {}) });
 const fail = (text: string) => ({ ...out(text), isError: true as const });

@@ -1,3 +1,4 @@
+import { COURSE_ID_RE } from "@/core/universities";
 import { claude } from "@/core/claude/runtime";
 import type { CatalogEntry } from "@/core/domain/catalog/catalog";
 import { CourseJsonSchema, PlanJsonSchema, ProgressJsonSchema, type CourseJson, type PlanJson, type ProgressJson } from "@/core/domain/dataSchemas";
@@ -36,7 +37,7 @@ export async function courseExists(n: string): Promise<boolean> {
 export async function listCourses(): Promise<CourseSummary[]> {
   const dir = coursesDir(root());
   if (!(await fs().exists(dir))) return [];
-  const all = await Promise.all((await fs().readDir(dir)).filter((e) => e.isDirectory && /^\d{8}$/.test(e.name)).map((e) => loadCourse(e.name)));
+  const all = await Promise.all((await fs().readDir(dir)).filter((e) => e.isDirectory && COURSE_ID_RE.test(e.name)).map((e) => loadCourse(e.name)));
   return all.filter((c): c is CourseSummary => !!c).sort((a, b) => a.course.createdAt.localeCompare(b.course.createdAt));
 }
 

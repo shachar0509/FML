@@ -43,7 +43,7 @@ describe("dataSchemas", () => {
   });
   it("course", () => {
     expect(CourseJsonSchema.safeParse(course).success).toBe(true);
-    expect(CourseJsonSchema.safeParse({ ...course, courseNumber: "123" }).success).toBe(false);
+    expect(CourseJsonSchema.safeParse({ ...course, courseNumber: "a/b" }).success).toBe(false);
   });
   it("plan", () => {
     expect(PlanJsonSchema.safeParse(plan).success).toBe(true);

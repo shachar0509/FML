@@ -1,3 +1,4 @@
+import { COURSE_ID_RE } from "@/core/universities";
 import { appendFile, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
@@ -20,7 +21,7 @@ import { CARDS_URI } from "./resources";
 
 const both = { ui: { resourceUri: CARDS_URI, visibility: ["model" as const, "app" as const] } }; // plain tools in hosts without cards (Claude Code)
 const appOnly = { ui: { resourceUri: CARDS_URI, visibility: ["app" as const] } };
-const num = z.string().regex(/^\d{8}$/);
+const num = z.string().regex(COURSE_ID_RE);
 const numIn = z.object({ number: num });
 const role = z.enum(["material", "exercises"]);
 const out = (text: string, structuredContent: object) => ({ content: [{ type: "text" as const, text }], structuredContent: structuredContent as Record<string, unknown> });

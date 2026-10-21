@@ -4,10 +4,12 @@ export type HomeData = {
   view: "home";
   language: "he" | "en";
   theme: "system" | "light" | "dark";
+  /** null until the student has chosen (the card then shows the picker). */
+  university: "technion" | "huji" | "reichman" | "braude" | null;
   courses: { number: string; name: string; credits: number; pct: number; stage: string | null }[];
 };
 export type Base = { language: "he" | "en"; theme: "system" | "light" | "dark" };
-export type AddData = Base & { view: "add" };
+export type AddData = Base & { view: "add"; example: string };
 export type Stage = { id: string; title: string; summary: string; status: "locked" | "available" | "in_progress" | "completed" | "completed_override"; mastery: number };
 export type CourseData = Base & {
   view: "course";

@@ -161,3 +161,11 @@ for (const lang of ["he", "en"] as const)
       await page.screenshot({ path: `e2e/shots/card-settings-${lang}-${theme}.png` });
       expect(errors).toEqual([]);
     });
+
+test("university picker before the first choice", async ({ page }) => {
+  await page.goto("/src/cards/test-host.html?lang=en&nouni=1");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Choose your university");
+  for (const n of ["Technion", "Hebrew University", "Reichman University", "Braude College"]) await expect(page.getByRole("button", { name: n })).toBeVisible();
+  const bad = (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations.filter((v) => v.impact === "serious" || v.impact === "critical");
+  expect(bad).toEqual([]);
+});

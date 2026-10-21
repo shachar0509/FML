@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { technionSource, type CatalogSource } from "@/core/domain/catalog/catalog";
 import { setFs } from "@/core/lib/fs/fs";
 import { nodeDirs } from "@/core/lib/platform";
-import { ensureDataRoot, ensureDevice } from "@/core/lib/firstRun";
+import { ensureDataRoot, ensureDevice, loadUniversity } from "@/core/lib/firstRun";
 import { setDeviceId } from "@/core/lib/device";
 import { readJson } from "@/core/lib/storage";
 import { useSettings } from "@/stores/settings";
@@ -38,6 +38,7 @@ export async function initNode(): Promise<{ deviceId: string; dataRoot: string }
   setDeviceId(deviceId);
   const dataRoot = useSettings.getState().settings.dataRoot;
   await ensureDataRoot(dataRoot);
+  await loadUniversity(dataRoot);
   return { deviceId, dataRoot };
 }
 

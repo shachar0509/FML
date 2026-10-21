@@ -1,7 +1,9 @@
 import { beforeEach, expect, it } from "vitest";
 import { memFs } from "@/test/memfs";
 import { setFs } from "./fs/fs";
-import { ensureDataRoot, ensureDevice } from "./firstRun";
+import { chooseUniversity, ensureDataRoot, ensureDevice, loadUniversity } from "./firstRun";
+import { fs } from "./fs/fs";
+import { university } from "@/core/universities";
 
 let m: ReturnType<typeof memFs>;
 beforeEach(() => setFs((m = memFs())));
@@ -18,4 +20,14 @@ it("data root creates shalav.json, keeps an existing one", async () => {
   expect(JSON.parse(first).formatVersion).toBe(1);
   await ensureDataRoot("/d");
   expect(m.files.get("/d/shalav.json")).toBe(first);
+});
+
+it("university: v1 data (courses, no choice) becomes technion; the choice is one-way", async () => {
+  await ensureDataRoot("/d");
+  expect(await loadUniversity("/d")).toBeNull();
+  await fs().mkdir("/d/courses/01040195");
+  expect(await loadUniversity("/d")).toBe("technion");
+  expect(university()?.id).toBe("technion");
+  await chooseUniversity("/d", "technion");
+  await expect(chooseUniversity("/d", "huji")).rejects.toThrow(/locked/);
 });

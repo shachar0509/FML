@@ -1,3 +1,5 @@
+import { chooseUniversity } from "@/core/lib/firstRun";
+import { UNIVERSITIES, UNIVERSITY_IDS, university } from "@/core/universities";
 import { registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 import { McpServer } from "@modelcontextprotocol/server";
 import { listCourses } from "@/core/domain/courses/courses";
@@ -23,19 +25,17 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
     contents: [{ uri: CARDS_URI, mimeType: RESOURCE_MIME_TYPE, text: await readCards() }],
   }));
 
-  registerAppTool(
-    server,
-    "shalav_home",
-    { title: "My courses", description: "Show the student's Shalav courses and what to do next.", _meta: { ui: { resourceUri: CARDS_URI } } },
-    async () => {
-      const courses = await listCourses();
+  const home = async () => {
+      const uni = university();
+      const courses = uni ? await listCourses() : [];
       // Text fallback for hosts without cards: the courses and numbered next actions.
-      const text = `${courses.length ? courses.map((c, i) => `${i + 1}. ${c.course.courseNumber} — ${c.course.nameHe}`).join("\n") : "No courses yet."}\nOptions: a) add a course (ask for the number, then course_lookup and course_create_request); ${courses.length ? "b) open a course (shalav_course); c) " : ""}settings (shalav_settings).`;
+      const text = !uni ? `No university chosen yet. Ask the student: ${UNIVERSITY_IDS.map((i) => UNIVERSITIES[i].nameEn).join(", ")}; then call shalav_choose_university (it cannot be changed later).` : `${courses.length ? courses.map((c, i) => `${i + 1}. ${c.course.courseNumber} — ${c.course.nameHe}`).join("\n") : "No courses yet."}\nOptions: a) add a course (ask for the number, then course_lookup and course_create_request); ${courses.length ? "b) open a course (shalav_course); c) " : ""}settings (shalav_settings).`;
       const { language, theme } = useSettings.getState().settings;
       const data: HomeData = {
         view: "home",
         language,
         theme,
+        university: uni?.id ?? null,
         courses: courses.map(({ course, plan, progress }) => {
           const t = progress?.totals;
           const stage = plan?.stages.find((x) => x.id === progress?.currentStageId);
@@ -48,7 +48,20 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
           };
         }),
       };
-      return { content: [{ type: "text", text }], structuredContent: data };
+      return { content: [{ type: "text" as const, text }], structuredContent: data };
+  };
+  registerAppTool(server, "shalav_home", { title: "My courses", description: "Show the student's Shalav courses and what to do next.", _meta: { ui: { resourceUri: CARDS_URI } } }, home);
+  registerAppTool(
+    server,
+    "shalav_choose_university",
+    { title: "Choose the university", description: "Set the student's university once (technion, huji, reichman, braude). It cannot be changed later; it sets the course number format.", inputSchema: z.object({ university: z.enum(UNIVERSITY_IDS) }), _meta: { ui: { resourceUri: CARDS_URI } } },
+    async ({ university: id }) => {
+      try {
+        await chooseUniversity(useSettings.getState().settings.dataRoot, id);
+      } catch (e) {
+        return { content: [{ type: "text" as const, text: e instanceof Error ? e.message : String(e) }], isError: true };
+      }
+      return home();
     },
   );
 
