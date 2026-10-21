@@ -22,6 +22,9 @@ function appDirs(env = process.env) {
 
 /** Wire fs, canvas, dirs, settings and the data root. Safe to call once per process. */
 export async function initNode(): Promise<{ deviceId: string; dataRoot: string }> {
+  // Claude Desktop runs extensions in an Electron utility process (process.type "utility"); pdf.js then takes it for a browser and every
+  // PDF fails to open (files never indexed, Moodle imports all "skipped"). Look like plain Node before pdf.js loads.
+  if (process.versions.electron && (process as { type?: string }).type) Object.defineProperty(process, "type", { value: undefined, configurable: true, writable: true });
   setFs(nodeFs());
   enableNodeCanvas();
   const dirs = appDirs();
