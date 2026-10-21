@@ -139,9 +139,12 @@ for (const lang of ["he", "en"] as const)
       // \neq overlays a slash on "="; it shows as "/=" when KaTeX's CSS and JS versions differ
       expect(await page.locator("article .katex .katex-thinbox").first().evaluate((e) => getComputedStyle(e).maxWidth)).toBe("0px");
       // board layout: labelled rows lined up at "=", a definition box, a sticky side note, a boxed result
-      await expect(page.locator(".board-row")).toHaveCount(4);
+      await expect(page.locator(".board-row")).toHaveCount(5);
       const eq = await page.locator(".board-rel").evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().left)));
       expect(new Set(eq).size).toBe(1);
+      // the left sides end at the relation (aligned), whatever their width
+      const lhs = await page.locator(".board-lhs .katex").evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().right)));
+      expect(Math.max(...lhs) - Math.min(...lhs)).toBeLessThanOrEqual(2);
       await expect(page.locator(".board-box-definition")).toContainText(lang === "he" ? "הגדרה" : "Definition");
       await expect(page.locator(".sticky-note .katex")).toBeVisible();
       await expect(page.locator("article .katex .fbox")).toBeVisible();

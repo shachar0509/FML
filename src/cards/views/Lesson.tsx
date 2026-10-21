@@ -57,9 +57,9 @@ export function Lesson({ data, callTool, go }: { data: LessonData; callTool: Too
       </header>
       <div className={`${panel} p-4`}>
         <h2 className={`${h2} mb-2`}>{t("learn.objectives")}</h2>
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-3">
           {d.objectives.map((o) => (
-            <li key={o.text} className="flex items-start gap-2 text-sm">
+            <li key={o.text} className="flex items-start gap-2.5 text-[15px]">
               {o.covered ? (
                 <Check className="mt-1 size-4 shrink-0 text-success" aria-label="covered" />
               ) : (

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import "@/core/i18n";
-import { Markdown } from "./Markdown";
+import { joinHyphenatedMath, Markdown } from "./Markdown";
 import { isFigureTag } from "./Figure";
 import { splitRel } from "./Rows";
 
@@ -58,6 +58,11 @@ describe("Markdown", () => {
   it("a short word before inline math stays glued to it", () => {
     const { container } = render(<Markdown>{"לכל $c$: אם $a<b$ אז $a+c<b+c$"}</Markdown>);
     expect(container.querySelector("p")?.innerHTML).toMatch(/אם&nbsp;<span class="katex"/);
+  });
+
+  it("two formulas around a hyphen become one (keeps their order in RTL)", () => {
+    expect(joinHyphenatedMath("הגדרת $\\varepsilon$-$N$ ו-$x$")).toBe("הגדרת $\\varepsilon\\text{-}N$ ו-$x$");
+    expect(joinHyphenatedMath("$$a$$-$$b$$")).toBe("$$a$$-$$b$$");
   });
 
   it("dispatches only the five figure tags", () => {

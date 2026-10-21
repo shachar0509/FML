@@ -105,12 +105,15 @@ const components: Components = {
   code: (p) => <code dir="ltr" className="inline-code" {...bare(p)} />,
 };
 
+/** "$\\varepsilon$-$N$" is two formulas around a hyphen; in a right-to-left line they swap places ("N-ε"). One formula keeps the order. */
+export const joinHyphenatedMath = (md: string) => md.replace(/(?<![$\\])\$([^$\n]+)\$-\$([^$\n]+)\$(?!\$)/g, (_, a: string, c: string) => `$${a}\\text{-}${c}$`);
+
 /** The one renderer for all Claude text (11.1). Raw HTML is ignored by react-markdown. */
 export function Markdown({ children, className }: { children: string; className?: string }) {
   return (
     <div className={`md ${className ?? ""}`}>
       <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[[rehypeKatex, KATEX], rehypeBoxes]} components={components}>
-        {children}
+        {joinHyphenatedMath(children)}
       </ReactMarkdown>
     </div>
   );

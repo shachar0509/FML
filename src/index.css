@@ -141,13 +141,17 @@ body {
 .board-row {
   display: contents;
 }
+/* Like \begin{aligned}: the left side hugs the relation, the gap opens between the name and the formula. */
+.board-lhs {
+  justify-self: end;
+}
 .board-label {
   justify-self: end;
-  padding-inline-end: 0.4em;
+  padding-inline-end: 1.25em;
   font-weight: 500;
   color: var(--primary);
 }
-.board-rows .katex-display {
+.md .board-rows .katex-display {
   margin: 0;
   padding: 0;
   overflow: visible;

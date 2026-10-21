@@ -415,3 +415,9 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - Test host sample data follows the card language (Hebrew lesson, objectives, questions, grade, practice, board), so screenshots show what a Hebrew student sees; e2e expectations updated.
 - Known limit: content generated before the language was changed (an existing plan's stage titles) stays in its old language until the plan is rebuilt.
 - Checks: typecheck/lint clean, 127 unit, 30 e2e.
+
+### M22a — Readable spacing; board rows aligned like `aligned`; ε-N order in RTL (done; 🧪 pending)
+- Cards: a little letter/word spacing (Rubik sets tight) and line-height 1.7 (2 on boards); lesson objectives 15px with more gap.
+- Rows block: the left side now hugs the relation (`justify-self: end`, like `\begin{aligned}`), the gap opens between the Hebrew name and the formula (1.25em). e2e asserts the left sides end at the same x; the step fixture is the multiplication axioms from the student's screenshot (left sides of different widths). Fixed a specificity bug that let a row's display math become its own scroll box.
+- Two inline formulas around a hyphen ("$\varepsilon$-$N$") are joined into one formula before rendering, so a right-to-left line no longer swaps them ("N-ε").
+- Checks: typecheck/lint clean, 128 unit, 30 e2e.

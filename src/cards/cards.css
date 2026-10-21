@@ -109,6 +109,15 @@
 body {
   font-family: "Rubik", system-ui, -apple-system, "Segoe UI", "Arial Hebrew", sans-serif;
 }
+/* Rubik sets tight; a little air between letters, words and lines keeps Hebrew readable. */
+.cards {
+  letter-spacing: 0.012em;
+  word-spacing: 0.06em;
+  line-height: 1.7;
+}
+.cards .board {
+  line-height: 2;
+}
 .cards h1,
 .cards h2,
 .cards h3 {

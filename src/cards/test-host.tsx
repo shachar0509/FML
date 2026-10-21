@@ -65,12 +65,13 @@ const practiceReply: Record<string, PracticeData> = { practice_start_request: mc
 const settings: SettingsData = { ...base, view: "settings", university: "technion", dataRoot: "/Users/me/Documents/Shalav", learning: { minExercises: 2, minExerciseScore: 85, masteryThreshold: 0.85, requireAllObjectives: true, hintsBeforeSolution: 3 }, conflicts: ["courses/01040195/.shalav/events/dev1 (1).jsonl"] };
 const figure: FigureData = { ...base, view: "figure", kind: "plot", source: JSON.stringify({ xDomain: [-2, 2], yDomain: [-1, 4], data: [{ fn: "x^2", label: "f" }] }), captionMd: "$f(x)=x^2$" };
 const step: StepData = {
-  ...base, view: "step", titleMd: L("המספרים הממשיים", "The real numbers"), figure: null, progress: { n: 2, of: 5 },
+  ...base, view: "step", titleMd: L("אקסיומות הכפל", "Multiplication axioms"), figure: null, progress: { n: 2, of: 5 },
   bodyMd: `\`\`\`rows
-${L("טבעיים", "Naturals")} | \\N = \\{1, 2, 3, 4, \\dots\\}
-${L("שלמים", "Integers")} | \\Z = \\{\\dots, -2, -1, 0, 1, 2, \\dots\\}
-${L("רציונליים", "Rationals")} | \\Q = \\left\\{ \\frac{m}{n} \\;\\middle|\\; \\substack{m, n \\in \\Z \\\\ n \\neq 0} \\right\\}
-${L("ממשיים", "Reals")} | \\R \\supset \\Q \\cup \\{\\sqrt{2}, \\pi, e\\}
+${L("סגירות", "Closure")} | a \\cdot b \\in F
+${L("קיבוציות", "Associativity")} | (a \\cdot b) \\cdot c = a \\cdot (b \\cdot c)
+${L("חילופיות", "Commutativity")} | a \\cdot b = b \\cdot a
+${L("איבר יחידה", "Identity")} | a \\cdot 1 = a, \\quad 1 \\neq 0
+${L("איבר הופכי", "Inverse")} | a \\cdot a^{-1} = 1, \\quad a \\neq 0
 \`\`\`
 
 > [!definition] ${L("שדה סדור", "Ordered field")}
