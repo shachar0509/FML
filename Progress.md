@@ -599,4 +599,5 @@ Edge cases found with the sample slides, and fixed in the renderer:
 - `pnpm dev:install` (`scripts/dev-install.mjs`, macOS) runs `pack:mcpb` and copies `build/mcpb` over the installed extension (`~/Library/Application Support/Claude/Claude Extensions/local.mcpb.shalav.shalav`). If Claude Desktop is running, it quits it and opens it again so the new server loads.
 - `--no-restart` only copies. Then turn Shalav off and on in Settings → Extensions, or restart Claude Desktop yourself.
 - You still install `dist/shalav.mcpb` by hand the first time. The script stops if the extension folder is missing.
-- **Checks:** ran with `--no-restart`; `diff -rq` of the build against the installed folder shows they are the same; lint clean.
+- If Claude Desktop is still running 20 s after the quit request, the script sends it SIGTERM. If it still has not quit, the script stops without copying. (The first version waited only 10 s, then reopened the app that was still running, so nothing restarted.)
+- **Checks:** a full run restarted Claude Desktop (new process ID) and Shalav started from the new files, according to its Claude Desktop log; ran with `--no-restart`; `diff -rq` of the build against the installed folder shows they are the same; lint clean.

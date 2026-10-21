@@ -22,9 +22,18 @@ const running = () => {
   }
 };
 const restart = !process.argv.includes("--no-restart") && running();
-if (restart) {
-  execSync(`osascript -e 'quit app "Claude"'`);
-  for (let i = 0; i < 40 && running(); i++) await new Promise((r) => setTimeout(r, 250));
+const waitQuit = async (seconds) => {
+  for (let i = 0; i < seconds * 4 && running(); i++) await new Promise((r) => setTimeout(r, 250));
+  return !running();
+};
+// A polite quit can take a while (or stall on a busy window); then SIGTERM, which Electron also handles as a normal quit.
+if (restart && !(execSync(`osascript -e 'quit app "Claude"'`), await waitQuit(20))) {
+  console.log("dev:install: Claude Desktop is still running, sending it SIGTERM");
+  execSync("pkill -x Claude || true");
+  if (!(await waitQuit(10))) {
+    console.error("dev:install: Claude Desktop did not quit; nothing was copied. Quit it yourself and run again.");
+    process.exit(1);
+  }
 }
 
 await rm(join(target, "server"), { recursive: true, force: true });
