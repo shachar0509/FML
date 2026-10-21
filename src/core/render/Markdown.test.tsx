@@ -69,7 +69,8 @@ describe("Markdown", () => {
     expect(hebrewOutOfMath(String.raw`a < b \text{ וגם } b < c \Rightarrow a < c`)).toBe(String.raw`$a < b$ וגם $b < c \Rightarrow a < c$`);
     expect(hebrewOutOfMath("בדיוק אחד מהבאים: a<b, a=b")).toBe("בדיוק אחד מהבאים: $a<b, a=b$");
     expect(fixMath("אם $a<b \\text{ אז } c$ ו-`$x$ שלום`")).toBe("אם $a<b$ אז $c$ ו-`$x$ שלום`"); // code untouched
-    expect(fixMath("$$\na \\text{ כאשר } b\n$$")).toBe("\n\n$a$ כאשר $b$\n\n");
+    expect(fixMath("$$\na \\text{ כאשר } b\n$$")).toBe("$$\na \\text{ כאשר } b\n$$"); // display math stays whole
+    expect(fixMath("$$x = 1 \\quad איבר אפס$$")).toBe("$$x = 1 \\quad \\text{איבר אפס}$$"); // bare Hebrew wrapped as one run
     const { container } = render(<Markdown>{"$a<b$ ו-$0<c$ גוררים $a c < b c$"}</Markdown>);
     expect(container.querySelector("p")?.getAttribute("dir")).toBe("rtl"); // the words decide, not the leading formula
     expect(render(<Markdown>{"$a_n \\to 0$"}</Markdown>).container.querySelector("p")?.hasAttribute("dir")).toBe(false); // formulas only: the card's direction
@@ -78,6 +79,26 @@ describe("Markdown", () => {
     expect(rows.querySelectorAll(".board-mixed")).toHaveLength(1);
     expect(rows.querySelector(".board-mixed")?.textContent).toContain("וגם");
     expect(rows.querySelectorAll(".board-rel .katex")).toHaveLength(1);
+  });
+
+  it("a proof box with an aligned derivation and Hebrew reasons renders (no KaTeX error); a box title equal to its kind is dropped", () => {
+    const md = [
+      "> [!theorem] משפט",
+      "> לכל $a \\in F$ מתקיים $0 \\cdot a = 0$.",
+      "",
+      "> [!proof]",
+      "> $$",
+      "> \\begin{aligned}",
+      "> 0 \\cdot a &= (0 + 0) \\cdot a && \\text{איבר אפס} \\\\",
+      "> &= 0 \\cdot a + 0 \\cdot a && \\text{פילוג}",
+      "> \\end{aligned}",
+      "> $$",
+      "> נוסיף $-(0 \\cdot a)$ לשני האגפים.",
+    ].join("\n");
+    const { container } = render(<Markdown>{md}</Markdown>);
+    expect(container.querySelector(".katex-error")).toBeNull();
+    expect(container.querySelector(".board-box-proof .katex-display")).toBeTruthy();
+    expect(container.querySelector(".board-box-theorem .board-box-title")).toBeNull();
   });
 
   it("dispatches only the five figure tags", () => {

@@ -428,3 +428,9 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - Prompt: no words inside math or a row's formula; statements that need words are normal sentences with inline formulas.
 - Fixtures/e2e: an MCQ option that starts with a formula is rtl in Hebrew; a rows line with "וגם" renders as a mixed line.
 - Checks: typecheck/lint clean, 129 unit, 30 e2e.
+
+### M22c — fixes: proof with an aligned derivation broke; box title repeated its kind (done; 🧪 pending)
+- M22b pulled Hebrew out of every formula, which also split display math / `aligned` derivations whose reasons are `\text{איבר אפס}` (inside a proof box the result was a red KaTeX error). Now only an inline one-line formula is split into text + formulas; display math and environments stay whole and only bare Hebrew letters are wrapped in `\text{…}` (KaTeX keeps a `\text` phrase as one run, so it reads right).
+- "> [!theorem] משפט" showed "משפט משפט": a title equal to the box's kind is dropped; the prompt says the title is the theorem's/definition's name.
+- Tests: the proof box from the student's screenshot renders with no `.katex-error`; the step fixture shows a theorem + proof box.
+- Checks: typecheck/lint clean, 130 unit, 30 e2e.

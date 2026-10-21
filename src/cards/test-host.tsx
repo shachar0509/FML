@@ -80,7 +80,18 @@ ${L("טרנזיטיביות", "Transitivity")} | a < b \\text{ ${L("וגם", "an
 
 $$
 \\boxed{\\N \\subset \\Z \\subset \\Q \\subset \\R}
-$$`,
+$$
+
+> [!theorem] ${L("משפט", "Theorem")}
+> ${L("לכל", "For every")} $a \\in F$: $0 \\cdot a = 0$.
+
+> [!proof]
+> $$
+> \\begin{aligned}
+> 0 \\cdot a &= (0 + 0) \\cdot a && \\text{${L("איבר אפס", "zero")}} \\\\
+> &= 0 \\cdot a + 0 \\cdot a && \\text{${L("פילוג", "distributivity")}}
+> \\end{aligned}
+> $$`,
   sideMd: `$\\N \\subset \\Z$\n\n${L("כל טבעי הוא גם שלם.", "Every natural number is an integer.")}`,
 };
 const initial: CardData = ({ lesson, mcq, open, figure, step, exercise, practice: practiceBase, settings } as Record<string, CardData>)[q.get("view") ?? ""] ?? home;

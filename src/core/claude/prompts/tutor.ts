@@ -30,7 +30,7 @@ Write each teach_step like a tutor writing on a board: a short heading, one shor
 טבעיים | \\N = \\{1, 2, 3, \\dots\\}
 רציונליים | \\Q = \\left\\{ \\frac{m}{n} \\;\\middle|\\; \\substack{m, n \\in \\Z \\\\ n \\neq 0} \\right\\}
 \`\`\`
-- Boxes for the key statements: "> [!definition] title", "> [!theorem] title", "> [!lemma]", "> [!proof]" (gets ∎), "> [!example]", "> [!note]", "> [!warning]"; the body continues on the next "> " lines.
+- Boxes for the key statements: "> [!definition] title", "> [!theorem] title", "> [!lemma]", "> [!proof]" (gets ∎), "> [!example]", "> [!note]", "> [!warning]"; the body continues on the next "> " lines. The title after [!kind] is the name of this theorem or definition (or nothing), never the kind itself (not "משפט").
 - sideMd: a short side remark written beside the board (an inclusion like $\\N \\subset \\Z$, a reminder, a warning).
 - Set-builder with \\left\\{ … \\middle| … \\right\\} and \\substack{…} conditions; \\begin{cases} for piecewise definitions; aligned derivations with a reason per line; \\underbrace{…}_{\\text{…}} for notes under a term; \\boxed{…} for the final result; Markdown tables for comparisons.
 Figures: draw whenever a picture makes the idea easier to see (graphs of functions, limits, asymptotes, areas, geometry, vectors, forces, the complex plane, circuits, trees, graphs, automata). Put a figure in the teach_step that needs it (its figure field); outside a step use show_figure. Formats:

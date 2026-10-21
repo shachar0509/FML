@@ -87,7 +87,9 @@ const COLOR_SPLIT = /\\(blue|green|pink|orange)\{([^{}]*)\}/;
 
 function Blockquote(p: ComponentProps<"blockquote"> & { node?: unknown; "data-box"?: string; "data-title"?: string }) {
   const { t } = useTranslation();
-  const { "data-box": box, "data-title": title, children, ...rest } = bare(p);
+  const { "data-box": box, "data-title": raw, children, ...rest } = bare(p);
+  // "> [!theorem] משפט" repeats the label: keep only a real title (the theorem's name)
+  const title = raw && ![t(`board.${box}`), box ?? ""].some((l) => l.toLowerCase() === raw.replace(/[.:]$/, "").trim().toLowerCase()) ? raw : "";
   if (!box) return <blockquote dir="auto" {...rest}>{children}</blockquote>;
   return (
     <section className={`board-box board-box-${box}`} dir="auto" aria-label={t(`board.${box}`)}>
@@ -139,7 +141,15 @@ export function hebrewOutOfMath(tex: string): string {
   math(tex.slice(at));
   return out.join(" ");
 }
-/** Applies the bidi fixes to Claude's Markdown outside code blocks: Hebrew out of formulas, hyphen-joined formulas merged. */
+/** Bare Hebrew letters in a formula are separate symbols (reversed); wrapped in \\text{…} a phrase stays one run and reads right. */
+export const wrapHebrew = (tex: string) =>
+  tex.replace(/\\text\{[^{}]*\}|([\u0590-\u05FF][\u0590-\u05FF\s"'׳״,.:;!?-]*[\u0590-\u05FF"'׳״.:])|([\u0590-\u05FF])/g, (all, run?: string, one?: string) =>
+    run || one ? `\\text{${run ?? one}}` : all,
+  );
+/**
+ * Applies the bidi fixes to Claude's Markdown outside code blocks. An inline formula with Hebrew words is split into
+ * text + formulas; a display formula or an environment (aligned with Hebrew reasons) is kept whole, its bare Hebrew wrapped.
+ */
 export const fixMath = (md: string) =>
   md
     .split(/(```[\s\S]*?```)/)
@@ -148,8 +158,10 @@ export const fixMath = (md: string) =>
         ? part
         : joinHyphenatedMath(
             part
-              .replace(/\$\$([\s\S]+?)\$\$/g, (all, t: string) => (HEB.test(t) ? `\n\n${hebrewOutOfMath(t)}\n\n` : all))
-              .replace(/(?<![$\\])\$([^$\n]+)\$(?!\$)/g, (all, t: string) => (HEB.test(t) ? hebrewOutOfMath(t) : all)),
+              .replace(/\$\$([\s\S]+?)\$\$/g, (all, t: string) => (HEB.test(t) ? `$$${wrapHebrew(t)}$$` : all))
+              .replace(/(?<![$\\])\$([^$\n]+)\$(?!\$)/g, (all, t: string) =>
+                !HEB.test(t) ? all : /\\begin|&|\\\\/.test(t) ? `$${wrapHebrew(t)}$` : hebrewOutOfMath(t),
+              ),
           ),
     )
     .join("");
