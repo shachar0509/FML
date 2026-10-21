@@ -50,19 +50,24 @@ export function parseSections(html: string, base: string): string[] {
 export function parseCourse(html: string, base: string): Link[] {
   const out: Link[] = [];
   const parts = html.split(/(?=<li\b[^>]*\bid="section-\d+")/i);
-  for (const part of parts) {
+  // Before the first section is the site's menu and header (e.g. a site-wide "login instructions" page), not the course.
+  for (const part of parts.length > 1 ? parts.slice(1) : parts) {
     const section = strip(/data-sectionname="([^"]*)"/i.exec(part)?.[1] ?? /<h[1-6][^>]*class="[^"]*sectionname[^"]*"[^>]*>([\s\S]*?)<\/h[1-6]>/i.exec(part)?.[1] ?? "");
     for (const m of part.matchAll(/<a\b[^>]*href="([^"]*(?:\/mod\/(?:resource|folder|assign|page)\/view\.php\?id=\d+|pluginfile\.php\/)[^"]*)"[^>]*>([\s\S]*?)<\/a>/gi)) {
       const url = abs(m[1] as string, base);
-      if (!out.some((o) => o.url === url)) out.push({ url, text: strip(m[2] as string).replace(/\s*(?:File|Folder|קובץ|תיקייה)$/i, ""), section });
+      const text = strip(m[2] as string).replace(/\s*(?:File|Folder|Assignment|Page|קובץ|תיקייה|תצוגת תיקיית קבצים|מטלה|דף תוכן מעוצב)$/i, "");
+      if (!ADMIN.test(text) && !out.some((o) => o.url === url)) out.push({ url, text, section });
     }
   }
   return out;
 }
 
-/** pluginfile links inside a resource landing page or a folder page. */
+/** Course admin items by their label (requests, forms, login/system instructions), not study material. */
+const ADMIN = /בקשה|בקשות|טופס|טפסים|הנחיות התחברות|התחברות למערכת|מילואים|נוהל|נהלי|request|\bform\b|login instructions/i;
+
+/** pluginfile links inside a resource landing page or a folder page: links and embedded documents, not pictures (theme logo, screenshots in a page). */
 export function parsePluginfiles(html: string, base: string): string[] {
-  return [...new Set([...html.matchAll(/(?:href|src|data)="([^"]*pluginfile\.php\/[^"]*)"/gi)].map((m) => abs(m[1] as string, base)))];
+  return [...new Set([...html.matchAll(/<(?:a|iframe|embed|object|source)\b[^>]*?\b(?:href|src|data)="([^"]*pluginfile\.php\/[^"]*)"/gi)].map((m) => abs(m[1] as string, base)).filter((u) => !/pluginfile\.php\/1\/|\/theme_/.test(u)))];
 }
 
 /** Exams and exercise sheets go to the exercises list, everything else is study material. */
@@ -71,8 +76,14 @@ export function guessRole(name: string, section: string): "material" | "exercise
 }
 
 export function fileName(url: string, disposition: string | undefined): string {
-  const cd = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition ?? "")?.[1];
-  const raw = cd ?? new URL(url).pathname.split("/").pop() ?? "file";
+  const star = /filename\*=UTF-8''"?([^";]+)"?/i.exec(disposition ?? "")?.[1];
+  let plain = /filename="?([^";]+)"?/i.exec(disposition ?? "")?.[1];
+  // Moodle sends the plain filename as raw UTF-8 bytes; HTTP clients read header bytes as Latin-1 ("×ª×¨××××" for "תרגיל").
+  if (plain && !/[^ -ÿ]/.test(plain) && /[\u0080-ÿ]/.test(plain)) {
+    const u = Buffer.from(plain, "latin1").toString("utf8");
+    if (!u.includes("�")) plain = u;
+  }
+  const raw = star ?? plain ?? new URL(url).pathname.split("/").pop() ?? "file";
   let n = raw;
   try {
     n = decodeURIComponent(raw);

@@ -25,7 +25,8 @@ export class MoodleFail extends Error {
 export type Downloaded = { path: string; role: "material" | "exercises" };
 export type Moodle = ReturnType<typeof createMoodle>;
 
-const loggedIn = () => !document.body.classList.contains("notloggedin") && !!document.querySelector('a[href*="login/logout.php"], #user-menu-toggle');
+// Only a real login has a logout link: guest access (Technion gives it once the session expires) has the user menu but sees no enrolled course.
+const loggedIn = () => !document.body.classList.contains("notloggedin") && !!document.querySelector('a[href*="login/logout.php"]');
 
 /**
  * Drives the student's own Chrome with a persistent profile: they log in (SSO + MFA) in the window, Shalav only keeps the browser session.

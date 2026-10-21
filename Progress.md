@@ -441,3 +441,10 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 ### M23 — One card on screen (done; 🧪 pending)
 - The chat cannot delete earlier messages, so older cards fold themselves away: each card the model renders claims a number from the app-only tool `shalav_card` (`Date.now()`-based, rises across server restarts) and polls it every 2 s while visible; once a newer number exists it shows one muted line ("הכרטיס הזה הוחלף…"), stops polling and leaves pip mode. Card-side navigation does not claim (only model results do).
 - e2e: test host `?stale=1` → the step card folds; without it the board stays. Checks: typecheck/lint clean, 130 unit, 31 e2e, smoke ok (49 tools).
+
+### M24 — Moodle import takes the course material (done; 🧪 pending)
+- Root cause (checked on the real Technion Moodle): once the Moodle session expires, Technion gives **guest access**. The page has the user menu but no logout link, and the old login check accepted the user menu, so the sync ran as a guest. A guest sees no enrolled course, only site pages. The login check now requires the logout link, so an expired session opens the login window again.
+- Junk files: everything in "חומרי לימוד" came from the site's "login instructions" page in the menu above the sections, which held the theme logo and login screenshots. `parseCourse` now ignores links before the first section and admin labels (requests, forms, reservists, login instructions). `parsePluginfiles` takes links and embedded documents but no `<img>` and no site/theme files.
+- Hebrew file names were mojibake: Moodle sends the plain `filename=` as raw UTF-8 bytes, which were read as Latin-1. They are re-decoded now, and `filename*` is preferred.
+- Files imported before this fix keep their broken names, because a re-import sees them as duplicates by content. Delete them in the course card, then import again.
+- Checks: typecheck/lint clean, 130 unit, smoke ok (49 tools).

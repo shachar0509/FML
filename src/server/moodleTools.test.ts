@@ -10,7 +10,7 @@ import type { FilesData } from "@/cards/types";
 import { FakeClaudeGateway, toolCall } from "@/core/claude/fake";
 import { setClaude } from "@/core/claude/runtime";
 import { createCourse } from "@/core/domain/courses/courses";
-import { courseNumbers, fileName, guessRole, parseCourse, parseSearch, parseSections, searchTerm } from "./moodleParse";
+import { courseNumbers, fileName, guessRole, parseCourse, parsePluginfiles, parseSearch, parseSections, searchTerm } from "./moodleParse";
 import { createMoodle } from "./moodle";
 import { initNode } from "./platform";
 import { createServer } from "./server";
@@ -33,9 +33,14 @@ it("parses Moodle pages and guesses roles", () => {
   expect(parseSections('<a href="/course/section.php?id=5">s</a><a href="/course/view.php?id=7&amp;section=2#x">s2</a><a href="/course/view.php?id=3&section=1">other</a>', base)).toEqual(["https://m.example.ac.il/course/section.php?id=5", "https://m.example.ac.il/course/view.php?id=7&section=2"]);
   const links = parseCourse('<li id="section-1" data-sectionname="Exercises"><a href="/mod/resource/view.php?id=9"><span>sheet 1</span> <span class="accesshide">File</span></a></li>', base);
   expect(links).toEqual([{ url: "https://m.example.ac.il/mod/resource/view.php?id=9", text: "sheet 1", section: "Exercises" }]);
+  // Real Technion page: the site menu's "login instructions" page sits before the sections, a reservists' request form inside one.
+  expect(parseCourse('<nav><a href="/mod/page/view.php?id=474">הנחיות התחברות למערכת</a></nav><li id="section-1" data-sectionname="שיעורי בית"><a href="/mod/assign/view.php?id=2">בקשה להפחתת גיליונות (עבור משרתי מילואים) מטלה</a><a href="/mod/assign/view.php?id=3">גיליון 1 מטלה</a></li>', base).map((l) => l.text)).toEqual(["גיליון 1"]);
+  expect(parsePluginfiles('<img src="/pluginfile.php/1/theme_boost_union/logocompact/logo.png"><img class="img-fluid" src="/pluginfile.php/4/mod_page/content/1/screen.jpg"><a href="/pluginfile.php/4/mod_folder/content/0/a.pdf">a</a><iframe src="/pluginfile.php/5/mod_resource/content/1/b.pdf"></iframe>', base)).toEqual(["https://m.example.ac.il/pluginfile.php/4/mod_folder/content/0/a.pdf", "https://m.example.ac.il/pluginfile.php/5/mod_resource/content/1/b.pdf"]);
   expect(guessRole("lecture1.pdf", "Week 1")).toBe("material");
   expect(guessRole("x.pdf", "מבחנים")).toBe("exercises");
   expect(fileName("https://x/pluginfile.php/1/Lecture%201.pdf", undefined)).toBe("Lecture 1.pdf");
+  expect(fileName("https://x/a.pdf", `inline; filename="${Buffer.from("תרגיל 3.pdf").toString("latin1")}"`)).toBe("תרגיל 3.pdf");
+  expect(fileName("https://x/a.pdf", `attachment; filename="x.pdf"; filename*=UTF-8''%D7%AA.pdf`)).toBe("ת.pdf");
 });
 
 // A tiny Moodle (served on localhost, reached through a redirect from 127.0.0.1): login = a script that sets the session cookie (stands in for SSO + MFA), a search page, one course with a file, an exam, a landing page and a folder.
