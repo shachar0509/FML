@@ -14,7 +14,7 @@ for (const lang of LANGS)
     await page.getByRole("button", { name: lang === "he" ? /הוספת קורס/ : /Add course/ }).click();
     // the course opens without a plan and nothing is sent to Claude: files first, Build plan when ready
     await expect(page.getByText(lang === "he" ? "השלב הבא: קבצי הקורס" : "Next: your course files")).toBeVisible();
-    await expect(page.getByText("lecture1.pdf")).toBeVisible();
+    await expect(page.getByRole("button", { name: lang === "he" ? /חומרי לימוד/ : /Study materials/ })).toHaveAttribute("aria-expanded", "false"); // Files section, collapsed
     expect(await said(page)).toEqual([]);
     await page.getByRole("button", { name: lang === "he" ? "בניית תוכנית" : "Build plan" }).click();
     expect(await said(page)).toEqual([lang === "he" ? "▶️ המשך" : "▶️ Continue"]);
@@ -30,9 +30,22 @@ for (const lang of LANGS)
       await expect(page.getByRole("heading", { level: 1 })).toContainText(lang === "he" ? "חשבון" : "Infinitesimal");
       await expect(page.getByText(lang === "he" ? "שכחו את תנאי ההתכנסות" : "Forgot the convergence condition")).toBeVisible();
       await expect(page.getByText("S002").first()).toBeVisible(); // current unit is expanded
-      await expect(page.getByText("lecture2.pdf")).toBeVisible(); // Files section
+      // file lists start collapsed (like the plan units); the rings show without opening them
       await expect(page.getByRole("img", { name: lang === "he" ? "50% אונדקסו" : "50% indexed" })).toBeVisible();
       await expect(page.getByRole("img", { name: lang === "he" ? "100% אונדקסו" : "100% indexed" })).toBeVisible();
+      const filesSection = page.getByRole("region", { name: lang === "he" ? "קבצי לימוד" : "Study files" });
+      const mats = page.getByRole("button", { name: lang === "he" ? /חומרי לימוד/ : /Study materials/ });
+      const exs = page.getByRole("button", { name: lang === "he" ? /תרגילים לדוגמה/ : /Sample exercises/ });
+      await expect(mats).toHaveAttribute("aria-expanded", "false");
+      await expect(exs).toHaveAttribute("aria-expanded", "false");
+      await expect(page.getByText("lecture2.pdf")).toBeHidden();
+      await expect(page.getByText("hw1.pdf")).toBeHidden();
+      await page.waitForTimeout(400); // card fade-in
+      await filesSection.screenshot({ path: `e2e/tests_output/course/card-files-collapsed-${lang}-${theme}.png` });
+      await mats.click();
+      await exs.click();
+      await expect(mats).toHaveAttribute("aria-expanded", "true");
+      await expect(page.getByText("lecture2.pdf")).toBeVisible();
       await expect(page.getByText(lang === "he" ? "עוד לא נקרא — לחצו על ״עדכון התוכנית״" : "Not read yet — press Update plan")).toBeVisible();
       // delete asks first; Cancel keeps the file
       await page.getByRole("button", { name: `${lang === "he" ? "הסרה" : "Remove"} lecture2.pdf` }).click();
@@ -45,16 +58,7 @@ for (const lang of LANGS)
       await page.getByRole("button", { name: `${lang === "he" ? "הסרה" : "Remove"} lecture2.pdf` }).click();
       await ask.getByRole("button", { name: lang === "he" ? "הסרה" : "Remove" }).click();
       await expect(ask).toBeHidden();
-      const filesSection = page.getByRole("region", { name: lang === "he" ? "קבצי לימוד" : "Study files" });
       await filesSection.screenshot({ path: `e2e/tests_output/course/card-files-${lang}-${theme}.png` });
-      const mats = page.getByRole("button", { name: lang === "he" ? /חומרי לימוד/ : /Study materials/ });
-      await mats.click(); // collapse
-      await expect(mats).toHaveAttribute("aria-expanded", "false");
-      await expect(page.getByText("lecture2.pdf")).toBeHidden();
-      await page.waitForTimeout(300); // chevron rotation
-      await filesSection.screenshot({ path: `e2e/tests_output/course/card-files-collapsed-${lang}-${theme}.png` });
-      await mats.click();
-      await expect(page.getByText("lecture2.pdf")).toBeVisible();
       await expect(page.getByText(lang === "he" ? "5 תרגילים" : "5 exercises found")).toBeVisible();
       await expect(page.getByText(lang === "he" ? "3 פתורים · 2 לא פתורים" : "3 solved · 2 unsolved")).toBeVisible();
       await expect(page.getByRole("button", { name: lang === "he" ? "ייבוא קבצי הקורס" : "Import course files" })).toBeEnabled();

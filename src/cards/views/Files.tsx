@@ -124,7 +124,7 @@ export function Files({
   const [sent, setSent] = useState<{ done: number; total: number } | null>(null); // upload bytes
   const [del, setDel] = useState<string | null>(null); // sha awaiting "are you sure"
   const [url, setUrl] = useState("");
-  const [shut, setShut] = useState<Partial<Record<Role, boolean>>>({});
+  const [open, setOpen] = useState<Partial<Record<Role, boolean>>>({}); // collapsed by default, like the plan units
   const refresh = useCallback(async () => {
     const r = await callTool("files_list", { number });
     if (!r.isError) setD(r.structuredContent as FilesData);
@@ -218,11 +218,11 @@ export function Files({
         <h3>
           <button
             className="flex w-full items-center gap-2 rounded text-start font-medium focus-visible:outline-2 focus-visible:outline-primary"
-            aria-expanded={!shut[role]}
-            onClick={() => setShut((x) => ({ ...x, [role]: !x[role] }))}
+            aria-expanded={!!open[role]}
+            onClick={() => setOpen((x) => ({ ...x, [role]: !x[role] }))}
           >
             <ChevronDown
-              className={`size-4 shrink-0 text-muted transition-transform motion-reduce:transition-none ${shut[role] ? "rtl:rotate-90 ltr:-rotate-90" : ""}`}
+              className={`size-4 shrink-0 text-muted transition-transform motion-reduce:transition-none ${open[role] ? "" : "rtl:rotate-90 ltr:-rotate-90"}`}
               aria-hidden
             />
             <span className="flex-1">{title}</span>
@@ -235,7 +235,7 @@ export function Files({
           {t("files.dropHint")}
         </p>
       )}
-      {!shut[role] &&
+      {open[role] &&
         rows.map((f) => (
           <div
             key={f.sha}

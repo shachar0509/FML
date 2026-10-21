@@ -628,3 +628,7 @@ Edge cases found with the sample slides, and fixed in the renderer:
   - The Moodle import unit test checks that progress starts at 0, ends at done = total, and clears.
   - 139 unit, 79 e2e; lint and tsc clean.
   - Not covered by a test: the local-upload bar, because the test host answers upload chunks instantly.
+
+## M37 — file lists start collapsed ✅
+- Study materials and Sample exercises open collapsed, like the plan's units. Their header still shows the indexed-% ring, and the Add and Open folder buttons stay visible. Tapping the header opens the list.
+- **Checks:** the course e2e checks that both lists start collapsed (the files are hidden and `aria-expanded` is false), then opens them for the file checks. The add-course test now looks for the collapsed header instead of a file name. 8 course e2e passed; lint and tsc clean.
