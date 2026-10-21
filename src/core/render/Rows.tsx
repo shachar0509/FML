@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import katex from "katex";
-import { fitWidth, hebrewOutOfMath, joinPieces, KATEX, Markdown, mathPieces } from "./Markdown";
+import { fitWidth, hebrewOutOfMath, joinPieces, KATEX, Markdown, mathPieces, MIRROR } from "./Markdown";
 
 const RELS = new Set(["neq", "ne", "le", "leq", "ge", "geq", "subset", "subseteq", "supset", "supseteq", "in", "notin", "iff", "Rightarrow", "Leftrightarrow", "to", "approx", "equiv", "sim", "cong", "coloneqq"]);
 
@@ -33,7 +33,7 @@ export function splitRel(m: string): [string, string, string] | null {
 const tex = (s: string) => ({ __html: katex.renderToString(s, { ...KATEX, displayMode: true }) });
 const HEB = /[֐-׿]/;
 
-/** Splits a row at the first top-level spacing (&&, \quad, \qquad, \hspace) that is followed by Hebrew: [formula, reason]. */
+/** Splits a row at its first top-level "&&", or at a spacing (\quad, \qquad, \hspace) followed by words: [formula, reason]. */
 export function splitReason(m: string): [string, string] {
   let depth = 0;
   for (let i = 0; i < m.length; i++) {
@@ -47,7 +47,8 @@ export function splitReason(m: string): [string, string] {
       continue;
     }
     const rest = m.slice(i + sep.length).trim();
-    if (HEB.test(rest) || /^\(?\s*\\text\{/.test(rest)) return [m.slice(0, i).trim(), rest.replace(/^\(([\s\S]*)\)$/, "$1").trim()];
+    // "&&" opens an aligned derivation's note column, whatever is in it ("&& \\Delta H_1 = -393.5")
+    if (sep === "&&" || HEB.test(rest) || /^\(?\s*\\text\{/.test(rest)) return [m.slice(0, i).trim(), rest.replace(/^\(([\s\S]*)\)$/, "$1").trim()];
     i += sep.length - 1;
   }
   return [m, ""];
@@ -57,13 +58,38 @@ type Row = { label: string; pre: string; lead: string; parts: readonly [string, 
 
 /** One source line "name | formula": the name, words before the formula, the formula split at its relation, the reason. */
 function parse(l: string): Row {
+  const r = parseLine(l);
+  // "|x| < R ⇒ הטור מתכנס": in a Hebrew row the arrow sits between the formula and its words, pointing at the words
+  const arrow = /\\([A-Za-z]+)\s*$/.exec(r.parts?.[2] || r.parts?.[0] || "");
+  if (!r.parts || !arrow || !MIRROR[arrow[1] as string] || !HEB.test(r.note)) return r;
+  const cut = (t: string) => t.slice(0, t.length - arrow[0].length).trim();
+  const parts = (r.parts[2] ? [r.parts[0], r.parts[1], cut(r.parts[2])] : [cut(r.parts[0]), r.parts[1], r.parts[2]]) as Row["parts"];
+  return { ...r, parts, note: `$\\mathrel{\\${MIRROR[arrow[1] as string]}}$\u00a0${r.note}` };
+}
+/**
+ * "name | formula": the name is what comes before the first "|", when it is a name. Not a name: "|x| < R" (an
+ * absolute value at the start; "| x" with a space is an empty name) and "f(x) = |x|" (the "|" is the formula's).
+ * A short name written as math ("r = 5\% | NPV = …") is a name when the formula after it has a relation too.
+ */
+function splitLabel(l: string): [string, string] {
   const bar = l.indexOf("|");
-  const [label, math] = bar >= 0 && !l.slice(0, bar).includes("\\") ? [l.slice(0, bar).trim(), l.slice(bar + 1).trim()] : ["", l.trim()];
+  if (bar < 0 || (bar === 0 && !/^\|\s/.test(l))) return ["", l.trim()];
+  const [left, right] = [l.slice(0, bar).trim(), l.slice(bar + 1).trim()];
+  const rel = (t: string) => /[=<>]|\\(?:le|ge|leq|geq|neq|in|subset|approx|equiv|sim)\b/.test(t);
+  if (HEB.test(left) || (!left.includes("\\") && !rel(left))) return [left, right];
+  return left.length <= 24 && rel(right) ? [`$${left}$`, right] : ["", l.trim()];
+}
+
+function parseLine(l: string): Row {
+  const [label, math] = splitLabel(l);
   const [f, reason] = splitReason(math);
-  const formula = f.replace(/(?<!\\)&/g, " ").trim();
+  // an aligned derivation's "&&" was a gap before a second column: keep a gap; single "&" marks are dropped
+  const formula = f.replace(/&&/g, "\\qquad ").replace(/(?<!\\)&/g, " ").trim();
   const note = reason ? hebrewOutOfMath(reason) : "";
   if (!HEB.test(formula) && !/\\text\{[^{}]*[A-Za-z]/.test(formula)) return { label, pre: "", lead: "", parts: splitRel(formula) ?? [formula, "", ""], mixed: "", note };
   const ps = mathPieces(formula);
+  // only units in \text ("kN·m"), no words: an ordinary formula
+  if (!ps.some((p) => p.words)) return { label, pre: "", lead: "", parts: splitRel(formula) ?? [formula, "", ""], mixed: "", note };
   const last = ps.at(-1);
   // words, then one formula ("בדיוק אחד מהבאים: a<b, …"): the words go before it; after a ":" on their own line
   if (ps.length > 1 && last && !last.words && ps.slice(0, -1).every((p) => p.words)) {
@@ -105,16 +131,19 @@ export function Rows({ source }: { source: string }) {
       if (el.dataset.stack !== "true") need = el.scrollWidth;
       const s = el.clientWidth + 1 < need;
       setStack(s);
-      // still too wide once stacked (a long fraction in a narrow box): smaller, not cut off
-      if (s && el.dataset.stack === "true") fitWidth(el);
+      // what stacking cannot fix (a long fraction in a narrow box, a block with no names to move): smaller, not cut
+      // off. When the stacking changes, the effect below fits after the new layout.
+      if (s === (el.dataset.stack === "true")) fitWidth(el);
     };
     const ro = new ResizeObserver(fit);
     ro.observe(el);
+    // KaTeX's fonts load lazily, after "ready" may already have resolved: measure again once any font arrives
+    document.fonts?.addEventListener("loadingdone", fit);
     void document.fonts?.ready.then(fit);
-    return () => ro.disconnect();
+    return () => (ro.disconnect(), document.fonts?.removeEventListener("loadingdone", fit));
   }, [source]);
   useLayoutEffect(() => {
-    if (stack && ref.current) fitWidth(ref.current);
+    if (ref.current) fitWidth(ref.current);
   }, [stack]);
   const md = (cls: string, s: string) =>
     s ? (
@@ -128,7 +157,7 @@ export function Rows({ source }: { source: string }) {
       {rows.map((r, i) => (
         <div key={i} role="listitem" className="board-row" style={{ "--row": i + 1 } as React.CSSProperties}>
           <span className="board-label" dir="auto">
-            {r.label}
+            {r.label.startsWith("$") ? <Markdown>{r.label}</Markdown> : r.label}
           </span>
           {r.lead ? (
             md("board-lead", r.lead)

@@ -113,6 +113,17 @@ body {
   padding: 0.5em 0;
 }
 
+/* Table cells break between words only (a narrow column must not split "NADH" into "NAD/H"); a table wider than
+   its board scrolls inside its frame. */
+.md td,
+.md th {
+  overflow-wrap: normal;
+}
+/* A formula and the punctuation right after it, and a number with its signs ("~26–28", "−1,000"), stay on one line */
+.md .ltr-token,
+.md .nobr {
+  white-space: nowrap;
+}
 /* Rendered Claude text (11.1) */
 .md .katex,
 .md .katex-display > .katex {
@@ -175,13 +186,16 @@ body {
 .board-rows[data-dir="ltr"] .board-rhs { grid-column: 5; }
 .board-rows[data-dir="ltr"] .board-note { grid-column: 6; padding-left: 1.75em; }
 .board-rows[data-dir="ltr"] :is(.board-mixed, .board-lead) { grid-column: 2 / -1; }
+/* A line of words and formulas takes the row's full width: its words wrap and a formula too wide shrinks (aligned
+   to one side, a too-wide line would spill past the frame where it can be neither seen nor scrolled to). */
+.board-rows :is(.board-mixed, .board-lead) { justify-self: stretch; min-width: 0; }
 .board-rows[data-dir="rtl"] .board-note { grid-column: 2; justify-self: end; padding-right: 1.75em; }
 .board-rows[data-dir="rtl"] .board-lhs { grid-column: 3; }
 .board-rows[data-dir="rtl"] .board-rel { grid-column: 4; }
 .board-rows[data-dir="rtl"] .board-rhs { grid-column: 5; }
 .board-rows[data-dir="rtl"] .board-pre { grid-column: 6; padding-left: 0.6em; }
 .board-rows[data-dir="rtl"] .board-label { grid-column: 7; justify-self: start; padding-left: 1.25em; }
-.board-rows[data-dir="rtl"] :is(.board-mixed, .board-lead) { grid-column: 1 / 7; justify-self: end; }
+.board-rows[data-dir="rtl"] :is(.board-mixed, .board-lead) { grid-column: 1 / 7; }
 /* Stacked (narrow): the name above its line, the reason below it, on the reading side. */
 .board-rows[data-stack="true"] .board-label {
   grid-row: calc(var(--row) * 3 - 2);
@@ -189,6 +203,8 @@ body {
   padding: 0.5em 0 0;
 }
 .board-rows[data-stack="true"] .board-note {
+  white-space: normal;
+  overflow-wrap: normal;
   grid-row: calc(var(--row) * 3);
   grid-column: 1 / -1;
   padding: 0 0 0.25em;
@@ -197,7 +213,8 @@ body {
 .board-rows[data-stack="true"][data-dir="rtl"] :is(.board-label, .board-note) { justify-self: end; }
 /* A reason written beside a line: smaller and quieter than the formula, so it reads as an explanation. */
 .board-note {
-  overflow-wrap: normal; /* break between words only; a word that does not fit stacks the block instead */
+  /* one line beside its formula; a reason that does not fit stacks the block (then it wraps, below the formula) */
+  white-space: nowrap;
   color: var(--muted);
   font-size: 0.92em;
   line-height: 1.5;

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import "@/core/i18n";
-import { balanceDollars, fixMath, rtlArrows, hebrewOutOfMath, joinHyphenatedMath, Markdown } from "./Markdown";
+import { balanceDollars, escapeCurrency, mathPieces, fixMath, rtlArrows, rtlTextArrows, hebrewOutOfMath, joinHyphenatedMath, Markdown } from "./Markdown";
 import { isFigureTag } from "./Figure";
 import { splitRel } from "./Rows";
 
@@ -140,15 +140,54 @@ describe("Markdown", () => {
     const bare = render(<Markdown>{"$$\n\\begin{aligned} x &= y \\text{ פילוג} \\\\ &= z \\end{aligned}\n$$"}</Markdown>).container; // no && before the reason
     expect(bare.querySelector(".board-note")?.textContent).toBe("פילוג");
     expect(bare.querySelectorAll(".board-rel .katex")).toHaveLength(2);
+    // a name written as math; an absolute value at the start of a line is not a name; "f(x) = |x|" keeps its bar
+    const named = render(<Markdown>{"```rows\nr = 5\\% | NPV = 89.3\n|x| < R\nf(x) = |x|\n```"}</Markdown>).container;
+    const names = [...named.querySelectorAll(".board-label")];
+    expect(names[0]?.querySelector(".katex")).toBeTruthy();
+    expect(names.slice(1).map((n) => n.textContent)).toEqual(["", ""]);
+    expect(named.querySelectorAll(".katex-error")).toHaveLength(0);
     expect(render(<Markdown>{"```rows\nClosure | a + b \\in F\n```"}</Markdown>).container.querySelector(".board-rows")?.getAttribute("data-dir")).toBe("ltr");
   });
 
   it("words that end with a colon before symbols: the symbols start on the next line", () => {
     const { container } = render(<Markdown>{"בדיוק אחד מהבאים: $a<b$, $a=b$\n\nלכל $c$: אם $a<b$"}</Markdown>);
     const [p1, p2] = [...container.querySelectorAll("p")];
-    expect(p1?.innerHTML).toMatch(/מהבאים:<br><span class="katex"/);
+    expect(p1?.innerHTML).toMatch(/מהבאים:<br><span class="(nobr|katex)"/);
+    expect(p1?.querySelector(".nobr")?.textContent).toMatch(/,$/); // the comma stays with its formula
     expect(p2?.querySelector("br")).toBeNull(); // ": אם" — words follow the colon, no break
     expect(hebrewOutOfMath("\\text{מ-} x = x+x")).toBe("מ-$x = x+x$");
+    expect(hebrewOutOfMath("|H|_{\\text{dB}} = -3 \\text{ שיפוע}")).toBe("$|H|_{\\text{dB}} = -3$ שיפוע"); // a subscript's words stay in the formula
+  });
+
+  it("edge cases: dollar amounts, arrow characters in Hebrew, chemistry, units in a formula", () => {
+    // a price is not a formula; a formula still is, and inline code stays literal
+    expect(escapeCurrency("המניה עלתה מ-$100 ל-$120 והתשואה $r$")).toBe("המניה עלתה מ-\\$100 ל-\\$120 והתשואה $r$");
+    expect(escapeCurrency("עלות של $5 מיליון")).toBe("עלות של \\$5 מיליון");
+    expect(escapeCurrency("$x$ ו-$2y$ `$5`")).toBe("$x$ ו-$2y$ `$5`");
+    const fin = render(<Markdown>{"המניה עלתה מ-$100 ל-$120 ($20$ אחוז)"}</Markdown>).container;
+    expect(fin.textContent).toContain("$100");
+    expect(fin.querySelectorAll(".katex")).toHaveLength(1);
+    // an arrow character next to Hebrew is turned to read right to left; between Latin words it stays
+    expect(rtlTextArrows("גלוקוז → פירובט → לקטט")).toBe("גלוקוז ← פירובט ← לקטט");
+    expect(rtlTextArrows("ATP → ADP")).toBe("ATP → ADP");
+    expect(render(<Markdown>{"ATP → ADP משחרר אנרגיה, וגלוקוז → פירובט"}</Markdown>).container.textContent).toBe("ATP → ADP משחרר אנרגיה, וגלוקוז ← פירובט");
+    expect(render(<Markdown>{"Glucose → pyruvate"}</Markdown>).container.textContent).toBe("Glucose → pyruvate"); // English: untouched
+    // \ce (mhchem) renders, also in a Hebrew sentence; its arrows are KaTeX's
+    const chem = render(<Markdown>{"התגובה $\\ce{2H2 + O2 -> 2H2O}$ משחררת חום"}</Markdown>).container;
+    expect(chem.querySelector(".katex-error")).toBeNull();
+    expect(chem.querySelector(".katex")).toBeTruthy();
+    // a table row: "$" never pairs across cells, and a cell's words keep their spaces
+    const table = render(<Markdown>{"| שנה | תזרים ($) | מקדם היוון ב-5% | ערך נוכחי ($) |\n|---|---|---|---|\n| 0 | −1,000 | 1.000 | $r$ |"}</Markdown>).container;
+    expect([...table.querySelectorAll("th")].map((t) => t.textContent)).toEqual(["שנה", "תזרים ($)", "מקדם היוון ב-5%", "ערך נוכחי ($)"]);
+    expect(table.querySelectorAll("td .katex")).toHaveLength(1); // "$r$" is still a formula
+    // a sign at the edge of a number or a Latin word stays on its side in a Hebrew line (a left-to-right island)
+    const edge = render(<Markdown>{"ההפסד −1,000 ו-~26 מולקולות NAD⁺ ב-25°C, בשלבים 1, 2, 3"}</Markdown>).container;
+    expect([...edge.querySelectorAll(".ltr-token")].map((t) => t.textContent)).toEqual(["−1,000", "~26", "NAD⁺", "25°C"]);
+    expect(edge.querySelector(".ltr-token")?.getAttribute("dir")).toBe("ltr");
+    expect(render(<Markdown>{"| −1,000 |\n|---|\n| 400 |"}</Markdown>).container.querySelector("th .ltr-token")?.textContent).toBe("−1,000"); // a cell with only a number
+    // a unit in \text stays inside its formula (no woven line)
+    expect(mathPieces("-3 \\text{ dB}").every((p) => !p.words)).toBe(true);
+    expect(mathPieces("\\text{exactly one of:} a<b")[0]).toEqual({ words: true, s: "exactly one of:" });
   });
 
   it("dispatches only the five figure tags", () => {
