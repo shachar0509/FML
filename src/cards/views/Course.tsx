@@ -1,28 +1,50 @@
 import { useState } from "react";
-import { Check, ChevronDown, Circle, Contrast, Lock } from "lucide-react";
+import { BookOpen, Check, ChevronDown, Circle, Contrast, Dumbbell, Lock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
+import { Bar, Ring, backLink, h2, panel } from "../ui";
 import type { CourseData, Stage, Go } from "../types";
 import { Checklist } from "./Checklist";
 import { Files } from "./Files";
 import { useBuild } from "./useBuild";
 
-type Tool = (name: string, args?: Record<string, unknown>) => Promise<{ structuredContent?: unknown }>;
+type Tool = (
+  name: string,
+  args?: Record<string, unknown>,
+) => Promise<{ structuredContent?: unknown }>;
 
-const StatusIcon = ({ s }: { s: Stage["status"] }) =>
-  s === "locked" ? <Lock className="size-4 text-muted" aria-label="locked" />
-  : s === "available" ? <Circle className="size-4 text-muted" aria-label="available" />
-  : s === "in_progress" ? <Contrast className="size-4 text-primary" aria-label="in progress" />
-  : <Check className={`size-4 ${s === "completed" ? "text-success" : "text-warning"}`} aria-label="completed" />;
+const STATUS: Record<Stage["status"], { icon: typeof Lock; label: string; chip: string }> = {
+  locked: { icon: Lock, label: "locked", chip: "bg-border/60 text-muted" },
+  available: { icon: Circle, label: "available", chip: "bg-border/60 text-muted" },
+  in_progress: { icon: Contrast, label: "in progress", chip: "bg-primary/15 text-primary" },
+  completed: { icon: Check, label: "completed", chip: "bg-success/15 text-success" },
+  completed_override: { icon: Check, label: "completed", chip: "bg-warning/15 text-warning" },
+};
+const StatusIcon = ({ s }: { s: Stage["status"] }) => {
+  const { icon: Icon, label, chip } = STATUS[s];
+  return (
+    <span className={`grid size-7 shrink-0 place-items-center rounded-full ${chip}`}>
+      <Icon className="size-3.5" aria-label={label} />
+    </span>
+  );
+};
 
-const Bar = ({ pct }: { pct: number }) => (
-  <div className="h-2 w-full overflow-hidden rounded-full bg-border" role="progressbar" aria-label={`${pct}%`} aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-    <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
-  </div>
-);
-
-export function Course({ data, callTool, go, reload, back, practice }: { data: CourseData; callTool: Tool; go: Go; reload: () => void; back: () => void; practice: () => void }) {
-  const { t } = useTranslation();
+export function Course({
+  data,
+  callTool,
+  go,
+  reload,
+  back,
+  practice,
+}: {
+  data: CourseData;
+  callTool: Tool;
+  go: Go;
+  reload: () => void;
+  back: () => void;
+  practice: () => void;
+}) {
+  const { t, i18n } = useTranslation();
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [sel, setSel] = useState<string | null>(null);
   const running = data.build?.state === "running";
@@ -36,50 +58,90 @@ export function Course({ data, callTool, go, reload, back, practice }: { data: C
   }
 
   return (
-    <section className="flex flex-col gap-5 p-4" aria-label={data.name}>
-      <button className="self-start text-sm text-primary" onClick={back}>← {t("course.back")}</button>
-      <header className="flex flex-col gap-2">
-        <h1 className="text-xl font-bold">{data.name}</h1>
-        <p className="text-sm text-muted"><span dir="ltr">{data.number}</span> · {t("home.credits", { count: data.credits })}</p>
-        {data.hasPlan && (
-          <>
-            <p className="text-sm text-muted">{t("courseHome.stagesOf", { k: data.stagesDone, n: data.stagesTotal })}</p>
-            <Bar pct={data.pct} />
-          </>
-        )}
+    <section className="flex flex-col gap-5" aria-label={data.name}>
+      <button className={backLink} onClick={back}>
+        {i18n.dir() === "rtl" ? "→" : "←"} {t("course.back")}
+      </button>
+      <header className={`${panel} flex items-center gap-4 p-4`}>
+        {data.hasPlan && <Ring pct={data.pct} />}
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <h1 className="text-xl leading-snug font-bold">{data.name}</h1>
+          <p className="text-sm text-muted">
+            <span dir="ltr">{data.number}</span> · {t("home.credits", { count: data.credits })}
+          </p>
+          {data.hasPlan && (
+            <div className="mt-1 flex flex-col gap-1.5">
+              <p className="text-xs text-muted">
+                {t("courseHome.stagesOf", { k: data.stagesDone, n: data.stagesTotal })}
+              </p>
+              <Bar pct={data.pct} />
+            </div>
+          )}
+        </div>
       </header>
 
       {!data.hasPlan && data.build && (
-        <div className="flex flex-col gap-3 rounded-card border border-warning p-4">
+        <div className={`${panel} flex flex-col gap-3 border-warning/60 p-4`}>
           {running ? (
             <Checklist go={go} b={live ?? data.build} />
           ) : (
             <>
-              <p>{t("plan.failed")}</p>
-              {data.build.error && <p className="text-xs text-muted" dir="auto">{data.build.error}</p>}
-              <Button className="self-start" onClick={() => void retry()}>{t("courseHome.tryAgain")}</Button>
+              <p className="font-medium">{t("plan.failed")}</p>
+              {data.build.error && (
+                <p className="text-xs text-muted" dir="auto">
+                  {data.build.error}
+                </p>
+              )}
+              <Button className="self-start" onClick={() => void retry()}>
+                {t("courseHome.tryAgain")}
+              </Button>
             </>
           )}
         </div>
       )}
 
       {data.hasPlan && (
-        <div className="flex flex-wrap gap-3">
-          <Button disabled={!cur} onClick={() => cur && void go({ kind: "learn", stageId: cur.id, title: cur.title })}>{t("nav.learn")}{cur ? ` — ${cur.id}` : ""}</Button>
-          <Button variant="outline" disabled={!data.canPractice} onClick={practice}>{t("nav.practice")}</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            disabled={!cur}
+            onClick={() => cur && void go({ kind: "learn", stageId: cur.id, title: cur.title })}
+          >
+            <BookOpen className="size-4" aria-hidden />
+            {t("nav.learn")}
+            {cur ? ` — ${cur.id}` : ""}
+          </Button>
+          <Button variant="outline" disabled={!data.canPractice} onClick={practice}>
+            <Dumbbell className="size-4" aria-hidden />
+            {t("nav.practice")}
+          </Button>
         </div>
       )}
 
       {data.watch.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="text-lg font-bold">{t("courseHome.watch")}</h2>
+          <h2 className={h2}>{t("courseHome.watch")}</h2>
           {data.watch.map((m) => (
-            <div key={m.label} className="flex flex-col gap-1 rounded-card border border-border bg-card p-3 text-sm">
+            <div
+              key={m.label}
+              className={`${panel} flex flex-col gap-2 border-s-4 border-s-warning p-3 text-sm`}
+            >
               <div className="flex items-center justify-between gap-2">
                 <span className="font-medium">{m.label}</span>
-                <span className="text-muted">{t("courseHome.watchCount", { count: m.count })}</span>
+                <span className="shrink-0 text-xs text-muted">
+                  {t("courseHome.watchCount", { count: m.count })}
+                </span>
               </div>
-              <div className="flex flex-wrap gap-1">{m.stageIds.map((id) => <span key={id} dir="ltr" className="rounded bg-border px-1.5 text-xs">{id}</span>)}</div>
+              <div className="flex flex-wrap gap-1">
+                {m.stageIds.map((id) => (
+                  <span
+                    key={id}
+                    dir="ltr"
+                    className="rounded-full bg-border/70 px-2 py-0.5 text-xs"
+                  >
+                    {id}
+                  </span>
+                ))}
+              </div>
             </div>
           ))}
         </section>
@@ -87,27 +149,57 @@ export function Course({ data, callTool, go, reload, back, practice }: { data: C
 
       {data.hasPlan && (
         <section className="flex flex-col gap-2">
-          <h2 className="text-lg font-bold">{t("courseHome.plan")}</h2>
+          <h2 className={h2}>{t("courseHome.plan")}</h2>
           {data.units.map((u) => {
-            const expanded = open[u.id] ?? (!!data.current && u.stages.some((s) => s.id === data.current));
+            const expanded =
+              open[u.id] ?? (!!data.current && u.stages.some((s) => s.id === data.current));
+            const done = u.stages.filter(
+              (s) => s.status === "completed" || s.status === "completed_override",
+            ).length;
             return (
-              <div key={u.id} className="rounded-card border border-border bg-card">
-                <button className="flex w-full items-center gap-2 p-3 text-start font-medium" onClick={() => setOpen({ ...open, [u.id]: !expanded })} aria-expanded={expanded}>
-                  <ChevronDown className={`size-4 transition-transform ${expanded ? "" : "ltr:-rotate-90 rtl:rotate-90"}`} aria-hidden />
-                  {u.title}
+              <div key={u.id} className={`${panel} overflow-hidden`}>
+                <button
+                  className="flex w-full items-center gap-2 px-4 py-3 text-start font-medium hover:bg-border/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+                  onClick={() => setOpen({ ...open, [u.id]: !expanded })}
+                  aria-expanded={expanded}
+                >
+                  <ChevronDown
+                    className={`size-4 shrink-0 text-muted transition-transform motion-reduce:transition-none ${expanded ? "" : "ltr:-rotate-90 rtl:rotate-90"}`}
+                    aria-hidden
+                  />
+                  <span className="grow">{u.title}</span>
+                  <span className="text-xs font-normal text-muted" dir="ltr">
+                    {done}/{u.stages.length}
+                  </span>
                 </button>
-                {expanded &&
-                  u.stages.map((s) => (
-                    <div key={s.id} className="border-t border-border">
-                      <button className="flex w-full items-center gap-3 px-4 py-2 text-start text-sm hover:bg-border/50" onClick={() => setSel(sel === s.id ? null : s.id)} aria-expanded={sel === s.id}>
-                        <StatusIcon s={s.status} />
-                        <span className="w-12 text-muted" dir="ltr">{s.id}</span>
-                        <span className="flex-1">{s.title}</span>
-                        <span className="text-muted">{s.mastery}%</span>
-                      </button>
-                      {sel === s.id && <p className="px-4 pb-3 text-sm text-muted">{s.summary}</p>}
-                    </div>
-                  ))}
+                {expanded && (
+                  <div className="fade-in">
+                    {u.stages.map((s) => (
+                      <div
+                        key={s.id}
+                        className={`border-t border-border ${s.id === data.current ? "bg-primary/5" : ""}`}
+                      >
+                        <button
+                          className="flex w-full items-center gap-3 px-4 py-2.5 text-start text-sm hover:bg-border/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+                          onClick={() => setSel(sel === s.id ? null : s.id)}
+                          aria-expanded={sel === s.id}
+                        >
+                          <StatusIcon s={s.status} />
+                          <span className="w-12 shrink-0 font-mono text-xs text-muted" dir="ltr">
+                            {s.id}
+                          </span>
+                          <span className={`flex-1 ${s.status === "locked" ? "text-muted" : ""}`}>
+                            {s.title}
+                          </span>
+                          <span className="text-xs text-muted tabular-nums">{s.mastery}%</span>
+                        </button>
+                        {sel === s.id && (
+                          <p className="fade-in px-4 ps-14 pb-3 text-sm text-muted">{s.summary}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}

@@ -10,12 +10,25 @@ export function Checklist({ b, go }: { b: BuildStatus; go: Go }) {
   const cur = STEPS.indexOf(b.step ?? "folders");
   return (
     <div className="flex flex-col gap-3" role="status">
-      <p className="text-sm text-muted">{t("plan.building")}</p>
+      <p className="font-medium">{t("plan.building")}</p>
       <ul className="flex flex-col gap-2">
         {STEPS.map((s, i) => (
           <li key={s} className="flex items-center gap-2 text-sm">
-            {i < cur ? <Check className="size-4 text-success" aria-hidden /> : i === cur ? <Loader2 className="size-4 animate-spin text-primary" aria-hidden /> : <span className="size-4 rounded-full border border-border" />}
-            <span className={i > cur ? "text-muted" : ""}>{s === "plan" && i === cur && b.unit ? t("plan.detailing", b.unit) : t(`plan.step.${s}`)}</span>
+            {i < cur ? (
+              <Check className="size-4 text-success" aria-hidden />
+            ) : i === cur ? (
+              <Loader2
+                className="size-4 animate-spin text-primary motion-reduce:animate-none"
+                aria-hidden
+              />
+            ) : (
+              <span className="size-4 rounded-full border-2 border-border" aria-hidden />
+            )}
+            <span className={i > cur ? "text-muted" : ""}>
+              {s === "plan" && i === cur && b.unit
+                ? t("plan.detailing", b.unit)
+                : t(`plan.step.${s}`)}
+            </span>
           </li>
         ))}
       </ul>

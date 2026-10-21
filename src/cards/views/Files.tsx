@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Waiting } from "./Waiting";
-import { Check, FileText, FolderOpen, Loader2, Trash2 } from "lucide-react";
+import { Check, FileText, FolderOpen, Loader2, Trash2, Upload } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Input } from "@/core/components/ui/input";
 import type { FileRow, FilesData, Go } from "../types";
+import { h2, panel } from "../ui";
 
-type Tool = (name: string, args?: Record<string, unknown>) => Promise<{ structuredContent?: unknown; isError?: boolean }>;
+type Tool = (
+  name: string,
+  args?: Record<string, unknown>,
+) => Promise<{ structuredContent?: unknown; isError?: boolean }>;
 type Role = "material" | "exercises";
 const CHUNK = 2 * 1024 * 1024; // raw bytes; base64 stays under the 4 MB tool limit
 
@@ -19,13 +23,43 @@ const b64 = (buf: ArrayBuffer) => {
 
 function Chip({ f }: { f: FileRow }) {
   const { t } = useTranslation();
-  if (f.status === "indexed") return <span className="flex items-center gap-1"><Check className="size-3 text-success" aria-hidden />{t("files.ready")}</span>;
-  if (f.status === "failed") return <span className="text-danger" title={f.error ?? ""}>{t("files.failed")}</span>;
-  if (f.status === "indexing") return <span className="flex items-center gap-1 text-primary"><Loader2 className="size-3 animate-spin" aria-hidden />{f.total ? t("files.indexingN", { done: f.done ?? 0, total: f.total }) : t("files.indexing")}</span>;
-  return <span className="text-muted">{t("files.waiting")}</span>;
+  const pill = "flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium";
+  if (f.status === "indexed")
+    return (
+      <span className={`${pill} bg-success/10 text-success`}>
+        <Check className="size-3" aria-hidden />
+        {t("files.ready")}
+      </span>
+    );
+  if (f.status === "failed")
+    return (
+      <span className={`${pill} bg-danger/10 text-danger`} title={f.error ?? ""}>
+        {t("files.failed")}
+      </span>
+    );
+  if (f.status === "indexing")
+    return (
+      <span className={`${pill} bg-primary/10 text-primary`}>
+        <Loader2 className="size-3 animate-spin motion-reduce:animate-none" aria-hidden />
+        {f.total
+          ? t("files.indexingN", { done: f.done ?? 0, total: f.total })
+          : t("files.indexing")}
+      </span>
+    );
+  return <span className={`${pill} bg-border/60 text-muted`}>{t("files.waiting")}</span>;
 }
 
-export function Files({ number, callTool, go, reload }: { number: string; callTool: Tool; go: Go; reload: () => void }) {
+export function Files({
+  number,
+  callTool,
+  go,
+  reload,
+}: {
+  number: string;
+  callTool: Tool;
+  go: Go;
+  reload: () => void;
+}) {
   const { t } = useTranslation();
   const [d, setD] = useState<FilesData | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -37,10 +71,15 @@ export function Files({ number, callTool, go, reload }: { number: string; callTo
   }, [callTool, number]);
   useEffect(() => {
     let on = true;
-    void callTool("files_list", { number }).then((r) => on && !r.isError && setD(r.structuredContent as FilesData));
+    void callTool("files_list", { number }).then(
+      (r) => on && !r.isError && setD(r.structuredContent as FilesData),
+    );
     return () => void (on = false);
   }, [callTool, number]);
-  const active = !!d && (d.improving?.state === "running" || [...d.materials, ...d.exercises].some((f) => f.status === "indexing"));
+  const active =
+    !!d &&
+    (d.improving?.state === "running" ||
+      [...d.materials, ...d.exercises].some((f) => f.status === "indexing"));
   const moodleBusy = !!d?.moodle?.busy;
   useEffect(() => {
     if (!active && !moodleBusy) return;
@@ -56,7 +95,14 @@ export function Files({ number, callTool, go, reload }: { number: string; callTo
   // A Moodle import that added files goes straight on to indexing (one Enter for import + index + plan update).
   const wasMoodle = useRef(false);
   useEffect(() => {
-    if (wasMoodle.current && !moodleBusy && d?.moodle?.last?.added && !d.moodle.last.error && d.canIndex) void start();
+    if (
+      wasMoodle.current &&
+      !moodleBusy &&
+      d?.moodle?.last?.added &&
+      !d.moodle.last.error &&
+      d.canIndex
+    )
+      void start();
     wasMoodle.current = moodleBusy;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [moodleBusy]);
@@ -68,10 +114,20 @@ export function Files({ number, callTool, go, reload }: { number: string; callTo
       for (const file of files) {
         const total = Math.max(1, Math.ceil(file.size / CHUNK));
         for (let i = 0; i < total; i++) {
-          const r = await callTool("file_upload_chunk", { number, role, name: file.name, index: i, total, data: b64(await file.slice(i * CHUNK, (i + 1) * CHUNK).arrayBuffer()) });
-          const s = r.structuredContent as { done?: boolean; status?: string; error?: string } | undefined;
+          const r = await callTool("file_upload_chunk", {
+            number,
+            role,
+            name: file.name,
+            index: i,
+            total,
+            data: b64(await file.slice(i * CHUNK, (i + 1) * CHUNK).arrayBuffer()),
+          });
+          const s = r.structuredContent as
+            { done?: boolean; status?: string; error?: string } | undefined;
           if (r.isError || (s?.done && s.status !== "added" && s.status !== "duplicate")) {
-            setMsg(t("files.rejected", { name: file.name, error: s?.status ?? s?.error ?? "error" }));
+            setMsg(
+              t("files.rejected", { name: file.name, error: s?.status ?? s?.error ?? "error" }),
+            );
             break;
           }
         }
@@ -84,8 +140,12 @@ export function Files({ number, callTool, go, reload }: { number: string; callTo
 
   async function importMoodle() {
     setMsg(null);
-    const r = await callTool("moodle_import", { number, ...(url.trim() ? { url: url.trim() } : {}) });
-    if (r.isError) setMsg((r.structuredContent as { error?: string } | undefined)?.error ?? t("moodle.failed"));
+    const r = await callTool("moodle_import", {
+      number,
+      ...(url.trim() ? { url: url.trim() } : {}),
+    });
+    if (r.isError)
+      setMsg((r.structuredContent as { error?: string } | undefined)?.error ?? t("moodle.failed"));
     await refresh();
   }
 
@@ -102,55 +162,152 @@ export function Files({ number, callTool, go, reload }: { number: string; callTo
 
   if (!d) return null;
   const zone = (role: Role, title: string, add: string, rows: FileRow[]) => (
-    <div className="flex flex-col gap-2 rounded-card border border-dashed border-border bg-card p-3" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); void upload(role, [...e.dataTransfer.files]); }}>
+    <div
+      className={`${panel} flex flex-col gap-2 p-4`}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault();
+        void upload(role, [...e.dataTransfer.files]);
+      }}
+    >
       <h3 className="font-medium">{title}</h3>
-      {rows.length === 0 && <p className="text-sm text-muted">{t("files.dropHint")}</p>}
+      {rows.length === 0 && (
+        <p className="rounded-lg border border-dashed border-border p-3 text-center text-sm text-muted">
+          {t("files.dropHint")}
+        </p>
+      )}
       {rows.map((f) => (
-        <div key={f.sha} className="flex items-center gap-2 text-sm">
+        <div
+          key={f.sha}
+          className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-2 text-sm first-of-type:border-t-0 first-of-type:pt-0"
+        >
           <FileText className="size-4 shrink-0 text-muted" aria-hidden />
-          <span className="flex-1 truncate" dir="auto">{f.name}</span>
-          {role === "exercises" && f.status === "indexed" && <span className="text-muted">{t("files.exercisesFound", { count: f.exercises })}</span>}
-          <span className="text-muted">{t("files.pages", { count: f.pages })}</span>
+          <span className="min-w-0 flex-1 truncate" dir="auto">
+            {f.name}
+          </span>
+          {role === "exercises" && f.status === "indexed" && (
+            <span className="text-xs text-muted">
+              {t("files.exercisesFound", { count: f.exercises })}
+            </span>
+          )}
+          <span className="text-xs text-muted">{t("files.pages", { count: f.pages })}</span>
           <Chip f={f} />
-          <button className="text-muted hover:text-danger" aria-label={`${t("files.remove")} ${f.name}`} onClick={() => void callTool("file_remove", { number, sha: f.sha }).then(refresh)}><Trash2 className="size-4" /></button>
+          <button
+            className="rounded text-muted hover:text-danger focus-visible:outline-2 focus-visible:outline-primary"
+            aria-label={`${t("files.remove")} ${f.name}`}
+            onClick={() => void callTool("file_remove", { number, sha: f.sha }).then(refresh)}
+          >
+            <Trash2 className="size-4" aria-hidden />
+          </button>
         </div>
       ))}
-      <div className="flex flex-wrap gap-2">
-        <label className="inline-flex cursor-pointer items-center rounded-card border border-border px-3 py-1.5 text-sm hover:bg-border/50">
+      <div className="mt-1 flex flex-wrap items-center gap-3">
+        <label className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-sm font-medium shadow-sm hover:bg-border/50 has-focus-visible:outline-2 has-focus-visible:outline-primary">
+          <Upload className="size-4" aria-hidden />
           {add}
-          <input type="file" multiple hidden accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md" disabled={busy} onChange={(e) => { void upload(role, [...(e.target.files ?? [])]); e.target.value = ""; }} />
+          <input
+            type="file"
+            multiple
+            hidden
+            accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md"
+            disabled={busy}
+            onChange={(e) => {
+              void upload(role, [...(e.target.files ?? [])]);
+              e.target.value = "";
+            }}
+          />
         </label>
-        <button className="inline-flex items-center gap-1 text-sm text-primary" onClick={() => void callTool("files_open_folder", { number, role })}><FolderOpen className="size-4" aria-hidden />{t("files.openFolder")}</button>
+        <button
+          className="inline-flex items-center gap-1 rounded text-sm text-primary hover:underline focus-visible:outline-2 focus-visible:outline-primary"
+          onClick={() => void callTool("files_open_folder", { number, role })}
+        >
+          <FolderOpen className="size-4" aria-hidden />
+          {t("files.openFolder")}
+        </button>
       </div>
     </div>
   );
   return (
     <section className="flex flex-col gap-3" aria-label={t("files.filter")}>
-      <h2 className="text-lg font-bold">{t("files.filter")}</h2>
+      <h2 className={h2}>{t("files.filter")}</h2>
       {zone("material", t("files.materials"), t("files.addMaterials"), d.materials)}
       {zone("exercises", t("files.exercises"), t("files.addExercises"), d.exercises)}
       {d.moodle && (
-        <div className="flex flex-col gap-2 rounded-card border border-border bg-card p-3">
+        <div className={`${panel} flex flex-col gap-2 p-4`}>
           <h3 className="font-medium">{t("moodle.title")}</h3>
           <p className="text-sm text-muted">{t("moodle.hint")}</p>
-          {!d.moodle.url && <Input dir="ltr" type="url" placeholder="https://moodle.example.ac.il/" aria-label={t("moodle.url")} value={url} onChange={(e) => setUrl(e.target.value)} />}
-          {d.moodle.busy && <p className="text-sm text-muted" role="status"><Loader2 className="me-1 inline size-4 animate-spin" aria-hidden />{t(d.moodle.busy === "login" ? "moodle.login" : "moodle.syncing")}</p>}
-          {!d.moodle.busy && d.moodle.last?.error && <p className="text-sm text-danger" role="alert">{d.moodle.last.error}</p>}
-          {!d.moodle.busy && d.moodle.last && !d.moodle.last.error && <p className="text-sm" role="status">{t("moodle.done", d.moodle.last)}</p>}
+          {!d.moodle.url && (
+            <Input
+              dir="ltr"
+              type="url"
+              placeholder="https://moodle.example.ac.il/"
+              aria-label={t("moodle.url")}
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+            />
+          )}
+          {d.moodle.busy && (
+            <p className="text-sm text-muted" role="status">
+              <Loader2 className="me-1 inline size-4 animate-spin" aria-hidden />
+              {t(d.moodle.busy === "login" ? "moodle.login" : "moodle.syncing")}
+            </p>
+          )}
+          {!d.moodle.busy && d.moodle.last?.error && (
+            <p className="text-sm text-danger" role="alert">
+              {d.moodle.last.error}
+            </p>
+          )}
+          {!d.moodle.busy && d.moodle.last && !d.moodle.last.error && (
+            <p className="text-sm" role="status">
+              {t("moodle.done", d.moodle.last)}
+            </p>
+          )}
           <div className="flex flex-wrap items-center gap-3">
-            <Button variant="outline" disabled={busy || !!d.moodle.busy || (!d.moodle.url && !url.trim())} onClick={() => void importMoodle()}>{t("moodle.import")}</Button>
-            {d.moodle.connected && !d.moodle.busy && <button className="text-sm text-muted hover:text-danger" onClick={() => void callTool("moodle_disconnect").then(refresh)}>{t("moodle.forget")}</button>}
+            <Button
+              variant="outline"
+              disabled={busy || !!d.moodle.busy || (!d.moodle.url && !url.trim())}
+              onClick={() => void importMoodle()}
+            >
+              {t("moodle.import")}
+            </Button>
+            {d.moodle.connected && !d.moodle.busy && (
+              <button
+                className="text-sm text-muted hover:text-danger"
+                onClick={() => void callTool("moodle_disconnect").then(refresh)}
+              >
+                {t("moodle.forget")}
+              </button>
+            )}
           </div>
         </div>
       )}
-      {busy && <p className="text-sm text-muted" role="status"><Loader2 className="me-1 inline size-4 animate-spin" aria-hidden />{t("files.uploading")}</p>}
-      {msg && <p className="text-sm text-danger" role="alert">{msg}</p>}
-      {d.improving?.state === "failed" && <p className="text-sm text-danger" role="alert">{t("courseHome.improveFailed")}</p>}
+      {busy && (
+        <p className="text-sm text-muted" role="status">
+          <Loader2 className="me-1 inline size-4 animate-spin" aria-hidden />
+          {t("files.uploading")}
+        </p>
+      )}
+      {msg && (
+        <p className="text-sm text-danger" role="alert">
+          {msg}
+        </p>
+      )}
+      {d.improving?.state === "failed" && (
+        <p className="text-sm text-danger" role="alert">
+          {t("courseHome.improveFailed")}
+        </p>
+      )}
       {active && <Waiting go={go} />}
-      {!d.hasPlan && (d.materials.length > 0 || d.exercises.length > 0) && <p className="text-sm text-muted">{t("files.needPlan")}</p>}
+      {!d.hasPlan && (d.materials.length > 0 || d.exercises.length > 0) && (
+        <p className="text-sm text-muted">{t("files.needPlan")}</p>
+      )}
       <div className="flex flex-wrap gap-3">
-        <Button disabled={!d.canIndex || active} onClick={() => void start()}>{t("files.start")}</Button>
-        <Button variant="outline" disabled={!d.canImprove || active} onClick={() => void improve()}>{t("courseHome.improve")}</Button>
+        <Button disabled={!d.canIndex || active} onClick={() => void start()}>
+          {t("files.start")}
+        </Button>
+        <Button variant="outline" disabled={!d.canImprove || active} onClick={() => void improve()}>
+          {t("courseHome.improve")}
+        </Button>
       </div>
     </section>
   );

@@ -320,3 +320,10 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
   - With a cards host, `shalav_home` text now says the student acts in the card and that Claude should not ask in chat.
   - The instructions say: on "▶️ המשך" always call `shalav_next_job` first, because card clicks change state the model does not see.
   - The card also sends `updateModelContext` with the meaning of the line (best effort).
+
+### M15b — Card UI refresh (done; 🧪 pending)
+- One card shell (`Cards.tsx`): slim sticky header with the Shalav mark/wordmark and the pin button (stays reachable while the card scrolls), centred `max-w-3xl` column, opaque "press Enter" banner (no more see-through), skeleton instead of the bare "…" while loading.
+- Tokens (`index.css`): calmer palette with AA text contrast in light and dark (darker success/warning/danger in light, lighter in dark, `danger-fg`), card shadow, 14px radius, system font fallbacks for Hebrew, `.cards` line-height 1.6, `fade-in`/`skeleton` honour `prefers-reduced-motion`. Button gets a `sm` size and focus offset.
+- Shared bits in `src/cards/ui.tsx` (panel, Bar, Ring, Skeleton). Home: course rows with progress bar + stage pill, empty state with one CTA, university tiles. Course: header with ring + bar, Learn/Practice with icons, units with done count and status chips. Lesson/MCQ/Open/Exercise/Practice/Files/Settings/AddCourse/Checklist/Waiting restyled in the same language. No behaviour, tool or i18n changes.
+- Checks: typecheck/lint clean, 122 unit, 29 e2e (axe AA clean); screenshots inspected (he/en, light/dark).
+- 🧪 Claude Desktop: look at the cards in a real chat (light + dark, Hebrew + English); is the banner/pin placement right in the iframe?

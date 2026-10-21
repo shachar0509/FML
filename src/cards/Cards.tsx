@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { CornerDownLeft, Pin, PinOff, X } from "lucide-react";
+import { CornerDownLeft, GraduationCap, Pin, PinOff, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { applyLanguage, applyTheme } from "@/core/lib/dom";
 import { AddCourse } from "./views/AddCourse";
@@ -11,6 +11,7 @@ import { Settings } from "./views/Settings";
 import { Practice } from "./views/Practice";
 import { Mcq, OpenQ } from "./views/Question";
 import type { CardData, Host } from "./types";
+import { Skeleton } from "./ui";
 import { useShalav } from "./useShalav";
 
 export function Cards({ host }: { host: Host }) {
@@ -53,9 +54,10 @@ export function Cards({ host }: { host: Host }) {
   const view = () => {
     if (!shown || !data)
       return (
-        <p className="p-4 text-muted" role="status">
-          …
-        </p>
+        <div role="status">
+          <span className="sr-only">{t("learn.loading")}</span>
+          <Skeleton />
+        </div>
       );
     if (shown.view === "add")
       return (
@@ -73,9 +75,7 @@ export function Cards({ host }: { host: Host }) {
         />
       );
     if (shown.view === "practice")
-      return (
-        <Practice data={shown} callTool={callTool} go={ask} back={() => open(shown.number)} />
-      );
+      return <Practice data={shown} callTool={callTool} go={ask} back={() => open(shown.number)} />;
     if (shown.view === "settings") return <Settings data={shown} callTool={callTool} back={home} />;
     if (shown.view === "lesson") return <Lesson data={shown} callTool={callTool} go={ask} />;
     if (shown.view === "mcq") return <Mcq data={shown} callTool={callTool} go={ask} />;
@@ -95,32 +95,55 @@ export function Cards({ host }: { host: Host }) {
   };
   // Inline cards scroll away with the chat; hosts that support it can float the card (pip) so it stays visible.
   return (
-    <>
-      {canPin && (
-        <button
-          className="fixed end-2 top-2 z-10 rounded-card p-1 text-muted hover:text-primary"
-          aria-label={t(pinned ? "mcp.unpin" : "mcp.pin")}
-          title={t(pinned ? "mcp.unpin" : "mcp.pin")}
-          aria-pressed={pinned}
-          onClick={() => void togglePin()}
+    <div className="cards mx-auto flex max-w-3xl flex-col">
+      <header className="sticky top-0 z-10 flex items-center gap-2 bg-bg px-4 pt-3 pb-2">
+        <span
+          className="grid size-6 place-items-center rounded-md bg-primary text-primary-fg"
+          aria-hidden
         >
-          {pinned ? (
-            <PinOff className="size-4" aria-hidden />
-          ) : (
-            <Pin className="size-4" aria-hidden />
-          )}
-        </button>
-      )}
-      {view()}
+          <GraduationCap className="size-4" />
+        </span>
+        <span className="grow text-sm font-semibold tracking-tight text-muted">
+          {language === "he" ? "שלב" : "Shalav"}
+        </span>
+        {canPin && (
+          <button
+            className="grid size-8 place-items-center rounded-full text-muted transition-colors hover:bg-border/60 hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
+            aria-label={t(pinned ? "mcp.unpin" : "mcp.pin")}
+            title={t(pinned ? "mcp.unpin" : "mcp.pin")}
+            aria-pressed={pinned}
+            onClick={() => void togglePin()}
+          >
+            {pinned ? (
+              <PinOff className="size-4" aria-hidden />
+            ) : (
+              <Pin className="size-4" aria-hidden />
+            )}
+          </button>
+        )}
+      </header>
+      <main className="flex grow flex-col px-4 pb-4">{view()}</main>
       {!!asked && (
-        <div aria-live="polite" className="sticky bottom-0 m-3 flex items-center gap-2 rounded-card border border-primary/40 bg-primary/10 px-3 py-2 text-sm">
-          <CornerDownLeft className="size-4 shrink-0 text-primary" aria-hidden />
-          <span className="grow">{t("mcp.pressEnter")}</span>
-          <button className="text-muted hover:text-fg" aria-label={t("mcp.dismiss")} onClick={clearAsked}>
+        <div
+          aria-live="polite"
+          className="sticky bottom-0 mx-4 mb-3 flex items-center gap-3 rounded-card border border-primary/40 bg-[color-mix(in_oklab,var(--primary)_10%,var(--card))] px-4 py-2.5 text-sm shadow-lg"
+        >
+          <span
+            className="grid size-7 shrink-0 place-items-center rounded-full bg-primary text-primary-fg"
+            aria-hidden
+          >
+            <CornerDownLeft className="size-4" />
+          </span>
+          <span className="grow font-medium">{t("mcp.pressEnter")}</span>
+          <button
+            className="grid size-7 place-items-center rounded-full text-muted hover:bg-border/60 hover:text-fg focus-visible:outline-2 focus-visible:outline-primary"
+            aria-label={t("mcp.dismiss")}
+            onClick={clearAsked}
+          >
             <X className="size-4" aria-hidden />
           </button>
         </div>
       )}
-    </>
+    </div>
   );
 }

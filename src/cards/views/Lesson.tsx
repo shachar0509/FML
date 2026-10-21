@@ -4,8 +4,12 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Markdown } from "@/core/render/Markdown";
 import type { LessonData, Go } from "../types";
+import { Bar, h2, panel } from "../ui";
 
-type Tool = (name: string, args?: Record<string, unknown>) => Promise<{ structuredContent?: unknown; isError?: boolean }>;
+type Tool = (
+  name: string,
+  args?: Record<string, unknown>,
+) => Promise<{ structuredContent?: unknown; isError?: boolean }>;
 
 export function Lesson({ data, callTool, go }: { data: LessonData; callTool: Tool; go: Go }) {
   const { t } = useTranslation();
@@ -13,7 +17,8 @@ export function Lesson({ data, callTool, go }: { data: LessonData; callTool: Too
   const [confirm, setConfirm] = useState(false);
   const done = d.status === "completed" || d.status === "completed_override";
   const args = { number: d.number, stageId: d.stageId };
-  const apply = (r: { structuredContent?: unknown; isError?: boolean }) => !r.isError && r.structuredContent && setD(r.structuredContent as LessonData);
+  const apply = (r: { structuredContent?: unknown; isError?: boolean }) =>
+    !r.isError && r.structuredContent && setD(r.structuredContent as LessonData);
 
   // The tutor records progress in the chat; keep the card in step with it.
   useEffect(() => {
@@ -27,26 +32,43 @@ export function Lesson({ data, callTool, go }: { data: LessonData; callTool: Too
     apply(await callTool("stage_complete", { ...args, by }));
     setConfirm(false);
   };
-  const stage = (s: { id: string; title: string }, kind: "learn" | "relearn") => void go({ kind, stageId: s.id, title: s.title });
+  const stage = (s: { id: string; title: string }, kind: "learn" | "relearn") =>
+    void go({ kind, stageId: s.id, title: s.title });
 
   return (
-    <section className="flex flex-col gap-4 p-4" aria-label={d.title}>
-      <header>
-        <p className="text-sm text-muted">{d.stageId}</p>
-        <h1 className="text-xl font-semibold">{d.title}</h1>
-      </header>
-      <div>
-        <div className="mb-1 flex justify-between text-sm"><span>{t("learn.mastery")}</span><span>{d.mastery}%</span></div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-border" role="progressbar" aria-label={t("learn.mastery")} aria-valuenow={d.mastery} aria-valuemin={0} aria-valuemax={100}>
-          <div className="h-full bg-primary" style={{ width: `${d.mastery}%` }} />
+    <section className="flex flex-col gap-4" aria-label={d.title}>
+      <header className={`${panel} flex flex-col gap-3 p-4`}>
+        <div className="flex flex-col gap-1">
+          <span
+            className="self-start rounded-full bg-primary/10 px-2 py-0.5 font-mono text-xs font-medium text-primary"
+            dir="ltr"
+          >
+            {d.stageId}
+          </span>
+          <h1 className="text-xl font-bold">{d.title}</h1>
         </div>
-      </div>
-      <div>
-        <h2 className="mb-1 text-sm font-medium">{t("learn.objectives")}</h2>
-        <ul className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1.5">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted">{t("learn.mastery")}</span>
+            <span className="font-semibold tabular-nums">{d.mastery}%</span>
+          </div>
+          <Bar
+            pct={d.mastery}
+            label={t("learn.mastery")}
+            tone={done ? "bg-success" : "bg-primary"}
+          />
+        </div>
+      </header>
+      <div className={`${panel} p-4`}>
+        <h2 className={`${h2} mb-2`}>{t("learn.objectives")}</h2>
+        <ul className="flex flex-col gap-2">
           {d.objectives.map((o) => (
             <li key={o.text} className="flex items-start gap-2 text-sm">
-              {o.covered ? <Check className="mt-0.5 size-4 shrink-0 text-success" aria-label="covered" /> : <Circle className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden />}
+              {o.covered ? (
+                <Check className="mt-1 size-4 shrink-0 text-success" aria-label="covered" />
+              ) : (
+                <Circle className="mt-1 size-4 shrink-0 text-muted" aria-hidden />
+              )}
               <Markdown>{o.text}</Markdown>
             </li>
           ))}
@@ -54,31 +76,65 @@ export function Lesson({ data, callTool, go }: { data: LessonData; callTool: Too
       </div>
 
       {done ? (
-        <div className="flex flex-col gap-2">
-          <p className="flex items-center gap-2 font-medium"><Check className="size-4 text-success" aria-hidden />{t("learn.completed")}</p>
+        <div className={`${panel} flex flex-col gap-3 border-success/50 p-4`}>
+          <p className="flex items-center gap-2 font-medium">
+            <span className="grid size-6 place-items-center rounded-full bg-success/15 text-success">
+              <Check className="size-4" aria-hidden />
+            </span>
+            {t("learn.completed")}
+          </p>
           <div className="flex flex-wrap gap-2">
-            {d.next && <Button onClick={() => stage(d.next as { id: string; title: string }, "learn")}>{t("learn.nextStage")}</Button>}
-            <Button variant="outline" onClick={() => void callTool("stage_reopen", args).then((r) => (apply(r), stage({ id: d.stageId, title: d.title }, "relearn")))}>{t("learn.again")}</Button>
+            {d.next && (
+              <Button onClick={() => stage(d.next as { id: string; title: string }, "learn")}>
+                {t("learn.nextStage")}
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              onClick={() =>
+                void callTool("stage_reopen", args).then(
+                  (r) => (apply(r), stage({ id: d.stageId, title: d.title }, "relearn")),
+                )
+              }
+            >
+              {t("learn.again")}
+            </Button>
           </div>
         </div>
       ) : d.criteria.met ? (
-        <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
+        <div className={`${panel} flex flex-col gap-3 border-success/50 p-4`}>
           <p className="font-medium">{t("stage.mastered")}</p>
-          <Button className="self-start" onClick={() => void complete("mastery")}>{t("learn.completeStage")}</Button>
+          <Button className="self-start" onClick={() => void complete("mastery")}>
+            {t("learn.completeStage")}
+          </Button>
         </div>
       ) : confirm ? (
-        <div className="flex flex-col gap-2 rounded-lg border border-border p-3" role="alertdialog" aria-label={t("advance.title")}>
+        <div
+          className={`${panel} flex flex-col gap-2 border-warning/60 p-4`}
+          role="alertdialog"
+          aria-label={t("advance.title")}
+        >
           <p className="font-medium">{t("advance.title")}</p>
           <p className="text-sm">{t("advance.body")}</p>
-          <ul className="list-disc ps-5 text-sm">{d.criteria.missing.map((m) => <li key={m}>{m}</li>)}</ul>
+          <ul className="list-disc ps-5 text-sm">
+            {d.criteria.missing.map((m) => (
+              <li key={m}>{m}</li>
+            ))}
+          </ul>
           <p className="text-sm text-muted">{t("advance.note")}</p>
           <div className="flex gap-2">
-            <Button variant="danger" onClick={() => void complete("user_override")}>{t("advance.confirm")}</Button>
-            <Button variant="outline" onClick={() => setConfirm(false)}>{t("advance.cancel")}</Button>
+            <Button variant="danger" onClick={() => void complete("user_override")}>
+              {t("advance.confirm")}
+            </Button>
+            <Button variant="outline" onClick={() => setConfirm(false)}>
+              {t("advance.cancel")}
+            </Button>
           </div>
         </div>
       ) : (
-        <Button variant="outline" className="self-start" onClick={() => setConfirm(true)}>{t("learn.completeAnyway")}</Button>
+        <Button variant="outline" className="self-start" onClick={() => setConfirm(true)}>
+          {t("learn.completeAnyway")}
+        </Button>
       )}
     </section>
   );

@@ -4,24 +4,31 @@
 :root {
   --primary: #4f46e5;
   --primary-fg: #ffffff;
-  --success: #059669;
-  --warning: #d97706;
-  --danger: #e11d48;
-  --bg: #f8fafc;
+  --success: #047857;
+  --warning: #b45309;
+  --danger: #be123c;
+  --danger-fg: #ffffff;
+  --bg: #f6f7fb;
   --card: #ffffff;
   --fg: #0f172a;
-  --muted: #64748b;
-  --border: #e2e8f0;
-  --radius-card: 12px;
+  --muted: #5b6474;
+  --border: #e3e6ee;
+  --radius-card: 14px;
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.06);
 }
 .dark {
-  --primary: #818cf8;
-  --primary-fg: #0f172a;
-  --bg: #0f172a;
-  --card: #1e293b;
-  --fg: #f1f5f9;
-  --muted: #94a3b8;
-  --border: #334155;
+  --primary: #8b93fb;
+  --primary-fg: #0b1020;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #fb7185;
+  --danger-fg: #0b1020;
+  --bg: #0e1220;
+  --card: #171c2e;
+  --fg: #eef0f6;
+  --muted: #9aa3b5;
+  --border: #2a3147;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3);
 }
 
 @theme inline {
@@ -30,13 +37,17 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
+  --color-danger-fg: var(--danger-fg);
   --color-bg: var(--bg);
   --color-card: var(--card);
   --color-fg: var(--fg);
   --color-muted: var(--muted);
   --color-border: var(--border);
   --radius-card: var(--radius-card);
-  --font-sans: "Heebo", system-ui, sans-serif;
+  --shadow-card: var(--shadow-card);
+  --font-sans:
+    "Heebo", system-ui, -apple-system, "Segoe UI", "Arial Hebrew", "Noto Sans Hebrew", Arial,
+    sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
@@ -46,21 +57,104 @@ body {
   font-family: var(--font-sans);
   font-size: 15px;
 }
+/* MCP cards (src/cards): comfortable RTL line-height, subtle fades, loading skeleton. */
+.cards {
+  line-height: 1.6;
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+.fade-in {
+  animation: fade-in 150ms ease-out;
+}
+.skeleton {
+  border-radius: 6px;
+  background: var(--border);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fade-in,
+  .skeleton {
+    animation: none;
+  }
+}
 .lesson-text {
   font-size: 16px;
   line-height: 1.7;
 }
 
 /* Rendered Claude text (11.1) */
-.md .katex, .md .katex-display > .katex { direction: ltr; unicode-bidi: isolate; }
-.md .katex-display { text-align: center; overflow-x: auto; overflow-y: hidden; padding: 0.25rem 0; }
-.md .inline-code { unicode-bidi: isolate; font-family: var(--font-mono); font-size: 0.9em; background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 0 0.25em; }
-.md p, .md ul, .md ol, .md blockquote { margin: 0.6em 0; }
-.md ul { list-style: disc; padding-inline-start: 1.5em; }
-.md ol { list-style: decimal; padding-inline-start: 1.5em; }
-.md blockquote { border-inline-start: 3px solid var(--border); padding-inline-start: 0.8em; color: var(--muted); }
-.md table { border-collapse: collapse; }
-.md th, .md td { border: 1px solid var(--border); padding: 0.3em 0.6em; }
-.md h1, .md h2, .md h3 { font-weight: 700; margin: 1em 0 0.4em; }
-.md .code-block pre.shiki { background: transparent !important; margin: 0; }
-.dark .md .code-block .shiki, .dark .md .code-block .shiki span { background: transparent !important; }
+.md .katex,
+.md .katex-display > .katex {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+.md .katex-display {
+  text-align: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25rem 0;
+}
+.md .inline-code {
+  unicode-bidi: isolate;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 0.25em;
+}
+.md p,
+.md ul,
+.md ol,
+.md blockquote {
+  margin: 0.6em 0;
+}
+.cards .md > :first-child {
+  margin-top: 0;
+}
+.cards .md > :last-child {
+  margin-bottom: 0;
+}
+.md ul {
+  list-style: disc;
+  padding-inline-start: 1.5em;
+}
+.md ol {
+  list-style: decimal;
+  padding-inline-start: 1.5em;
+}
+.md blockquote {
+  border-inline-start: 3px solid var(--border);
+  padding-inline-start: 0.8em;
+  color: var(--muted);
+}
+.md table {
+  border-collapse: collapse;
+}
+.md th,
+.md td {
+  border: 1px solid var(--border);
+  padding: 0.3em 0.6em;
+}
+.md h1,
+.md h2,
+.md h3 {
+  font-weight: 700;
+  margin: 1em 0 0.4em;
+}
+.md .code-block pre.shiki {
+  background: transparent !important;
+  margin: 0;
+}
+.dark .md .code-block .shiki,
+.dark .md .code-block .shiki span {
+  background: transparent !important;
+}
