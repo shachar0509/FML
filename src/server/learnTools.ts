@@ -139,7 +139,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
         system,
         status(s, stage.id),
         recap,
-        "The lesson card is shown. Begin the lesson now as the instructions say.",
+        "The lesson card is shown. Begin the lesson now: teach the first part of the stage (overview, intuition, definition, worked example; a figure when it helps). Do not ask any question or call present_mcq/ask_open_question in this first message.",
       ].filter(Boolean).join("\n\n");
       return out(text, lessonData(s, stage.id));
     },

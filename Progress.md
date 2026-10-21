@@ -348,3 +348,9 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - During a build the student can keep using the cards: the course card shows the checklist (plan → read files k/n → coverage) and still shows the files; Home shows a "Building plan…" pill; the back arrow works. `shalav_next_job` now serves pending AI jobs before card requests (a lesson started mid-build would end the turn and stall the build); a card request waits and Claude is told to call shalav_next_job again once the jobs are done.
 - Checks: typecheck/lint clean, unit + 30 e2e green, pack + smoke.
 - 🧪 Claude Desktop: add a course → no message; upload files / Moodle → Build plan → Enter → plan built from files; add a file → Update plan → new topics get stages.
+
+### M17a — fixes: lesson teaches before quizzing; Moodle login no longer hangs (done; 🧪 pending)
+- Lesson: the MCP tutor prompt now says "teach first, quiz second": never open or resume with a question or diagnostic quiz; each idea is taught in full (intuition/figure → definition → worked example) before one check about what was just taught; the first lesson message asks no question tool. `shalav_start_lesson` repeats this.
+- Moodle: `moodle.technion.ac.il` redirects to `moodle26.technion.ac.il`, and the login check compared against the address before the redirect, so it never saw the login. Now the real origin is taken after the redirect (login page, `/my/` probe, search and same-host filter), the logged-in check looks at every tab (SSO popups) and also accepts Moodle 4's `#user-menu-toggle`, and after a login the files download in the same browser window (Moodle's session cookie dies when the browser closes). `connect` folded into `sync(…, login)`.
+- Test: the fake Moodle now redirects 127.0.0.1 → localhost (the old code hangs on it).
+- 🧪 Claude Desktop: Moodle import → log in → the window closes after the download and the files show; start a lesson → the first message teaches with no question.

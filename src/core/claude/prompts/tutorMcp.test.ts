@@ -11,4 +11,6 @@ it("MCP tutor prompt: show_figure formats, TA lesson flow, no fenced figures", (
   expect(s).not.toMatch(/mermaid/);
   expect(s).toMatch(/notebook \(paper or tablet\)/);
   expect(s).toMatch(/like a TA checking homework/);
+  expect(s).toMatch(/Teach first, quiz second/);
+  expect(s).toMatch(/no question in this first message/);
 });

@@ -43,15 +43,13 @@ export function registerMoodleTools(server: McpServer, make?: (profileDir: strin
     let relogin = !isConnected();
     try {
       for (;;) {
-        if (relogin) {
-          busy = "login";
-          await m.connect(base);
-          connected = true;
-          await writeFile(marker(), new Date().toISOString());
-        }
-        busy = "sync";
+        busy = relogin ? "login" : "sync";
         try {
-          const r = await m.sync(base, number, dir);
+          const r = await m.sync(base, number, dir, relogin, () => {
+            busy = "sync";
+            connected = true;
+            void writeFile(marker(), new Date().toISOString());
+          });
           let added = 0, duplicate = 0, skipped = r.skipped;
           for (const role of ["material", "exercises"] as const) {
             const paths = r.files.filter((f) => f.role === role).map((f) => f.path);

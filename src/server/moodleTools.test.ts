@@ -32,13 +32,15 @@ it("parses Moodle pages and guesses roles", () => {
   expect(fileName("https://x/pluginfile.php/1/Lecture%201.pdf", undefined)).toBe("Lecture 1.pdf");
 });
 
-// A tiny Moodle: login = a script that sets the session cookie (stands in for SSO + MFA), a search page, one course with a file, an exam, a landing page and a folder.
+// A tiny Moodle (served on localhost, reached through a redirect from 127.0.0.1): login = a script that sets the session cookie (stands in for SSO + MFA), a search page, one course with a file, an exam, a landing page and a folder.
 function fakeMoodle() {
   const logout = '<a href="/login/logout.php?sesskey=x">Log out</a>';
   return http((req, res) => {
     const cookies = req.headers.cookie ?? "";
     const idp = /(^|;\s*)idp=1/.test(cookies); // persistent SSO cookie; Moodle's own s=1 is a session cookie that dies with the browser
     const url = new URL(req.url ?? "/", "http://x");
+    // Like moodle.technion.ac.il → moodle26.technion.ac.il: the given address redirects to another host.
+    if (req.headers.host?.startsWith("127.0.0.1")) return void (res.setHeader("location", `http://localhost:${req.headers.host.split(":")[1]}${req.url}`), (res.statusCode = 302), res.end());
     if (idp && !/(^|;\s*)s=1/.test(cookies) && (url.pathname === "/my/" || url.pathname === "/")) return void (res.setHeader("set-cookie", "s=1; Path=/"), res.setHeader("location", url.pathname), (res.statusCode = 302), res.end());
     const loggedIn = /(^|;\s*)s=1/.test(cookies);
     const html = (b: string) => (res.setHeader("content-type", "text/html"), res.end(`<html><body class="${loggedIn ? "loggedin" : "notloggedin"}">${b}</body></html>`));

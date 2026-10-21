@@ -1,4 +1,4 @@
-import { chromium } from "playwright-core";
+import { chromium, type BrowserContext } from "playwright-core";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { MEDIA, extOf } from "@/core/domain/ingest/import";
@@ -14,6 +14,8 @@ export class LoginNeeded extends Error {
 export type Downloaded = { path: string; role: "material" | "exercises" };
 export type Moodle = ReturnType<typeof createMoodle>;
 
+const loggedIn = () => !document.body.classList.contains("notloggedin") && !!document.querySelector('a[href*="login/logout.php"], #user-menu-toggle');
+
 /**
  * Drives the student's own Chrome with a persistent profile: they log in (SSO + MFA) in the window, Shalav only keeps the browser session.
  * `channel` undefined = Playwright's bundled Chromium (tests).
@@ -24,43 +26,46 @@ export function createMoodle(o: { profileDir: string; channel?: string; headedLo
       throw new Error(o.channel === "chrome" ? "Google Chrome is needed for Moodle import. Install it and try again." : String(e));
     });
 
-  /** Opens the login page and resolves once a logged-in Moodle page shows. */
-  async function connect(baseUrl: string, timeoutMs = 5 * 60_000): Promise<void> {
-    const ctx = await open(!(o.headedLogin ?? true));
-    try {
-      const page = ctx.pages()[0] ?? (await ctx.newPage());
-      await page.goto(baseUrl);
-      const origin = new URL(baseUrl).origin;
-      for (const t0 = Date.now(); Date.now() - t0 < timeoutMs; ) {
-        if (page.isClosed()) throw new Error("The login window was closed before the login finished.");
-        const ok = await page.evaluate(() => !document.body.classList.contains("notloggedin") && !!document.querySelector('a[href*="login/logout.php"]')).catch(() => false);
-        if (ok && new URL(page.url()).origin === origin) return;
-        await page.waitForTimeout(1000).catch(() => undefined);
-      }
-      throw new Error("The login timed out.");
-    } finally {
-      await ctx.close().catch(() => undefined);
+  /** Opens Moodle in the window and resolves with Moodle's real origin once a logged-in Moodle page shows in any tab (SSO may use a popup). */
+  async function waitLogin(ctx: BrowserContext, baseUrl: string, timeoutMs: number): Promise<string> {
+    const page = ctx.pages()[0] ?? (await ctx.newPage());
+    await page.goto(baseUrl);
+    const origin = new URL(page.url()).origin; // the address may redirect (moodle.technion.ac.il → moodle26.technion.ac.il)
+    for (const t0 = Date.now(); Date.now() - t0 < timeoutMs; ) {
+      if (!ctx.pages().length) throw new Error("The login window was closed before the login finished.");
+      for (const p of ctx.pages()) if (new URL(p.url()).origin === origin && (await p.evaluate(loggedIn).catch(() => false))) return origin;
+      await new Promise((r) => setTimeout(r, 1000));
     }
+    throw new Error("The login timed out.");
   }
 
-  /** Downloads the supported files of the course into `dir`. Same host only, one request at a time. */
-  async function sync(baseUrl: string, number: string, dir: string): Promise<{ course: string; files: Downloaded[]; skipped: number }> {
-    const ctx = await open(true);
+  /**
+   * Downloads the supported files of the course into `dir`. Same host only, one request at a time.
+   * `login`: open a window and wait for the student to log in, then download in that same browser (Moodle's session cookie dies with the browser).
+   */
+  async function sync(baseUrl: string, number: string, dir: string, login = false, onLoggedIn?: () => void, loginTimeoutMs = 5 * 60_000): Promise<{ course: string; files: Downloaded[]; skipped: number }> {
+    const ctx = await open(!(login && (o.headedLogin ?? true)));
     try {
-      const origin = new URL(baseUrl).origin;
+      let origin: string;
+      if (login) {
+        origin = await waitLogin(ctx, baseUrl, loginTimeoutMs);
+        onLoggedIn?.();
+      } else {
+        // The SSO provider's cookies stay in the profile: opening /my/ signs in silently when they are still valid (no MFA), otherwise the student logs in again.
+        const probe = await ctx.newPage();
+        await probe.goto(new URL("/my/", baseUrl).href).catch(() => undefined);
+        const signedIn = await probe.evaluate(loggedIn).catch(() => false);
+        origin = new URL(probe.url()).origin;
+        await probe.close();
+        if (!signedIn) throw new LoginNeeded();
+      }
       const wait = () => new Promise((r) => setTimeout(r, o.delayMs ?? 300));
       const html = async (url: string) => {
         const r = await ctx.request.get(url, { timeout: 60_000 });
         if (!r.ok()) throw new Error(`Moodle answered ${r.status()} for ${new URL(url).pathname}.`);
         return { text: await r.text(), url: r.url() };
       };
-      // Moodle's own session cookie dies with the browser, but the SSO provider's cookies stay in the profile: opening /my/ in a page signs in silently when they are still valid (no MFA), otherwise the student logs in again.
-      const probe = await ctx.newPage();
-      await probe.goto(new URL("/my/", baseUrl).href).catch(() => undefined);
-      const signedIn = await probe.evaluate(() => !!document.querySelector('a[href*="login/logout.php"]')).catch(() => false);
-      await probe.close();
-      if (!signedIn) throw new LoginNeeded();
-      const s = await html(new URL(`/course/search.php?search=${encodeURIComponent(number)}`, baseUrl).href);
+      const s = await html(new URL(`/course/search.php?search=${encodeURIComponent(number)}`, origin).href);
       const hit = parseSearch(s.text, s.url, number)[0];
       if (!hit) throw new Error(`No Moodle course matches ${number}. Check that you are enrolled and that the number is in the course name.`);
       const page = await html(hit.url);
@@ -90,5 +95,5 @@ export function createMoodle(o: { profileDir: string; channel?: string; headedLo
       await ctx.close().catch(() => undefined);
     }
   }
-  return { connect, sync };
+  return { sync };
 }
