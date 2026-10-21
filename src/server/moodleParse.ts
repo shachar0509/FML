@@ -75,6 +75,20 @@ export function guessRole(name: string, section: string): "material" | "exercise
   return /מבחן|מבחנ|בוחן|בחינ|מועד|תרגיל|תרגול|שיעורי בית|פתרון|exam|midterm|quiz|moed|homework|\bhw\b|exercise|assignment|problem set|sheet|solution/i.test(`${name} ${section}`) ? "exercises" : "material";
 }
 
+const EX_TEXT = /שאל(?:ה|ות)|תרגיל|סעיף|פתרון|הוכיחו|חשבו|מצאו|הראו|נמקו|נק['׳]|problem|exercise|solution|question|prove that|show that|\bfind\b|\bcompute\b/gi;
+const MAT_TEXT = /הרצאה|הגדרה|מסקנה|הערה|פרק|תזכורת|lecture|definition|theorem|lemma|corollary|chapter|remark|recall/gi;
+const MAT_LABEL = /הרצא|סיכום|סיכומי|רשימות|מצגת|ספר|lecture|notes|slides|summary|chapter|book/i;
+
+/**
+ * Brief check of what a file is: signal words in its first pages, plus the name / link label / section (worth 3 words).
+ * No text (a picture, a scan) or a tie → the label alone (guessRole).
+ */
+export function briefRole(text: string, label: string): "material" | "exercises" {
+  const ex = (text.match(EX_TEXT)?.length ?? 0) + (guessRole(label, "") === "exercises" ? 3 : 0);
+  const mat = (text.match(MAT_TEXT)?.length ?? 0) + (MAT_LABEL.test(label) ? 3 : 0);
+  return ex === mat ? guessRole(label, "") : ex > mat ? "exercises" : "material";
+}
+
 export function fileName(url: string, disposition: string | undefined): string {
   const star = /filename\*=UTF-8''"?([^";]+)"?/i.exec(disposition ?? "")?.[1];
   let plain = /filename="?([^";]+)"?/i.exec(disposition ?? "")?.[1];

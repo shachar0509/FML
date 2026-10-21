@@ -10,7 +10,7 @@ import type { FilesData } from "@/cards/types";
 import { FakeClaudeGateway, toolCall } from "@/core/claude/fake";
 import { setClaude } from "@/core/claude/runtime";
 import { createCourse } from "@/core/domain/courses/courses";
-import { courseNumbers, fileName, guessRole, parseCourse, parsePluginfiles, parseSearch, parseSections, searchTerm } from "./moodleParse";
+import { briefRole, courseNumbers, fileName, guessRole, parseCourse, parsePluginfiles, parseSearch, parseSections, searchTerm } from "./moodleParse";
 import { createMoodle } from "./moodle";
 import { initNode } from "./platform";
 import { createServer } from "./server";
@@ -38,6 +38,10 @@ it("parses Moodle pages and guesses roles", () => {
   expect(parsePluginfiles('<img src="/pluginfile.php/1/theme_boost_union/logocompact/logo.png"><img class="img-fluid" src="/pluginfile.php/4/mod_page/content/1/screen.jpg"><a href="/pluginfile.php/4/mod_folder/content/0/a.pdf">a</a><iframe src="/pluginfile.php/5/mod_resource/content/1/b.pdf"></iframe>', base)).toEqual(["https://m.example.ac.il/pluginfile.php/4/mod_folder/content/0/a.pdf", "https://m.example.ac.il/pluginfile.php/5/mod_resource/content/1/b.pdf"]);
   expect(guessRole("lecture1.pdf", "Week 1")).toBe("material");
   expect(guessRole("x.pdf", "מבחנים")).toBe("exercises");
+  // Brief check: the opening text outweighs a misleading section name; no text → the label decides.
+  expect(briefRole("הרצאה 3: הגדרה. משפט. מסקנה. הערה. תזכורת: פרק 2", "notes.pdf חומר עזר להרצאות ותרגולים")).toBe("material");
+  expect(briefRole("שאלה 1 סעיף א: חשבו את המהירות. שאלה 2: מצאו", "week3.pdf שבוע 3")).toBe("exercises");
+  expect(briefRole("", "scan.pdf תרגולים ישנים")).toBe("exercises");
   expect(fileName("https://x/pluginfile.php/1/Lecture%201.pdf", undefined)).toBe("Lecture 1.pdf");
   expect(fileName("https://x/a.pdf", `inline; filename="${Buffer.from("תרגיל 3.pdf").toString("latin1")}"`)).toBe("תרגיל 3.pdf");
   expect(fileName("https://x/a.pdf", `attachment; filename="x.pdf"; filename*=UTF-8''%D7%AA.pdf`)).toBe("ת.pdf");

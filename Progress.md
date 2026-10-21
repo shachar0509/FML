@@ -448,3 +448,9 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - Hebrew file names were mojibake: Moodle sends the plain `filename=` as raw UTF-8 bytes, which were read as Latin-1. They are re-decoded now, and `filename*` is preferred.
 - Files imported before this fix keep their broken names, because a re-import sees them as duplicates by content. Delete them in the course card, then import again.
 - Checks: typecheck/lint clean, 130 unit, smoke ok (49 tools).
+
+### M24b — Moodle: parallel fetch + brief check per file (done; 🧪 pending)
+- Course pages, section pages, folders and files are now fetched together, with at most 4 requests at a time (`PARALLEL` in `moodle.ts`). Only the HTTP request holds a slot, so a folder never deadlocks waiting for its own files. A 300 ms courtesy delay applies per request.
+- Folder choice (`briefRole` in `moodleParse.ts`): counts exercise vs material signal words in the text of the file's first 2 pages (pdfjs, local, no AI). The file name, link label and section together count as 3 words. A file with no text (a scan or picture) or a tie falls back to the label (`guessRole`). Checked on the real 01140071 PDFs: tutorials and class exercises come out as exercises. Scans of the solved-exercises folder have no text, so the folder label decides.
+- Folder names stay "חומרי לימוד" / "תרגילים לדוגמה" (`src/constants.ts`).
+- Checks: typecheck/lint clean, 130 unit, smoke ok (49 tools).

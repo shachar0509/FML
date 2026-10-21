@@ -3,7 +3,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { MoodleError } from "@/cards/types";
 import { MEDIA, extOf } from "@/core/domain/ingest/import";
-import { fileName, guessRole, parseCourse, parsePluginfiles, parseSearch, parseSections, searchTerm } from "./moodleParse";
+import { openPdf, pageText } from "@/core/lib/pdf";
+import { briefRole, fileName, parseCourse, parsePluginfiles, parseSearch, parseSections, searchTerm } from "./moodleParse";
 
 /** The saved login is gone or expired: the student has to log in again in the browser window. */
 export class LoginNeeded extends Error {
@@ -26,6 +27,26 @@ export type Downloaded = { path: string; role: "material" | "exercises" };
 export type Moodle = ReturnType<typeof createMoodle>;
 
 // Only a real login has a logout link: guest access (Technion gives it once the session expires) has the user menu but sees no enrolled course.
+const PARALLEL = 4;
+
+/** The text of a downloaded file's first two pages, for the brief check of what it is ("" for pictures, scans and unreadable PDFs). */
+async function opening(name: string, body: Buffer): Promise<string> {
+  const ext = extOf(name);
+  if (ext === "txt" || ext === "md") return body.subarray(0, 8000).toString("utf8");
+  if (ext !== "pdf") return "";
+  try {
+    const doc = await openPdf(new Uint8Array(body));
+    try {
+      const pages = await Promise.all(Array.from({ length: Math.min(2, doc.numPages) }, async (_, i) => pageText(await doc.getPage(i + 1))));
+      return pages.join(" ");
+    } finally {
+      void doc.loadingTask.destroy();
+    }
+  } catch {
+    return "";
+  }
+}
+
 const loggedIn = () => !document.body.classList.contains("notloggedin") && !!document.querySelector('a[href*="login/logout.php"]');
 
 /**
@@ -52,7 +73,7 @@ export function createMoodle(o: { profileDir: string; channel?: string; headedLo
   }
 
   /**
-   * Downloads the supported files of every Moodle course whose name has the course number (all its sections) into `dir`. Same host only, one request at a time.
+   * Downloads the supported files of every Moodle course whose name has the course number (all its sections) into `dir`. Same host only, PARALLEL requests at a time; each file's folder is chosen by a brief look at its first pages (briefRole).
    * `login`: open a window and wait for the student to log in, then download in that same browser (Moodle's session cookie dies with the browser).
    */
   async function sync(baseUrl: string, number: string, dir: string, login = false, onLoggedIn?: () => void, loginTimeoutMs = 5 * 60_000): Promise<{ course: string; files: Downloaded[]; skipped: number }> {
@@ -71,9 +92,25 @@ export function createMoodle(o: { profileDir: string; channel?: string; headedLo
         await probe.close();
         if (!signedIn) throw new LoginNeeded();
       }
-      const wait = () => new Promise((r) => setTimeout(r, o.delayMs ?? 300));
+      // At most PARALLEL requests in flight (polite to Moodle); only the request holds a slot, so a folder can wait for its own files.
+      let active = 0;
+      const queue: (() => void)[] = [];
+      const get = async (url: string, timeout: number) => {
+        if (active < PARALLEL) active++;
+        else await new Promise<void>((r) => queue.push(r));
+        try {
+          await new Promise((r) => setTimeout(r, o.delayMs ?? 300));
+          const r = await ctx.request.get(url, { timeout });
+          await r.body(); // read while holding the slot
+          return r;
+        } finally {
+          const next = queue.shift();
+          if (next) next();
+          else active--;
+        }
+      };
       const html = async (url: string) => {
-        const r = await ctx.request.get(url, { timeout: 60_000 });
+        const r = await get(url, 60_000);
         if (!r.ok()) throw new MoodleFail("http", `Moodle answered ${r.status()} for ${new URL(url).pathname}.`);
         return { text: await r.text(), url: r.url() };
       };
@@ -84,32 +121,35 @@ export function createMoodle(o: { profileDir: string; channel?: string; headedLo
       const files: Downloaded[] = [];
       const seen = new Set<string>();
       let skipped = 0;
+      let slot = 0;
       const grab = async (url: string, hint: { text: string; section: string }, depth: number): Promise<void> => {
         if (new URL(url).origin !== origin || seen.has(url)) return;
         seen.add(url);
-        await wait();
-        const r = await ctx.request.get(url, { timeout: 120_000 });
-        if (!r.ok()) return void skipped++;
+        const r = await get(url, 120_000).catch(() => null);
+        if (!r?.ok()) return void skipped++;
         if ((r.headers()["content-type"] ?? "").includes("text/html")) {
-          if (depth < 2) for (const u of parsePluginfiles(await r.text(), r.url())) await grab(u, hint, depth + 1);
+          if (depth < 2) await Promise.all(parsePluginfiles(await r.text(), r.url()).map((u) => grab(u, hint, depth + 1)));
           return;
         }
         const name = fileName(r.url(), r.headers()["content-disposition"]);
         if (!(extOf(name) in MEDIA)) return void skipped++;
-        const path = join(dir, String(files.length), name); // own folder per file keeps the real name for import
-        await mkdir(join(dir, String(files.length)), { recursive: true });
-        await writeFile(path, await r.body());
-        files.push({ path, role: guessRole(name, `${hint.text} ${hint.section}`) });
+        const sub = join(dir, String(slot++)); // own folder per file keeps the real name for import
+        const body = await r.body();
+        await mkdir(sub, { recursive: true });
+        await writeFile(join(sub, name), body);
+        files.push({ path: join(sub, name), role: briefRole(await opening(name, body), `${name} ${hint.text} ${hint.section}`) });
       };
-      for (const hit of hits) {
-        const page = await html(hit.url);
-        const pages = [page];
-        for (const u of parseSections(page.text, page.url)) {
-          const sec = new URL(u).origin === origin && (await html(u).catch(() => null)); // one section per page; a broken section is skipped
-          if (sec) pages.push(sec);
-        }
-        for (const p of pages) for (const l of parseCourse(p.text, p.url)) await grab(l.url, l, 0);
-      }
+      // Courses, their section pages and the files all go out together, PARALLEL requests at a time.
+      const pages = (
+        await Promise.all(
+          hits.map(async (hit) => {
+            const page = await html(hit.url);
+            const secs = await Promise.all(parseSections(page.text, page.url).map((u) => (new URL(u).origin === origin ? html(u).catch(() => null) : null))); // a broken section is skipped
+            return [page, ...secs.filter((s) => s !== null)];
+          }),
+        )
+      ).flat();
+      await Promise.all(pages.flatMap((p) => parseCourse(p.text, p.url)).map((l) => grab(l.url, l, 0)));
       return { course: hits.map((h) => h.text).join(", "), files, skipped };
     } finally {
       await ctx.close().catch(() => undefined);
