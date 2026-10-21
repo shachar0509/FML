@@ -15,4 +15,7 @@ it("MCP tutor prompt: show_figure formats, TA lesson flow, no fenced figures", (
   expect(s).toMatch(/no question in this first message/);
   expect(s).toMatch(/One teach_step per message/);
   expect(s).toMatch(/never in the chat text/);
+  expect(s).toContain("```rows\nטבעיים | \\N = ");
+  expect(s).toMatch(/\[!definition\]/);
+  expect(s).toMatch(/sideMd/);
 });

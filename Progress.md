@@ -388,3 +388,11 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - Coloured math terms like the inspiration (a, b, c in blue/green/pink): KaTeX macros `\blue{}`, `\green{}`, `\pink{}`, `\orange{}` → `\htmlClass` (the only trusted command), colours themed per light/dark; the tutor is told to colour the terms the student must tell apart, consistently.
 - Lesson and course headers are a violet hero band (white text, white ring/bar); Home rows get a coloured initial badge per course; MCQ/open questions sit in a framed card with violet option letters.
 - Checks: typecheck/lint clean, 123 unit, 30 e2e (screenshots reviewed he/en, light/dark).
+
+### M20 — Board-like lecture layouts in lesson steps (done; 🧪 pending)
+- **Rows block** (` ```rows `, `src/core/render/Rows.tsx`): one "name | math" per line; the math is split at its first top-level relation (`=`, `\subset`, `\le`, `\iff`, `:=`…, never inside `{…}`, `\{…\}` or `\left…\right`) and laid out as a grid name | lhs | relation | rhs, so the relations line up like on a lecturer's board (the "המספרים הממשיים" photo). Hebrew names stay outside KaTeX. Wide rows scroll inside the block (keyboard-focusable).
+- **Board boxes**: `> [!definition] title` / theorem / lemma / proof (dashed, ends with ∎) / example / note / warning → an outlined box with its label cut into the top border (rehype plugin in `Markdown.tsx`; labels in i18n `board.*`). Other blockquotes unchanged.
+- **Side note**: `teach_step.sideMd` → a yellow sticky note taped beside the page (wide cards) or above it; counts toward the step length cap. The pinned figure shares that column.
+- `\boxed{}` results get a violet frame. Base board styles live in `src/index.css` (desktop renderer too); the notebook flavour in `src/cards/cards.css`.
+- Tutor prompt: a board toolkit (rows, boxes, sideMd, set-builder with `\middle|` + `\substack`, cases, aligned with reasons, `\underbrace` notes, `\boxed` results, tables).
+- Checks: typecheck/lint clean, 125 unit (splitRel incl. escaped braces, rows render, boxes, sideMd + length cap), 30 e2e (the step fixture is the real-numbers board: 4 rows with the "=" at the same x, definition box, sticky note, boxed result; axe AA; he/en, light/dark).

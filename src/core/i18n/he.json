@@ -480,5 +480,14 @@
     "askPlaceholder": "מה לא ברור?",
     "send": "שליחת השאלה",
     "progress": "צעד {{n}} מתוך {{of}}"
+  },
+  "board": {
+    "definition": "הגדרה",
+    "theorem": "משפט",
+    "lemma": "למה",
+    "proof": "הוכחה",
+    "example": "דוגמה",
+    "note": "הערה",
+    "warning": "שימו לב"
   }
 }

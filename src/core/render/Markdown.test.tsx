@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import "@/core/i18n";
 import { Markdown } from "./Markdown";
 import { isFigureTag } from "./Figure";
+import { splitRel } from "./Rows";
 
 describe("Markdown", () => {
   it("renders RTL blocks with isolated math, tables, and ignores raw HTML", () => {
@@ -22,6 +23,28 @@ describe("Markdown", () => {
     expect(screen.getByRole("button", { name: /copy|העתק/i })).toBeInTheDocument();
     expect(screen.getByText("+++")).toBeInTheDocument();
     expect(screen.getByText("x").className).toContain("inline-code");
+  });
+
+  it("board rows: split at the first top-level relation, label optional, aligned grid", () => {
+    expect(splitRel(String.raw`\Q = \left\{ \frac{m}{n} \middle| n \neq 0 \right\}`)).toEqual(["\\Q", "=", String.raw`\left\{ \frac{m}{n} \middle| n \neq 0 \right\}`]);
+    expect(splitRel(String.raw`\{x \le 1\} \subseteq A`)).toEqual([String.raw`\{x \le 1\}`, "\\subseteq", "A"]);
+    expect(splitRel(String.raw`\left\{ a = b \right\} \le 2`)?.[1]).toBe("\\le");
+    expect(splitRel("f := x^2")).toEqual(["f", ":=", "x^2"]);
+    expect(splitRel("x + 1")).toBeNull();
+    const { container } = render(<Markdown>{"```rows\nטבעיים | \\N = \\{1, 2, \\dots\\}\n| \\Z \\supset \\N\nx + 1\n```"}</Markdown>);
+    const rows = [...container.querySelectorAll(".board-row")];
+    expect(rows.map((r) => r.querySelector(".board-label")?.textContent)).toEqual(["טבעיים", "", ""]);
+    expect(rows[1]?.querySelector(".board-rel .katex")).toBeTruthy();
+    expect(rows[2]?.querySelector(".board-rel")?.innerHTML).toBe("");
+  });
+
+  it("board boxes: [!kind] blockquotes get a labelled box, others stay blockquotes", () => {
+    const { container } = render(<Markdown>{"> [!theorem] Bolzano\n> If $f$ is continuous…\n\n> [!proof]\n> Trivial.\n\n> [!nope] x\n\n> plain"}</Markdown>);
+    const boxes = [...container.querySelectorAll(".board-box")];
+    expect(boxes.map((b) => b.className)).toEqual(["board-box board-box-theorem", "board-box board-box-proof"]);
+    expect(boxes[0]?.querySelector(".board-box-tab")?.textContent).toMatch(/(משפט|Theorem) Bolzano/);
+    expect(boxes[0]?.textContent).not.toContain("[!theorem]");
+    expect(container.querySelectorAll("blockquote")).toHaveLength(2);
   });
 
   it("dispatches only the five figure tags", () => {

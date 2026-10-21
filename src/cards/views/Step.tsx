@@ -14,9 +14,10 @@ export function Step({ data, go }: { data: StepData; go: Go }) {
   const [sent, setSent] = useState<string | null>(null);
   const send = (label: string, req: Parameters<Go>[0]) => (setSent(label), void go(req));
   const p = data.progress;
+  const side = !!(data.figure || data.sideMd);
   return (
     <section className="flex flex-col gap-4" aria-label={data.titleMd}>
-      <article className={`notebook board grid min-w-0 gap-x-6 gap-y-4 overflow-x-auto rounded-card py-6 pe-6 shadow-card ${data.figure ? "md:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]" : ""}`}>
+      <article className={`notebook board grid min-w-0 gap-x-6 gap-y-4 overflow-x-auto rounded-card py-6 pe-6 shadow-card ${side ? "md:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]" : ""}`}>
         <div className="min-w-0">
           <h2 className="text-2xl font-bold">
             <Markdown>{data.titleMd}</Markdown>
@@ -26,10 +27,19 @@ export function Step({ data, go }: { data: StepData; go: Go }) {
             <Markdown>{data.bodyMd}</Markdown>
           </div>
         </div>
-        {data.figure && (
-          <div className="pinned-figure self-start">
-            <FigureCard bare data={{ ...data, view: "figure", ...data.figure }} />
-          </div>
+        {side && (
+          <aside className="flex flex-col gap-5 self-start md:pt-14">
+            {data.sideMd && (
+              <div className="sticky-note text-[15px] leading-7">
+                <Markdown>{data.sideMd}</Markdown>
+              </div>
+            )}
+            {data.figure && (
+              <div className="pinned-figure">
+                <FigureCard bare data={{ ...data, view: "figure", ...data.figure }} />
+              </div>
+            )}
+          </aside>
         )}
       </article>
       {p && (

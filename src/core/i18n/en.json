@@ -480,5 +480,14 @@
     "askPlaceholder": "What is unclear?",
     "send": "Send question",
     "progress": "Step {{n}} of {{of}}"
+  },
+  "board": {
+    "definition": "Definition",
+    "theorem": "Theorem",
+    "lemma": "Lemma",
+    "proof": "Proof",
+    "example": "Example",
+    "note": "Note",
+    "warning": "Watch out"
   }
 }

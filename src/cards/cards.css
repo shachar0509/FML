@@ -121,3 +121,41 @@ body {
   border-radius: 999px;
   background: linear-gradient(90deg, var(--primary), var(--primary-2));
 }
+
+/* Side note on the board: a sticky note taped to the notebook page (the one playful touch). */
+.sticky-note {
+  --note: #fff3b0;
+  position: relative;
+  padding: 1.1rem 1rem 0.9rem;
+  background: var(--note);
+  color: #3d3200;
+  border-radius: 4px 4px 14px 4px;
+  box-shadow: 0 10px 22px -14px rgb(60 45 0 / 0.55);
+  transform: rotate(-1.2deg);
+}
+.sticky-note::before {
+  content: "";
+  position: absolute;
+  top: -0.55rem;
+  inset-inline-start: 50%;
+  width: 3.5rem;
+  height: 1.1rem;
+  translate: -50% 0;
+  background: rgb(169 155 255 / 0.45);
+  border-radius: 2px;
+}
+.dark .sticky-note {
+  --note: #3b3415;
+  color: #fbe9a0;
+}
+.cards .sticky-note .md,
+.cards .sticky-note .katex {
+  color: inherit;
+}
+.board .board-rows .katex {
+  font-size: 1.12em;
+}
+.board .md .board-rows .katex-display {
+  margin: 0;
+  padding: 0.1em 0;
+}

@@ -216,17 +216,17 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     {
       title: "Lesson step",
       description: `Show ONE small step of the lesson as a card: one idea (a definition, one property, one proof step, one example), at most about 120 words of Markdown with $math$, optionally one figure. All teaching goes here, not in the chat. The student then presses Continue, Explain differently, or asks a question.${hint}`,
-      inputSchema: z.object({ titleMd: z.string().max(120), bodyMd: z.string().max(6000), figure: figure.optional(), progress: z.object({ n: z.number().int().min(1), of: z.number().int().min(1).max(30) }).optional().describe("This step's number within the current part of the stage and your estimate of its steps (shown as a progress bar).") }),
+      inputSchema: z.object({ titleMd: z.string().max(120), bodyMd: z.string().max(6000), sideMd: z.string().max(1500).optional().describe("A short side remark written beside the board (an inclusion, a reminder, a warning), shown as a note next to the step."), figure: figure.optional(), progress: z.object({ n: z.number().int().min(1), of: z.number().int().min(1).max(30) }).optional().describe("This step's number within the current part of the stage and your estimate of its steps (shown as a progress bar).") }),
       _meta: withCard,
     },
-    async ({ titleMd, bodyMd, figure: f, progress }) => {
+    async ({ titleMd, bodyMd, sideMd, figure: f, progress }) => {
       if (!active) return fail(NO_LESSON);
       // ponytail: length cap counts characters without LaTeX commands; tune STEP_CHARS if Hebrew steps feel cramped.
-      if (bodyMd.replace(/\\[a-zA-Z]+|[{}$]/g, "").length > STEP_CHARS) return fail(`This step is too long (${bodyMd.length} characters). Teach less at once: split it into smaller steps and send only the first one.`);
+      if ((bodyMd + (sideMd ?? "")).replace(/\\[a-zA-Z]+|[{}$]/g, "").length > STEP_CHARS) return fail(`This step is too long (${bodyMd.length + (sideMd?.length ?? 0)} characters). Teach less at once: split it into smaller steps and send only the first one.`);
       const bad = f && badFigure(f.kind, f.source);
       if (bad) return fail(`${bad} Fix it and call teach_step again.`);
       const { language, theme } = sets();
-      const data: StepData = { view: "step", language, theme, titleMd, bodyMd, figure: f ?? null, progress: progress && { n: Math.min(progress.n, progress.of), of: progress.of } };
+      const data: StepData = { view: "step", language, theme, titleMd, bodyMd, figure: f ?? null, sideMd: sideMd?.trim() || null, progress: progress && { n: Math.min(progress.n, progress.of), of: progress.of } };
       return out("Step shown. End your message now (no more text) and wait: the student continues, asks for another explanation, or asks a question.", data);
     },
   );

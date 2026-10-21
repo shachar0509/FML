@@ -4,8 +4,10 @@ import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import "katex/dist/katex.min.css";
+import { useTranslation } from "react-i18next";
 import { CodeBlock } from "./CodeBlock";
 import { Figure, isFigureTag } from "./Figure";
+import { Rows } from "./Rows";
 
 export const KATEX = {
   throwOnError: false,
@@ -30,10 +32,46 @@ const auto = <T extends keyof React.JSX.IntrinsicElements>(tag: T) =>
     return <Tag dir="auto" {...(bare(props) as object)} />;
   };
 
+/** Board boxes: a blockquote that starts with "[!definition] Title" (GitHub-alert style). */
+export const BOXES = ["definition", "theorem", "lemma", "proof", "example", "note", "warning"] as const;
+type El = { type: string; tagName?: string; value?: string; children?: El[]; properties?: Record<string, unknown> };
+/** rehype: marks such blockquotes (data-box, data-title) and removes the marker line. */
+const rehypeBoxes = () => (tree: El) => {
+  const walk = (n: El) => {
+    if (n.type === "element" && n.tagName === "blockquote") {
+      const p = n.children?.find((c) => c.type === "element");
+      const t = p?.tagName === "p" ? p.children?.[0] : undefined;
+      const m = t?.type === "text" ? /^\[!(\w+)\][ \t]*([^\n]*)\n?/.exec(t.value ?? "") : null;
+      if (p && t && m && (BOXES as readonly string[]).includes((m[1] as string).toLowerCase())) {
+        n.properties = { ...n.properties, dataBox: (m[1] as string).toLowerCase(), dataTitle: m[2] };
+        t.value = (t.value ?? "").slice(m[0].length);
+        if (!t.value && p.children?.length === 1) n.children = n.children?.filter((c) => c !== p);
+      }
+    }
+    n.children?.forEach(walk);
+  };
+  walk(tree);
+};
+
+function Blockquote(p: ComponentProps<"blockquote"> & { node?: unknown; "data-box"?: string; "data-title"?: string }) {
+  const { t } = useTranslation();
+  const { "data-box": box, "data-title": title, children, ...rest } = bare(p);
+  if (!box) return <blockquote dir="auto" {...rest}>{children}</blockquote>;
+  return (
+    <section className={`board-box board-box-${box}`} dir="auto" aria-label={t(`board.${box}`)}>
+      <span className="board-box-tab">
+        {t(`board.${box}`)}
+        {title ? <span className="board-box-title"> {title}</span> : null}
+      </span>
+      {children}
+    </section>
+  );
+}
+
 const text = (n: ReactNode): string => (typeof n === "string" ? n : Array.isArray(n) ? n.map(text).join("") : "");
 
 const components: Components = {
-  p: auto("p"), li: auto("li"), blockquote: auto("blockquote"), h1: auto("h1"), h2: auto("h2"), h3: auto("h3"),
+  p: auto("p"), li: auto("li"), blockquote: Blockquote as Components["blockquote"], h1: auto("h1"), h2: auto("h2"), h3: auto("h3"),
   h4: auto("h4"), h5: auto("h5"), h6: auto("h6"), th: auto("th"), td: auto("td"),
   table: (p) => (
     <div className="my-3 overflow-x-auto">
@@ -45,6 +83,7 @@ const components: Components = {
     const code = isValidElement(children) ? (children as ReactElement<{ className?: string; children?: ReactNode }>) : null;
     const lang = /language-(\S+)/.exec(code?.props.className ?? "")?.[1] ?? "text";
     const src = text(code?.props.children).replace(/\n$/, "");
+    if (lang === "rows") return <Rows source={src} />;
     return isFigureTag(lang) ? <Figure tag={lang} source={src} /> : <CodeBlock code={src} lang={lang} />;
   },
   code: (p) => <code dir="ltr" className="inline-code" {...bare(p)} />,
@@ -54,7 +93,7 @@ const components: Components = {
 export function Markdown({ children, className }: { children: string; className?: string }) {
   return (
     <div className={`md ${className ?? ""}`}>
-      <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[[rehypeKatex, KATEX]]} components={components}>
+      <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[[rehypeKatex, KATEX], rehypeBoxes]} components={components}>
         {children}
       </ReactMarkdown>
     </div>

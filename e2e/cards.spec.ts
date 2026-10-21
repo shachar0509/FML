@@ -138,7 +138,13 @@ for (const lang of ["he", "en"] as const)
       await expect(page.locator("article .katex").first()).toBeVisible();
       // \neq overlays a slash on "="; it shows as "/=" when KaTeX's CSS and JS versions differ
       expect(await page.locator("article .katex .katex-thinbox").first().evaluate((e) => getComputedStyle(e).maxWidth)).toBe("0px");
-      await expect(page.locator("figure svg").first()).toBeVisible();
+      // board layout: labelled rows lined up at "=", a definition box, a sticky side note, a boxed result
+      await expect(page.locator(".board-row")).toHaveCount(4);
+      const eq = await page.locator(".board-rel").evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().left)));
+      expect(new Set(eq).size).toBe(1);
+      await expect(page.locator(".board-box-definition")).toContainText(lang === "he" ? "הגדרה" : "Definition");
+      await expect(page.locator(".sticky-note .katex")).toBeVisible();
+      await expect(page.locator("article .katex .fbox")).toBeVisible();
       await axe();
       await page.screenshot({ path: `e2e/shots/card-step-${lang}-${theme}.png`, fullPage: true });
       await page.getByRole("button", { name: lang === "he" ? "יש לי שאלה" : "I have a question" }).click();

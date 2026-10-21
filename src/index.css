@@ -124,6 +124,88 @@ body {
 .m-green { color: var(--m-green, #15803d); }
 .m-pink { color: var(--m-pink, #db2777); }
 .m-orange { color: var(--m-orange, #c2410c); }
+/* Board layouts (M20): ```rows lines up the relation across rows; [!kind] blockquotes are boxes. */
+.board-rows {
+  display: grid;
+  grid-template-columns: max-content max-content max-content minmax(0, 1fr);
+  align-items: center;
+  column-gap: 0.5em;
+  row-gap: 0.15em;
+  margin: 1em 0;
+  overflow-x: auto;
+}
+.board-row {
+  display: contents;
+}
+.board-label {
+  justify-self: end;
+  padding-inline-end: 0.4em;
+  font-weight: 500;
+  color: var(--primary);
+}
+.board-rows .katex-display {
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+}
+.board-rows .katex-display > .katex {
+  text-align: left;
+}
+.board-rel .katex-display > .katex {
+  text-align: center;
+}
+.board-rows:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+}
+.board-box {
+  position: relative;
+  margin: 1.4em 0 1em;
+  padding: 1.1em 1em 0.6em;
+  border: 2px solid var(--box, var(--primary));
+  border-radius: 14px;
+  background: var(--card);
+}
+.board-box-tab {
+  position: absolute;
+  top: -0.8em;
+  inset-inline-start: 0.8em;
+  padding: 0 0.45em;
+  background: var(--card);
+  color: var(--box, var(--primary));
+  font-weight: 700;
+  line-height: 1.5;
+}
+.board-box-title {
+  color: var(--fg);
+  font-weight: 600;
+}
+.board-box-theorem,
+.board-box-lemma {
+  --box: var(--m-blue, #2563eb);
+}
+.board-box-example {
+  --box: var(--m-green, #15803d);
+}
+.board-box-note {
+  --box: var(--m-orange, #c2410c);
+}
+.board-box-warning {
+  --box: var(--danger);
+}
+.board-box-proof {
+  --box: var(--muted);
+  border-style: dashed;
+}
+.board-box-proof > :last-child::after {
+  content: " ∎";
+  float: inline-end;
+}
+.md .katex .fbox {
+  border: 2px solid var(--primary);
+  border-radius: 6px;
+  padding: 0.15em 0.1em;
+}
 .md .katex-display {
   text-align: center;
   overflow-x: auto;

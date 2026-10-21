@@ -160,3 +160,6 @@
 
 ## M18 — Lesson content in step cards, length enforced by the server
 - The student found the chat lessons too long and the plain chat text less readable than the cards. Lesson content now goes through `teach_step` (a card per step) and the server refuses steps over ~900 characters, because a prompt-only rule ("teach slowly") was not followed reliably. Continuing still needs one Enter per step (Claude Desktop cannot start a turn from a card, see M15).
+
+## M20 — A `rows` block instead of Hebrew inside KaTeX
+- Board layouts put a Hebrew name beside each aligned formula. KaTeX has no Hebrew metrics and lays `\text{}` out left to right, so names inside `aligned` render badly. A fenced `rows` block keeps the names as normal (bidi-correct) text and renders each formula's lhs / relation / rhs in a CSS grid, which also lines the relations up across rows. Boxes reuse GitHub-alert syntax (`> [!theorem]`) so the Markdown stays readable as plain text.
