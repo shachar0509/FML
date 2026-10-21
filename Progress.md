@@ -18,7 +18,7 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - [x] M10. Settings and context — DONE (see M-log)
 - [x] M11. Packaging (MCPB) and docs — DONE (see M-log; 🧪 install check pending)
 - [x] M12. Cleanup — DONE (see M-log)
-- [ ] M13. Hardening + acceptance checklist v2
+- [x] M13. Hardening + acceptance checklist v2 — DONE (see M-log; 🧪 checklist pending, see ACCEPTANCE.md)
 
 ### Handoff notes (start here)
 - v1 is complete through Step 13, plus partial Step 14 (see the log below). Step 14 is **superseded** by M13; do not continue it.
@@ -128,6 +128,12 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - Checks: typecheck/lint clean, 118 unit, 27 e2e (the 7 desktop-app specs are gone), `pack:mcpb` + `smoke:mcpb` ok (44 tools).
 - Not done: unused i18n keys of the v1 screens remain in `he.json/en.json`; `src/server/tools/` split from plan §8 not done (flat `src/server/*Tools.ts`); `mcp:dev`/README not re-read for stale desktop wording beyond M11.
 - Next: M13 — Hardening + acceptance checklist v2.
+
+### M13 — Hardening + acceptance (done; 🧪 pending)
+- **Nudge** (plan §11 risk): `cards/views/Waiting.tsx` = "Waiting for Claude…" plus a "Nudge Claude" button after 20 s that re-sends "call shalav_next_job"; used by the plan-build checklist, Files and Exercise cards. Test `Waiting.test.tsx`.
+- **Claude Code / text hosts** (§10 #13): `course_lookup`, `course_create_request`, `plan_retry_request`, `course_status`, `files_list`, `files_start_indexing`, `plan_improve_request` are now visible to the model as well as the card; `shalav_home`/`shalav_course` text lists numbered options; server instructions explain the text flow. Not possible without cards: photo grading and file upload (put files in the course folder, then `files_list`).
+- `ACCEPTANCE.md`: the §10 checklist with auto coverage and the 🧪 boxes. Checks: typecheck/lint clean, 119 unit, 27 e2e, pack + smoke ok.
+- **All remaining work is the user's 🧪 checks** (M4–M11 items above + ACCEPTANCE.md) and fixes from what they find. Open polish: unused v1 i18n keys, `src/server/tools/` split, signing/icon for the `.mcpb`.
 
 ## Phase 1 — Desktop app (v1, frozen)
 

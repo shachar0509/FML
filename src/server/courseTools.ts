@@ -10,7 +10,7 @@ import type { BridgeGateway } from "./bridge";
 import { CARDS_URI } from "./resources";
 import { nodeCatalog } from "./platform";
 
-const appOnly = { ui: { resourceUri: CARDS_URI, visibility: ["app" as const] } };
+const both = { ui: { resourceUri: CARDS_URI, visibility: ["model" as const, "app" as const] } }; // also usable as plain tools in hosts without cards (Claude Code)
 const lookupIn = z.object({ number: z.string() });
 const numIn = z.object({ number: z.string().regex(/^\d{8}$/) });
 type Build = { state: "running" | "done" | "failed"; progress: CreateProgress | null; error: string | null };
@@ -50,7 +50,7 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, so
     return { state: b.state, step: b.progress?.step, unit: b.progress?.unit, error: b.error, pending: bridge.pending() };
   };
 
-  registerAppTool(server, "course_lookup", { title: "Look up a course", description: "Card-only: look a course number up in the Technion catalog.", inputSchema: lookupIn, _meta: appOnly }, async ({ number }) => {
+  registerAppTool(server, "course_lookup", { title: "Look up a course", description: "look a course number up in the Technion catalog.", inputSchema: lookupIn, _meta: both }, async ({ number }) => {
     const n = normalizeCourseNumber(number);
     let r: LookupResult;
     if (!n) r = { status: "invalid" };
@@ -71,9 +71,9 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, so
     "course_create_request",
     {
       title: "Add a course",
-      description: "Card-only: create the course and start building its plan (an AI job; the model must then call shalav_next_job).",
+      description: "create the course and start building its plan (an AI job; the model must then call shalav_next_job).",
       inputSchema: z.object({ number: z.string(), manual: z.object({ nameHe: z.string(), credits: z.number(), syllabusHe: z.string() }).optional() }),
-      _meta: appOnly,
+      _meta: both,
     },
     async ({ number, manual }) => {
       const n = normalizeCourseNumber(number);
@@ -88,14 +88,14 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, so
     },
   );
 
-  registerAppTool(server, "plan_retry_request", { title: "Retry the plan", description: "Card-only: rebuild a failed plan (an AI job).", inputSchema: numIn, _meta: appOnly }, async ({ number }) => {
+  registerAppTool(server, "plan_retry_request", { title: "Retry the plan", description: "rebuild a failed plan (an AI job).", inputSchema: numIn, _meta: both }, async ({ number }) => {
     if (!(await courseExists(number))) return { ...out("No such course.", { ok: false }), isError: true };
     if (builds.get(number)?.state === "running") return out("Already building.", { ok: true });
     start(number, "Rebuilding the study plan for", (on) => buildPlan(number, on));
     return out(`Started rebuilding the plan for ${number}. Call shalav_next_job now.`, { ok: true });
   });
 
-  registerAppTool(server, "course_status", { title: "Plan build status", description: "Card-only: progress of a plan build.", inputSchema: numIn, _meta: appOnly }, async ({ number }) => {
+  registerAppTool(server, "course_status", { title: "Plan build status", description: "progress of a plan build.", inputSchema: numIn, _meta: both }, async ({ number }) => {
     const s = status(number);
     return out(s.state, s);
   });
@@ -134,7 +134,7 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, so
         units: (plan?.units ?? []).map((u) => ({ id: u.id, title: u.title, stages: u.stageIds.flatMap((id) => byId.get(id) ?? []) })),
       };
       const cur = data.current && byId.get(data.current);
-      const text = `${course.courseNumber} — ${course.nameHe}\n${plan ? `${data.stagesDone}/${data.stagesTotal} stages done${cur ? `; next: ${cur.id} · ${cur.title}` : ""}` : "No study plan yet — the card offers Build/Try again."}`;
+      const text = `${course.courseNumber} — ${course.nameHe}\n${plan ? `${data.stagesDone}/${data.stagesTotal} stages done${cur ? `; next: ${cur.id} · ${cur.title}` : ""}` : "No study plan yet — offer plan_retry_request."}\nOptions: 1) learn the next stage (shalav_start_lesson); 2) practice (shalav_practice); 3) add or index files (files_list, files_start_indexing); 4) improve the plan (plan_improve_request).`;
       return out(text, data);
     },
   );

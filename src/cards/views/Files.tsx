@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Waiting } from "./Waiting";
 import { Check, FileText, FolderOpen, Loader2, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
@@ -113,7 +114,7 @@ export function Files({ number, callTool, say, reload }: { number: string; callT
       {busy && <p className="text-sm text-muted" role="status"><Loader2 className="me-1 inline size-4 animate-spin" aria-hidden />{t("files.uploading")}</p>}
       {msg && <p className="text-sm text-danger" role="alert">{msg}</p>}
       {d.improving?.state === "failed" && <p className="text-sm text-danger" role="alert">{t("courseHome.improveFailed")}</p>}
-      {active && <p className="text-sm text-muted" role="status">{t("mcp.waiting")}</p>}
+      {active && <Waiting say={say} />}
       {!d.hasPlan && (d.materials.length > 0 || d.exercises.length > 0) && <p className="text-sm text-muted">{t("files.needPlan")}</p>}
       <div className="flex flex-wrap gap-3">
         <Button disabled={!d.canIndex || active} onClick={() => void start()}>{t("files.start")}</Button>

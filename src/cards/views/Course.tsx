@@ -52,7 +52,7 @@ export function Course({ data, callTool, say, reload, back, practice }: { data: 
       {!data.hasPlan && data.build && (
         <div className="flex flex-col gap-3 rounded-card border border-warning p-4">
           {running ? (
-            <Checklist b={live ?? data.build} />
+            <Checklist say={say} b={live ?? data.build} />
           ) : (
             <>
               <p>{t("plan.failed")}</p>

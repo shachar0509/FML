@@ -30,10 +30,10 @@ it("looks up, creates a course through the bridge with fake jobs, shows the cour
   const call = (name: string, args: Record<string, unknown> = {}) => client.callTool({ name, arguments: args });
   const text = (r: { content?: unknown }) => JSON.stringify(r.content);
 
-  // card-only tools are hidden from the model
+  // the course flow is also open to the model (Claude Code has no cards)
   const tools = (await client.listTools()).tools;
   for (const n of ["course_lookup", "course_create_request", "plan_retry_request", "course_status"])
-    expect(tools.find((t) => t.name === n)?._meta).toMatchObject({ ui: { visibility: ["app"] } });
+    expect(tools.find((t) => t.name === n)?._meta).toMatchObject({ ui: { visibility: ["model", "app"] } });
   expect(tools.find((t) => t.name === "shalav_course")?._meta).toMatchObject({ ui: { resourceUri: "ui://shalav/cards.html" } });
 
   expect(sc<LookupResult>(await call("course_lookup", { number: "abc" })).status).toBe("invalid");

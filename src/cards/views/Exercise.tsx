@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Waiting } from "./Waiting";
 import { ImagePlus, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
@@ -95,7 +96,7 @@ export function Exercise({ data, callTool, say }: { data: ExerciseData; callTool
           <Markdown>{d.solutionMd}</Markdown>
         </div>
       )}
-      {busy && <p role="status" className="text-sm text-muted">{d.busy === "grade" ? t("exercise.grading") : t("mcp.waiting")}</p>}
+      {busy && <Waiting say={say} label={d.busy === "grade" ? t("exercise.grading") : undefined} />}
       {(err || d.error) && <p role="alert" className="text-sm text-danger">{t("exercise.failed")}</p>}
       {!done && (
         <div className="flex flex-col gap-2 rounded-lg border border-dashed border-border p-3">

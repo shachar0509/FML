@@ -29,9 +29,8 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
     { title: "My courses", description: "Show the student's Shalav courses and what to do next.", _meta: { ui: { resourceUri: CARDS_URI } } },
     async () => {
       const courses = await listCourses();
-      const text = courses.length
-        ? courses.map((c, i) => `${i + 1}. ${c.course.courseNumber} — ${c.course.nameHe}`).join("\n")
-        : "No courses yet. Ask the student which Technion course number to add.";
+      // Text fallback for hosts without cards: the courses and numbered next actions.
+      const text = `${courses.length ? courses.map((c, i) => `${i + 1}. ${c.course.courseNumber} — ${c.course.nameHe}`).join("\n") : "No courses yet."}\nOptions: a) add a course (ask for the number, then course_lookup and course_create_request); ${courses.length ? "b) open a course (shalav_course); c) " : ""}settings (shalav_settings).`;
       const { language, theme } = useSettings.getState().settings;
       const data: HomeData = {
         view: "home",

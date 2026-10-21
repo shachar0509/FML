@@ -105,7 +105,7 @@ export function AddCourse({ callTool, say, open, back }: { callTool: Tool; say: 
           </div>
         </form>
       )}
-      {phase === "building" && <Checklist b={(build ?? { state: "running" }) as BuildStatus} />}
+      {phase === "building" && <Checklist say={say} b={(build ?? { state: "running" }) as BuildStatus} />}
     </section>
   );
 }

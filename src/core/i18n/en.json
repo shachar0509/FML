@@ -442,6 +442,8 @@
     "back": "Courses",
     "learn": "▶️ Let's learn {{stage}}",
     "waiting": "Waiting for Claude to work on it… if nothing happens, write “continue” in the chat.",
+    "nudge": "Please call shalav_next_job now and keep working through the jobs until they are done.",
+    "nudgeBtn": "Nudge Claude",
     "index": "📚 Please index my files now",
     "improve": "✨ Please improve my study plan from my materials",
     "relearn": "🔁 Let's learn {{stage}} again",

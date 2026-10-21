@@ -18,6 +18,7 @@ import type { BridgeGateway } from "./bridge";
 import { native, openFolder } from "./native";
 import { CARDS_URI } from "./resources";
 
+const both = { ui: { resourceUri: CARDS_URI, visibility: ["model" as const, "app" as const] } }; // plain tools in hosts without cards (Claude Code)
 const appOnly = { ui: { resourceUri: CARDS_URI, visibility: ["app" as const] } };
 const num = z.string().regex(/^\d{8}$/);
 const numIn = z.object({ number: num });
@@ -60,7 +61,7 @@ export function registerFileTools(server: McpServer, bridge: BridgeGateway, o: {
     };
   }
 
-  registerAppTool(server, "files_list", { title: "Course files", description: "Card-only: scan the course folder and list the files with their indexing status.", inputSchema: numIn, _meta: appOnly }, async ({ number }) => {
+  registerAppTool(server, "files_list", { title: "Course files", description: "Scan the course folder and list the files with their indexing status.", inputSchema: numIn, _meta: both }, async ({ number }) => {
     if (!(await courseExists(number))) return fail("No such course.");
     const d = await list(number);
     return out(`${d.materials.length} materials, ${d.exercises.length} exercise files`, d);
@@ -108,7 +109,7 @@ export function registerFileTools(server: McpServer, bridge: BridgeGateway, o: {
     return out("ok", { ok: true });
   });
 
-  registerAppTool(server, "files_start_indexing", { title: "Start indexing", description: "Card-only: index the pending files (an AI job; the model must then call shalav_next_job).", inputSchema: numIn, _meta: appOnly }, async ({ number }) => {
+  registerAppTool(server, "files_start_indexing", { title: "Start indexing", description: "Index the pending files (an AI job; the model must then call shalav_next_job).", inputSchema: numIn, _meta: both }, async ({ number }) => {
     if (!(await loadCourse(number))?.plan) return fail("This course has no study plan yet.");
     const todo = (await listFileIndexes(number)).filter((r) => r.status === "pending" || r.status === "failed");
     if (!todo.length) return out("Nothing to index.", { ok: true, count: 0 });
@@ -127,7 +128,7 @@ export function registerFileTools(server: McpServer, bridge: BridgeGateway, o: {
     return out("ok", { ok: true });
   });
 
-  registerAppTool(server, "plan_improve_request", { title: "Improve the plan", description: "Card-only: refine the study plan from the indexed materials (an AI job).", inputSchema: numIn, _meta: appOnly }, async ({ number }) => {
+  registerAppTool(server, "plan_improve_request", { title: "Improve the plan", description: "Refine the study plan from the indexed materials (an AI job).", inputSchema: numIn, _meta: both }, async ({ number }) => {
     const c = await loadCourse(number);
     if (!c?.plan) return fail("This course has no study plan yet.");
     if (improving.get(number)?.state === "running") return out("Already improving.", { ok: true });

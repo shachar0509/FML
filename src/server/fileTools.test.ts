@@ -38,8 +38,9 @@ it("uploads in chunks, lists, indexes through the bridge, removes", async () => 
   const num = "01040195";
   const up = (index: number, data: string, name = "notes.txt") => call("file_upload_chunk", { number: num, role: "material", name, index, total: 2, data: b64(data) });
 
-  for (const n of ["files_list", "file_upload_chunk", "files_start_indexing", "plan_improve_request"])
-    expect((await client.listTools()).tools.find((t) => t.name === n)?._meta).toMatchObject({ ui: { visibility: ["app"] } });
+  expect((await client.listTools()).tools.find((t) => t.name === "file_upload_chunk")?._meta).toMatchObject({ ui: { visibility: ["app"] } });
+  for (const n of ["files_list", "files_start_indexing", "plan_improve_request"])
+    expect((await client.listTools()).tools.find((t) => t.name === n)?._meta).toMatchObject({ ui: { visibility: ["model", "app"] } });
 
   let f = sc<FilesData>(await call("files_list", { number: num }));
   expect(f).toMatchObject({ materials: [], exercises: [], hasPlan: true, canIndex: false, canImprove: false });

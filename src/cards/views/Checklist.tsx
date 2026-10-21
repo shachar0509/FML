@@ -1,10 +1,11 @@
 import { Check, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { BuildStatus } from "../types";
+import { Waiting } from "./Waiting";
 
 const STEPS = ["folders", "plan", "validate", "progress"] as const;
 /** Plan build checklist (v1 §4.3): spinner -> check. */
-export function Checklist({ b }: { b: BuildStatus }) {
+export function Checklist({ b, say }: { b: BuildStatus; say: (t: string) => Promise<unknown> }) {
   const { t } = useTranslation();
   const cur = STEPS.indexOf(b.step ?? "folders");
   return (
@@ -18,7 +19,7 @@ export function Checklist({ b }: { b: BuildStatus }) {
           </li>
         ))}
       </ul>
-      {!!b.pending && <p className="text-sm text-warning">{t("mcp.waiting")}</p>}
+      {!!b.pending && <Waiting say={say} />}
     </div>
   );
 }

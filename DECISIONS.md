@@ -132,3 +132,7 @@
 - Kept the `learn` dir only for `recap.ts`; the old transcript engine is deleted (history in tag `desktop-v1-final`).
 - Kept localStorage fallback in `lib/storage.ts` for the card dev page and tests.
 - Server files stay flat (`src/server/*Tools.ts`) instead of `server/tools/`.
+
+## M13
+- Nudge button after a fixed 20 s (no per-card tuning). Role `status` stays on the parent; `Waiting` uses `aria-live` only.
+- Text hosts: the course/files tools are model-visible instead of adding duplicate "text" tools; upload, photo grading and chunk tools stay card-only.
