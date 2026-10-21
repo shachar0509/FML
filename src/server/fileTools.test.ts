@@ -6,9 +6,9 @@ import { Client } from "@modelcontextprotocol/client";
 import { InMemoryTransport } from "@modelcontextprotocol/server";
 import { expect, it } from "vitest";
 import type { FilesData } from "@/cards/types";
-import { FakeClaudeGateway, toolCall } from "@/claude/fake";
-import { setClaude } from "@/claude/runtime";
-import { createCourse } from "@/domain/courses/courses";
+import { FakeClaudeGateway, toolCall } from "@/core/claude/fake";
+import { setClaude } from "@/core/claude/runtime";
+import { createCourse } from "@/core/domain/courses/courses";
 import { initNode } from "./platform";
 import { createServer } from "./server";
 

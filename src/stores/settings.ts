@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { DEFAULT_SETTINGS, SettingsSchema, type Settings } from "@/domain/schemas";
-import { defaultDataRoot, readJson, writeJson } from "@/lib/storage";
+import { DEFAULT_SETTINGS, SettingsSchema, type Settings } from "@/core/domain/schemas";
+import { defaultDataRoot, readJson, writeJson } from "@/core/lib/storage";
 
 const FILE = "settings.json";
 

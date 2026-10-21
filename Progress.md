@@ -17,7 +17,7 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - [x] M9. Practice — DONE (see M-log; 🧪 check pending)
 - [x] M10. Settings and context — DONE (see M-log)
 - [x] M11. Packaging (MCPB) and docs — DONE (see M-log; 🧪 install check pending)
-- [ ] M12. Cleanup (delete Tauri/sync/API code, move to src/core)
+- [x] M12. Cleanup — DONE (see M-log)
 - [ ] M13. Hardening + acceptance checklist v2
 
 ### Handoff notes (start here)
@@ -121,6 +121,13 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - 🧪 **User check in Claude Desktop** (on `dist/shalav.mcpb`: run `pnpm pack:mcpb`, or the release asset): double-click it and press Install; the settings dialog asks for a data folder and language and does NOT ask for an API key; type "Shalav" or pick the prompt "Shalav: my courses": the Home card opens (Hebrew, RTL). Then do the pending checks M4–M10 listed above (Add course 01040195, files, Learn, exercise, Practice, Settings). Also report whether Claude Desktop warns about an unsigned extension, and whether the data folder you chose was created. Windows: same install on a Windows machine, not tested.
 - Not done / not verified: install on a clean macOS user and on Windows; `pnpm pack:mcpb` on Linux CI (the workflow is untested); the `.mcpb` is unsigned; the icon is a placeholder; manifest `language` is a free string (no enum support in `user_config`).
 - Next: M12 — Cleanup (delete Tauri/sync/API code, move to src/core).
+
+### M12 — Cleanup (done)
+- Deleted: `src-tauri/`, `src/sync`, `src/screens`, `App/routes/main.tsx`, `index.html`, `live/` + `vitest.live.config.ts`, v1 API client (`claude/{gateway,cache,models,cap,connect,keyCheck,sdk}`, `pricing.json`, `prompts/{ask,summary}`), `domain/{ask,usage}`, `lib/secrets`, the v1 Lesson engine (`learn/{engine,context,session}`), unused UI (`Lightbox`, `ui/{dialog,tabs,toaster}`), Tauri branches in `storage/fs/firstRun/pageSource/catalog/courses`, and all Tauri/Anthropic-SDK/router/radix-dialog/tabs deps. Settings schema lost `models/usage/updates/onboardingCompleted` (old files still parse).
+- Moved with `git mv` to `src/core/{domain,lib,claude,render,i18n,components}`; imports are `@/core/...`. `claude/runtime.ts` is just `setClaude/claude`. `claude.test.ts` shrank to `structured.test.ts`. `pnpm dev` = vite on 1420 (card test host); Playwright waits on `test-host.html`.
+- Checks: typecheck/lint clean, 118 unit, 27 e2e (the 7 desktop-app specs are gone), `pack:mcpb` + `smoke:mcpb` ok (44 tools).
+- Not done: unused i18n keys of the v1 screens remain in `he.json/en.json`; `src/server/tools/` split from plan §8 not done (flat `src/server/*Tools.ts`); `mcp:dev`/README not re-read for stale desktop wording beyond M11.
+- Next: M13 — Hardening + acceptance checklist v2.
 
 ## Phase 1 — Desktop app (v1, frozen)
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Check, ChevronDown, Circle, Contrast, Lock } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/core/components/ui/button";
 import type { CourseData, Stage } from "../types";
 import { Checklist } from "./Checklist";
 import { Files } from "./Files";

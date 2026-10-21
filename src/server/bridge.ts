@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { ClaudeError } from "@/claude/errors";
-import type { Block, ClaudeGateway, ClaudeRequest, ClaudeResponse, ToolDef } from "@/claude/types";
+import { ClaudeError } from "@/core/claude/errors";
+import type { Block, ClaudeGateway, ClaudeRequest, ClaudeResponse, ToolDef } from "@/core/claude/types";
 
 /** Host Bridge (plan v2 §5.1): the domain code calls send(); the host model answers through shalav_submit_job. */
 

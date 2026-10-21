@@ -1,17 +1,17 @@
-// Node wiring for what the Tauri app got from plugins: dirs, first run, catalog.
+// Node wiring: dirs, settings, first run, catalog.
 import { homedir, platform } from "node:os";
 import { join } from "node:path";
-import { technionSource, type CatalogSource } from "@/domain/catalog/catalog";
-import { setFs } from "@/lib/fs/fs";
-import { nodeDirs } from "@/lib/platform";
-import { ensureDataRoot, ensureDevice } from "@/lib/firstRun";
-import { setDeviceId } from "@/lib/device";
-import { readJson } from "@/lib/storage";
+import { technionSource, type CatalogSource } from "@/core/domain/catalog/catalog";
+import { setFs } from "@/core/lib/fs/fs";
+import { nodeDirs } from "@/core/lib/platform";
+import { ensureDataRoot, ensureDevice } from "@/core/lib/firstRun";
+import { setDeviceId } from "@/core/lib/device";
+import { readJson } from "@/core/lib/storage";
 import { useSettings } from "@/stores/settings";
 import { enableNodeCanvas } from "./canvas";
 import { nodeFs } from "./nodeFs";
 
-/** Per-user app dirs (config = device-local state, like Tauri's appConfigDir). */
+/** Per-user app dirs (config = device-local state). */
 function appDirs(env = process.env) {
   const home = homedir();
   const os = platform();

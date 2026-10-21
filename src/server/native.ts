@@ -1,4 +1,4 @@
-// TS ports of the Rust commands in src-tauri/src/commands.rs (sha256, import_copy, heic_to_jpeg, trash_path).
+// TS ports of the v1 native commands (sha256, import_copy, heic_to_jpeg, trash_path).
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
@@ -6,7 +6,7 @@ import { copyFile, mkdir, rename, stat } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { basename, extname, join } from "node:path";
 import { promisify } from "node:util";
-import type { Native } from "@/domain/ingest/import";
+import type { Native } from "@/core/domain/ingest/import";
 
 const run = promisify(execFile);
 

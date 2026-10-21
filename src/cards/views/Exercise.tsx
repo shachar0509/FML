@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { ImagePlus, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
-import { Markdown } from "@/render/Markdown";
-import { GradeCard, readable } from "@/screens/Exercise/GradeCard";
+import { Button } from "@/core/components/ui/button";
+import { Markdown } from "@/core/render/Markdown";
+import { GradeCard, readable } from "./GradeCard";
 import type { ExerciseData } from "../types";
 
 type Tool = (name: string, args?: Record<string, unknown>) => Promise<{ structuredContent?: unknown; isError?: boolean }>;

@@ -1,6 +1,6 @@
 import { Plus, Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/core/components/ui/button";
 import type { HomeData } from "../types";
 
 function Ring({ pct }: { pct: number }) {

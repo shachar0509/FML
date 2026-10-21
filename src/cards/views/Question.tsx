@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Check, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
-import { Markdown } from "@/render/Markdown";
+import { Button } from "@/core/components/ui/button";
+import { Markdown } from "@/core/render/Markdown";
 import type { McqData, OpenData } from "../types";
 
 type Tool = (name: string, args?: Record<string, unknown>) => Promise<{ structuredContent?: unknown; isError?: boolean }>;

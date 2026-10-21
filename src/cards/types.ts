@@ -1,4 +1,4 @@
-import type { Grade } from "@/claude/practiceTools";
+import type { Grade } from "@/core/claude/practiceTools";
 /** What the server puts in `structuredContent`; `view` picks the card view (plan v2 §8). */
 export type HomeData = {
   view: "home";

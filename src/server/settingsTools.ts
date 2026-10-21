@@ -2,10 +2,10 @@ import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import type { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod";
 import type { SettingsData } from "@/cards/types";
-import { buildKnowledgeBoundary } from "@/domain/boundary/boundary";
-import { loadCourse, listCourses } from "@/domain/courses/courses";
-import { SettingsSchema } from "@/domain/schemas";
-import { findConflictCopies } from "@/lib/fs/conflicts";
+import { buildKnowledgeBoundary } from "@/core/domain/boundary/boundary";
+import { loadCourse, listCourses } from "@/core/domain/courses/courses";
+import { SettingsSchema } from "@/core/domain/schemas";
+import { findConflictCopies } from "@/core/lib/fs/conflicts";
 import { useSettings } from "@/stores/settings";
 import { CARDS_URI } from "./resources";
 

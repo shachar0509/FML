@@ -126,3 +126,9 @@
 - Only darwin-arm64, darwin-x64 and win32-x64 canvas binaries ship (plan §10); Windows on ARM and Linux are out of `compatibility.platforms`. Binaries come from `pnpm-workspace.yaml` `supportedArchitectures`, so one Linux CI runner builds the whole package.
 - The .mcpb is unsigned (no certificate); `pdf.worker.mjs` and `standard_fonts/` sit next to `server.mjs` because pdfjs resolves them relative to the file that bundles it.
 - Claude Code install is documented as clone + build + `claude mcp add`, since there is no published npm package.
+
+## M12
+- Kept `claude/{types,errors,structured,tools,practiceTools,tutorTools,fake}` and `prompts/*` except ask/summary; dropped the v1 gateway/models/cache (the bridge replaces them).
+- Kept the `learn` dir only for `recap.ts`; the old transcript engine is deleted (history in tag `desktop-v1-final`).
+- Kept localStorage fallback in `lib/storage.ts` for the card dev page and tests.
+- Server files stay flat (`src/server/*Tools.ts`) instead of `server/tools/`.

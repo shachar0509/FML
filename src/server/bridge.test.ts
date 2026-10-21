@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import * as z from "zod";
-import { callStructured } from "@/claude/structured";
-import { defineTool } from "@/claude/tools";
+import { callStructured } from "@/core/claude/structured";
+import { defineTool } from "@/core/claude/tools";
 import { BridgeGateway, type Content } from "./bridge";
 
 const tool = defineTool("submit_x", "x", z.object({ n: z.number() }));

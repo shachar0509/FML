@@ -1,4 +1,4 @@
-import type { Fs } from "@/lib/fs/fs";
+import type { Fs } from "@/core/lib/fs/fs";
 
 /** In-memory Fs for tests. Directories are implicit from file paths + explicit mkdir. */
 export function memFs(): Fs & { files: Map<string, string>; bytes: Map<string, Uint8Array> } {

@@ -1,5 +1,5 @@
 import { createCanvas, loadImage, type Canvas } from "@napi-rs/canvas";
-import { setNodeCanvas } from "@/lib/images";
+import { setNodeCanvas } from "@/core/lib/images";
 
 /** Route lib/images + lib/pdf through @napi-rs/canvas. Call once at server start. */
 export function enableNodeCanvas(): void {

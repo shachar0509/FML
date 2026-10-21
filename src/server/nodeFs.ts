@@ -1,5 +1,5 @@
 import { appendFile, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
-import type { Fs } from "@/lib/fs/fs";
+import type { Fs } from "@/core/lib/fs/fs";
 
 export const nodeFs = (): Fs => ({
   readText: (p) => readFile(p, "utf8"),

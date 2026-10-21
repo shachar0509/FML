@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Check, Circle } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
-import { Markdown } from "@/render/Markdown";
+import { Button } from "@/core/components/ui/button";
+import { Markdown } from "@/core/render/Markdown";
 import type { LessonData } from "../types";
 
 type Tool = (name: string, args?: Record<string, unknown>) => Promise<{ structuredContent?: unknown; isError?: boolean }>;

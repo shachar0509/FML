@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { applyLanguage, applyTheme } from "@/lib/dom";
+import { applyLanguage, applyTheme } from "@/core/lib/dom";
 import { AddCourse } from "./views/AddCourse";
 import { Course } from "./views/Course";
 import { Exercise } from "./views/Exercise";

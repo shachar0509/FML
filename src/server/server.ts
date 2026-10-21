@@ -1,11 +1,11 @@
 import { registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 import { McpServer } from "@modelcontextprotocol/server";
-import { listCourses } from "@/domain/courses/courses";
+import { listCourses } from "@/core/domain/courses/courses";
 import * as z from "zod";
 import { BridgeGateway } from "./bridge";
 import type { HomeData } from "@/cards/types";
 import { useSettings } from "@/stores/settings";
-import type { CatalogSource } from "@/domain/catalog/catalog";
+import type { CatalogSource } from "@/core/domain/catalog/catalog";
 import { registerCourseTools } from "./courseTools";
 import { registerFileTools } from "./fileTools";
 import { registerExerciseTools } from "./exerciseTools";
