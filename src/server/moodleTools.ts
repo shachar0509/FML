@@ -12,7 +12,7 @@ import { nodeDirs } from "@/core/lib/platform";
 import { COURSE_ID_RE, university } from "@/core/universities";
 import { useSettings } from "@/stores/settings";
 import { importDeps } from "./fileTools";
-import { createMoodle, LoginNeeded, type Moodle } from "./moodle";
+import { createMoodle, LoginNeeded, MoodleFail, type Moodle } from "./moodle";
 import { CARDS_URI } from "./resources";
 
 const both = { ui: { resourceUri: CARDS_URI, visibility: ["model" as const, "app" as const] } };
@@ -70,7 +70,8 @@ export function registerMoodleTools(server: McpServer, make?: (profileDir: strin
         }
       }
     } catch (e) {
-      last = { course: "", added: 0, duplicate: 0, skipped: 0, error: e instanceof Error ? e.message : String(e) };
+      const code = e instanceof MoodleFail ? e.code : e instanceof LoginNeeded ? "login" : "failed";
+      last = { course: "", added: 0, duplicate: 0, skipped: 0, error: e instanceof Error ? e.message : String(e), code };
     } finally {
       busy = null;
       await rm(dir, { recursive: true, force: true });

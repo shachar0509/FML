@@ -108,7 +108,7 @@ export function Files({
             { done?: boolean; status?: string; error?: string } | undefined;
           if (r.isError || (s?.done && s.status !== "added" && s.status !== "duplicate")) {
             setMsg(
-              t("files.rejected", { name: file.name, error: s?.status ?? s?.error ?? "error" }),
+              t("files.rejected", { name: file.name, error: t(`file.${s?.status ?? "failed"}`, { defaultValue: t("file.failed") }) }),
             );
             break;
           }
@@ -127,7 +127,7 @@ export function Files({
       ...(url.trim() ? { url: url.trim() } : {}),
     });
     if (r.isError)
-      setMsg((r.structuredContent as { error?: string } | undefined)?.error ?? t("moodle.failed"));
+      setMsg(t("moodle.err.url"));
     await refresh();
   }
 
@@ -225,7 +225,7 @@ export function Files({
           )}
           {!d.moodle.busy && d.moodle.last?.error && (
             <p className="text-sm text-danger" role="alert">
-              {d.moodle.last.error}
+              {t(`moodle.err.${d.moodle.last.code ?? "failed"}`, { number })}
             </p>
           )}
           {!d.moodle.busy && d.moodle.last && !d.moodle.last.error && (

@@ -408,3 +408,10 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - Boards: lesson steps, lesson/course headers, MCQ/open questions, practice questions and exercise statements. Everything else (lists, files, settings) stays calm cards on the classroom-wall background. No gradients; buttons and progress are marker blue / chalk yellow. The board logic from M20 (rows, boxes, sticky note, boxed results) is unchanged, only restyled.
 - Text fixes: inline math never breaks across lines (`.md .katex { white-space: nowrap }`; "a +" / "(−b)" were split); a short word right before inline math ("אם $a<b$") is glued to it with a no-break space (rehype pass in `Markdown.tsx`).
 - Checks: typecheck/lint clean, 127 unit, 30 e2e (axe AA, he/en × light/dark), screenshots reviewed.
+
+### M22 — One language in the cards (the one in Settings) (done; 🧪 pending)
+- Prompt language rule (`languageRules`, used by the tutor, grading, practice, side questions) is stricter than spec 10.1: everything the student sees (titles, text, options, feedback, notes, exercise statements) in the chosen language; English only inside math notation and code; technical terms in the language's university term, with the English term at most once in parentheses; no words inside math (`\text{…}`).
+- Server errors the cards showed raw in English are now codes the card translates: Moodle (`MoodleFail` codes chrome / closed / timeout / http / noCourse / login / failed, plus the address check), upload rejections (`file.*`), and the plan-build failure (localized message; the English detail only as a tooltip).
+- Test host sample data follows the card language (Hebrew lesson, objectives, questions, grade, practice, board), so screenshots show what a Hebrew student sees; e2e expectations updated.
+- Known limit: content generated before the language was changed (an existing plan's stage titles) stays in its old language until the plan is rebuilt.
+- Checks: typecheck/lint clean, 127 unit, 30 e2e.

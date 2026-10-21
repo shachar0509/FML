@@ -87,8 +87,8 @@ for (const lang of ["he", "en"] as const)
       await page.screenshot({ path: `e2e/shots/card-course-${lang}-${theme}.png` });
       const bad = (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations.filter((v) => v.impact === "serious" || v.impact === "critical");
       expect(bad).toEqual([]);
-      await page.getByRole("button", { name: /Limits/ }).click();
-      await expect(page.getByText("Limits summary")).toBeVisible();
+      await page.getByRole("button", { name: lang === "he" ? /גבולות/ : /Limits/ }).click();
+      await expect(page.getByText(lang === "he" ? "תקציר: גבולות" : "Limits summary")).toBeVisible();
       expect(errors).toEqual([]);
     });
 
@@ -102,12 +102,12 @@ for (const lang of ["he", "en"] as const)
       const url = (v: string) => `/src/cards/test-host.html?view=${v}&lang=${lang}&theme=${theme}`;
 
       await page.goto(url("lesson"));
-      await expect(page.getByRole("heading", { level: 1 })).toHaveText("Limits of sequences");
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText(lang === "he" ? "גבולות של סדרות" : "Limits of sequences");
       await expect(page.locator(".katex").first()).toBeVisible(); // objectives render math
       await axe();
       await page.screenshot({ path: `e2e/shots/card-lesson-${lang}-${theme}.png` });
       await page.getByRole("button", { name: lang === "he" ? "להשלים בכל זאת" : "Complete anyway" }).click();
-      await expect(page.getByText("Solve 2 more exercises")).toBeVisible();
+      await expect(page.getByText(lang === "he" ? "לפתור עוד 2 תרגילים" : "Solve 2 more exercises")).toBeVisible();
       await page.getByRole("button", { name: lang === "he" ? "כן, להמשיך" : "Yes, continue" }).click();
       await expect(page.getByText(lang === "he" ? "השלב הושלם" : "Stage completed")).toBeVisible();
       await page.getByRole("button", { name: lang === "he" ? "לשלב הבא" : "Next stage" }).click();
@@ -116,7 +116,7 @@ for (const lang of ["he", "en"] as const)
       await page.goto(url("mcq"));
       await page.getByRole("button", { name: /diverges|מתבדרת/ }).click();
       await expect(page.getByRole("status")).toContainText(lang === "he" ? "לא נכון" : "Not quite");
-      expect((await said()).at(-1)).toContain("C) diverges");
+      expect((await said()).at(-1)).toContain(lang === "he" ? "C) מתבדרת" : "C) diverges");
       await axe();
       await page.screenshot({ path: `e2e/shots/card-mcq-${lang}-${theme}.png` });
 
@@ -193,7 +193,7 @@ for (const lang of ["he", "en"] as const)
       await axe();
       await page.screenshot({ path: `e2e/shots/card-practice-${lang}-${theme}.png` });
       await page.getByRole("button", { name: lang === "he" ? "סיום תרגול" : "End session" }).click();
-      await expect(page.getByText("Sign slip")).toBeVisible();
+      await expect(page.getByText(lang === "he" ? "טעות סימן" : "Sign slip")).toBeVisible();
       await page.getByRole("button", { name: lang === "he" ? "ללמוד שוב" : "Learn again" }).click();
       expect(JSON.stringify((await page.evaluate(() => (window as unknown as { __reqs: unknown[] }).__reqs)).at(-1))).toContain("S001");
       expect(errors).toEqual([]);

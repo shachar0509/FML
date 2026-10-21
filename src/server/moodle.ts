@@ -1,6 +1,7 @@
 import { chromium, type BrowserContext } from "playwright-core";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import type { MoodleError } from "@/cards/types";
 import { MEDIA, extOf } from "@/core/domain/ingest/import";
 import { fileName, guessRole, parseCourse, parsePluginfiles, parseSearch, parseSections, searchTerm } from "./moodleParse";
 
@@ -8,6 +9,16 @@ import { fileName, guessRole, parseCourse, parsePluginfiles, parseSearch, parseS
 export class LoginNeeded extends Error {
   constructor() {
     super("Moodle login needed.");
+  }
+}
+
+/** A Moodle failure the card can name in the student's language. */
+export class MoodleFail extends Error {
+  constructor(
+    readonly code: MoodleError,
+    message: string,
+  ) {
+    super(message);
   }
 }
 
@@ -23,7 +34,7 @@ const loggedIn = () => !document.body.classList.contains("notloggedin") && !!doc
 export function createMoodle(o: { profileDir: string; channel?: string; headedLogin?: boolean; delayMs?: number }) {
   const open = (headless: boolean) =>
     chromium.launchPersistentContext(o.profileDir, { headless, channel: o.channel, ...(headless ? {} : { viewport: null }) }).catch((e: unknown) => {
-      throw new Error(o.channel === "chrome" ? "Google Chrome is needed for Moodle import. Install it and try again." : String(e));
+      throw o.channel === "chrome" ? new MoodleFail("chrome", "Google Chrome is needed for Moodle import. Install it and try again.") : e;
     });
 
   /** Opens Moodle in the window and resolves with Moodle's real origin once a logged-in Moodle page shows in any tab (SSO may use a popup). */
@@ -32,11 +43,11 @@ export function createMoodle(o: { profileDir: string; channel?: string; headedLo
     await page.goto(baseUrl);
     const origin = new URL(page.url()).origin; // the address may redirect (moodle.technion.ac.il → moodle26.technion.ac.il)
     for (const t0 = Date.now(); Date.now() - t0 < timeoutMs; ) {
-      if (!ctx.pages().length) throw new Error("The login window was closed before the login finished.");
+      if (!ctx.pages().length) throw new MoodleFail("closed", "The login window was closed before the login finished.");
       for (const p of ctx.pages()) if (new URL(p.url()).origin === origin && (await p.evaluate(loggedIn).catch(() => false))) return origin;
       await new Promise((r) => setTimeout(r, 1000));
     }
-    throw new Error("The login timed out.");
+    throw new MoodleFail("timeout", "The login timed out.");
   }
 
   /**
@@ -62,13 +73,13 @@ export function createMoodle(o: { profileDir: string; channel?: string; headedLo
       const wait = () => new Promise((r) => setTimeout(r, o.delayMs ?? 300));
       const html = async (url: string) => {
         const r = await ctx.request.get(url, { timeout: 60_000 });
-        if (!r.ok()) throw new Error(`Moodle answered ${r.status()} for ${new URL(url).pathname}.`);
+        if (!r.ok()) throw new MoodleFail("http", `Moodle answered ${r.status()} for ${new URL(url).pathname}.`);
         return { text: await r.text(), url: r.url() };
       };
       const s = await html(new URL(`/course/search.php?search=${encodeURIComponent(searchTerm(number))}&perpage=all`, origin).href);
       // ponytail: first 5 matching courses (main, combined, groups); raise if courses have more groups.
       const hits = parseSearch(s.text, s.url, number).slice(0, 5);
-      if (!hits.length) throw new Error(`No Moodle course matches ${number}. Check that you are enrolled and that the number is in the course name.`);
+      if (!hits.length) throw new MoodleFail("noCourse", `No Moodle course matches ${number}. Check that you are enrolled and that the number is in the course name.`);
       const files: Downloaded[] = [];
       const seen = new Set<string>();
       let skipped = 0;

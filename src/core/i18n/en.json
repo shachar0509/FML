@@ -185,7 +185,9 @@
     "unsupported": "This file type isn't supported. Use PDF, images (JPG, PNG, WEBP, HEIC), TXT or MD.",
     "tooLarge": "The file is too large (over 200 MB).",
     "heicWindows": "HEIC files aren't supported on Windows. Save the photo as JPG and try again.",
-    "duplicate": "This file was already added."
+    "duplicate": "This file was already added.",
+    "failed": "The file could not be added.",
+    "tooManyPages": "The file has too many pages."
   },
   "grade": {
     "unreadable": "We couldn't read the solution. Try another photo in good light, taken straight from above.",
@@ -289,7 +291,17 @@
     "syncing": "Downloading your course files…",
     "done": "Imported {{added}} new, {{duplicate}} already here, {{skipped}} skipped (from {{course}}).",
     "forget": "Forget my Moodle login",
-    "failed": "The import failed."
+    "failed": "The import failed.",
+    "err": {
+      "chrome": "Moodle import needs Google Chrome. Install it and try again.",
+      "closed": "The login window was closed before the login finished. Try again.",
+      "timeout": "The login timed out. Try again and log in in the window that opens.",
+      "http": "Moodle did not answer properly. Try again in a few minutes.",
+      "noCourse": "No Moodle course with the number {{number}} was found. Check that you are enrolled.",
+      "login": "The Moodle login did not work. Try again.",
+      "failed": "The import failed. Try again.",
+      "url": "The Moodle address is not valid. It must start with https://"
+    }
   },
   "home": {
     "add": "Add course",

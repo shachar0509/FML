@@ -88,12 +88,7 @@ export function Course({
       )}
       {!running && data.build?.state === "failed" && (
         <div className={`${panel} flex flex-col gap-2 border-danger/50 p-4`} role="alert">
-          <p className="font-medium">{t("plan.failed")}</p>
-          {data.build.error && (
-            <p className="text-xs text-muted" dir="auto">
-              {data.build.error}
-            </p>
-          )}
+          <p className="font-medium" title={data.build.error ?? undefined}>{t("plan.failed")}</p>
         </div>
       )}
       {!data.hasPlan && !running && (

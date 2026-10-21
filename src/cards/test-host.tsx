@@ -8,6 +8,8 @@ import type { CardData, CourseData, FilesData, HomeData, Host, ExerciseData, Pra
 /** Playwright test host: a fake bridge instead of Claude Desktop. ?lang=&theme=&empty=1 ; sent messages land in window.__said. */
 const q = new URLSearchParams(location.search);
 const lang = q.get("lang") === "en" ? "en" : "he";
+/** Sample content in the card language, like real content (English only in math). */
+const L = (he: string, en: string) => (lang === "he" ? he : en);
 const home: HomeData = {
   view: "home",
   language: lang,
@@ -16,16 +18,16 @@ const home: HomeData = {
   courses: q.get("empty")
     ? []
     : [
-        { number: "01040195", name: lang === "he" ? "חשבון אינפיניטסימלי 1" : "Infinitesimal Calculus 1", credits: 5.5, pct: 35, stage: "S12 · Limits of sequences" },
+        { number: "01040195", name: lang === "he" ? "חשבון אינפיניטסימלי 1" : "Infinitesimal Calculus 1", credits: 5.5, pct: 35, stage: L("S12 · גבולות של סדרות", "S12 · Limits of sequences") },
         { number: "02340117", name: lang === "he" ? "מבוא למדעי המחשב" : "Intro to Computer Science", credits: 4, pct: 0, stage: null },
       ],
 };
-const st = (id: string, title: string, status: CourseData["units"][number]["stages"][number]["status"], mastery: number) => ({ id, title, summary: `${title} summary`, status, mastery });
+const st = (id: string, title: string, status: CourseData["units"][number]["stages"][number]["status"], mastery: number) => ({ id, title, summary: L(`תקציר: ${title}`, `${title} summary`), status, mastery });
 const course: CourseData = {
   view: "course", language: lang, theme: "system", number: "01040195", name: home.courses[0]?.name ?? "Calculus", credits: 5.5, pct: 17, stagesDone: 1, stagesTotal: 3,
   current: "S002", hasPlan: true, build: null, canPractice: true,
   watch: [{ label: lang === "he" ? "שכחו את תנאי ההתכנסות" : "Forgot the convergence condition", count: 3, stageIds: ["S002"] }],
-  units: [{ id: "U01", title: lang === "he" ? "סדרות" : "Sequences", stages: [st("S001", "Definition", "completed", 90), st("S002", "Limits", "in_progress", 40), st("S003", "Squeeze", "locked", 0)] }],
+  units: [{ id: "U01", title: lang === "he" ? "סדרות" : "Sequences", stages: [st("S001", L("הגדרה", "Definition"), "completed", 90), st("S002", L("גבולות", "Limits"), "in_progress", 40), st("S003", L("כלל הסנדוויץ'", "Squeeze"), "locked", 0)] }],
 };
 const found: LookupResult = { status: "found", entry: { courseNumber: "01040195", nameHe: "חשבון אינפיניטסימלי 1", credits: 5.5, faculty: "מתמטיקה", syllabusHe: "קדם: 01040031\nסדרות, גבולות, רציפות" } };
 const files: FilesData = {
@@ -35,34 +37,50 @@ const files: FilesData = {
 };
 const base = { language: lang, theme: "system" } as const;
 const lesson: LessonData = {
-  ...base, view: "lesson", number: "01040195", stageId: "S002", title: "Limits of sequences", status: "in_progress", mastery: 40, next: { id: "S003", title: "Squeeze" },
-  objectives: [{ text: "State the $\\varepsilon$-$N$ definition", covered: true }, { text: "Prove a limit from the definition", covered: false }],
-  criteria: { met: false, missing: ["Solve 2 more exercises with score ≥ 85"] },
+  ...base, view: "lesson", number: "01040195", stageId: "S002", title: L("גבולות של סדרות", "Limits of sequences"), status: "in_progress", mastery: 40, next: { id: "S003", title: L("כלל הסנדוויץ'", "Squeeze") },
+  objectives: [{ text: L("לנסח את הגדרת $\\varepsilon$-$N$", "State the $\\varepsilon$-$N$ definition"), covered: true }, { text: L("להוכיח גבול לפי ההגדרה", "Prove a limit from the definition"), covered: false }],
+  criteria: { met: false, missing: [L("לפתור עוד 2 תרגילים בציון 85 לפחות", "Solve 2 more exercises with score ≥ 85")] },
 };
-const mcq: McqData = { ...base, view: "mcq", checkId: "c1", questionMd: "Which holds for $a_n = 1/n$?", options: ["$a_n \\to 0$", "$a_n \\to 1$", "diverges"] };
-const open: OpenData = { ...base, view: "open", checkId: "c2", questionMd: "Explain why $\\lim 1/n = 0$." };
+const mcq: McqData = { ...base, view: "mcq", checkId: "c1", questionMd: L("מה נכון לגבי $a_n = 1/n$?", "Which holds for $a_n = 1/n$?"), options: ["$a_n \\to 0$", "$a_n \\to 1$", L("מתבדרת", "diverges")] };
+const open: OpenData = { ...base, view: "open", checkId: "c2", questionMd: L("הסבירו למה $\\lim 1/n = 0$.", "Explain why $\\lim 1/n = 0$.") };
 const exercise: ExerciseData = {
-  ...base, view: "exercise", number: "01040195", runId: "r1", difficulty: 3, statementMd: "Prove that $\\lim 1/n = 0$.", figures: [], hints: [], solutionMd: null, grade: null, canReveal: false, busy: null, error: null,
+  ...base, view: "exercise", number: "01040195", runId: "r1", difficulty: 3, statementMd: L("הוכיחו ש-$\\lim 1/n = 0$.", "Prove that $\\lim 1/n = 0$."), figures: [], hints: [], solutionMd: null, grade: null, canReveal: false, busy: null, error: null,
 };
 const graded: ExerciseData = {
   ...exercise, canReveal: true,
   grade: {
-    legibility: "clear", illegibleParts: [], verdict: "partially_correct", score: 70, summaryMd: "Good start, the choice of $N$ is missing.",
-    steps: [{ label: "Setup", status: "correct", commentMd: "Fine." }, { label: "Choose $N$", status: "missing", commentMd: "No $N$ given." }],
-    missingForFullCredit: ["explicit N"], mistakes: [], edgeCasesMissed: [], correctedKeyStepMd: "Take $N > 1/\\varepsilon$.", usesMaterialBeyondCompleted: [], stageIds: ["S002"],
+    legibility: "clear", illegibleParts: [], verdict: "partially_correct", score: 70, summaryMd: L("התחלה טובה, חסרה הבחירה של $N$.", "Good start, the choice of $N$ is missing."),
+    steps: [{ label: L("הכנה", "Setup"), status: "correct", commentMd: L("תקין.", "Fine.") }, { label: L("בחירת N", "Choose N"), status: "missing", commentMd: L("לא נבחר $N$.", "No $N$ given.") }],
+    missingForFullCredit: [L("N מפורש", "explicit N")], mistakes: [], edgeCasesMissed: [], correctedKeyStepMd: L("ניקח $N > 1/\\varepsilon$.", "Take $N > 1/\\varepsilon$."), usesMaterialBeyondCompleted: [], stageIds: ["S002"],
   },
 };
 const practiceBase: PracticeData = {
-  ...base, view: "practice", number: "01040195", mode: "choose", units: [{ id: "U01", title: "Limits" }], stages: [{ id: "S001", title: "Sequences" }],
+  ...base, view: "practice", number: "01040195", mode: "choose", units: [{ id: "U01", title: L("גבולות", "Limits") }], stages: [{ id: "S001", title: L("סדרות", "Sequences") }],
   counters: { answered: 0, correct: 0, avg: 0 }, item: null, loading: false, error: null, summary: null,
 };
-const mcqItem: PracticeData = { ...practiceBase, mode: "item", item: { kind: "M", questionMd: "Does $a_n=1/n$ converge?", options: ["Yes, to 0", "No", "Yes, to 1", "Only for even n"], selected: null, correctIndex: null, explanationMd: null } };
-const mcqDone: PracticeData = { ...mcqItem, counters: { answered: 1, correct: 0, avg: 0 }, item: { ...(mcqItem.item as Extract<PracticeData["item"], { kind: "M" }>), selected: 1, correctIndex: 0, explanationMd: "Since $1/n \\to 0$." } };
-const practiceSummary: PracticeData = { ...practiceBase, mode: "summary", summary: { items: 1, avgScore: 0, newMistakes: ["Sign slip"], weakStages: [{ id: "S001", title: "Sequences" }] } };
+const mcqItem: PracticeData = { ...practiceBase, mode: "item", item: { kind: "M", questionMd: L("האם $a_n=1/n$ מתכנסת?", "Does $a_n=1/n$ converge?"), options: lang === "he" ? ["כן, ל-0", "לא", "כן, ל-1", "רק עבור $n$ זוגי"] : ["Yes, to 0", "No", "Yes, to 1", "Only for even n"], selected: null, correctIndex: null, explanationMd: null } };
+const mcqDone: PracticeData = { ...mcqItem, counters: { answered: 1, correct: 0, avg: 0 }, item: { ...(mcqItem.item as Extract<PracticeData["item"], { kind: "M" }>), selected: 1, correctIndex: 0, explanationMd: L("כי $1/n \\to 0$.", "Since $1/n \\to 0$.") } };
+const practiceSummary: PracticeData = { ...practiceBase, mode: "summary", summary: { items: 1, avgScore: 0, newMistakes: [L("טעות סימן", "Sign slip")], weakStages: [{ id: "S001", title: L("סדרות", "Sequences") }] } };
 const practiceReply: Record<string, PracticeData> = { practice_start_request: mcqItem, practice_next_request: mcqItem, practice_answer_mcq: mcqDone, practice_end: practiceSummary, practice_state: practiceBase };
 const settings: SettingsData = { ...base, view: "settings", university: "technion", dataRoot: "/Users/me/Documents/Shalav", learning: { minExercises: 2, minExerciseScore: 85, masteryThreshold: 0.85, requireAllObjectives: true, hintsBeforeSolution: 3 }, conflicts: ["courses/01040195/.shalav/events/dev1 (1).jsonl"] };
 const figure: FigureData = { ...base, view: "figure", kind: "plot", source: JSON.stringify({ xDomain: [-2, 2], yDomain: [-1, 4], data: [{ fn: "x^2", label: "f" }] }), captionMd: "$f(x)=x^2$" };
-const step: StepData = { ...base, view: "step", titleMd: "המספרים הממשיים", bodyMd: "```rows\nטבעיים | \\N = \\{1, 2, 3, 4, \\dots\\}\nשלמים | \\Z = \\{\\dots, -2, -1, 0, 1, 2, \\dots\\}\nרציונליים | \\Q = \\left\\{ \\frac{m}{n} \\;\\middle|\\; \\substack{m, n \\in \\Z \\\\ n \\neq 0} \\right\\}\nממשיים | \\R = \\{\\, x \\mid x \\text{ on the line} \\,\\}\n```\n\n> [!definition] שדה סדור\n> שדה $F$ עם יחס $<$ כך שלכל $\\blue{a}, \\green{b}, \\pink{c}$: אם $\\blue{a} < \\green{b}$ אז $\\blue{a} + \\pink{c} < \\green{b} + \\pink{c}$.\n\n$$\n\\boxed{\\N \\subset \\Z \\subset \\Q \\subset \\R}\n$$", sideMd: "$\\N \\subset \\Z$\n\nכל טבעי הוא גם שלם.", figure: null, progress: { n: 2, of: 5 } };
+const step: StepData = {
+  ...base, view: "step", titleMd: L("המספרים הממשיים", "The real numbers"), figure: null, progress: { n: 2, of: 5 },
+  bodyMd: `\`\`\`rows
+${L("טבעיים", "Naturals")} | \\N = \\{1, 2, 3, 4, \\dots\\}
+${L("שלמים", "Integers")} | \\Z = \\{\\dots, -2, -1, 0, 1, 2, \\dots\\}
+${L("רציונליים", "Rationals")} | \\Q = \\left\\{ \\frac{m}{n} \\;\\middle|\\; \\substack{m, n \\in \\Z \\\\ n \\neq 0} \\right\\}
+${L("ממשיים", "Reals")} | \\R \\supset \\Q \\cup \\{\\sqrt{2}, \\pi, e\\}
+\`\`\`
+
+> [!definition] ${L("שדה סדור", "Ordered field")}
+> ${L("שדה $F$ עם יחס $<$ כך שלכל", "A field $F$ with a relation $<$ such that for all")} $\\blue{a}, \\green{b}, \\pink{c}$: ${L("אם", "if")} $\\blue{a} < \\green{b}$ ${L("אז", "then")} $\\blue{a} + \\pink{c} < \\green{b} + \\pink{c}$.
+
+$$
+\\boxed{\\N \\subset \\Z \\subset \\Q \\subset \\R}
+$$`,
+  sideMd: `$\\N \\subset \\Z$\n\n${L("כל טבעי הוא גם שלם.", "Every natural number is an integer.")}`,
+};
 const initial: CardData = ({ lesson, mcq, open, figure, step, exercise, practice: practiceBase, settings } as Record<string, CardData>)[q.get("view") ?? ""] ?? home;
 const said: string[] = [];
 let mode = "inline";
@@ -73,7 +91,7 @@ const noPlan: CourseData = { ...course, hasPlan: false, pct: 0, stagesDone: 0, s
 (window as unknown as { __reqs: unknown[] }).__reqs = reqs;
 const host: Host = {
   callTool: async (name, args) => (name === "shalav_request" && reqs.push(args), name === "course_create_request" && (created = true), {
-    structuredContent: practiceReply[name] ?? (name === "shalav_settings" ? settings : name === "settings_update" ? { ...settings, learning: { ...settings.learning, minExercises: 3 } } : undefined) ?? (name === "course_lookup" ? found : name === "shalav_home" ? home : name === "shalav_course" ? (created ? noPlan : course) : name === "course_create_request" ? { ok: true, number: "01040195" } : name === "files_list" ? files : name === "lesson_state" ? lesson : name === "stage_complete" ? { ...lesson, status: "completed_override" } : name === "stage_reopen" ? lesson : name === "check_answer" ? { selectedIndex: 1, correct: false, correctIndex: 0, explanationMd: "Since $1/n \\to 0$." } : name === "attachment_upload" ? { files: [{ sha256: "a".repeat(64), mediaType: "image/jpeg" }] } : name === "exercise_grade_request" || name === "exercise_state" ? graded : name === "moodle_import" ? { ok: true } : name === "course_status" ? { state: "running", step: "plan", unit: { k: 1, n: 4 }, pending: 1 } : { ok: true }),
+    structuredContent: practiceReply[name] ?? (name === "shalav_settings" ? settings : name === "settings_update" ? { ...settings, learning: { ...settings.learning, minExercises: 3 } } : undefined) ?? (name === "course_lookup" ? found : name === "shalav_home" ? home : name === "shalav_course" ? (created ? noPlan : course) : name === "course_create_request" ? { ok: true, number: "01040195" } : name === "files_list" ? files : name === "lesson_state" ? lesson : name === "stage_complete" ? { ...lesson, status: "completed_override" } : name === "stage_reopen" ? lesson : name === "check_answer" ? { selectedIndex: 1, correct: false, correctIndex: 0, explanationMd: L("כי $1/n \\to 0$.", "Since $1/n \\to 0$.") } : name === "attachment_upload" ? { files: [{ sha256: "a".repeat(64), mediaType: "image/jpeg" }] } : name === "exercise_grade_request" || name === "exercise_state" ? graded : name === "moodle_import" ? { ok: true } : name === "course_status" ? { state: "running", step: "plan", unit: { k: 1, n: 4 }, pending: 1 } : { ok: true }),
   }),
   say: async (t) => void said.push(t),
   context: () => ({ theme: q.get("theme") ?? undefined, availableDisplayModes: ["inline", "pip"], displayMode: mode }),

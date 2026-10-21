@@ -48,8 +48,10 @@ export type MoodleState = {
   url: string | null;
   connected: boolean;
   busy: "login" | "sync" | null;
-  last: { course: string; added: number; duplicate: number; skipped: number; error: string | null } | null;
+  /** `code` names the failure for the card (i18n moodle.err.*); `error` is the English detail for the model. */
+  last: { course: string; added: number; duplicate: number; skipped: number; error: string | null; code?: MoodleError } | null;
 };
+export type MoodleError = "chrome" | "closed" | "timeout" | "http" | "noCourse" | "login" | "failed";
 /** Lesson card (shalav_start_lesson / app-only lesson_state). */
 export type LessonData = Base & {
   view: "lesson";
