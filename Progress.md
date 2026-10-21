@@ -493,3 +493,19 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - In paragraphs, "…: $a$" breaks the line after the colon.
 - When side by side does not fit (measured), names go above their formula and reasons below it.
 - Checks: typecheck/lint clean, 136 unit, 31 e2e.
+
+## M27 — arrows in Hebrew sentences, advanced slides
+
+- An inline formula in a Hebrew sentence (a paragraph, a rows line woven with words, a note) is split at its top-level logical arrows (⇒ ⇐ ⟹ ⟸ ⇔ ⟺ \implies \iff):
+  - each statement becomes its own formula, and the arrows are mirrored (`\mathrel{…}`, so a second pass leaves them);
+  - "a<b וגם b<c ⇒ a<c" now reads from the right as a<b, וגם, b<c, then a<c.
+  - An arrow keeps a no-break space to the statement it points to.
+  - These stay as they are: nested arrows, `\to`, display formulas and English sentences.
+- A display formula or rows block wider than its board shrinks to fit, down to 60% (`fitWidth`).
+- A long box title wraps inside the box.
+- Rows have room for handwriting overhang.
+- svg figures are `dir="ltr"`: in Hebrew cards an inherited rtl had flipped every `text-anchor`.
+- `e2e/advanced.spec.ts` covers the samples in `src/cards/test-advanced.ts` (`?view=step&sample=log|trig|tan|integral|parts`):
+  - checks: no KaTeX errors, no raw TeX, nothing cut off sideways, figures drawn;
+  - screenshots go to `e2e/shots/test6/`.
+- Checks: lint/typecheck clean, 136 unit, 41 e2e.
