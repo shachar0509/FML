@@ -54,12 +54,16 @@ for (const lang of ["he", "en"] as const)
     await page.getByPlaceholder("01040195").fill("01040195");
     await page.keyboard.press("Enter");
     await expect(page.getByText(lang === "he" ? "תיאור הקורס מהקטלוג" : "Catalog description")).toBeVisible();
-    await expect(page.getByText(lang === "he" ? /שלב תבנה תוכנית לימוד מפורטת/ : /builds a detailed step-by-step study plan/)).toBeVisible();
+    await expect(page.getByText(lang === "he" ? /ואז לבנות את תוכנית הלימוד/ : /then build the study plan/)).toBeVisible();
     const bad = (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations.filter((v) => v.impact === "serious" || v.impact === "critical");
     expect(bad).toEqual([]);
     await page.screenshot({ path: `e2e/shots/card-add-${lang}.png` });
     await page.getByRole("button", { name: lang === "he" ? /הוספת קורס/ : /Add course/ }).click();
-    await expect(page.getByRole("status")).toBeVisible(); // build checklist
+    // the course opens without a plan and nothing is sent to Claude: files first, Build plan when ready
+    await expect(page.getByText(lang === "he" ? "השלב הבא: קבצי הקורס" : "Next: your course files")).toBeVisible();
+    await expect(page.getByText("lecture1.pdf")).toBeVisible();
+    expect(await page.evaluate(() => (window as unknown as { __said: string[] }).__said)).toEqual([]);
+    await page.getByRole("button", { name: lang === "he" ? "בניית תוכנית" : "Build plan" }).click();
     expect(await page.evaluate(() => (window as unknown as { __said: string[] }).__said)).toEqual([lang === "he" ? "▶️ המשך" : "▶️ Continue"]);
     await expect(page.getByText(lang === "he" ? "לחצו Enter" : "Press Enter")).toBeVisible();
   });
@@ -77,7 +81,7 @@ for (const lang of ["he", "en"] as const)
       await expect(page.getByText("lecture2.pdf")).toBeVisible(); // Files section
       await expect(page.getByText(lang === "he" ? "5 תרגילים" : "5 exercises found")).toBeVisible();
       await expect(page.getByRole("button", { name: lang === "he" ? "ייבוא קבצי הקורס" : "Import course files" })).toBeEnabled();
-      await page.getByRole("button", { name: lang === "he" ? "התחל אינדוקס" : "Start indexing" }).click();
+      await page.getByRole("button", { name: lang === "he" ? "עדכון התוכנית" : "Update plan" }).click();
       expect((await page.evaluate(() => (window as unknown as { __said: string[] }).__said)).at(-1)).toBe(lang === "he" ? "▶️ המשך" : "▶️ Continue");
       await page.waitForTimeout(400);
       await page.screenshot({ path: `e2e/shots/card-course-${lang}-${theme}.png` });

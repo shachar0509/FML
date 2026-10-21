@@ -70,7 +70,7 @@ export function Cards({ host }: { host: Host }) {
       );
     if (shown.view === "add")
       return (
-        <AddCourse example={shown.example} callTool={callTool} go={ask} open={(n) => open(n, true)} back={back ?? home} />
+        <AddCourse example={shown.example} callTool={callTool} open={(n) => open(n, true)} back={back ?? home} />
       );
     if (shown.view === "course")
       return (

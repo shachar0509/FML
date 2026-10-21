@@ -31,7 +31,7 @@ const course: CourseData = {
 };
 const found: LookupResult = { status: "found", entry: { courseNumber: "01040195", nameHe: "חשבון אינפיניטסימלי 1", credits: 5.5, faculty: "מתמטיקה", syllabusHe: "קדם: 01040031\nסדרות, גבולות, רציפות" } };
 const files: FilesData = {
-  view: "files", language: lang, theme: "system", number: "01040195", hasPlan: true, canIndex: true, canImprove: true, improving: null, moodle: { url: "https://moodle.example.ac.il/", connected: false, busy: null, last: null },
+  view: "files", language: lang, theme: "system", number: "01040195", moodle: { url: "https://moodle.example.ac.il/", connected: false, busy: null, last: null },
   materials: [{ sha: "a1", name: "lecture1.pdf", pages: 12, status: "indexed", error: null, exercises: 0 }, { sha: "a2", name: "lecture2.pdf", pages: 9, status: "pending", error: null, exercises: 0 }],
   exercises: [{ sha: "b1", name: "hw1.pdf", pages: 3, status: "indexed", error: null, exercises: 5 }],
 };
@@ -68,11 +68,13 @@ const initial: CardData = ({ lesson, mcq, open, figure, exercise, practice: prac
 const said: string[] = [];
 let mode = "inline";
 const reqs: unknown[] = [];
+let created = false; // after course_create_request the course has no plan yet
+const noPlan: CourseData = { ...course, hasPlan: false, pct: 0, stagesDone: 0, stagesTotal: 0, current: null, canPractice: false, watch: [], units: [] };
 (window as unknown as { __said: string[]; __reqs: unknown[] }).__said = said;
 (window as unknown as { __reqs: unknown[] }).__reqs = reqs;
 const host: Host = {
-  callTool: async (name, args) => (name === "shalav_request" && reqs.push(args), {
-    structuredContent: practiceReply[name] ?? (name === "shalav_settings" ? settings : name === "settings_update" ? { ...settings, learning: { ...settings.learning, minExercises: 3 } } : undefined) ?? (name === "course_lookup" ? found : name === "shalav_home" ? home : name === "shalav_course" ? course : name === "files_list" ? files : name === "lesson_state" ? lesson : name === "stage_complete" ? { ...lesson, status: "completed_override" } : name === "stage_reopen" ? lesson : name === "check_answer" ? { selectedIndex: 1, correct: false, correctIndex: 0, explanationMd: "Since $1/n \\to 0$." } : name === "attachment_upload" ? { files: [{ sha256: "a".repeat(64), mediaType: "image/jpeg" }] } : name === "exercise_grade_request" || name === "exercise_state" ? graded : name === "moodle_import" ? { ok: true } : name === "course_status" ? { state: "running", step: "plan", unit: { k: 1, n: 4 }, pending: 1 } : { ok: true }),
+  callTool: async (name, args) => (name === "shalav_request" && reqs.push(args), name === "course_create_request" && (created = true), {
+    structuredContent: practiceReply[name] ?? (name === "shalav_settings" ? settings : name === "settings_update" ? { ...settings, learning: { ...settings.learning, minExercises: 3 } } : undefined) ?? (name === "course_lookup" ? found : name === "shalav_home" ? home : name === "shalav_course" ? (created ? noPlan : course) : name === "course_create_request" ? { ok: true, number: "01040195" } : name === "files_list" ? files : name === "lesson_state" ? lesson : name === "stage_complete" ? { ...lesson, status: "completed_override" } : name === "stage_reopen" ? lesson : name === "check_answer" ? { selectedIndex: 1, correct: false, correctIndex: 0, explanationMd: "Since $1/n \\to 0$." } : name === "attachment_upload" ? { files: [{ sha256: "a".repeat(64), mediaType: "image/jpeg" }] } : name === "exercise_grade_request" || name === "exercise_state" ? graded : name === "moodle_import" ? { ok: true } : name === "course_status" ? { state: "running", step: "plan", unit: { k: 1, n: 4 }, pending: 1 } : { ok: true }),
   }),
   say: async (t) => void said.push(t),
   context: () => ({ theme: q.get("theme") ?? undefined, availableDisplayModes: ["inline", "pip"], displayMode: mode }),

@@ -41,13 +41,9 @@ export async function listCourses(): Promise<CourseSummary[]> {
   return all.filter((c): c is CourseSummary => !!c).sort((a, b) => a.course.createdAt.localeCompare(b.course.createdAt));
 }
 
-/** Spec 4.3 steps 1 and 2-4. A plan failure keeps the course (planError set); the UI offers "Try again". */
-export async function createCourse(
-  entry: CatalogEntry | ManualEntry,
-  onProgress: (p: CreateProgress) => void,
-): Promise<{ course: CourseJson; planError: string | null }> {
+/** Folders + course.json only; the plan is built later, when the student asks (MCP: "Build plan"). */
+export async function addCourse(entry: CatalogEntry | ManualEntry): Promise<CourseJson> {
   const p = paths(entry.courseNumber);
-  onProgress({ step: "folders" });
   for (const d of [p.materials, p.exercises, p.events, p.history, p.indexFiles, p.attachments]) await fs().mkdir(d);
   const now = nowIso();
   const course: CourseJson = {
@@ -65,6 +61,16 @@ export async function createCourse(
     updatedAt: now,
   };
   await writeJsonAtomic(p.courseJson, course);
+  return course;
+}
+
+/** Spec 4.3 steps 1 and 2-4. A plan failure keeps the course (planError set); the UI offers "Try again". */
+export async function createCourse(
+  entry: CatalogEntry | ManualEntry,
+  onProgress: (p: CreateProgress) => void,
+): Promise<{ course: CourseJson; planError: string | null }> {
+  onProgress({ step: "folders" });
+  const course = await addCourse(entry);
   const { planError } = await buildPlan(course.courseNumber, onProgress);
   return { course: (await loadCourse(course.courseNumber))?.course ?? course, planError };
 }

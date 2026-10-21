@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookOpen, Check, ChevronDown, Circle, Contrast, Dumbbell, Lock } from "lucide-react";
+import { BookOpen, Check, ChevronDown, Circle, Contrast, Dumbbell, Lock, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Bar, Ring, h2, panel } from "../ui";
@@ -49,11 +49,17 @@ export function Course({
   const live = useBuild(running ? data.number : null, callTool, reload);
   const cur = data.units.flatMap((u) => u.stages).find((s) => s.id === data.current);
 
-  async function retry() {
-    await callTool("plan_retry_request", { number: data.number });
+  async function build() {
+    await callTool("plan_build_request", { number: data.number });
     reload();
     void go();
   }
+  const buildButton = (
+    <Button className="self-start" variant={data.hasPlan ? "outline" : "default"} disabled={running} onClick={() => void build()}>
+      <Sparkles className="size-4" aria-hidden />
+      {t(data.hasPlan ? "plan.update" : "plan.build")}
+    </Button>
+  );
 
   return (
     <section className="flex flex-col gap-5" aria-label={data.name}>
@@ -75,23 +81,25 @@ export function Course({
         </div>
       </header>
 
-      {!data.hasPlan && data.build && (
-        <div className={`${panel} flex flex-col gap-3 border-warning/60 p-4`}>
-          {running ? (
-            <Checklist go={go} b={live ?? data.build} />
-          ) : (
-            <>
-              <p className="font-medium">{t("plan.failed")}</p>
-              {data.build.error && (
-                <p className="text-xs text-muted" dir="auto">
-                  {data.build.error}
-                </p>
-              )}
-              <Button className="self-start" onClick={() => void retry()}>
-                {t("courseHome.tryAgain")}
-              </Button>
-            </>
+      {running && data.build && (
+        <div className={`${panel} p-4`}>
+          <Checklist go={go} b={live ?? data.build} />
+        </div>
+      )}
+      {!running && data.build?.state === "failed" && (
+        <div className={`${panel} flex flex-col gap-2 border-danger/50 p-4`} role="alert">
+          <p className="font-medium">{t("plan.failed")}</p>
+          {data.build.error && (
+            <p className="text-xs text-muted" dir="auto">
+              {data.build.error}
+            </p>
           )}
+        </div>
+      )}
+      {!data.hasPlan && !running && (
+        <div className={`${panel} flex flex-col gap-3 p-4`}>
+          <p className="font-medium">{t("plan.firstTitle")}</p>
+          <p className="text-sm text-muted">{t("plan.firstBody")}</p>
         </div>
       )}
 
@@ -200,7 +208,13 @@ export function Course({
           })}
         </section>
       )}
-      {!running && <Files number={data.number} callTool={callTool} go={go} reload={reload} />}
+      <Files number={data.number} callTool={callTool} reload={reload} live={running} />
+      {!running && (
+        <div className={`${panel} flex flex-col gap-2 p-4`}>
+          <p className="text-sm text-muted">{t(data.hasPlan ? "plan.updateHint" : "plan.buildHint")}</p>
+          {buildButton}
+        </div>
+      )}
     </section>
   );
 }

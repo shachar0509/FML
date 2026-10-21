@@ -12,10 +12,8 @@ import { importFiles, removeFile, scanCourse, type Deps } from "@/core/domain/in
 import { listFileIndexes } from "@/core/domain/ingest/indexStore";
 import { openSource } from "@/core/domain/ingest/pageSource";
 import { createIndexQueue } from "@/core/domain/ingest/queue";
-import { refinePlan } from "@/core/domain/plan/refine";
 import { coursePaths } from "@/core/lib/fs/paths";
 import { useSettings } from "@/stores/settings";
-import type { BridgeGateway } from "./bridge";
 import { native, openFolder } from "./native";
 import type { MoodleState } from "@/cards/types";
 import { CARDS_URI } from "./resources";
@@ -28,11 +26,11 @@ const role = z.enum(["material", "exercises"]);
 const out = (text: string, structuredContent: object) => ({ content: [{ type: "text" as const, text }], structuredContent: structuredContent as Record<string, unknown> });
 const fail = (text: string) => ({ ...out(text, { ok: false, error: text }), isError: true });
 
-// Indexing starts only on "Start indexing" (it spends the student's subscription), so import never enqueues.
+// Indexing starts only on "Build plan" (it spends the student's subscription), so import never enqueues.
 export const importDeps = (): Deps => ({ native, open: openSource, enqueue: () => undefined, platform: process.platform === "win32" ? "windows" : "macos" });
 
-/** Files and indexing (plan v2 §6.6): chunked upload, open folder, scan, status, Start indexing, Improve plan. */
-export function registerFileTools(server: McpServer, bridge: BridgeGateway, o: { openFolder?: (p: string) => Promise<void>; moodle?: () => MoodleState } = {}) {
+/** Files and indexing (plan v2 §6.6): chunked upload, open folder, scan, status; indexing runs inside "Build plan" (courseTools). */
+export function registerFileTools(server: McpServer, o: { openFolder?: (p: string) => Promise<void>; moodle?: () => MoodleState } = {}) {
   const root = () => useSettings.getState().settings.dataRoot;
   const lang = () => useSettings.getState().settings.language;
   const prog = new Map<string, { done: number; total: number }>();
@@ -46,22 +44,16 @@ export function registerFileTools(server: McpServer, bridge: BridgeGateway, o: {
   });
   queue.subscribe((e) => (e.done === undefined ? prog.delete(e.sha256) : prog.set(e.sha256, { done: e.done, total: e.total ?? 0 })));
   const deps = importDeps;
-  const improving = new Map<string, { state: "running" | "failed"; error: string | null }>();
 
   async function list(number: string): Promise<FilesData> {
     await scanCourse(number, deps());
     const recs = await listFileIndexes(number);
     const row = (r: (typeof recs)[number]) => ({ sha: r.sha256, name: r.fileName, pages: r.pageCount, status: r.status, error: r.error, exercises: r.exercises.length, ...prog.get(r.sha256) });
-    const plan = (await loadCourse(number))?.plan;
     const { language, theme } = useSettings.getState().settings;
     return {
       view: "files", language, theme, number,
       materials: recs.filter((r) => r.role === "material").map(row),
       exercises: recs.filter((r) => r.role === "exercises").map(row),
-      hasPlan: !!plan,
-      canIndex: !!plan && recs.some((r) => r.status === "pending" || r.status === "failed"),
-      canImprove: !!plan && recs.some((r) => r.role === "material" && r.status === "indexed"),
-      improving: improving.get(number) ?? null,
       moodle: o.moodle?.() ?? null,
     };
   }
@@ -114,33 +106,22 @@ export function registerFileTools(server: McpServer, bridge: BridgeGateway, o: {
     return out("ok", { ok: true });
   });
 
-  async function improve(number: string) {
-    const c = await loadCourse(number);
-    if (!c?.plan) return;
-    improving.set(number, { state: "running", error: null });
-    try {
-      await refinePlan({ gw: claude(), course: c.course, lang: lang() });
-      improving.delete(number);
-    } catch (e) {
-      improving.set(number, { state: "failed", error: e instanceof Error ? e.message : String(e) });
-      throw e;
-    }
-  }
-
-  registerAppTool(server, "files_start_indexing", { title: "Start indexing", description: "Index the pending files (an AI job; the model must then call shalav_next_job).", inputSchema: numIn, _meta: both }, async ({ number }) => {
-    if (!(await loadCourse(number))?.plan) return fail("This course has no study plan yet.");
+  /** Index every pending/failed file against the current plan (part of "Build plan"); returns how many files are indexed after it. */
+  async function indexPending(number: string, on: (k: number, n: number) => void = () => undefined) {
     const todo = (await listFileIndexes(number)).filter((r) => r.status === "pending" || r.status === "failed");
-    if (!todo.length) return out("Nothing to index.", { ok: true, count: 0 });
-    // One Enter does both: index, then refine the plan from what was indexed (M15).
-    bridge.run(`Indexing files of ${number}`, async () => {
+    const left = new Set(todo.map((r) => r.sha256));
+    on(0, todo.length);
+    const off = queue.subscribe((e) => {
+      if (e.done === undefined && left.delete(e.sha256)) on(todo.length - left.size, todo.length);
+    });
+    try {
       for (const r of todo) await queue.retry(number, r.sha256);
       await queue.idle();
-      const ok = (await listFileIndexes(number)).some((r) => r.status === "indexed" && todo.some((x) => x.sha256 === r.sha256));
-      if (ok) await improve(number);
-      return todo.length;
-    }, (n) => [{ type: "text", text: `Indexed ${n} file(s) of ${number} and updated the plan from them. Tell the student; the card shows the result.` }]).done.catch(() => undefined);
-    return out(`Started indexing ${todo.length} file(s). Call shalav_next_job now.`, { ok: true, count: todo.length, next: "Call shalav_next_job now." });
-  });
+    } finally {
+      off?.();
+    }
+    return (await listFileIndexes(number)).filter((r) => r.status === "indexed").length;
+  }
 
   registerAppTool(server, "file_remove", { title: "Remove a file", description: "Card-only: move a course file to the trash and drop its index.", inputSchema: z.object({ number: num, sha: z.string() }), _meta: appOnly }, async ({ number, sha }) => {
     const r = (await listFileIndexes(number)).find((x) => x.sha256 === sha);
@@ -149,12 +130,5 @@ export function registerFileTools(server: McpServer, bridge: BridgeGateway, o: {
     return out("ok", { ok: true });
   });
 
-  registerAppTool(server, "plan_improve_request", { title: "Improve the plan", description: "Refine the study plan from the indexed materials (an AI job).", inputSchema: numIn, _meta: both }, async ({ number }) => {
-    const c = await loadCourse(number);
-    if (!c?.plan) return fail("This course has no study plan yet.");
-    if (improving.get(number)?.state === "running") return out("Already improving.", { ok: true });
-    improving.set(number, { state: "running", error: null }); // the card sees it at once
-    bridge.run(`Improving the study plan for ${number}`, () => improve(number), () => [{ type: "text", text: `The plan for ${number} was updated from the materials. Tell the student.` }]).done.catch(() => undefined);
-    return out("Started improving the plan. Call shalav_next_job now.", { ok: true, next: "Call shalav_next_job now." });
-  });
+  return { indexPending };
 }

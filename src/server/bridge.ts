@@ -100,6 +100,11 @@ export class BridgeGateway implements ClaudeGateway {
     });
   }
 
+  /** No AI job queued or waiting for an answer. */
+  idle(): boolean {
+    return this.jobs.size === 0;
+  }
+
   pending(): number {
     return [...this.jobs.values()].filter((j) => j.state === "queued").length;
   }

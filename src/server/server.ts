@@ -50,6 +50,7 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
             credits: course.credits,
             pct: t && t.stagesTotal ? Math.round((100 * t.stagesCompleted) / t.stagesTotal) : 0,
             stage: stage ? `${stage.id} · ${stage.title}` : null,
+            building: builds.building(course.courseNumber),
           };
         }),
       };
@@ -70,9 +71,9 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
     },
   );
 
-  registerCourseTools(server, bridge, catalog);
   const moodle = registerMoodleTools(server, moodleMake);
-  registerFileTools(server, bridge, { moodle });
+  const files = registerFileTools(server, { moodle });
+  const builds = registerCourseTools(server, bridge, files.indexPending, catalog);
   const exercises = registerExerciseTools(server, bridge);
   registerLearnTools(server, bridge, exercises);
   registerPracticeTools(server, bridge, exercises);
@@ -107,9 +108,11 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
     "shalav_next_job",
     { title: "Next Shalav job", description: "Fetch what the student asked for in a Shalav card, or the next pending Shalav AI job (instructions and the answer format). Call it when the student sends \"▶️ המשך\" / \"▶️ Continue\" or a card says work is pending." },
     async () => {
-      const req = inbox.shift();
+      // Pending AI jobs first: a lesson started mid-build would end the turn and stall the build.
+      const req = bridge.idle() ? inbox.shift() : undefined;
       if (req) return { content: [{ type: "text" as const, text: `Student request from the card:\n${req}${bridge.pending() || inbox.length ? "\n\nAfterwards call shalav_next_job again: more is pending." : ""}` }] };
-      return { content: await bridge.nextWait() };
+      const c = await bridge.nextWait();
+      return { content: inbox.length && bridge.idle() ? [...c, { type: "text" as const, text: "Then call shalav_next_job again: the student asked for something in a card." }] : c };
     },
   );
   server.registerTool(
@@ -119,7 +122,10 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
       description: "Answer a Shalav job. Pass `input` (matching the job's schema) or `text`. Returns the next job or the final result.",
       inputSchema: z.object({ jobId: z.number(), input: z.record(z.string(), z.unknown()).optional(), text: z.string().optional() }),
     },
-    (a) => bridge.submit(a),
+    async (a) => {
+      const r = await bridge.submit(a);
+      return inbox.length && bridge.idle() ? { ...r, content: [...r.content, { type: "text" as const, text: "Then call shalav_next_job again: the student asked for something in a card." }] } : r;
+    },
   );
 
   const prompt = (name: string, title: string, text: string) =>

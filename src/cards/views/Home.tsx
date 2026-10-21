@@ -1,4 +1,4 @@
-import { BookOpen, ChevronLeft, ChevronRight, Landmark, Plus, Settings } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, Landmark, Loader2, Plus, Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { UNIVERSITIES, UNIVERSITY_IDS, type UniversityId } from "@/core/universities";
@@ -104,6 +104,12 @@ export function Home({
                 <span dir="ltr">{c.number}</span>
                 <span aria-hidden>·</span>
                 <span>{t("home.credits", { count: c.credits })}</span>
+                {c.building && (
+                  <span className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                    <Loader2 className="size-3 animate-spin motion-reduce:animate-none" aria-hidden />
+                    {t("home.building")}
+                  </span>
+                )}
                 {c.stage && (
                   <span
                     className="max-w-full truncate rounded-full bg-border/70 px-2 py-0.5 text-xs text-fg"

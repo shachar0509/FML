@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Waiting } from "./Waiting";
 import { Check, FileText, FolderOpen, Loader2, Trash2, Upload } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Input } from "@/core/components/ui/input";
-import type { FileRow, FilesData, Go } from "../types";
+import type { FileRow, FilesData } from "../types";
 import { h2, panel } from "../ui";
 
 type Tool = (
@@ -52,13 +51,14 @@ function Chip({ f }: { f: FileRow }) {
 export function Files({
   number,
   callTool,
-  go,
   reload,
+  live = false,
 }: {
   number: string;
   callTool: Tool;
-  go: Go;
   reload: () => void;
+  /** a plan build is running: follow the indexing statuses */
+  live?: boolean;
 }) {
   const { t } = useTranslation();
   const [d, setD] = useState<FilesData | null>(null);
@@ -76,36 +76,18 @@ export function Files({
     );
     return () => void (on = false);
   }, [callTool, number]);
-  const active =
-    !!d &&
-    (d.improving?.state === "running" ||
-      [...d.materials, ...d.exercises].some((f) => f.status === "indexing"));
+  const active = !!d && [...d.materials, ...d.exercises].some((f) => f.status === "indexing");
   const moodleBusy = !!d?.moodle?.busy;
   useEffect(() => {
-    if (!active && !moodleBusy) return;
+    if (!active && !moodleBusy && !live) return;
     const id = setInterval(() => void refresh(), 2500);
     return () => clearInterval(id);
-  }, [active, moodleBusy, refresh]);
+  }, [active, moodleBusy, live, refresh]);
   const wasActive = useRef(false);
   useEffect(() => {
     if (wasActive.current && !active) reload(); // plan may have changed
     wasActive.current = active;
   }, [active, reload]);
-
-  // A Moodle import that added files goes straight on to indexing (one Enter for import + index + plan update).
-  const wasMoodle = useRef(false);
-  useEffect(() => {
-    if (
-      wasMoodle.current &&
-      !moodleBusy &&
-      d?.moodle?.last?.added &&
-      !d.moodle.last.error &&
-      d.canIndex
-    )
-      void start();
-    wasMoodle.current = moodleBusy;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [moodleBusy]);
 
   async function upload(role: Role, files: File[]) {
     setBusy(true);
@@ -147,17 +129,6 @@ export function Files({
     if (r.isError)
       setMsg((r.structuredContent as { error?: string } | undefined)?.error ?? t("moodle.failed"));
     await refresh();
-  }
-
-  async function start() {
-    const r = await callTool("files_start_indexing", { number });
-    await refresh();
-    if (!r.isError) void go();
-  }
-  async function improve() {
-    await callTool("plan_improve_request", { number });
-    await refresh();
-    void go();
   }
 
   if (!d) return null;
@@ -292,23 +263,6 @@ export function Files({
           {msg}
         </p>
       )}
-      {d.improving?.state === "failed" && (
-        <p className="text-sm text-danger" role="alert">
-          {t("courseHome.improveFailed")}
-        </p>
-      )}
-      {active && <Waiting go={go} />}
-      {!d.hasPlan && (d.materials.length > 0 || d.exercises.length > 0) && (
-        <p className="text-sm text-muted">{t("files.needPlan")}</p>
-      )}
-      <div className="flex flex-wrap gap-3">
-        <Button disabled={!d.canIndex || active} onClick={() => void start()}>
-          {t("files.start")}
-        </Button>
-        <Button variant="outline" disabled={!d.canImprove || active} onClick={() => void improve()}>
-          {t("courseHome.improve")}
-        </Button>
-      </div>
     </section>
   );
 }

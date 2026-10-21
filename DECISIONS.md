@@ -153,3 +153,7 @@
 
 ## M16 — figures in lessons
 - Figures go through a tool (`show_figure`) and a card, not fenced blocks: Shalav does not render Claude's chat text. Only plot/geometry/SVG are in the card bundle; Mermaid + WaveDrom would make every card 9.4 MB instead of 3.3 MB. SVG covers trees, automata and circuits.
+
+## M17 — plan on demand
+- "Build plan" always ends with a coverage refine (when files are indexed) instead of building the plan straight from the files: indexing maps pages/exercises to stage ids, so a plan must exist first. Refine never deletes stages, so progress survives an update.
+- AI jobs before card requests in `shalav_next_job`: the build only advances while Claude is inside a turn; lessons and grading wait until it finishes (Claude cannot run two things at once in one chat).

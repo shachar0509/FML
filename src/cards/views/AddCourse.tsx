@@ -2,13 +2,11 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Input } from "@/core/components/ui/input";
-import type { BuildStatus, LookupResult, Go } from "../types";
-import { Checklist } from "./Checklist";
-import { useBuild } from "./useBuild";
+import type { LookupResult } from "../types";
 import { panel } from "../ui";
 
 type Entry = Extract<LookupResult, { status: "found" }>["entry"];
-type Phase = "input" | "looking" | "preview" | "manual" | "building";
+type Phase = "input" | "looking" | "preview" | "manual";
 type Tool = (
   name: string,
   args?: Record<string, unknown>,
@@ -17,13 +15,11 @@ type Tool = (
 export function AddCourse({
   example,
   callTool,
-  go,
   open,
   back,
 }: {
   example: string;
   callTool: Tool;
-  go: Go;
   open: (n: string) => void;
   back: () => void;
 }) {
@@ -37,7 +33,6 @@ export function AddCourse({
   const [entry, setEntry] = useState<Entry | null>(null);
   const [more, setMore] = useState(false);
   const [man, setMan] = useState({ nameHe: "", credits: "", syllabusHe: "" });
-  const build = useBuild(phase === "building" ? number : null, callTool, () => open(number));
 
   async function lookup() {
     setError(null);
@@ -64,8 +59,7 @@ export function AddCourse({
   async function create(manual?: { nameHe: string; credits: number; syllabusHe: string }) {
     const r = await callTool("course_create_request", { number: number || raw, manual });
     if (r.isError) return setError(t("api.failed"));
-    setPhase("building");
-    void go();
+    open((r.structuredContent as { number?: string } | undefined)?.number ?? number);
   }
 
   const credits = Number(man.credits);
@@ -180,11 +174,6 @@ export function AddCourse({
             </Button>
           </div>
         </form>
-      )}
-      {phase === "building" && (
-        <div className={`${panel} p-4`}>
-          <Checklist go={go} b={(build ?? { state: "running" }) as BuildStatus} />
-        </div>
       )}
     </section>
   );

@@ -340,3 +340,11 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - The sticky card header has a back arrow (→ in Hebrew, ← in English) on every screen except the home list. It goes back through the screens opened inside the card; with no history it goes up (lesson/exercise/practice → the course, course/settings/add/questions/figures → home).
 - The in-view back links (course, practice, settings) are gone; a course reload or a finished plan build replaces the screen instead of adding history.
 - Checks: typecheck/lint clean, 123 unit, 30 e2e (new back-navigation test).
+
+### M17 — Plan only when the student asks; "Build plan" / "Update plan" covers every topic (done; 🧪 pending)
+- Adding a course only creates it (folders + course.json, `addCourse`); no AI job and no "▶️ המשך". The course card opens with "Next: your course files": upload materials/example exercises or import from Moodle (the Moodle import no longer starts indexing by itself).
+- One button at the bottom of the course card: "Build plan" (no plan) / "Update plan". New `plan_build_request` (one bridge operation) runs: generate the plan from the syllabus if there is none → index all pending files against it (indexing needs stage ids) → refine with the materials **and the example exercises** so every topic has a stage (the refine prompt now lists the exercises and a coverage rule; it adds stages, never deletes). The result says how many stages were added.
+- Removed `files_start_indexing`, `plan_improve_request`, `plan_retry_request` and the FilesData flags (canIndex/canImprove/improving).
+- During a build the student can keep using the cards: the course card shows the checklist (plan → read files k/n → coverage) and still shows the files; Home shows a "Building plan…" pill; the back arrow works. `shalav_next_job` now serves pending AI jobs before card requests (a lesson started mid-build would end the turn and stall the build); a card request waits and Claude is told to call shalav_next_job again once the jobs are done.
+- Checks: typecheck/lint clean, unit + 30 e2e green, pack + smoke.
+- 🧪 Claude Desktop: add a course → no message; upload files / Moodle → Build plan → Enter → plan built from files; add a file → Update plan → new topics get stages.

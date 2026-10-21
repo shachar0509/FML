@@ -143,21 +143,27 @@
     "manualEntry": "Your university has no online catalog in Shalav yet. Enter the course details from the syllabus.",
     "notFound": "We couldn't find this course in the catalog. You can enter the details manually.",
     "catalogLabel": "Catalog description",
-    "afterAdd": "After you add the course, Shalav builds a detailed step-by-step study plan (a few minutes).",
+    "afterAdd": "After you add the course you can add its files (or import them from Moodle), then build the study plan.",
     "back": "Back to courses",
     "checking": "Checking the number…",
     "exists": "This course was already added."
   },
   "plan": {
-    "building": "Building a detailed study plan… this can take a few minutes.",
+    "building": "Building the study plan… you can keep using Shalav meanwhile.",
     "failed": "The study plan could not be built.",
     "detailing": "Detailing unit {{k}} of {{n}}",
     "step": {
-      "folders": "Creating folders",
       "plan": "Building the study plan",
-      "validate": "Validating and saving the plan",
-      "progress": "Preparing progress tracking"
-    }
+      "index": "Reading your course files",
+      "cover": "Making sure every topic is covered"
+    },
+    "firstTitle": "Next: your course files",
+    "firstBody": "Add lecture notes and example exercises below, or import them from Moodle. When you are ready, press Build plan; Shalav builds it from the syllabus and your files so no topic is left out.",
+    "buildHint": "Ready? The plan is built from the syllabus and all the files above.",
+    "updateHint": "Added files? Update the plan: Shalav reads the new files and makes sure every topic in them and in the example exercises has a stage.",
+    "build": "Build plan",
+    "update": "Update plan",
+    "reading": "Reading file {{k}} of {{n}}"
   },
   "advance": {
     "title": "Move to the next stage?",
@@ -306,12 +312,12 @@
     "name": "Course name",
     "creditsLabel": "Credits",
     "syllabus": "Syllabus",
-    "syllabusHint": "At least 100 characters ({{n}})"
+    "syllabusHint": "At least 100 characters ({{n}})",
+    "building": "Building plan…"
   },
   "courseHome": {
     "missing": "Course not found.",
     "stagesOf": "{{k}} of {{n}} stages",
-    "tryAgain": "Try again",
     "practiceLocked": "Practice will open soon",
     "plan": "Study plan",
     "objectives": "Objectives",
@@ -321,9 +327,6 @@
     "watchCount": "{{count}} times",
     "watchLast": "last seen",
     "again": "Learn again",
-    "improve": "Improve plan using my materials",
-    "improved": "The plan was updated from your materials.",
-    "improveFailed": "Couldn't improve the plan. Nothing was changed.",
     "new": "New"
   },
   "files": {
@@ -348,8 +351,6 @@
     "rejected": "{{name}}: {{error}}",
     "largeConfirm": "{{name}} has {{pages}} pages. Indexing will use about {{tokens}} input tokens. Continue?",
     "uploading": "Adding files…",
-    "needPlan": "Indexing starts once the study plan is ready.",
-    "start": "Start indexing",
     "openFolder": "Open folder"
   },
   "render": {

@@ -84,7 +84,7 @@ export function registerMoodleTools(server: McpServer, make?: (profileDir: strin
     "moodle_import",
     {
       title: "Import from Moodle",
-      description: "Download the course's files from the student's university Moodle into the course (a browser window opens once so the student can log in, including two-step verification). Runs in the background; poll files_list, then offer files_start_indexing. `url` is the Moodle address when the university has no built-in one.",
+      description: "Download the course's files from the student's university Moodle into the course (a browser window opens once so the student can log in, including two-step verification). Runs in the background; poll files_list. The student then presses Build/Update plan when ready (plan_build_request). `url` is the Moodle address when the university has no built-in one.",
       inputSchema: z.object({ number: z.string().regex(COURSE_ID_RE), url: z.string().max(300).optional() }),
       _meta: both,
     },
@@ -108,8 +108,8 @@ export function registerMoodleTools(server: McpServer, make?: (profileDir: strin
       const job = run(number, base);
       await Promise.race([job, new Promise((r) => setTimeout(r, 20_000))]);
       const s = state();
-      const text = s.busy ? (s.busy === "login" ? "A browser window opened: the student must log in there. Poll files_list for progress." : "Importing in the background. Poll files_list for progress.") : s.last?.error ? `Import failed: ${s.last.error}` : `Imported ${s.last?.added ?? 0} new file(s) from "${s.last?.course}". Offer files_start_indexing.`;
-      return out(text, { ok: !s.last?.error, started: true, state: s, next: "When busy is null, call files_start_indexing." });
+      const text = s.busy ? (s.busy === "login" ? "A browser window opened: the student must log in there. Poll files_list for progress." : "Importing in the background. Poll files_list for progress.") : s.last?.error ? `Import failed: ${s.last.error}` : `Imported ${s.last?.added ?? 0} new file(s) from "${s.last?.course}". The student presses Build/Update plan when ready.`;
+      return out(text, { ok: !s.last?.error, started: true, state: s, next: "When busy is null, tell the student; they press Build/Update plan when ready." });
     },
   );
 

@@ -6,7 +6,7 @@ export type HomeData = {
   theme: "system" | "light" | "dark";
   /** null until the student has chosen (the card then shows the picker). */
   university: "technion" | "huji" | "reichman" | "braude" | null;
-  courses: { number: string; name: string; credits: number; pct: number; stage: string | null }[];
+  courses: { number: string; name: string; credits: number; pct: number; stage: string | null; building?: boolean }[];
 };
 export type Base = { language: "he" | "en"; theme: "system" | "light" | "dark" };
 export type AddData = Base & { view: "add"; example: string };
@@ -27,7 +27,7 @@ export type CourseData = Base & {
   watch: { label: string; count: number; stageIds: string[] }[];
   units: { id: string; title: string; stages: Stage[] }[];
 };
-export type BuildStatus = { state: "none" | "running" | "done" | "failed"; step?: "folders" | "plan" | "validate" | "progress"; unit?: { k: number; n: number }; error?: string | null; pending?: number };
+export type BuildStatus = { state: "none" | "running" | "done" | "failed"; step?: "plan" | "index" | "cover"; unit?: { k: number; n: number }; error?: string | null; pending?: number };
 export type LookupResult =
   | { status: "invalid" }
   /** `manual` = the university has no online catalog; `number` is the normalised course id. */
@@ -41,10 +41,6 @@ export type FilesData = Base & {
   number: string;
   materials: FileRow[];
   exercises: FileRow[];
-  hasPlan: boolean;
-  canIndex: boolean;
-  canImprove: boolean;
-  improving: { state: "running" | "failed"; error: string | null } | null;
   moodle: MoodleState | null;
 };
 /** Moodle import (plan M14b). `url` null = the student must paste their Moodle address. */

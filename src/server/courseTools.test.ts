@@ -34,7 +34,7 @@ it("looks up, creates a course through the bridge with fake jobs, shows the cour
 
   // the course flow is also open to the model (Claude Code has no cards)
   const tools = (await client.listTools()).tools;
-  for (const n of ["course_lookup", "course_create_request", "plan_retry_request", "course_status"])
+  for (const n of ["course_lookup", "course_create_request", "plan_build_request", "course_status"])
     expect(tools.find((t) => t.name === n)?._meta).toMatchObject({ ui: { visibility: ["model", "app"] } });
   expect(tools.find((t) => t.name === "shalav_course")?._meta).toMatchObject({ ui: { resourceUri: "ui://shalav/cards.html" } });
 
@@ -42,8 +42,14 @@ it("looks up, creates a course through the bridge with fake jobs, shows the cour
   expect(sc<LookupResult>(await call("course_lookup", { number: "01040195" })).status).toBe("found");
   expect(sc<LookupResult>(await call("course_lookup", { number: "01040196" })).status).toBe("notfound");
 
+  // adding a course only creates it; the student adds files and builds the plan when ready
   expect((await call("course_create_request", { number: "01040195" })).isError).toBeFalsy();
+  expect(sc<{ state: string }>(await call("course_status", { number: "01040195" })).state).toBe("none");
+  expect(sc<CourseData>(await call("shalav_course", { number: "01040195" }))).toMatchObject({ hasPlan: false, build: null });
+  expect(text(await call("shalav_next_job"))).toContain("No Shalav job");
+  expect((await call("plan_build_request", { number: "01040195" })).isError).toBeFalsy();
   expect(sc<{ state: string }>(await call("course_status", { number: "01040195" })).state).toBe("running");
+  expect(sc<{ courses: { building?: boolean }[] }>(await call("shalav_home")).courses[0]?.building).toBe(true);
 
   // the host model answers the jobs: outline, then the unit details, until the final summary
   let r = await call("shalav_next_job");
@@ -56,9 +62,9 @@ it("looks up, creates a course through the bridge with fake jobs, shows the cour
       ? { courseKind: "computational", units: [unit(35), unit(35)] }
       : { stages: (/stage ids ([S\d, ]+)\./.exec(t.replaceAll("\\n", "\n"))?.[1] ?? "").split(", ").map((sid) => ({ id: sid, objectives: ["a", "b"], newConcepts: [], theorems: [], techniques: [], edgeCases: [], examRelevance: "core", estimatedMinutes: 30 })) };
     r = await client.callTool({ name: "shalav_submit_job", arguments: { jobId: id, input } });
-    if (/The plan for \d+ is ready/.test(text(r))) final = text(r);
+    if (/The study plan for \d+ is built/.test(text(r))) final = text(r);
   }
-  expect(final).toContain("shalav_course");
+  expect(final).toContain("the card shows the plan");
   expect(sc<{ state: string }>(await call("course_status", { number: "01040195" })).state).toBe("done");
 
   const root = useSettings.getState().settings.dataRoot;

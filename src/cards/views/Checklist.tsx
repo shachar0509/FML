@@ -3,11 +3,11 @@ import { useTranslation } from "react-i18next";
 import type { BuildStatus, Go } from "../types";
 import { Waiting } from "./Waiting";
 
-const STEPS = ["folders", "plan", "validate", "progress"] as const;
+const STEPS = ["plan", "index", "cover"] as const;
 /** Plan build checklist (v1 §4.3): spinner -> check. */
 export function Checklist({ b, go }: { b: BuildStatus; go: Go }) {
   const { t } = useTranslation();
-  const cur = STEPS.indexOf(b.step ?? "folders");
+  const cur = STEPS.indexOf(b.step ?? "plan");
   return (
     <div className="flex flex-col gap-3" role="status">
       <p className="font-medium">{t("plan.building")}</p>
@@ -25,8 +25,8 @@ export function Checklist({ b, go }: { b: BuildStatus; go: Go }) {
               <span className="size-4 rounded-full border-2 border-border" aria-hidden />
             )}
             <span className={i > cur ? "text-muted" : ""}>
-              {s === "plan" && i === cur && b.unit
-                ? t("plan.detailing", b.unit)
+              {i === cur && b.unit
+                ? t(s === "plan" ? "plan.detailing" : "plan.reading", b.unit)
                 : t(`plan.step.${s}`)}
             </span>
           </li>

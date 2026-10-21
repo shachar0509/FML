@@ -97,13 +97,19 @@ export async function refinePlan(opts: Opts): Promise<PlanJson> {
     .filter((r) => r.role === "material" && r.status === "indexed")
     .map((r) => `## ${r.fileName}\n` + r.materialPages.map((m) => `p${m.page}: ${m.summary}`).join("\n"))
     .join("\n\n");
+  // ponytail: first 300 chars per exercise, 12k chars in all; enough to name the topic.
+  const exercises = indexes
+    .filter((r) => r.role === "exercises" && r.status === "indexed" && r.exercises.length)
+    .map((r) => `## ${r.fileName}\n` + r.exercises.map((e) => `- ${e.label} [${e.type}]: ${e.statementMd.replace(/\s+/g, " ").slice(0, 300)}`).join("\n"))
+    .join("\n\n")
+    .slice(0, 12_000);
   const byId = new Map(old.stages.map((s) => [s.id, s]));
   const planText = old.units
     .map((u) => `${u.id} ${u.title}\n` + u.stageIds.map((id) => `  ${id} [${byId.get(id)?.kind}] ${byId.get(id)?.title} — ${byId.get(id)?.summary}`).join("\n"))
     .join("\n");
 
   onProgress?.({ step: "plan" });
-  let messages: Message[] = [{ role: "user", content: refinePrompt(course, planText, materials, lang === "he" ? "Hebrew" : "English") }];
+  let messages: Message[] = [{ role: "user", content: refinePrompt(course, planText, materials, lang === "he" ? "Hebrew" : "English", exercises) }];
   let rev: PlanRevision;
   let model: string;
   for (let fix = 0; ; fix++) {
