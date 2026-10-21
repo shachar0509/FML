@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import "@/core/i18n";
-import { balanceDollars, fixMath, hebrewOutOfMath, joinHyphenatedMath, Markdown } from "./Markdown";
+import { balanceDollars, fixMath, rtlArrows, hebrewOutOfMath, joinHyphenatedMath, Markdown } from "./Markdown";
 import { isFigureTag } from "./Figure";
 import { splitRel } from "./Rows";
 
@@ -66,7 +66,15 @@ describe("Markdown", () => {
   });
 
   it("Hebrew inside a formula is pulled out as text; formulas skip the paragraph direction", () => {
-    expect(hebrewOutOfMath(String.raw`a < b \text{ וגם } b < c \Rightarrow a < c`)).toBe(String.raw`$a < b$ וגם $b < c \Rightarrow a < c$`);
+    expect(hebrewOutOfMath(String.raw`a < b \text{ וגם } b < c \Rightarrow a < c`)).toBe(String.raw`$a < b$ וגם $b < c$ $\mathrel{\Leftarrow}$ $a < c$`); // read from the right: b<c, then a<c
+    // a formula in a Hebrew sentence: cut at its top-level arrows, which point the way the sentence reads
+    expect(rtlArrows(String.raw`x>0 \implies x^2>0 \iff y`)).toBe(String.raw`$x>0$ $\mathrel{\impliedby}$ $x^2>0$ $\mathrel{\iff}$ $y$`);
+    expect(rtlArrows(String.raw`\left(a \Rightarrow b\right) \Rightarrow c`)).toBe(String.raw`$\left(a \Rightarrow b\right)$ $\mathrel{\Leftarrow}$ $c$`); // nested stays
+    expect(rtlArrows(String.raw`a_n \to 0`)).toBe(String.raw`$a_n \to 0$`); // a limit is not an implication
+    expect(fixMath(String.raw`לכן $x>0 \Rightarrow x^2>0$ תמיד`)).toBe("לכן $x>0$ $\\mathrel{\\Leftarrow}$\u00a0$x^2>0$ תמיד");
+    expect(fixMath(fixMath("לכן $x>0 \\Rightarrow y$"))).toBe(fixMath("לכן $x>0 \\Rightarrow y$")); // turned once, not back again // the arrow stays with the statement it points to
+    expect(fixMath(String.raw`So $x>0 \Rightarrow x^2>0$.`)).toBe(String.raw`So $x>0 \Rightarrow x^2>0$.`); // English reads left to right
+    expect(fixMath("לכן\n$$\na \\Rightarrow b\n$$")).toBe("לכן\n$$\na \\Rightarrow b\n$$"); // a display formula stands alone
     expect(hebrewOutOfMath("בדיוק אחד מהבאים: a<b, a=b")).toBe("בדיוק אחד מהבאים: $a<b, a=b$");
     expect(fixMath("אם $a<b \\text{ אז } c$ ו-`$x$ שלום`")).toBe("אם $a<b$ אז $c$ ו-`$x$ שלום`"); // code untouched
     expect(fixMath("$$\na \\text{ כאשר } b\n$$")).toBe("```rows\n| a \\text{ כאשר } b\n```"); // Hebrew in display math: a rows line

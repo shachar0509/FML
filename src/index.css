@@ -137,7 +137,9 @@ body {
      beyond the formula columns, so such a line never widens (and misaligns) them; a reason wraps when space is short. */
   grid-template-columns: max-content max-content max-content max-content max-content auto minmax(0, 1fr);
   align-items: center;
-  margin: 1em 0;
+  margin: 1em -0.35em;
+  /* room for handwriting that overhangs its box (a cursive ז), which the scroll box would clip */
+  padding-inline: 0.35em;
   overflow-x: auto;
 }
 .board-rows[data-dir="rtl"] {
@@ -226,10 +228,13 @@ body {
   border-radius: 14px;
   background: var(--card);
 }
+/* The label sits on the box's top border; a long title wraps inside the box instead of over its text. */
 .board-box-tab {
-  position: absolute;
-  top: -0.8em;
-  inset-inline-start: 0.8em;
+  position: relative;
+  display: table;
+  max-width: 100%;
+  margin-block: -1.75em 0;
+  margin-inline-start: -0.2em;
   padding: 0 0.45em;
   background: var(--card);
   color: var(--box, var(--primary));

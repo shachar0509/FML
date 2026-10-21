@@ -12,5 +12,6 @@ export function Svg({ source }: { source: string; dark: boolean }) {
     },
     [source],
   );
-  return <div ref={ref} className={boxClass} />;
+  // SVG coordinates run left to right: in a Hebrew card an inherited rtl would flip every text-anchor (labels land on the wrong side)
+  return <div ref={ref} className={boxClass} dir="ltr" />;
 }

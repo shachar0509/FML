@@ -1,4 +1,4 @@
-import { isValidElement, type ComponentProps, type ReactElement, type ReactNode } from "react";
+import { isValidElement, useLayoutEffect, useRef, type ComponentProps, type ReactElement, type ReactNode } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
@@ -150,14 +150,47 @@ export function mathPieces(tex: string): Piece[] {
   return out;
 }
 /** Hebrew inside a formula renders reversed (KaTeX lays text left to right): pull it out as text, keeping the math pieces as formulas. */
-export const hebrewOutOfMath = (tex: string): string => joinPieces(mathPieces(tex));
-/** Pieces back to Markdown: words as text, math as $…$. */
-export const joinPieces = (ps: Piece[]): string =>
+export const hebrewOutOfMath = (tex: string): string => joinPieces(mathPieces(tex), HEB.test(tex));
+/** Pieces back to Markdown: words as text, math as $…$ (in a right-to-left sentence split at its arrows, see rtlArrows). */
+export const joinPieces = (ps: Piece[], rtl = false): string =>
   ps.reduce((acc, p) => {
-    const s = p.words ? p.s : `$${p.s}$`;
+    const s = p.words ? p.s : rtl ? rtlArrows(p.s) : `$${p.s}$`;
     // "מ-" + "$x$" is one word ("מ-x"); a punctuation mark sticks to what came before
     return !acc ? s : acc.endsWith("-") || (p.words && /^[,.:;]/.test(p.s)) ? acc + s : `${acc} ${s}`;
   }, "");
+/** Logical arrows between statements, and their mirror image for a right-to-left sentence. */
+const MIRROR: Record<string, string> = {
+  Rightarrow: "Leftarrow", Leftarrow: "Rightarrow", implies: "impliedby", impliedby: "implies",
+  Longrightarrow: "Longleftarrow", Longleftarrow: "Longrightarrow", iff: "iff", Leftrightarrow: "Leftrightarrow", Longleftrightarrow: "Longleftrightarrow",
+};
+/**
+ * A formula inside a right-to-left sentence is read right to left as a whole: "$b<c \\Rightarrow a<c$" would be
+ * read "a<c" first. So it is cut at its top-level logical arrows into one formula per statement, and each arrow is
+ * mirrored to point the way the sentence reads (b<c ⇐ a<c, read from the right: b<c, then a<c). Arrows inside
+ * {…} or \\left…\\right, and \\to (limits, mappings), stay as they are.
+ */
+export function rtlArrows(tex: string): string {
+  const out: string[] = [];
+  let depth = 0;
+  let at = 0;
+  for (let i = 0; i < tex.length; i++) {
+    const c = tex[i];
+    if (c === "{") depth++;
+    else if (c === "}") depth--;
+    else if (c === "\\") {
+      const name = /^[a-zA-Z]+/.exec(tex.slice(i + 1))?.[0] ?? "";
+      if (name === "left") depth++;
+      else if (name === "right") depth--;
+      else if (depth === 0 && MIRROR[name]) {
+        out.push(tex.slice(at, i).trim(), `\\mathrel{\\${MIRROR[name]}}`); // \\mathrel{…}: already turned, a second pass leaves it
+        at = i + 1 + name.length;
+      }
+      i += name.length || 1;
+    }
+  }
+  out.push(tex.slice(at).trim());
+  return out.filter(Boolean).map((t) => `$${t}$`).join(" ");
+}
 /** Hebrew nested in a structure (\\underbrace{…}_{\\text{…}}, \\frac{…}{…}) belongs to that structure, not to the line. */
 const deepHebrew = (tex: string) => {
   let depth = 0;
@@ -231,7 +264,7 @@ export const fixMath = (md: string) =>
     .map((part, i) =>
       i % 2
         ? part
-        : joinHyphenatedMath(
+        : glueArrows(joinHyphenatedMath(
             balanceDollars(part)
               .replace(/^([ \t]*(?:>[ \t]?)*)\$\$([\s\S]*?)\$\$[ \t]*$/gm, (all, pre: string, t: string) => {
                 const body = t.split("\n").map((l, k) => (k ? l.replace(/^[ \t]*(?:>[ \t]?)*/, "") : l)).join("\n");
@@ -239,10 +272,13 @@ export const fixMath = (md: string) =>
                 return rows === null ? all : [`${pre}\`\`\`rows`, ...rows.split("\n").map((l) => pre + l), `${pre}\`\`\``].join("\n");
               })
               .replace(/\$\$([\s\S]+?)\$\$/g, (all, t: string) => (HEB.test(t) ? `$$${wrapHebrew(t)}$$` : all))
-              .replace(/(?<![$\\])\$([^$\n]+)\$(?!\$)/g, (all, t: string) =>
-                !HEB.test(t) ? all : /\\begin|&|\\\\/.test(t) ? `$${wrapHebrew(t)}$` : hebrewOutOfMath(t),
-              ),
-          ),
+              .replace(/(?<![$\\])\$([^$\n]+)\$(?!\$)/g, (all, t: string, at: number, str: string) => {
+                if (HEB.test(t)) return /\\begin|&|\\\\/.test(t) ? `$${wrapHebrew(t)}$` : hebrewOutOfMath(t);
+                // a formula in a Hebrew sentence: its arrows follow the sentence (rtlArrows)
+                const line = str.slice(str.lastIndexOf("\n", at) + 1, (str.indexOf("\n", at) + 1 || str.length + 1) - 1);
+                return HEB.test(line.replace(/\$[^$\n]*\$/g, "")) ? rtlArrows(t) : all;
+              }),
+          )),
     )
     .join("");
 
@@ -265,12 +301,39 @@ export const balanceDollars = (md: string) =>
     })
     .join("\n");
 
+/** An arrow formula never ends a line: it stays with the statement it points to (a no-break space after it). */
+export const glueArrows = (md: string) =>
+  md.replace(/(\$(?:\\mathrel\{)?\\(?:Leftarrow|Rightarrow|implies|impliedby|Longleftarrow|Longrightarrow|iff|Leftrightarrow|Longleftrightarrow)\}?\$) +/g, "$1\u00a0");
+
 export const joinHyphenatedMath = (md: string) => md.replace(/(?<![$\\])\$([^$\n]+)\$-\$([^$\n]+)\$(?!\$)/g, (_, a: string, c: string) => `$${a}\\text{-}${c}$`);
 
 /** The one renderer for all Claude text (11.1). Raw HTML is ignored by react-markdown. */
+/** Shrinks an element's font until its content fits its width (down to 60%; beyond that it scrolls). */
+export function fitWidth(el: HTMLElement) {
+  el.style.fontSize = "";
+  const over = el.scrollWidth / Math.max(1, el.clientWidth);
+  if (over > 1.01) el.style.fontSize = `${Math.max(0.6, 1 / over).toFixed(3)}em`;
+}
+
+/** A display formula wider than its board (a long fraction, a sum with limits) is scaled down, not cut off. */
+function useFitFormulas() {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const fit = () => el.querySelectorAll<HTMLElement>(".katex-display").forEach((d) => !d.closest(".board-rows") && fitWidth(d));
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    void document.fonts?.ready.then(fit);
+    return () => ro.disconnect();
+  });
+  return ref;
+}
+
 export function Markdown({ children, className }: { children: string; className?: string }) {
+  const ref = useFitFormulas();
   return (
-    <div className={`md ${className ?? ""}`}>
+    <div ref={ref} className={`md ${className ?? ""}`}>
       <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[[rehypeKatex, KATEX], rehypeBoxes]} components={components}>
         {fixMath(children)}
       </ReactMarkdown>

@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import katex from "katex";
-import { hebrewOutOfMath, joinPieces, KATEX, Markdown, mathPieces } from "./Markdown";
+import { fitWidth, hebrewOutOfMath, joinPieces, KATEX, Markdown, mathPieces } from "./Markdown";
 
 const RELS = new Set(["neq", "ne", "le", "leq", "ge", "geq", "subset", "subseteq", "supset", "supseteq", "in", "notin", "iff", "Rightarrow", "Leftrightarrow", "to", "approx", "equiv", "sim", "cong", "coloneqq"]);
 
@@ -101,14 +101,21 @@ export function Rows({ source }: { source: string }) {
     if (!el || typeof ResizeObserver === "undefined") return;
     let need = 0;
     const fit = () => {
+      el.style.fontSize = "";
       if (el.dataset.stack !== "true") need = el.scrollWidth;
-      setStack(el.clientWidth + 1 < need);
+      const s = el.clientWidth + 1 < need;
+      setStack(s);
+      // still too wide once stacked (a long fraction in a narrow box): smaller, not cut off
+      if (s && el.dataset.stack === "true") fitWidth(el);
     };
     const ro = new ResizeObserver(fit);
     ro.observe(el);
     void document.fonts?.ready.then(fit);
     return () => ro.disconnect();
   }, [source]);
+  useLayoutEffect(() => {
+    if (stack && ref.current) fitWidth(ref.current);
+  }, [stack]);
   const md = (cls: string, s: string) =>
     s ? (
       <span className={cls} dir="auto">

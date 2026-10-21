@@ -3,6 +3,7 @@ import "./cards.css";
 import "@/core/i18n";
 import { createRoot } from "react-dom/client";
 import { Cards } from "./Cards";
+import { ADVANCED } from "./test-advanced";
 import type { CardData, CourseData, FilesData, HomeData, Host, ExerciseData, PracticeData, SettingsData, LessonData, LookupResult, McqData, OpenData, FigureData, StepData } from "./types";
 
 /** Playwright test host: a fake bridge instead of Claude Desktop. ?lang=&theme=&empty=1 ; sent messages land in window.__said. */
@@ -96,7 +97,8 @@ $$
 > $$`,
   sideMd: `$\\N \\subset \\Z$\n\n${L("כל טבעי הוא גם שלם.", "Every natural number is an integer.")}`,
 };
-const initial: CardData = ({ lesson, mcq, open, figure, step, exercise, practice: practiceBase, settings } as Record<string, CardData>)[q.get("view") ?? ""] ?? home;
+const sample = ADVANCED[q.get("sample") ?? ""];
+const initial: CardData = sample ? { ...step, sideMd: null, ...sample } : (({ lesson, mcq, open, figure, step, exercise, practice: practiceBase, settings } as Record<string, CardData>)[q.get("view") ?? ""] ?? home);
 const said: string[] = [];
 let mode = "inline";
 const reqs: unknown[] = [];

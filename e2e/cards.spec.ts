@@ -1,5 +1,12 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
+
+/** The element's box (it must be on screen). */
+async function box(l: Locator) {
+  const b = await l.boundingBox();
+  if (!b) throw new Error("not on screen");
+  return b;
+}
 
 // Card bundle in the fake-host page (src/cards/test-host.tsx); no Claude Desktop needed.
 for (const lang of ["he", "en"] as const)
@@ -161,13 +168,13 @@ for (const lang of ["he", "en"] as const)
       const lhs = await axioms.locator(".board-lhs .katex").evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().right)));
       expect(Math.max(...lhs) - Math.min(...lhs)).toBeLessThanOrEqual(2);
       // the names are on the reading side: right of the formulas in Hebrew, left in English
-      const [name, formula] = await Promise.all([axioms.locator(".board-label").first(), axioms.locator(".board-rhs").first()].map((l) => l.boundingBox()));
-      if (lang === "he") expect(name!.x).toBeGreaterThan(formula!.x + formula!.width - 1);
-      else if ((await axioms.getAttribute("data-stack")) === "true") expect(name!.y + name!.height).toBeLessThanOrEqual(formula!.y + 1); // too narrow: the name above its formula
-      else expect(name!.x + name!.width).toBeLessThan(formula!.x);
+      const [name, formula] = await Promise.all([axioms.locator(".board-label").first(), axioms.locator(".board-rhs").first()].map(box));
+      if (lang === "he") expect(name.x).toBeGreaterThan(formula.x + formula.width - 1);
+      else if ((await axioms.getAttribute("data-stack")) === "true") expect(name.y + name.height).toBeLessThanOrEqual(formula.y + 1); // too narrow: the name above its formula
+      else expect(name.x + name.width).toBeLessThan(formula.x);
       await expect(page.locator(".board-box-proof").getByText("∎")).toHaveCount(0); // the mark is CSS, after the last line
       const proofRows = page.locator(".board-box-proof .board-rows, .board-box-proof .katex-display").first();
-      const proofBox = (await proofRows.boundingBox())!;
+      const proofBox = await box(proofRows);
       const mark = await proofRows.evaluate((e) => getComputedStyle(e, "::after").content);
       if (lang === "he") expect(mark).toBe('"∎"');
       expect(proofBox.height).toBeGreaterThan(40);
@@ -175,10 +182,10 @@ for (const lang of ["he", "en"] as const)
         // the proof's reasons: right-to-left notes left of the lined-up formulas ("מ-x = 0·a" reads right to left)
         const proof = page.locator(".board-box-proof .board-rows");
         await expect(proof.locator(".board-note")).toHaveCount(3);
-        const [note, rhs] = await Promise.all([proof.locator(".board-note").last(), proof.locator(".board-lhs").last()].map((l) => l.boundingBox()));
-        expect(note!.x + note!.width).toBeLessThanOrEqual(rhs!.x + 1);
-        const [line, math] = await Promise.all([proof.locator(".board-note p").last(), proof.locator(".board-note .katex").last()].map((l) => l.boundingBox()));
-        expect(math!.x + math!.width).toBeLessThan(line!.x + line!.width - 8); // "מ-" is right of its formula
+        const [note, rhs] = await Promise.all([proof.locator(".board-note").last(), proof.locator(".board-lhs").last()].map(box));
+        expect(note.x + note.width).toBeLessThanOrEqual(rhs.x + 1);
+        const [line, math] = await Promise.all([proof.locator(".board-note p").last(), proof.locator(".board-note .katex").last()].map(box));
+        expect(math.x + math.width).toBeLessThan(line.x + line.width - 8); // "מ-" is right of its formula
       }
       await expect(page.locator(".board-box-definition")).toContainText(lang === "he" ? "הגדרה" : "Definition");
       await expect(page.locator(".sticky-note .katex")).toBeVisible();
