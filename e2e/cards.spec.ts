@@ -154,6 +154,7 @@ for (const lang of ["he", "en"] as const)
       await page.goto(`/src/cards/test-host.html?lang=${lang}&theme=${theme}`);
       await page.getByRole("button", { name: lang === "he" ? "הגדרות" : "Settings" }).click();
       await expect(page.getByText("/Users/me/Documents/Shalav")).toBeVisible();
+      await expect(page.getByText(lang === "he" ? "הטכניון" : "Technion", { exact: true })).toBeVisible();
       await expect(page.getByRole("alert")).toContainText("dev1 (1).jsonl");
       await page.getByRole("spinbutton").first().fill("3");
       await expect(page.getByRole("spinbutton").first()).toHaveValue("3");

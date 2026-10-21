@@ -140,6 +140,7 @@
   },
   "course": {
     "invalidNumber": "A course number has 8 digits (e.g. 01040195)",
+    "manualEntry": "Your university has no online catalog in Shalav yet. Enter the course details from the syllabus.",
     "notFound": "We couldn't find this course in the catalog. You can enter the details manually.",
     "catalogLabel": "Catalog description",
     "afterAdd": "After you add the course, Shalav builds a detailed step-by-step study plan (a few minutes).",
@@ -267,7 +268,7 @@
     "skip": "Skip for now",
     "finish": "Finish"
   },
-  "university": { "title": "Choose your university", "hint": "This sets the course number format. It cannot be changed later." },
+  "university": { "label": "University", "locked": "Fixed. To change it, reset Shalav completely by deleting the data folder.", "title": "Choose your university", "hint": "This sets the course number format. It cannot be changed later." },
   "moodle": {
       "title": "Import from Moodle",
       "hint": "Opens a browser window once so you can log in to your university Moodle (including two-step verification). Shalav never sees your password.",

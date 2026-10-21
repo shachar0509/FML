@@ -29,7 +29,9 @@ export type CourseData = Base & {
 };
 export type BuildStatus = { state: "none" | "running" | "done" | "failed"; step?: "folders" | "plan" | "validate" | "progress"; unit?: { k: number; n: number }; error?: string | null; pending?: number };
 export type LookupResult =
-  | { status: "invalid" | "notfound" | "offline" }
+  | { status: "invalid" }
+  /** `manual` = the university has no online catalog; `number` is the normalised course id. */
+  | { status: "notfound" | "offline" | "manual"; number: string }
   | { status: "exists"; number: string }
   | { status: "found"; entry: { courseNumber: string; nameHe: string; credits: number; faculty: string; syllabusHe: string } };
 export type FileRow = { sha: string; name: string; pages: number; status: "pending" | "indexing" | "indexed" | "failed"; error: string | null; exercises: number; done?: number; total?: number };
@@ -86,6 +88,8 @@ export type ExerciseData = Base & {
 /** Settings card (shalav_settings / app-only settings_update); `conflicts` = sync conflict copies found in the data folder. */
 export type SettingsData = Base & {
   view: "settings";
+  /** Locked after the first choice. */
+  university: "technion" | "huji" | "reichman" | "braude" | null;
   dataRoot: string;
   learning: { minExercises: number; minExerciseScore: number; masteryThreshold: number; requireAllObjectives: boolean; hintsBeforeSolution: number };
   conflicts: string[];

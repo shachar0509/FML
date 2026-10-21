@@ -57,14 +57,14 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, so
     const n = uni.normalize(number);
     let r: LookupResult;
     if (!n) r = { status: "invalid" };
-    else if (!uni.catalog) r = (await courseExists(n)) ? { status: "exists", number: n } : { status: "notfound" }; // no online catalog: manual entry
+    else if (!uni.catalog) r = (await courseExists(n)) ? { status: "exists", number: n } : { status: "manual", number: n }; // no online catalog: manual entry
     else if (await courseExists(n)) r = { status: "exists", number: n };
     else {
       try {
         const e = await catalog().lookup(n);
-        r = e ? { status: "found", entry: { courseNumber: e.courseNumber, nameHe: e.nameHe, credits: e.credits, faculty: e.faculty, syllabusHe: e.syllabusHe } } : { status: "notfound" };
+        r = e ? { status: "found", entry: { courseNumber: e.courseNumber, nameHe: e.nameHe, credits: e.credits, faculty: e.faculty, syllabusHe: e.syllabusHe } } : { status: "notfound", number: n };
       } catch {
-        r = { status: "offline" };
+        r = { status: "offline", number: n };
       }
     }
     return out(r.status, r);

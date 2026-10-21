@@ -141,3 +141,8 @@
 - Course id format: Technion strict (8 digits); HUJI/Reichman/Braude formats could not be verified (web search found nothing official), so they accept short alphanumeric codes and uppercase them. Tighten per university when real numbers are known.
 - The university is stored in `shalav.json` (shared by all devices on the data folder), not per device, so two machines cannot disagree. No in-app reset: deleting the data folder is the reset.
 - Prompts use `uniName()`; module-level constant prompts say "university" generically.
+
+## M14b
+- Moodle via the student's installed Chrome (not a bundled browser: MCPB size) with a persistent profile; no passwords or cookies are handled by Shalav code, and nothing is written outside the browser profile except a "logged in once" marker file.
+- One import tool runs login+sync as a background job (MCP calls time out); progress is read through files_list.
+- Unknown Moodle addresses are asked from the student instead of guessed.

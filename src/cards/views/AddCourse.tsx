@@ -17,6 +17,7 @@ export function AddCourse({ example, callTool, say, open, back }: { example: str
   const [number, setNumber] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
+  const [manual, setManual] = useState(false);
   const [entry, setEntry] = useState<Entry | null>(null);
   const [more, setMore] = useState(false);
   const [man, setMan] = useState({ nameHe: "", credits: "", syllabusHe: "" });
@@ -35,7 +36,8 @@ export function AddCourse({ example, callTool, say, open, back }: { example: str
       setNumber(r.entry.courseNumber);
       setPhase("preview");
     } else {
-      setNumber(raw.replace(/\D/g, ""));
+      setNumber(r.number);
+      setManual(r.status === "manual");
       setOffline(r.status === "offline");
       setPhase("manual");
     }
@@ -89,7 +91,7 @@ export function AddCourse({ example, callTool, say, open, back }: { example: str
       )}
       {phase === "manual" && (
         <form className="flex flex-col gap-3" onSubmit={(e) => (e.preventDefault(), void create({ nameHe: man.nameHe.trim(), credits, syllabusHe: man.syllabusHe.trim() }))}>
-          <p className="text-sm text-muted">{t("course.notFound")}</p>
+          <p className="text-sm text-muted">{t(manual ? "course.manualEntry" : "course.notFound")}</p>
           {offline && <p className="text-sm text-warning">{t("net.offline")}</p>}
           <label className={lbl}>{t("home.name")}<Input value={man.nameHe} onChange={(e) => setMan({ ...man, nameHe: e.target.value })} /></label>
           <label className={lbl}>{t("home.creditsLabel")}<Input type="number" min={0} step={0.5} dir="ltr" value={man.credits} onChange={(e) => setMan({ ...man, credits: e.target.value })} /></label>

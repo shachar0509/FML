@@ -149,6 +149,17 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - Tests: tool flow + lock, v1→technion, loose ids, picker e2e (28 e2e), 120 unit. Docs: README/manifest text.
 - Not done: Moodle per university (next, M14b); settings card does not show the university yet.
 
+### M14b — Moodle import (done; 🧪 live check pending)
+- `src/server/moodle.ts` drives the student's **own Chrome** (`playwright-core`, `channel: "chrome"`, persistent profile in the config dir `moodle-profile`): `connect` opens a window for SSO + MFA and waits for a logged-in Moodle page; `sync` opens `/my/` in a headless page first (SSO cookies in the profile sign in silently; Moodle's own session cookie dies with the browser), then course search by number → course page → resource/folder/pluginfile links → downloads (same host, sequential). `moodleParse.ts` = the regex selectors (one place to fix after a real-site check). Role guess: exam/quiz/exercise/solution words (he+en, name or section title) → exercises.
+- `moodleTools.ts`: `moodle_import({number, url?})` (background job; login first if needed, one automatic re-login on expiry; files go through `importFiles`, so dedupe and naming are the usual ones), `moodle_disconnect` (deletes the profile). State shows in `files_list.moodle`; the Files card has an "Import from Moodle" box (address field when the university has no built-in URL, progress, result, Forget login).
+- Moodle address: Technion built in (`https://moodle.technion.ac.il/`, to verify); HUJI/Reichman/Braude unknown → the student pastes it once (saved in settings `moodleUrl`, https only).
+- Tests: parsers + a fake Moodle (http server with an SSO-style persistent cookie and a session cookie) driven by Playwright's bundled Chromium: login, 4 files by role, zip skipped, second run all duplicates, forget + re-login. 122 unit, 28 e2e.
+- Packaging: `playwright-core` is external and copied into the MCPB `node_modules` (`scripts/pack-mcpb.mjs`) — **`pnpm pack:mcpb` / `smoke:mcpb` not re-run yet** (the run was stopped); smoke's tool count will change.
+- 🧪 live (needs the Mac screen): Import from Moodle in a course card → Chrome opens → log in with MFA → files appear → Start indexing. Report failing selectors.
+
+### M14c — University polish (done)
+- `course_lookup` for universities without a catalog returns `manual` (+ normalised number) and the card says "no online catalog yet, enter from the syllabus" instead of "not found"; the manual form no longer strips letters from course ids. Settings card shows the locked university with the reset note.
+
 ## Phase 1 — Desktop app (v1, frozen)
 
 ### Steps (v1 spec §19)

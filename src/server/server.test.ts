@@ -36,7 +36,7 @@ it("lists tools/prompts and calls shalav_home", async () => {
   expect(JSON.stringify(locked.content)).toMatch(/locked/);
   // other universities have no catalog: lookup goes straight to manual entry, ids are normalised loosely
   const look = await client.callTool({ name: "course_lookup", arguments: { number: " 80 131 " } });
-  expect(look.structuredContent).toMatchObject({ status: "notfound" });
+  expect(look.structuredContent).toMatchObject({ status: "manual", number: "80131" });
   expect((await client.callTool({ name: "course_lookup", arguments: { number: "a/b" } })).structuredContent).toMatchObject({ status: "invalid" });
   const r = await client.callTool({ name: "shalav_home", arguments: {} });
   expect(JSON.stringify(r.content)).toMatch(/No courses yet/);

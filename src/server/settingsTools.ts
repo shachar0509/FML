@@ -1,4 +1,4 @@
-import { COURSE_ID_RE } from "@/core/universities";
+import { COURSE_ID_RE, university } from "@/core/universities";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import type { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod";
@@ -20,7 +20,7 @@ export function registerSettingsTools(server: McpServer) {
   const sets = () => useSettings.getState().settings;
   async function data(): Promise<SettingsData> {
     const { language, theme, dataRoot, learning } = sets();
-    return { view: "settings", language, theme, dataRoot, learning, conflicts: await findConflictCopies(dataRoot) };
+    return { view: "settings", language, theme, university: university()?.id ?? null, dataRoot, learning, conflicts: await findConflictCopies(dataRoot) };
   }
 
   registerAppTool(server, "shalav_settings", { title: "Shalav settings", description: "Show the settings card (language, data folder, learning criteria).", _meta: { ui: { resourceUri: CARDS_URI } } }, async () => out("The settings card is shown.", await data()));

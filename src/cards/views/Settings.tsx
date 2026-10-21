@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Input } from "@/core/components/ui/input";
+import { UNIVERSITIES } from "@/core/universities";
 import type { SettingsData } from "../types";
 
 type Tool = (name: string, args?: Record<string, unknown>) => Promise<{ structuredContent?: unknown; isError?: boolean }>;
@@ -15,7 +16,7 @@ const NUMS: { key: Exclude<keyof L, "requireAllObjectives">; min: number; max: n
 const DEFAULTS: L = { minExercises: 2, minExerciseScore: 85, masteryThreshold: 0.85, requireAllObjectives: true, hintsBeforeSolution: 3 };
 
 export function Settings({ data, callTool, back }: { data: SettingsData; callTool: Tool; back: () => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [d, setD] = useState(data);
   const save = async (patch: { language?: "he" | "en"; learning?: L }) => {
     const r = await callTool("settings_update", patch);
@@ -39,6 +40,13 @@ export function Settings({ data, callTool, back }: { data: SettingsData; callToo
         </div>
       </div>
       <div>
+        {d.university && (
+          <>
+            <p className="font-bold">{t("university.label")}</p>
+            <p className="text-sm">{i18n.language.startsWith("he") ? UNIVERSITIES[d.university].nameHe : UNIVERSITIES[d.university].nameEn}</p>
+            <p className="text-sm text-muted">{t("university.locked")}</p>
+          </>
+        )}
         <p className="font-bold">{t("mcp.settings.dataRoot")}</p>
         <p dir="ltr" className="break-all text-sm">{d.dataRoot}</p>
         <p className="text-sm text-muted">{t("mcp.settings.dataHint")}</p>
