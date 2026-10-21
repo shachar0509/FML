@@ -11,7 +11,6 @@ import { FakeClaudeGateway, toolCall } from "@/core/claude/fake";
 import { setClaude } from "@/core/claude/runtime";
 import { createCourse } from "@/core/domain/courses/courses";
 import { briefRole, courseNumbers, fileName, guessRole, parseCourse, parsePluginfiles, parseSearch, parseSections, searchTerm } from "./moodleParse";
-import { installPct } from "./browser";
 import { createMoodle } from "./moodle";
 import { initNode } from "./platform";
 import { createServer } from "./server";
@@ -49,10 +48,6 @@ it("parses Moodle pages and guesses roles", () => {
   expect(briefRole("סילבוס הקורס. הרכב הציון: ציון סופי 80% מבחן. נוכחות חובה. שעות קבלה", "info.pdf מבוא")).toBeNull();
   expect(parseCourse('<li id="section-1" data-sectionname="עזר"><a href="/mod/resource/view.php?id=1">סרטוני עזר</a></li>', base)).toEqual([]);
   expect(fileName("https://x/pluginfile.php/1/Lecture%201.pdf", undefined)).toBe("Lecture 1.pdf");
-  // the browser download's progress lines (playwright-core install)
-  expect(installPct("|■■■■■■■■■■■■■■■■                                                                |  20% of 185.8 MiB")).toBe(20);
-  expect(installPct("|                                                                                |   0% of 185.8 MiB")).toBe(0);
-  expect(installPct("Downloading Chrome for Testing 156.0.8078.4 (playwright chromium v1248)")).toBeNull();
   expect(fileName("https://x/a.pdf", `inline; filename="${Buffer.from("תרגיל 3.pdf").toString("latin1")}"`)).toBe("תרגיל 3.pdf");
   expect(fileName("https://x/a.pdf", `attachment; filename="x.pdf"; filename*=UTF-8''%D7%AA.pdf`)).toBe("ת.pdf");
 });

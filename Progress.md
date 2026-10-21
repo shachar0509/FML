@@ -654,16 +654,21 @@ Edge cases found with the sample slides, and fixed in the renderer:
 
 ## M39 — Moodle login in Shalav's own Chromium, hidden after login ✅
 - **Own browser:** Moodle import no longer uses the student's Google Chrome. On the first import, `ensureChromium` (`src/server/browser.ts`) downloads Playwright's Chromium ("Chrome for Testing", ~186 MB download, ~370 MB on disk) into `<config>/browsers`, then launches it by path.
-  - Playwright reads `PLAYWRIGHT_BROWSERS_PATH` when it loads, so the install (`cli.js install --no-shell chromium`) and the path lookup run in a child process. That process is `process.execPath` with `ELECTRON_RUN_AS_NODE=1`, because the server runs on Claude Desktop's Electron Node.
-  - The download shows in the card as a bar: "Downloading the browser for Moodle (one time)…" (`busy: "install"`, `progress` in percent, parsed from the installer's "NN% of" lines; the ffmpeg download after it is ignored). A failed download is `MoodleError` "install".
+  - The download runs in-process: `fetch` of the registry's URL (`findExecutable("chromium").downloadURLs`), then playwright-core's `extractZip`, then an `INSTALLATION_COMPLETE` marker. Claude Desktop runs Shalav in an Electron utility process and Claude.app has the **RunAsNode fuse disabled** (`@electron/fuses read`). Spawning `process.execPath` with `ELECTRON_RUN_AS_NODE`, or Playwright's own forked downloader, would start Claude instead of node. The first M39 commit did exactly that; fixed before release.
+  - The download shows in the card as a bar from 0%: "Downloading the browser for Moodle (one time)…" (`busy: "install"`, `progress` in percent of bytes). A failed download is `MoodleError` "install".
 - **Hidden after login:** once the login is done, the window's cookies (session cookies included) are copied, the window is closed, and the import continues in a headless browser on the same profile. A later import runs hidden while the saved login works. If the login has expired (`LoginNeeded`), the login window opens again and closes after login.
 - **New profile:** `moodle-profile-chromium` with its own login marker, because Chromium encrypts cookies under another keychain item than Chrome. The old Chrome profile and marker are deleted, so each student logs in once more.
 - The Moodle hint text now explains the one-time download and that the window closes. The "Chrome is needed" error is gone.
 - **Checks:**
   - The Moodle import test logs in and then imports through the hand-off. Without `addCookies` it fails, because the fake Moodle's session cookie dies with the browser.
-  - The install progress parser is tested.
-  - A real `ensureChromium` run into an empty folder: progress went from 0 to 100 in 11 steps, and a second call reused the download. The downloaded build also launches headless by path.
-  - The packed extension resolves `playwright-core/package.json` and `cli.js` from its own `node_modules`.
+  - A real `ensureChromium` run into an empty folder: 38 s, progress from 0 to 100, and a second call reused the download. The downloaded build launches headless by path.
+  - The packed extension resolves `playwright-core/lib/coreBundle` (registry URL and `extractZip`) from its own `node_modules`.
   - The course e2e shows the install bar at 42%.
   - Totals: 141 unit, 83 e2e (one e2e run had 3 failures because the dev server reloaded mid-run; they passed on rerun). Lint and tsc clean.
 - **🧪 In Claude Desktop:** `pnpm dev:install`, then Import course files: the download bar, then a "Chrome for Testing" login window. After login the window closes and the Importing bar runs.
+- **Fix (review):** a build chat could stall when builds interleave (e.g. Update plan on B and C took both index queue slots while A was waiting for one).
+  - `wait(op)` now hands a build chat any course's queued build job.
+  - The timeout text says `build: true`.
+  - `next("build")` says "still running" (not "no build work") while a build is unfinished.
+  - The schema skip is per lane, so it always points one message back.
+  - Bridge test: answering A's job returns B's job at once, and "no build work" appears only when all builds are done. It hangs without the fix.

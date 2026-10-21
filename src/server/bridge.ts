@@ -28,8 +28,6 @@ type Op = {
   ctl: AbortController;
   settled: boolean;
   lastJob?: number;
-  /** The answer schema the op's last shown job carried (it is not repeated right after). */
-  lastSchema?: { text: string; job: number };
   result?: unknown;
   error?: unknown;
   summary: (result: unknown) => Content[];
@@ -49,6 +47,8 @@ export class BridgeGateway implements ClaudeGateway {
   private seen = new Map<string, number>();
   /** Last time a chat asked for or answered a build job. */
   private servedAt = 0;
+  /** The answer schema of the lane's last shown job (not repeated right after). Per lane, not per op: a build chat interleaves courses. */
+  private lastSchema: Partial<Record<Lane, { text: string; job: number }>> = {};
 
   /** Run a domain operation; every send() made inside it belongs to it and can be cancelled together. */
   run<T>(label: string, fn: (signal: AbortSignal) => Promise<T>, summary?: (r: T) => Content[], lane: Lane = "study"): { opId: number; done: Promise<T> } {
@@ -131,7 +131,11 @@ export class BridgeGateway implements ClaudeGateway {
   next(lane: Lane = "study"): Content[] {
     if (lane === "build") this.servedAt = Date.now();
     const job = [...this.jobs.values()].find((j) => j.state === "queued" && this.laneOf(j) === lane);
-    if (!job) return [{ type: "text", text: lane === "build" ? "No build work is pending." : "No Shalav job is pending." }];
+    if (!job) {
+      if (lane === "study") return [{ type: "text", text: "No Shalav job is pending." }];
+      const running = [...this.ops.values()].some((o) => o.lane === "build" && !o.settled);
+      return [{ type: "text", text: running ? "Build work is still running (reading files): call shalav_next_job with build: true again." : "No build work is pending." }];
+    }
     job.state = "shown";
     return this.render(job);
   }
@@ -187,7 +191,9 @@ export class BridgeGateway implements ClaudeGateway {
         }
         return { content: [...op.summary(op.result), ...more] };
       }
-      const nextJob = [...this.jobs.values()].find((j) => j.state === "queued" && j.opId === op.id);
+      // A build chat takes any course's queued build job while its own op waits (e.g. for an index queue slot held by another course).
+      const queued = [...this.jobs.values()].filter((j) => j.state === "queued");
+      const nextJob = queued.find((j) => j.opId === op.id) ?? (op.lane === "build" ? queued.find((j) => this.laneOf(j) === "build") : undefined);
       if (nextJob) {
         nextJob.state = "shown";
         return { content: [{ type: "text", text: "Next job is ready.\n\n" }, ...this.render(nextJob)] };
@@ -195,7 +201,7 @@ export class BridgeGateway implements ClaudeGateway {
       const open = [...this.jobs.values()].filter((j) => j.state === "shown" && j.opId === op.id);
       if (open.length) return { content: [{ type: "text", text: `Answer the other open job(s) of ${op.label} too: ${open.map((j) => "#" + j.id).join(", ")}.` }] };
       const left = deadline - Date.now();
-      if (left <= 0) return { content: [{ type: "text", text: `${op.label} is still working. Call shalav_next_job in a moment.` }] };
+      if (left <= 0) return { content: [{ type: "text", text: `${op.label} is still working. Call shalav_next_job${op.lane === "build" ? " with build: true" : ""} in a moment.` }] };
       await new Promise<void>((resolve) => {
         const t = setTimeout(resolve, left);
         this.listeners.add(() => {
@@ -248,11 +254,11 @@ export class BridgeGateway implements ClaudeGateway {
       }
     });
 
-    // The schema is skipped only when the job shown just before in this op had it: one message back, never lost to a compacted chat.
-    const op = job.opId === undefined ? undefined : this.ops.get(job.opId);
+    // The schema is skipped only when the job shown just before in this lane had it: one message back, never lost to a compacted chat.
+    const lane = this.laneOf(job);
     const schema = job.tool ? JSON.stringify(job.tool.input_schema) : "";
-    const prev = op?.lastSchema?.text === schema ? op.lastSchema.job : undefined;
-    if (op) op.lastSchema = schema ? { text: schema, job: job.id } : undefined;
+    const prev = this.lastSchema[lane]?.text === schema ? this.lastSchema[lane]?.job : undefined;
+    this.lastSchema[lane] = schema ? { text: schema, job: job.id } : undefined;
     text.push(
       "## How to answer",
       !job.tool

@@ -120,6 +120,7 @@ it("builds at once: one chat works through both, each job belongs to its own cou
     const job = /job #(\d+) \(Building the study plan for (\d+)\)/.exec(t);
     if (!job) {
       expect(t).toMatch(/The study plan for \d+ is built/);
+      expect(t).not.toMatch(/call shalav_next_job(?! with build: true)/); // never sends the build chat to the study lane
       if (!t.includes("call shalav_next_job with build: true")) break; // the last build: no hand-off
       handoffs++;
       r = await call("shalav_next_job", { build: true });
@@ -137,7 +138,8 @@ it("builds at once: one chat works through both, each job belongs to its own cou
         : { stages: (/stage ids ([S\d, ]+)\./.exec(t.replaceAll("\\n", "\n"))?.[1] ?? "").split(", ").map((sid) => ({ id: sid, objectives: ["a", "b"], newConcepts: [], theorems: [], techniques: [], edgeCases: [], examRelevance: "core", estimatedMinutes: 30 })) };
     r = await call("shalav_submit_job", { jobId: Number(job[1]), input });
   }
-  expect(handoffs).toBeGreaterThanOrEqual(1);
+  expect(handoffs).toBeLessThanOrEqual(2); // jobs of all courses interleave; a summary hands off only while another build still runs
+  expect(text(await call("shalav_next_job", { build: true }))).toContain("No build work is pending");
   for (const n of courses) {
     expect(sc<{ state: string }>(await call("course_status", { number: n })).state).toBe("done");
     expect(sc<{ materials: { status: string }[] }>(await call("files_list", { number: n })).materials.map((f) => f.status)).toEqual(["indexed"]);

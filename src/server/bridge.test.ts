@@ -129,3 +129,36 @@ it("nextWait waits for a running operation's first request", async () => {
   await b.submit({ jobId: 1, text: "ok" });
   await done;
 });
+
+it("build lane: a chat whose build is waiting gets another course's job; it never hears 'no build work' while one runs", async () => {
+  const b = new BridgeGateway();
+  let release!: () => void;
+  const hold = new Promise<void>((r) => (release = r));
+  // A: one job, then waits (e.g. for an index queue slot) before its next one
+  const a = b.run("A", async () => {
+    await b.send(req);
+    await hold;
+    return b.send(req);
+  }, undefined, "build");
+  const ja = await b.nextWait("build");
+  // B is pressed meanwhile and queues a job
+  const bb = b.run("B", () => callStructured(b, tool, { ...req, system: "SYS B" }), undefined, "build");
+  await new Promise((r) => setTimeout(r, 10));
+  expect(text(await b.nextWait("study"))).toContain("No Shalav job"); // another chat never gets build jobs
+  // answering A's job hands out B's job at once (no 45 s wait for A)
+  const t0 = Date.now();
+  const r = await b.submit({ jobId: idOf(ja), text: "a1" });
+  expect(Date.now() - t0).toBeLessThan(1000);
+  expect(text(r.content)).toContain("(B)");
+  expect(text(r.content)).toContain("JSON schema (tool submit_x)"); // the schema is shown: the job before it in this lane had none
+  // A still running, nothing queued: keep calling, not "no build work"
+  await b.submit({ jobId: idOf(r.content), input: { n: 1 } });
+  await bb.done;
+  expect(text(b.next("build"))).toContain("still running");
+  release();
+  const last = await b.nextWait("build");
+  expect(text(last)).toContain("(A)");
+  await b.submit({ jobId: idOf(last), text: "a2" });
+  await a.done;
+  expect(text(b.next("build"))).toContain("No build work is pending");
+});
