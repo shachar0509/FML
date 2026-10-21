@@ -21,7 +21,7 @@ const Bar = ({ pct }: { pct: number }) => (
   </div>
 );
 
-export function Course({ data, callTool, say, reload, back }: { data: CourseData; callTool: Tool; say: (t: string) => Promise<void>; reload: () => void; back: () => void }) {
+export function Course({ data, callTool, say, reload, back, practice }: { data: CourseData; callTool: Tool; say: (t: string) => Promise<void>; reload: () => void; back: () => void; practice: () => void }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [sel, setSel] = useState<string | null>(null);
@@ -66,7 +66,7 @@ export function Course({ data, callTool, say, reload, back }: { data: CourseData
       {data.hasPlan && (
         <div className="flex flex-wrap gap-3">
           <Button disabled={!cur} onClick={() => cur && void say(t("mcp.learn", { stage: `${cur.id} · ${cur.title}` }))}>{t("nav.learn")}{cur ? ` — ${cur.id}` : ""}</Button>
-          <Button variant="outline" disabled={!data.canPractice}>{t("nav.practice")}</Button>
+          <Button variant="outline" disabled={!data.canPractice} onClick={practice}>{t("nav.practice")}</Button>
         </div>
       )}
 

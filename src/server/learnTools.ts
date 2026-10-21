@@ -33,7 +33,7 @@ const fail = (text: string) => ({ ...out(text), isError: true as const });
 type Check = { kind: "mcq" | "open"; n: string; stageId: string; correctIndex?: number; explanationMd?: string; selected?: number };
 
 /** Learn (plan v2 §6.3): the host chat is the lesson; the tutor tools record the v1 events and return cards. */
-export function registerLearnTools(server: McpServer, bridge: BridgeGateway) {
+export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exercises: ReturnType<typeof registerExerciseTools>) {
   /** The lesson the student is in; the tutor tools carry a stageId but no course number. */
   let active: { n: string; stageId: string } | null = null;
   const checks = new Map<string, Check>(); // lost on a server restart; check_answer then says so
@@ -92,7 +92,6 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway) {
     return { s, n: active.n, stageId: stageId && s.plan.stages.some((x) => x.id === stageId) ? stageId : active.stageId };
   }
   const NO_LESSON = "No lesson is open. Call shalav_start_lesson first.";
-  const exercises = registerExerciseTools(server, bridge);
 
   registerAppTool(
     server,

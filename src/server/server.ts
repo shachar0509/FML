@@ -8,7 +8,9 @@ import { useSettings } from "@/stores/settings";
 import type { CatalogSource } from "@/domain/catalog/catalog";
 import { registerCourseTools } from "./courseTools";
 import { registerFileTools } from "./fileTools";
+import { registerExerciseTools } from "./exerciseTools";
 import { registerLearnTools } from "./learnTools";
+import { registerPracticeTools } from "./practiceTools";
 import { INSTRUCTIONS } from "./instructions";
 import { CARDS_URI, readCards } from "./resources";
 
@@ -52,7 +54,9 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
 
   registerCourseTools(server, bridge, catalog);
   registerFileTools(server, bridge);
-  registerLearnTools(server, bridge);
+  const exercises = registerExerciseTools(server, bridge);
+  registerLearnTools(server, bridge, exercises);
+  registerPracticeTools(server, bridge, exercises);
 
   server.registerTool(
     "shalav_next_job",

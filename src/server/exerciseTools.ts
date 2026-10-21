@@ -50,13 +50,16 @@ export function registerExerciseTools(server: McpServer, bridge: BridgeGateway) 
     };
   }
 
-  /** Called by assign_exercise (Learn) and later by Practice. */
-  async function open(n: string, ex: Ex, context: Context): Promise<ExerciseData> {
-    const runId = newId();
-    const run = new ExerciseRun(n, ex, context, { gw: bridge, loadImage: loadImageB64(n), digest }, emptyRun(), async () => undefined);
-    const figures = (await figureImages(n, ex)).map((f) => `data:${f.mediaType};base64,${f.base64}`);
-    runs.set(runId, { run, n, context, busy: null, figures });
+  /** Register a run (idempotent per runId) and return its card data. */
+  async function adopt(runId: string, n: string, run: ExerciseRun, context: Context): Promise<ExerciseData> {
+    if (runs.get(runId)?.run !== run) runs.set(runId, { run, n, context, busy: null, figures: (await figureImages(n, run.ex)).map((f) => `data:${f.mediaType};base64,${f.base64}`) });
     return data(runId);
+  }
+
+  /** Called by assign_exercise (Learn). Practice owns its run and uses adopt(). */
+  async function open(n: string, ex: Ex, context: Context): Promise<ExerciseData> {
+    const run = new ExerciseRun(n, ex, context, { gw: bridge, loadImage: loadImageB64(n), digest }, emptyRun(), async () => undefined);
+    return adopt(newId(), n, run, context);
   }
 
   const get = (runId: string) => runs.get(runId);
@@ -129,5 +132,5 @@ export function registerExerciseTools(server: McpServer, bridge: BridgeGateway) 
     },
   );
 
-  return { open };
+  return { open, adopt, digest };
 }

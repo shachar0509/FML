@@ -110,3 +110,8 @@
 - Hints/solutions use a raw BM25 digest (≤ 4,000 chars) through the new optional `Env.digest`, not a lesson-brief job: same reasoning as M7, one host round trip less. Desktop v1 is unchanged (no `digest`).
 - Open-question attachments are not built: Claude Desktop accepts images pasted in the chat itself, and server-stored images could only reach the model through a job. Exercises (the real written work) do have uploads.
 - The Grade card is the v1 `GradeCard` component, imported as-is (step labels are plain text, so `$…$` in a label is not rendered; same as v1).
+
+## M9 — Practice
+- **No prefetch.** The v1 engine prefetches the next item; over the bridge that parks a job nobody fetches until the next chat line, so `Practice.prefetchOn = false` on the server. Each Next may therefore need a short wait for Claude (the card says "Preparing…" and sends one chat line). Revisit if the real check shows it is slow.
+- Practice exercise items reuse the engine's own `ExerciseRun` (registered through `exercises.adopt`) instead of `exercises.open`, so results land in the session counters.
+- Open practice answers are text only (no attachments), same as Learn open questions.

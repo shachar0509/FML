@@ -36,6 +36,8 @@ export class Practice {
   error: string | null = null;
   summary: Summary | null = null;
   private subs = new Set<() => void>();
+  /** The MCP server turns this off: a prefetched item would park a job nobody fetches until the next chat line. */
+  prefetchOn = true;
   private prefetching: Promise<void> | null = null;
   private ac = new AbortController();
 
@@ -133,7 +135,7 @@ export class Practice {
   /** Prefetch the next item while the user works (7.5). */
   private prefetch() {
     const st = this.state;
-    if (!st || st.next || this.prefetching) return;
+    if (!this.prefetchOn || !st || st.next || this.prefetching) return;
     this.prefetching = (async () => {
       try {
         const made = await this.produce();
@@ -177,12 +179,14 @@ export class Practice {
 
   /** The Ex of the current exercise item. */
   exercise: Ex | null = null;
+  /** Settles when the run of the current exercise item exists. */
+  binding: Promise<void> = Promise.resolve();
   private bindRun() {
     this.run = null;
     this.exercise = null;
     const cur = this.state?.current;
     if (cur?.kind !== "E") return;
-    void (async () => {
+    this.binding = (async () => {
       const found = (await allExercises(this.courseNumber)).find((x) => x.id === cur.ref.id);
       if (!found || this.state?.current !== cur) return;
       this.exercise = fromExercise(found);

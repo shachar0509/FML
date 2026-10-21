@@ -73,7 +73,25 @@ export type ExerciseData = Base & {
   busy: "grade" | "hint" | "solution" | null;
   error: string | null;
 };
-export type CardData = HomeData | AddData | CourseData | LessonData | McqData | OpenData | ExerciseData;
+/** Practice card (shalav_practice / app-only practice_*). */
+export type PracticeItem =
+  | { kind: "E"; exercise: ExerciseData }
+  | { kind: "M"; questionMd: string; options: string[]; selected: number | null; correctIndex: number | null; explanationMd: string | null }
+  | { kind: "O"; questionMd: string; answer: string | null; result: { correct: boolean; score: number; feedbackMd: string } | null };
+export type PracticeData = Base & {
+  view: "practice";
+  number: string;
+  mode: "locked" | "choose" | "item" | "summary";
+  units: { id: string; title: string }[];
+  stages: { id: string; title: string }[];
+  counters: { answered: number; correct: number; avg: number };
+  item: PracticeItem | null;
+  /** Claude is preparing the next item or grading an answer */
+  loading: boolean;
+  error: string | null;
+  summary: { items: number; avgScore: number; newMistakes: string[]; weakStages: { id: string; title: string }[] } | null;
+};
+export type CardData = HomeData | AddData | CourseData | LessonData | McqData | OpenData | ExerciseData | PracticeData;
 
 export type Host = {
   callTool(name: string, args?: Record<string, unknown>): Promise<{ structuredContent?: unknown; isError?: boolean }>;

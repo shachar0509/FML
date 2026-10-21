@@ -14,7 +14,7 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - [x] M6. Files and indexing — DONE (see M-log; real PDF in the bundle not yet checked)
 - [x] M7. Learn — DONE (see M-log; 🧪 full lesson pending)
 - [x] M8. Exercises and grading — DONE (see M-log; 🧪 check pending)
-- [ ] M9. Practice
+- [x] M9. Practice — DONE (see M-log; 🧪 check pending)
 - [ ] M10. Settings and context
 - [ ] M11. Packaging (MCPB) and docs (🧪)
 - [ ] M12. Cleanup (delete Tauri/sync/API code, move to src/core)
@@ -94,6 +94,15 @@ Environment: Node 22, pnpm, Rust (`~/.cargo/bin`, only needed for v1 until M12),
 - 🧪 **User check in Claude Desktop** (after M11): in a lesson Claude calls `assign_exercise`; the Exercise card shows the statement; Upload a photo of a handwritten solution (also try a PDF); Grade puts a chat line, Claude fetches the job (sees the photo) and answers; the Grade card appears in the card (steps, missing, mistakes) and Claude continues the lesson. Hint 1/2/3 and Show full solution (unlocks after hint 3 or a grade). Report: does Claude actually read the handwriting from the job image, time and tool calls per grade, whether the file picker works in the card iframe, and whether a phone photo uploads fast.
 - Not done: open-question attachments (decision: paste in chat); run state not persisted across a server restart; Practice reuse of the card comes with M9 (`exercises.open(n, ex, "practice")`).
 - Next: M9 — Practice.
+
+### M9 — Practice (done; 🧪 pending)
+- `src/server/practiceTools.ts` (`registerPracticeTools`; `createServer` now creates `registerExerciseTools` once and passes it to Learn and Practice): model+card `shalav_practice({courseNumber, scope?})` (without a scope the card shows the chooser), app-only `practice_state`, `practice_start_request`, `practice_next_request`, `practice_answer_mcq`, `practice_answer_open_request`, `practice_retry`, `practice_end`, `practice_learn_again`. One v1 `Practice` engine per course in memory (state also saved as v1 `ui` lines, so a restart resumes). Engine calls that may need Claude run as bridge ops; the tool waits 100 ms, and if the engine is still loading the card sends the chat line `mcp.practice` so the model calls `shalav_next_job`. MCQ keys and explanations leave the server only after the answer.
+- Exercise items reuse the Exercise card: `exercises.adopt(runId, n, run, "practice")` registers the engine's own `ExerciseRun`, so grade/hint/solution tools work unchanged and the engine records results. Engine changes: `prefetchOn` (server sets false) and `binding` promise.
+- Card `views/Practice.tsx`: scope chooser (all / unit / weak / stage), counters, MCQ, open answer (text only), Try again, Next, End, summary with Learn again; polls `practice_state` while loading or on an exercise item. Course card Practice button opens it.
+- Tests: `practiceTools.test.ts` (visibility, locked → chooser, generated exercise via two jobs, exercise card state through exercise tools, MCQ key hidden then revealed, open answer graded via job, summary, events); e2e practice card he/en × light/dark (axe, screenshot inspected). Typecheck/lint clean, e2e 30 pass.
+- 🧪 **User check in Claude Desktop** (after M11): complete one stage, open the course card, press Practice, choose a scope, Start; Claude should fetch the job(s) and an item appears (exercise → upload/grade like M8, MCQ, open answer). Report how many tool calls an item takes and whether the "continue" chat line works.
+- Not done: prefetch (decision: off, see DECISIONS.md); open-answer attachments; the weak scope is untested over MCP.
+- Next: M10 — Settings and context.
 
 ## Phase 1 — Desktop app (v1, frozen)
 

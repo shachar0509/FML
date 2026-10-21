@@ -121,3 +121,26 @@ for (const lang of ["he", "en"] as const)
       await page.screenshot({ path: `e2e/shots/card-exercise-${lang}-${theme}.png` });
       expect(errors).toEqual([]);
     });
+
+for (const lang of ["he", "en"] as const)
+  for (const theme of ["light", "dark"] as const)
+    test(`practice card (${lang}/${theme})`, async ({ page }) => {
+      const errors: string[] = [];
+      page.on("pageerror", (e) => errors.push(e.message));
+      const axe = async () => expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations.filter((v) => v.impact === "serious" || v.impact === "critical")).toEqual([]);
+      await page.goto(`/src/cards/test-host.html?view=practice&lang=${lang}&theme=${theme}`);
+      await expect(page.getByRole("radio")).toHaveCount(4);
+      await axe();
+      await page.getByRole("button", { name: lang === "he" ? "התחל" : "Start" }).click();
+      await expect(page.locator(".katex").first()).toBeVisible();
+      await page.getByRole("button", { name: /^B\b/ }).click();
+      await expect(page.getByRole("status").last()).toBeVisible();
+      await expect(page.getByLabel(lang === "he" ? "נכון" : "Correct")).toBeVisible(); // the right option is marked
+      await axe();
+      await page.screenshot({ path: `e2e/shots/card-practice-${lang}-${theme}.png` });
+      await page.getByRole("button", { name: lang === "he" ? "סיום תרגול" : "End session" }).click();
+      await expect(page.getByText("Sign slip")).toBeVisible();
+      await page.getByRole("button", { name: lang === "he" ? "ללמוד שוב" : "Learn again" }).click();
+      expect((await page.evaluate(() => (window as unknown as { __said: string[] }).__said)).at(-1)).toContain("S001");
+      expect(errors).toEqual([]);
+    });
