@@ -769,3 +769,13 @@ Edge cases found with the sample slides, and fixed in the renderer:
 - File names were centered in the space left after the page count and the status label. Labels of different widths ("Ready" vs "Not scanned yet — press Update plan") moved each name to a different center.
 - The rows now share one grid (CSS subgrid): icon | name | pages (and exercise counts) | label | ⋯. Every column is as wide in every row, so names, page counts and labels line up.
 - e2e: the course spec was flaky because a 1-day-old orphaned `pnpm dev` (1 GB) was reused. After killing it, 20/20 passed in 30 s.
+
+## M48: the plan and course name in the settings language (Translate button)
+- The Technion catalog has Hebrew names only, and a plan is written in the language it was built in. So showing it in the other language needs the chat model. You chose a button, so nothing is spent until it's pressed.
+- `src/core/domain/plan/translate.ts`:
+  - per course and language, `.shalav/translations.<lang>.json` maps `source text → translation`. Nothing needs invalidating, and after an Update plan only new or changed texts are missing;
+  - a text already in the language (any Hebrew letter = Hebrew; no Hebrew = English; no Hebrew/Latin letters = both) is shown as is;
+  - `translateCourse` sends the missing texts in jobs of 40, 3 at a time (`submit_translations`), and saves after each one.
+- Shown translated: the course card (name, unit and stage titles, summaries), Home (name, next stage), lesson title and next stage, practice unit and stage titles. Model-facing text and ids are unchanged.
+- Course card: "N items of the plan aren't in English yet" + **Translate to English / תרגום לעברית** (`course_translate_request`, study lane; the card sends ▶️ Continue). While it runs: Waiting, with a reload every 3 s so texts appear as they arrive. After a language switch in Settings, the course card fetches itself again.
+- Tests: translate unit tests (lookup, fallback, missing, one run then nothing left, per language). e2e: the note, the button, ▶️ Continue, the waiting label.

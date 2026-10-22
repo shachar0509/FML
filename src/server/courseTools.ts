@@ -6,6 +6,7 @@ import type { BuildStatus, CourseData, FileCounts, LookupResult } from "@/cards/
 import { type CatalogSource } from "@/core/domain/catalog/catalog";
 import { addCourse, buildPlan, courseExists, loadCourse, type ManualEntry } from "@/core/domain/courses/courses";
 import { newStageIds, refinePlan } from "@/core/domain/plan/refine";
+import { localize, translateCourse } from "@/core/domain/plan/translate";
 import { claude, setClaude } from "@/core/claude/runtime";
 import { useSettings } from "@/stores/settings";
 import type { BridgeGateway } from "./bridge";
@@ -15,6 +16,7 @@ import { nodeCatalog } from "./platform";
 const both = { ui: { resourceUri: CARDS_URI, visibility: ["model" as const, "app" as const] } }; // also usable as plain tools in hosts without cards (Claude Code)
 const lookupIn = z.object({ number: z.string() });
 const numIn = z.object({ number: z.string().regex(COURSE_ID_RE) });
+const appOnly = { ui: { resourceUri: CARDS_URI, visibility: ["app" as const] } };
 type Build = { state: "running" | "done" | "failed"; progress: { step: "plan" | "index" | "cover"; unit?: { k: number; n: number }; files?: FileCounts } | null; error: string | null };
 const out = (text: string, structuredContent: object) => ({ content: [{ type: "text" as const, text }], structuredContent: structuredContent as Record<string, unknown> });
 
@@ -23,6 +25,7 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, in
   const catalog = () => source ?? nodeCatalog();
   setClaude(bridge); // domain code (createCourse/buildPlan) talks to the host model through the bridge
   const builds = new Map<string, Build>();
+  const translating = new Set<string>(); // courses whose plan is being translated to the settings language
   const look = () => useSettings.getState().settings;
 
   /**
@@ -148,9 +151,10 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, in
       const { language, theme } = look();
       const { course, plan, progress } = c;
       const t = progress?.totals;
+      const { tr, missing } = await localize(course, plan, language);
       const stages = (plan?.stages ?? []).map((s) => {
         const p = progress?.stages[s.id];
-        return { id: s.id, title: s.title, summary: s.summary, status: p?.status ?? "locked", mastery: Math.round((p?.mastery ?? 0) * 100) };
+        return { id: s.id, title: tr(s.title), summary: tr(s.summary), status: p?.status ?? "locked", mastery: Math.round((p?.mastery ?? 0) * 100) };
       });
       const byId = new Map(stages.map((s) => [s.id, s]));
       const b = status(number);
@@ -159,7 +163,7 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, in
         language,
         theme,
         number,
-        name: course.nameHe,
+        name: tr(course.nameHe),
         credits: course.credits,
         stagesDone: t?.stagesCompleted ?? 0,
         stagesTotal: t?.stagesTotal ?? 0,
@@ -169,13 +173,29 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, in
         build: b.state === "running" || b.state === "failed" ? b : null,
         canPractice: stages.some((s) => s.status === "completed" || s.status === "completed_override"),
         watch: (progress?.mistakes ?? []).filter((m) => !m.resolved).slice(0, 5).map((m) => ({ label: language === "he" ? m.labelHe : m.labelEn, count: m.count, stageIds: m.stageIds })),
-        units: (plan?.units ?? []).map((u) => ({ id: u.id, title: u.title, stages: u.stageIds.flatMap((id) => byId.get(id) ?? []) })),
+        units: (plan?.units ?? []).map((u) => ({ id: u.id, title: tr(u.title), stages: u.stageIds.flatMap((id) => byId.get(id) ?? []) })),
+        translate: { missing, running: translating.has(number) },
       };
       const cur = data.current && byId.get(data.current);
       const text = `${course.courseNumber} — ${course.nameHe}\n${plan ? `${data.stagesDone}/${data.stagesTotal} stages done${cur ? `; next: ${cur.id} · ${cur.title}` : ""}` : "No study plan yet: the student adds course files, then presses Build plan."}\nOptions: 1) learn the next stage (shalav_start_lesson); 2) practice (shalav_practice); 3) add course files (files_list); 4) build or update the plan from the files (plan_build_request).`;
       return out(text, data);
     },
   );
+
+  // M48: "Translate" on the course card (the student's choice: it spends the chat's turns). Study lane: the card sends "▶️ Continue".
+  registerAppTool(server, "course_translate_request", { title: "Translate the plan", description: "Card-only: translate the course name and study plan to the settings language.", inputSchema: numIn, _meta: appOnly }, async ({ number }) => {
+    const c = await loadCourse(number);
+    if (!c) return { ...out(`No course ${number}.`, { error: "missing" }), isError: true };
+    if (translating.has(number)) return out("Already translating.", { ok: true });
+    const lang = look().language;
+    translating.add(number);
+    bridge.run(
+      `Translating the study plan of ${number}`,
+      (signal) => translateCourse(claude(), c.course, c.plan, lang, signal).finally(() => translating.delete(number)),
+      (k) => [{ type: "text", text: `${k} text(s) of the ${number} plan were translated; the card shows them. Say nothing more than one short sentence.` }],
+    ).done.catch(() => undefined);
+    return out("Translating.", { ok: true });
+  });
 
   return { building: (n: string) => builds.get(n)?.state === "running" };
 }

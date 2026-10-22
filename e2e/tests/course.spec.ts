@@ -214,6 +214,22 @@ for (const lang of LANGS)
   });
 
 for (const lang of LANGS)
+  test(`course: Translate puts the plan in the settings language (${lang})`, async ({ page }) => {
+    const errors = pageErrors(page);
+    await page.goto(host(`lang=${lang}&tr=1`)); // 12 texts of the plan are in the other language
+    await page.locator("ul button").first().click();
+    await expect(page.getByText(lang === "he" ? "12 פריטים בתוכנית עוד לא בעברית." : "12 items of the plan aren't in English yet.")).toBeVisible();
+    await page.waitForTimeout(400); // card fade-in
+    await axe(page);
+    await page.getByText(lang === "he" ? "12 פריטים" : "12 items").locator("..").screenshot({ path: `e2e/tests_output/course/card-course-translate-${lang}.png` });
+    await page.getByRole("button", { name: lang === "he" ? "תרגום לעברית" : "Translate to English" }).click();
+    expect(await toolsCalled(page)).toContain("course_translate_request");
+    expect(await said(page)).toEqual([lang === "he" ? "▶️ המשך" : "▶️ Continue"]); // the chat does the translating
+    await expect(page.getByText(lang === "he" ? "מתרגמים את התוכנית לעברית…" : "Translating the plan to English…")).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
+for (const lang of LANGS)
   test(`course files: first Moodle import downloads the browser (${lang})`, async ({ page }) => {
     const errors = pageErrors(page);
     await page.goto(host(`lang=${lang}&files=installing`));

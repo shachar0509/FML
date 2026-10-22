@@ -1,4 +1,5 @@
 import { COURSE_ID_RE } from "@/core/universities";
+import { localize } from "@/core/domain/plan/translate";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import type { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod";
@@ -36,6 +37,7 @@ export function registerPracticeTools(server: McpServer, bridge: BridgeGateway, 
   async function data(n: string, p: Practice): Promise<PracticeData> {
     const { language, theme } = useSettings.getState().settings;
     const ctx = await loadCtx(n);
+    const { tr } = await localize(ctx.course, ctx.plan, language);
     const done = completedIds(ctx.progress);
     const st = p.state;
     await p.binding;
@@ -51,8 +53,8 @@ export function registerPracticeTools(server: McpServer, bridge: BridgeGateway, 
     return {
       view: "practice", language, theme, number: n,
       mode: p.summary ? "summary" : st ? "item" : done.size ? "choose" : "locked",
-      units: ctx.plan.units.filter((u) => u.stageIds.some((s) => done.has(s))).map((u) => ({ id: u.id, title: u.title })),
-      stages: ctx.plan.stages.filter((s) => done.has(s.id)).map((s) => ({ id: s.id, title: s.title })),
+      units: ctx.plan.units.filter((u) => u.stageIds.some((s) => done.has(s))).map((u) => ({ id: u.id, title: tr(u.title) })),
+      stages: ctx.plan.stages.filter((s) => done.has(s.id)).map((s) => ({ id: s.id, title: tr(s.title) })),
       counters: p.counters, item, loading: p.loading, error: p.error, summary: p.summary,
     };
   }

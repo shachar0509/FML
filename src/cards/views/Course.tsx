@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   BookOpen,
   Check,
@@ -6,6 +6,7 @@ import {
   Circle,
   Contrast,
   Dumbbell,
+  Languages,
   Lock,
   Sparkles,
 } from "lucide-react";
@@ -16,6 +17,7 @@ import type { CourseData, FilesData, Stage, Go } from "../types";
 import { Checklist } from "./Checklist";
 import { Files } from "./Files";
 import { useBuild } from "./useBuild";
+import { Waiting } from "./Waiting";
 
 type Tool = (
   name: string,
@@ -51,8 +53,21 @@ export function Course({
   reload: () => void;
   practice: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [open, setOpen] = useState<Record<string, boolean>>({});
+  // the language was switched in Settings (instant, card-side): fetch the course again for its texts in that language
+  useEffect(() => {
+    if (i18n.language !== data.language) reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [i18n.language, data.language]);
+  // a translation is running: show the texts as they arrive
+  const translating = data.translate.running;
+  useEffect(() => {
+    if (!translating) return;
+    const h = setInterval(reload, 3000);
+    return () => clearInterval(h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [translating]);
   const [sel, setSel] = useState<string | null>(null);
   const running = data.build?.state === "running";
   const [unread, setUnread] = useState<number | null>(null); // files the next build would read
@@ -105,6 +120,29 @@ export function Course({
         </div>
       </header>
 
+      {data.translate.missing > 0 && !running && (
+        <div className={`${panel} flex flex-wrap items-center justify-between gap-3 p-4`}>
+          {translating ? (
+            <Waiting go={go} label={t("translate.running")} />
+          ) : (
+            <>
+              <p className="text-sm text-muted">{t("translate.note", { count: data.translate.missing })}</p>
+              <Button
+                variant="outline"
+                onClick={() =>
+                  void callTool("course_translate_request", { number: data.number }).then(() => {
+                    reload();
+                    return go();
+                  })
+                }
+              >
+                <Languages className="size-4" aria-hidden />
+                {t("translate.button")}
+              </Button>
+            </>
+          )}
+        </div>
+      )}
       {running && data.build && (
         <div className={`${panel} p-4`}>
           <Checklist go={go} b={live ?? data.build} />

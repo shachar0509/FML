@@ -532,5 +532,11 @@
     "example": "Example",
     "note": "Note",
     "warning": "Watch out"
+  },
+  "translate": {
+    "note_one": "1 item of the plan isn't in English yet.",
+    "note_other": "{{count}} items of the plan aren't in English yet.",
+    "button": "Translate to English",
+    "running": "Translating the plan to English…"
   }
 }

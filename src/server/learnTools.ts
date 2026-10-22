@@ -6,6 +6,7 @@ import type { FigureData, LessonData, McqData, OpenData, StepData } from "@/card
 import { statusBlock, tutorSystem } from "@/core/claude/prompts/tutor";
 import { askOpenQuestion, assignExercise, consultMaterials, presentMcq, recordCheckResult, updateAssessment } from "@/core/claude/tutorTools";
 import { buildKnowledgeBoundary } from "@/core/domain/boundary/boundary";
+import { localize } from "@/core/domain/plan/translate";
 import { CourseJsonSchema, EventSchema, PlanJsonSchema } from "@/core/domain/dataSchemas";
 import { listFileIndexes } from "@/core/domain/ingest/indexStore";
 import { buildRecap } from "@/core/domain/learn/recap";
@@ -46,7 +47,8 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     const [course, plan] = await Promise.all([readJsonFile(p.courseJson, CourseJsonSchema), readJsonFile(p.planJson, PlanJsonSchema)]);
     if (!course || !plan) return null;
     const events = await readJsonlDir(p.events, EventSchema);
-    return { course, plan, events, progress: reduceProgress(plan, events, nowIso()) };
+    const { tr } = await localize(course, plan, sets().language); // card titles in the settings language (M48)
+    return { course, plan, events, progress: reduceProgress(plan, events, nowIso()), tr };
   }
   type S = NonNullable<Awaited<ReturnType<typeof load>>>;
   const criteria = (s: S, stageId: string) =>
@@ -59,12 +61,12 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     const next = s.plan.stages[i + 1];
     const { language, theme } = sets();
     return {
-      view: "lesson", language, theme, number: s.course.courseNumber, stageId, title: stage?.title ?? stageId,
+      view: "lesson", language, theme, number: s.course.courseNumber, stageId, title: stage ? s.tr(stage.title) : stageId,
       status: sp?.status ?? "locked",
       objectives: (stage?.objectives ?? []).map((text, k) => ({ text, covered: !!sp?.coveredObjectives.includes(k) })),
       mastery: Math.round((sp?.mastery ?? 0) * 100),
       criteria: criteria(s, stageId),
-      next: next ? { id: next.id, title: next.title } : null,
+      next: next ? { id: next.id, title: s.tr(next.title) } : null,
     };
   }
 

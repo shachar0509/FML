@@ -4,6 +4,7 @@ import { loadImageB64 } from "@/core/lib/attachments";
 import { getUiCapability, registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 import { McpServer } from "@modelcontextprotocol/server";
 import { listCourses } from "@/core/domain/courses/courses";
+import { localize } from "@/core/domain/plan/translate";
 import * as z from "zod";
 import { BridgeGateway } from "./bridge";
 import type { HomeData } from "@/cards/types";
@@ -54,18 +55,19 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
         language,
         theme,
         university: uni?.id ?? null,
-        courses: courses.map(({ course, plan, progress }) => {
+        courses: await Promise.all(courses.map(async ({ course, plan, progress }) => {
           const t = progress?.totals;
           const stage = plan?.stages.find((x) => x.id === progress?.currentStageId);
+          const { tr } = await localize(course, plan, language);
           return {
             number: course.courseNumber,
-            name: course.nameHe,
+            name: tr(course.nameHe),
             credits: course.credits,
             pct: t && t.stagesTotal ? Math.round((100 * t.stagesCompleted) / t.stagesTotal) : 0,
-            stage: stage ? `${stage.id} · ${stage.title}` : null,
+            stage: stage ? `${stage.id} · ${tr(stage.title)}` : null,
             building: builds.building(course.courseNumber),
           };
-        }),
+        })),
       };
       return { content: [{ type: "text" as const, text }], structuredContent: data };
   };

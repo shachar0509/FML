@@ -26,6 +26,8 @@ export type CourseData = Base & {
   canPractice: boolean;
   watch: { label: string; count: number; stageIds: string[] }[];
   units: { id: string; title: string; stages: Stage[] }[];
+  /** M48: texts of the plan and name not yet in the settings language (0 = all shown in it), and whether a translation runs. */
+  translate: { missing: number; running: boolean };
 };
 /** A plan build's files by scan state, materials and exercises together. */
 export type FileCounts = { scanned: number; scanning: number; notScanned: number; total: number };
