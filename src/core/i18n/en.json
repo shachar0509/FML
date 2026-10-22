@@ -355,6 +355,7 @@
     "unsolved": "{{count}} unsolved",
     "pages": "{{count}} pages",
     "waiting": "Not scanned yet — press {{button}}",
+    "queued": "Waiting to scan",
     "indexedPct": "{{pct}}% scanned",
     "indexing": "Scanning",
     "indexingN": "Scanning {{done}}/{{total}}",

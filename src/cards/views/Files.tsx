@@ -20,7 +20,7 @@ const b64 = (buf: ArrayBuffer) => {
   return btoa(s);
 };
 
-function Chip({ f, hasPlan }: { f: FileRow; hasPlan: boolean }) {
+function Chip({ f, hasPlan, building }: { f: FileRow; hasPlan: boolean; building: boolean }) {
   const { t } = useTranslation();
   const pill = "flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium";
   if (f.status === "indexed")
@@ -47,7 +47,7 @@ function Chip({ f, hasPlan }: { f: FileRow; hasPlan: boolean }) {
     );
   return (
     <span className={`${pill} bg-border/60 text-muted`}>
-      {t("files.waiting", { button: t(hasPlan ? "plan.update" : "plan.build") })}
+      {building ? t("files.queued") : t("files.waiting", { button: t(hasPlan ? "plan.update" : "plan.build") })}
     </span>
   );
 }
@@ -151,7 +151,7 @@ function Legend({ rows, filter, onFilter }: { rows: FileRow[]; filter?: string; 
 }
 
 /** The ⋯ menu of one file: Open, Re-scan, Delete. Arrow keys move, Esc or an outside click closes. */
-function FileMenu({ f, onOpen, onRescan, onDelete }: { f: FileRow; onOpen: () => void; onRescan: () => void; onDelete: () => void }) {
+function FileMenu({ f, building, onOpen, onRescan, onDelete }: { f: FileRow; building: boolean; onOpen: () => void; onRescan: () => void; onDelete: () => void }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLSpanElement>(null);
@@ -205,7 +205,7 @@ function FileMenu({ f, onOpen, onRescan, onDelete }: { f: FileRow; onOpen: () =>
           <button
             role="menuitem"
             className={`${item} hover:bg-border/50 focus-visible:bg-border/50`}
-            disabled={f.status === "pending" || f.status === "indexing"} // nothing to redo yet
+            disabled={building || f.status === "pending" || f.status === "indexing"} // nothing to redo yet; a plan build uses every file until it ends
             onClick={() => (close(), onRescan())}
           >
             <ScanLine className="size-4 shrink-0 text-muted" aria-hidden />
@@ -396,9 +396,10 @@ export function Files({
               </span>
             )}
             <span className="text-xs text-muted">{t("files.pages", { count: f.pages })}</span>
-            <Chip f={f} hasPlan={hasPlan} />
+            <Chip f={f} hasPlan={hasPlan} building={live} />
             <FileMenu
               f={f}
+              building={live}
               onOpen={() => void callTool("file_open", { number, sha: f.sha })}
               onRescan={() =>
                 void callTool("file_reindex", { number, sha: f.sha }).then((r) => {

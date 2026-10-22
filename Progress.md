@@ -759,3 +759,8 @@ Edge cases found with the sample slides, and fixed in the renderer:
 - Before, the card took its language from the last server result, so pressing עברית/English only took effect on the next card.
 - Settings now applies the language (text, `dir`, `lang`) on click, before the save returns. If the save fails, it goes back to the saved language.
 - e2e: from each language, press the other one: the heading, `dir` and the pressed button switch at once.
+
+## M46: during a plan build, unscanned files say "waiting to scan" and Re-scan is off
+- While a build runs, a file not scanned yet shows "ממתין לסריקה / Waiting to scan". When no build is running it shows "Not scanned yet — press Update plan / Build plan".
+- Re-scan in the ⋯ menu is disabled for every file until the build ends. Open and Delete stay available.
+- e2e: in the joined-build test, the label, no "press Update plan", and Re-scan disabled on a scanned file.

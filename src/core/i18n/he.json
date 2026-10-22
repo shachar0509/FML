@@ -359,6 +359,7 @@
     "unsolved_other": "{{count}} לא פתורים",
     "pages": "{{count}} עמודים",
     "waiting": "עוד לא נסרק — לחצו על ״{{button}}״",
+    "queued": "ממתין לסריקה",
     "indexedPct": "{{pct}}% נסרקו",
     "indexing": "סורק",
     "indexingN": "סורק {{done}}/{{total}}",
