@@ -59,25 +59,34 @@ describe("graph", () => {
 });
 
 describe("control: gentle, but honest", () => {
+  // M75: the plan's required behaviour, exactly (two speeds: no single half-life can meet both "forgive 2 slips" and "see a slump")
   it("full control is reachable, and 1-2 misses after a long run barely move it", () => {
     const good = ctl(seq([[30, 1]]));
-    expect(good).toBeGreaterThan(0.93);
-    const two = ctl(seq([[30, 1], [2, 0]]));
-    expect(two).toBeGreaterThan(0.8);
-    expect(good - two).toBeLessThan(0.13);
-    expect(ctl(seq([[30, 1], [2, 0], [3, 1]]))).toBeGreaterThan(0.85); // back up after a few good answers
+    expect(good).toBeGreaterThan(0.95);
+    expect(good - ctl(seq([[30, 1], [2, 0]]))).toBeLessThanOrEqual(0.08);
+    expect(ctl(seq([[30, 1], [2, 0], [3, 1]]))).toBeGreaterThan(0.9); // back up after a few good answers
+    expect(ctl(seq([[10, 1]]))).toBeGreaterThan(0.84); // a new student rises as fast as before M75
   });
 
-  it("a steady 80% student stays steady (no swings after each miss)", () => {
-    const pattern = Array.from({ length: 60 }, (_, i) => (i % 5 === 4 ? 0 : 1));
-    const vals = pattern.map((_, i) => ctl(pattern.slice(0, i + 1))).slice(25);
-    expect(Math.min(...vals)).toBeGreaterThan(0.72);
-    expect(Math.max(...vals)).toBeLessThan(0.88);
+  it("a steady 80% student stays within ±0.05 of 0.8 (no swings after each miss)", () => {
+    const pattern = Array.from({ length: 80 }, (_, i) => (i % 5 === 4 ? 0 : 1));
+    const vals = pattern.map((_, i) => ctl(pattern.slice(0, i + 1))).slice(30);
+    expect(Math.min(...vals)).toBeGreaterThanOrEqual(0.75);
+    expect(Math.max(...vals)).toBeLessThanOrEqual(0.85);
   });
 
-  it("sustained misses bring it down", () => {
-    expect(ctl(seq([[30, 1], [10, 0]]))).toBeLessThan(0.6);
+  it("8 misses out of the last 10 bring it below 0.5 within those 10", () => {
+    expect(ctl([...seq([[30, 1]]), 0, 0, 1, 0, 0, 0, 1, 0, 0, 0])).toBeLessThan(0.5);
     expect(ctl(seq([[30, 1], [20, 0]]))).toBeLessThan(0.35);
+  });
+
+  it("shown stars never drop after 1-2 misses on one node of a course (3 nodes, any starting point)", () => {
+    for (const n of [10, 30, 60]) {
+      const other = ctl(seq([[n, 1]]));
+      const stars = (hit: number) => (5 * (2 * other + hit)) / 3;
+      const shown = shownStars(null, stars(other));
+      for (const misses of [1, 2]) expect(shownStars(shown, stars(ctl(seq([[n, 1], [misses, 0]]))))).toBe(shown);
+    }
   });
 
   it("a custom course starts at its self-rated level; academic starts low", () => {

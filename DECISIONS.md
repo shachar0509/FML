@@ -164,6 +164,19 @@
 ## M20 — A `rows` block instead of Hebrew inside KaTeX
 - Board layouts put a Hebrew name beside each aligned formula. KaTeX has no Hebrew metrics and lays `\text{}` out left to right, so names inside `aligned` render badly. A fenced `rows` block keeps the names as normal (bidi-correct) text and renders each formula's lhs / relation / rhs in a CSS grid, which also lines the relations up across rows. Boxes reuse GitHub-alert syntax (`> [!theorem]`) so the Markdown stays readable as plain text.
 
+## M61 — Deviations from the approved knowledge-graph plan (recorded in M75; they were only in Progress.md and code comments)
+- The prior's K=3 pseudo-answers fade with the answer count (so full control is reachable), and answers from before M62 (no `nodes`) count for all their stage's nodes at half weight. The plan's formula had a fixed prior.
+- Engine data lives per device: `<course>/.shalav/knowledge/<device>/{map.json, engine/}` (two engines writing one synced SQLite file would corrupt it; the log rebuilds it). The star hysteresis is kept in `map.json`, not `level.json`. The binary is installed in `<config>/engines`, not the data root's `bin/` (one per machine, not synced).
+- Without an engine, stars are still shown, from the log alone (no forgetting). The plan said cards show no stars then; the log is the truth, so a missing engine only loses forgetting.
+- `get_next_activity` and `check_mastery` are not called: the focus comes from `get_olm_snapshot.focus_concept`, and mastery thresholds are Shalav's own (criteria.ts), so Shalav never depends on the engine's fast BKT estimate for a level.
+- The cards have two `Stars`: the clickable picker in `CustomCourse.tsx` (self-rating) and the read-only display in `ui.tsx` (M65). Different jobs, so not merged.
+
+## M75 — Control: two speeds (the plan's required behaviour, exactly)
+- No single half-life meets both "30 good + 2 misses drops ≤ 0.08" (needs ≥ ~28 answers) and "8 of the last 10 missed → < 0.5" (needs ≤ ~7). M61 used 12 and loosened the tests to fit (< 0.13, < 0.6), failing both. Now: a long memory (36 answers) normally, and in a slump (≥ 5 misses, score < 0.5, in the node's last 10 answers) the lower of it and a short memory (6). Results: 2 slips −0.078; 8 of 10 → 0.42; steady 80% stays 0.78–0.81; after 10 misses, 10 good answers bring it back from 0.38 to ~0.74. The prior fades with a 12-answer half-life as before, so a new student rises as fast (10 good → 0.86).
+- The cost: the 5th miss in 10 drops the node in one step (0.83 → 0.55). Course stars average all nodes and have hysteresis, so they absorb it; a question's stars on that node can jump.
+- "Shown stars never drop after 1-2 misses" holds when the misses hit some of the course's nodes (tested with 3). If they hit every node (a one-stage course, untagged legacy answers), 0.078 × 5 = 0.39★ can cross the 0.35★ hysteresis by a hair, as the plan's own 0.08 limit would.
+- Control is Shalav's, not the engine's: the engine's BKT keeps no history (the M61 spike: two misses after 8 or after 30 correct answers alike drop it 0.94 → 0.27), so it never gets gentler with use; only its FSRS retention improves with a long history, and that is applied on top.
+
 ## M64 — Customized practice generates; the engine only reorders
 - Customized practice (custom courses) always generates a new exercise, as asked ("a loop of generated exercises"); an existing course exercise is served only when generation fails, so the loop never stops for one bad job. Normal practice keeps the full mix.
 - The engine's focus/misconceptions/reviews only add a bonus to the focus stage (+0.5); they never pick outside the scope, and practice works the same without the engine.

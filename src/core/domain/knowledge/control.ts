@@ -12,10 +12,15 @@ type Evidence = { s: number; w: number };
 /** M72: a convention the scan or the teacher's notes learned; only answers tagged with it are its evidence (never a stage-wide spread) */
 const learned = (n: GraphNode) => n.kind === "convention" && (n.origin === "index" || n.origin === "teacher");
 
-/** Half-life in answers: the last 12 answers on a node weigh as much as everything before them. */
-const HALF = 12;
-/** Pseudo-answers at the prior; they fade like the oldest answers, so full control is reachable. */
+/** Half-lives in answers (M75): a long memory, so one or two slips after a good run barely move it (30 good + 2 misses: −0.078);
+ * a short one once the node is in a slump (≥5 misses in its last 10 answers), so a real slump shows within those 10 (8 of 10: 0.42). */
+const SLOW = 36;
+const FAST = 6;
+const WINDOW = 10;
+const SLUMP = 5;
+/** Pseudo-answers at the prior; they fade with a 12-answer half-life (as before M75, whatever the memory), so full control is reachable and a new student rises as fast. */
 const K = 3;
+const PRIOR_HALF = 12;
 /** Self-rated level of a custom course (1-5) → starting control of every node. */
 const LEVEL_PRIOR = [0.05, 0.25, 0.45, 0.65, 0.85];
 export const priorOf = (c: Pick<CourseJson, "type" | "level">) => (isCustom(c) ? (LEVEL_PRIOR[(c.level ?? 1) - 1] ?? 0.05) : 0.1);
@@ -50,17 +55,24 @@ export function evidenceByNode(g: Graph, events: Event[]): Map<string, Evidence[
   return out;
 }
 
-/** Control of one node: a decaying average of its answers, starting from the prior. */
-export function control(evs: Evidence[], prior: number): number {
+/** A decaying average of the answers with half-life `half`, starting from the prior. */
+function average(evs: Evidence[], prior: number, half: number): number {
   const n = evs.length;
-  let num = K * prior * 0.5 ** (n / HALF);
-  let den = K * 0.5 ** (n / HALF);
+  let num = K * prior * 0.5 ** (n / PRIOR_HALF);
+  let den = K * 0.5 ** (n / PRIOR_HALF);
   evs.forEach((e, i) => {
-    const w = e.w * 0.5 ** ((n - 1 - i) / HALF);
+    const w = e.w * 0.5 ** ((n - 1 - i) / half);
     num += w * e.s;
     den += w;
   });
   return den ? num / den : prior;
+}
+
+/** Control of one node: the long-memory average; in a slump, the lower of it and the short-memory one. */
+export function control(evs: Evidence[], prior: number): number {
+  const slow = average(evs, prior, SLOW);
+  const slump = evs.slice(-WINDOW).filter((e) => e.s < 0.5).length >= SLUMP;
+  return slump ? Math.min(slow, average(evs, prior, FAST)) : slow;
 }
 
 export type Knowledge = {
