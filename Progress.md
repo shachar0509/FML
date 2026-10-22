@@ -886,3 +886,7 @@ Edge cases found with the sample slides, and fixed in the renderer:
   - Without a plan, the request covers the whole subject.
 - The job's summary says how many of N were added, and how many found documents were already in the course.
 - Tests: balancing (`web.test.ts`), server round trip (existing file and its source named in the request; same name / same text / used source rejected; follow-up round asks for the 2 missing; capped at 3), e2e (the slider value reaches the request).
+
+## M52 fix: custom course placeholders right-to-left in Hebrew
+- The custom course fields used `dir="auto"`. An empty field with that setting is left-to-right, so the Hebrew placeholders ran backwards. Empty fields now follow the card's direction; once text is typed, its own direction applies (an English name in a Hebrew card still reads left-to-right).
+- e2e: the three empty fields are RTL in Hebrew and LTR in English.

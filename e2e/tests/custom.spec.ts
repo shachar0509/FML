@@ -9,6 +9,9 @@ for (const lang of LANGS)
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(lang === "he" ? "יצירת קורס אישי" : "Create a custom course");
     const create = page.getByRole("button", { name: lang === "he" ? "יצירת הקורס" : "Create course" });
     await expect(create).toBeDisabled();
+    // empty fields follow the card's direction, so the placeholders read right-to-left in Hebrew
+    for (const f of lang === "he" ? ["שם הקורס", "תיאור הקורס", "מה תרצו להשיג"] : ["Course name", "Course description", "Desired outcome"])
+      expect(await page.getByLabel(f).evaluate((el) => getComputedStyle(el).direction)).toBe(lang === "he" ? "rtl" : "ltr");
     await page.getByLabel(lang === "he" ? "שם הקורס" : "Course name").fill(lang === "he" ? "תורת המוזיקה לגיטרה" : "Music theory for guitar");
     await page.getByLabel(lang === "he" ? "תיאור הקורס" : "Course description").fill(lang === "he" ? "סולמות, אקורדים והרמוניה" : "Scales, chords and harmony");
     await expect(page.getByText(lang === "he" ? /פרטו כמה שיותר/ : /Elaborate as much as you can/)).toBeVisible();

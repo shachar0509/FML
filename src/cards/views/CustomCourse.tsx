@@ -95,6 +95,7 @@ export function CustomCourse({
   }
 
   const lbl = "flex flex-col gap-1.5 text-sm font-medium";
+  // dir="auto" on an empty field is LTR, so its placeholder would run backwards in Hebrew: the page direction until something is typed
   const area =
     "rounded-lg border border-border bg-card p-3 text-sm font-normal focus-visible:outline-2 focus-visible:outline-primary";
   return (
@@ -109,7 +110,7 @@ export function CustomCourse({
           {t("custom.name")}
           <Input
             autoFocus
-            dir="auto"
+            dir={f.name ? "auto" : undefined}
             placeholder={t("custom.namePh")}
             value={f.name}
             onChange={(e) => setF({ ...f, name: e.target.value })}
@@ -119,7 +120,7 @@ export function CustomCourse({
           {t("custom.description")}
           <textarea
             className={`${area} min-h-32`}
-            dir="auto"
+            dir={f.description ? "auto" : undefined}
             placeholder={t("custom.descriptionPh")}
             value={f.description}
             onChange={(e) => setF({ ...f, description: e.target.value })}
@@ -132,7 +133,7 @@ export function CustomCourse({
           </span>
           <textarea
             className={`${area} min-h-20`}
-            dir="auto"
+            dir={f.goal ? "auto" : undefined}
             placeholder={t("custom.goalPh")}
             value={f.goal}
             onChange={(e) => setF({ ...f, goal: e.target.value })}
