@@ -181,10 +181,11 @@ for (const lang of LANGS)
     await page.getByRole("button", { name: lang === "he" ? "עדכון התוכנית" : "Update plan" }).click();
     await expect(page.getByText(lang === "he" ? "בתור: הצ'אט שבונה עכשיו ימשיך לקורס הזה." : "In line: the chat that is building now continues with this course.")).toBeVisible();
     expect(await said(page)).toEqual([]); // nothing sent: that chat picks it up
-    // while the plan builds: a file not scanned yet waits for it (no "press Update plan"), and Re-scan is off for every file
+    // while the plan builds: a file it will read waits for it (no "press Update plan"); one added meanwhile waits for the next build; Re-scan is off for every file
     await page.getByRole("button", { name: lang === "he" ? /חומרי לימוד/ : /Study materials/ }).click();
     await expect(page.getByText(lang === "he" ? "ממתין לסריקה" : "Waiting to scan", { exact: true })).toBeVisible();
-    await expect(page.getByText(lang === "he" ? /לחצו על/ : /press Update plan/)).toBeHidden();
+    await expect(page.getByText(lang === "he" ? /לחצו על/ : /press Update plan/)).toHaveCount(1);
+    await expect(page.getByText("lecture4.pdf").locator("..")).toContainText(lang === "he" ? /לחצו על/ : /press Update plan/);
     await page.getByRole("button", { name: lang === "he" ? "אפשרויות לקובץ lecture1.pdf" : "Options for lecture1.pdf" }).click();
     await expect(page.getByRole("menuitem", { name: lang === "he" ? "סריקה מחדש" : "Re-scan" })).toBeDisabled();
     await page.waitForTimeout(400); // card fade-in
@@ -193,6 +194,19 @@ for (const lang of LANGS)
     await page.waitForTimeout(400); // card fade-in
     await axe(page);
     await page.getByText(lang === "he" ? "בתור:" : "In line:").locator("..").screenshot({ path: `e2e/tests_output/course/card-course-joined-${lang}.png` });
+    expect(errors).toEqual([]);
+  });
+
+for (const lang of LANGS)
+  test(`course: files added or deleted in the folder outside the app show up by themselves (${lang})`, async ({ page }) => {
+    const errors = pageErrors(page);
+    await page.goto(host(`lang=${lang}&files=outside`));
+    await page.locator("ul button").first().click();
+    await page.getByRole("button", { name: lang === "he" ? /חומרי לימוד/ : /Study materials/ }).click();
+    await expect(page.getByText("outside.pdf")).toBeVisible({ timeout: 4000 }); // no click: the card follows the folder
+    await expect(page.getByText("lecture2.pdf")).toBeHidden();
+    await page.waitForTimeout(400); // card fade-in
+    await page.getByRole("region", { name: lang === "he" ? "קבצי לימוד" : "Study files" }).screenshot({ path: `e2e/tests_output/course/card-files-outside-${lang}.png` });
     expect(errors).toEqual([]);
   });
 

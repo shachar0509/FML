@@ -20,7 +20,7 @@ const b64 = (buf: ArrayBuffer) => {
   return btoa(s);
 };
 
-function Chip({ f, hasPlan, building }: { f: FileRow; hasPlan: boolean; building: boolean }) {
+function Chip({ f, hasPlan }: { f: FileRow; hasPlan: boolean }) {
   const { t } = useTranslation();
   const pill = "flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium";
   if (f.status === "indexed")
@@ -47,7 +47,7 @@ function Chip({ f, hasPlan, building }: { f: FileRow; hasPlan: boolean; building
     );
   return (
     <span className={`${pill} bg-border/60 text-muted`}>
-      {building ? t("files.queued") : t("files.waiting", { button: t(hasPlan ? "plan.update" : "plan.build") })}
+      {f.inBuild ? t("files.queued") : t("files.waiting", { button: t(hasPlan ? "plan.update" : "plan.build") })}
     </span>
   );
 }
@@ -265,12 +265,11 @@ export function Files({
     if (d) onFiles?.(d);
   }, [d, onFiles]);
   const active = !!d && [...d.materials, ...d.exercises].some((f) => f.status === "indexing");
-  const moodleBusy = !!d?.moodle?.busy;
+  // Always: files added to or deleted from the course folders outside the app show up at once (each call scans the folders).
   useEffect(() => {
-    if (!active && !moodleBusy && !live) return;
-    const id = setInterval(() => void refresh(), 2500);
+    const id = setInterval(() => void refresh(), 1500);
     return () => clearInterval(id);
-  }, [active, moodleBusy, live, refresh]);
+  }, [refresh]);
   const wasActive = useRef(false);
   useEffect(() => {
     if (wasActive.current && !active) reload(); // plan may have changed
@@ -396,7 +395,7 @@ export function Files({
               {t("files.pages", { count: f.pages })}
             </span>
             <span className="justify-self-start">
-              <Chip f={f} hasPlan={hasPlan} building={live} />
+              <Chip f={f} hasPlan={hasPlan} />
             </span>
             <FileMenu
               f={f}

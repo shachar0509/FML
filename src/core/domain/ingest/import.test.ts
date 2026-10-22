@@ -69,18 +69,41 @@ describe("scanCourse / remove / reindex", () => {
     const p = coursePaths(root(), C);
     mem.files.set(`${p.materials}/new.pdf`, "x");
     mem.files.set(`${p.materials}/note.docx`, "x");
-    expect(await scanCourse(C, deps())).toEqual({ added: 1, removed: 0 });
-    expect(await scanCourse(C, deps())).toEqual({ added: 0, removed: 0 });
+    expect(await scanCourse(C, deps())).toEqual({ added: 1, removed: [] });
+    expect(await scanCourse(C, deps())).toEqual({ added: 0, removed: [] });
     // rename: same hash, new name
     hashes[`${p.materials}/renamed.pdf`] = "h:new.pdf";
     mem.files.delete(`${p.materials}/new.pdf`);
     mem.files.set(`${p.materials}/renamed.pdf`, "x");
-    expect(await scanCourse(C, deps())).toEqual({ added: 0, removed: 0 });
+    expect(await scanCourse(C, deps())).toEqual({ added: 0, removed: [] });
     const [rec] = await listFileIndexes(C);
     expect(rec?.fileName).toBe("renamed.pdf");
     mem.files.delete(`${p.materials}/renamed.pdf`);
-    expect(await scanCourse(C, deps())).toEqual({ added: 0, removed: 1 });
+    expect(await scanCourse(C, deps())).toEqual({ added: 0, removed: ["h:new.pdf"] });
     expect(await listFileIndexes(C)).toEqual([]);
+  });
+
+  it("does not open an unreadable folder file again until it changes", async () => {
+    const f = `${coursePaths(root(), C).materials}/broken.pdf`;
+    mem.files.set(f, "x");
+    let opens = 0;
+    const d = { ...deps(), open: async () => (opens++, Promise.reject(new Error("bad pdf"))) };
+    await scanCourse(C, d);
+    await scanCourse(C, d);
+    expect(opens).toBe(1);
+    sizes[f] = 11; // replaced with another file
+    await scanCourse(C, d);
+    expect(opens).toBe(2);
+  });
+
+  it("skips a file still being copied in (its size changes while it is hashed), then takes it whole", async () => {
+    const f = `${coursePaths(root(), C).materials}/copying.pdf`;
+    mem.files.set(f, "x");
+    let n = 0;
+    const d = deps();
+    const native = { ...d.native, size: async () => (n++ ? 20 : 10) }; // grows between the two reads
+    expect(await scanCourse(C, { ...d, native })).toEqual({ added: 0, removed: [] });
+    expect(await scanCourse(C, deps())).toEqual({ added: 1, removed: [] }); // copy done: same size before and after
   });
 
   it("removeFile trashes + deletes record; reindex resets and enqueues", async () => {

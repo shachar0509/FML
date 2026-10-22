@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/client";
@@ -9,6 +9,8 @@ import type { FilesData } from "@/cards/types";
 import { FakeClaudeGateway, toolCall } from "@/core/claude/fake";
 import { setClaude } from "@/core/claude/runtime";
 import { createCourse } from "@/core/domain/courses/courses";
+import { coursePaths } from "@/core/lib/fs/paths";
+import { useSettings } from "@/stores/settings";
 import { initNode } from "./platform";
 import { createServer } from "./server";
 
@@ -25,7 +27,7 @@ const details = (req: { messages: { content: unknown }[] }) =>
 const sc = <T,>(r: { structuredContent?: unknown }) => r.structuredContent as T;
 const b64 = (s: string) => Buffer.from(s).toString("base64");
 
-it("uploads in chunks, lists, indexes through the bridge, removes", async () => {
+async function boot() {
   const d = await mkdtemp(join(tmpdir(), "shalav-"));
   Object.assign(process.env, { SHALAV_CONFIG_DIR: join(d, "c"), SHALAV_CACHE_DIR: join(d, "k"), SHALAV_DOCUMENTS_DIR: join(d, "d") });
   await writeFile(join(d, "cards.html"), "<html></html>");
@@ -38,7 +40,11 @@ it("uploads in chunks, lists, indexes through the bridge, removes", async () => 
   const client = new Client({ name: "t", version: "0" });
   await Promise.all([createServer().connect(a), client.connect(b)]);
   const call = (name: string, args: Record<string, unknown> = {}) => client.callTool({ name, arguments: args });
-  const num = "01040195";
+  return { call, client, num: "01040195" };
+}
+
+it("uploads in chunks, lists, indexes through the bridge, removes", async () => {
+  const { call, client, num } = await boot();
   const up = (index: number, data: string, name = "notes.txt") => call("file_upload_chunk", { number: num, role: "material", name, index, total: 2, data: b64(data) });
 
   expect((await client.listTools()).tools.find((t) => t.name === "file_upload_chunk")?._meta).toMatchObject({ ui: { visibility: ["app"] } });
@@ -90,4 +96,24 @@ it("uploads in chunks, lists, indexes through the bridge, removes", async () => 
 
   await call("file_remove", { number: num, sha: f.materials[0]?.sha });
   expect(sc<FilesData>(await call("files_list", { number: num })).materials).toEqual([]);
+});
+
+it("follows the folders: a file added mid-build waits for the next build, one deleted mid-build stops being read", async () => {
+  const { call, num } = await boot();
+  const dir = coursePaths(useSettings.getState().settings.dataRoot, num).materials;
+  await writeFile(join(dir, "a.txt"), "limits of sequences"); // put there outside the app
+  expect(sc<FilesData>(await call("files_list", { number: num })).materials).toMatchObject([{ name: "a.txt", status: "pending" }]);
+
+  await call("plan_build_request", { number: num });
+  expect(JSON.stringify((await call("shalav_next_job", { build: true })).content)).toContain("limits of sequences"); // a.txt is being read
+  await writeFile(join(dir, "late.txt"), "continuity");
+  let f = sc<FilesData>(await call("files_list", { number: num }));
+  expect(f.materials.map((m) => [m.name, m.status, !!m.inBuild])).toEqual([["a.txt", "indexing", true], ["late.txt", "pending", false]]);
+  expect(sc<{ files: unknown }>(await call("course_status", { number: num })).files).toMatchObject({ total: 1 }); // late.txt is not in this build
+
+  await rm(join(dir, "a.txt")); // deleted outside the app while it is read: its job is withdrawn, like Remove in the card
+  f = sc<FilesData>(await call("files_list", { number: num }));
+  expect(f.materials.map((m) => m.name)).toEqual(["late.txt"]);
+  await vi.waitFor(async () => expect(sc<{ state: string }>(await call("course_status", { number: num })).state).toBe("done"));
+  expect(sc<FilesData>(await call("files_list", { number: num })).materials).toMatchObject([{ name: "late.txt", status: "pending", inBuild: undefined }]); // the next Update plan reads it
 });

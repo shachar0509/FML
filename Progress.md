@@ -794,3 +794,13 @@ Edge cases found with the sample slides, and fixed in the renderer:
   - quote definitions, theorems and rules in the original wording, followed by a translation.
 - Lookup and lesson-brief prompts: a quote stays in the materials' language and is followed by its translation when that differs. When the languages match, nothing changes and nothing extra is spent.
 - Tests: detection (Hebrew text with an English file name counts as Hebrew; mixed; none), tutor rule present only on a mismatch.
+
+## M50: the file lists follow the course folders
+- The course card's file lists refresh every 1.5 s, and each refresh scans the folders. A file added to or deleted from the materials or example-question folders outside the app shows up or disappears by itself.
+- A file still being copied in (its size changes while it's hashed) is skipped until the next scan.
+- One folder scan per course runs at a time; overlapping polls share it.
+- A folder file that can't be added (unreadable, too many pages, over 200 MB) isn't opened again on every poll until its size changes.
+- Mid-build:
+  - Build plan claims the files that aren't scanned when it's pressed. A file added meanwhile isn't read: it shows "press Update plan" (not "Waiting to scan") and is left for the next build.
+  - A file deleted outside the app mid-build is handled like Remove in the card: its scan is cancelled and its pending AI jobs are withdrawn, and it leaves the build's counts.
+- Tests: server round trip (external add, then mid-build add + delete, build ends, the late file stays pending), scan skips a file that changes while being hashed and doesn't reopen an unreadable one (`import.test.ts`), e2e for the folder change and for the late file's label during a build.

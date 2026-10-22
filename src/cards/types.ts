@@ -38,7 +38,7 @@ export type LookupResult =
   | { status: "notfound" | "offline" | "manual"; number: string }
   | { status: "exists"; number: string }
   | { status: "found"; entry: { courseNumber: string; nameHe: string; credits: number; faculty: string; syllabusHe: string } };
-export type FileRow = { sha: string; name: string; pages: number; status: "pending" | "indexing" | "indexed" | "failed"; error: string | null; exercises: number; /** exercises whose solution is printed in the file */ solved: number; done?: number; total?: number };
+export type FileRow = { sha: string; name: string; pages: number; status: "pending" | "indexing" | "indexed" | "failed"; error: string | null; exercises: number; /** exercises whose solution is printed in the file */ solved: number; done?: number; total?: number; /** read by the plan build running now (one added meanwhile waits for the next) */ inBuild?: boolean };
 /** Files section of the course card (app-only `files_list`). */
 export type FilesData = Base & {
   view: "files";

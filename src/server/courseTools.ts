@@ -21,7 +21,8 @@ type Build = { state: "running" | "done" | "failed"; progress: { step: "plan" | 
 const out = (text: string, structuredContent: object) => ({ content: [{ type: "text" as const, text }], structuredContent: structuredContent as Record<string, unknown> });
 
 /** Courses and plan (plan v2 §6.2): lookup, create/retry as bridge operations, status polling, Course Home data. */
-export function registerCourseTools(server: McpServer, bridge: BridgeGateway, indexPending: (n: string, on: (c: FileCounts) => void) => Promise<number>, source?: CatalogSource) {
+type Files = { indexPending: (n: string, on: (c: FileCounts) => void) => Promise<number>; claim: (n: string) => Promise<void>; release: (n: string) => void };
+export function registerCourseTools(server: McpServer, bridge: BridgeGateway, files: Files, source?: CatalogSource) {
   const catalog = () => source ?? nodeCatalog();
   setClaude(bridge); // domain code (createCourse/buildPlan) talks to the host model through the bridge
   const builds = new Map<string, Build>();
@@ -40,6 +41,7 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, in
       `Building the study plan for ${n}`,
       async () => {
         try {
+          await files.claim(n); // the files there when Build is pressed; one added meanwhile waits for the next build
           let had = (await loadCourse(n))?.plan ?? null;
           const fresh = !had;
           if (!had) {
@@ -48,7 +50,7 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, in
             if (r.planError) throw new Error(r.planError);
             had = (await loadCourse(n))?.plan ?? null;
           }
-          const indexed = await indexPending(n, (files) => (b.progress = { step: "index", files: files.total ? files : undefined }));
+          const indexed = await files.indexPending(n, (files) => (b.progress = { step: "index", files: files.total ? files : undefined }));
           let added = 0;
           // Serial by design: refine starts only after every file of this course is read (indexPending waits for them), and one build per course runs at a time.
           const c = await loadCourse(n);
@@ -62,6 +64,8 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, in
           b.state = "failed";
           b.error = e instanceof Error ? e.message : String(e);
           throw e;
+        } finally {
+          files.release(n);
         }
       },
       (r) => [{ type: "text", text: `The study plan for ${n} is ${r.fresh ? "built" : "updated"}${r.indexed ? ` from ${r.indexed} course file(s)` : ""}${r.added ? `; ${r.added} stage(s) were added so every topic in the files is covered` : r.indexed ? "; it already covered every topic in the files" : ""}. Tell the student in one sentence; the card shows the plan.` }],

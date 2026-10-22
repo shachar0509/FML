@@ -86,11 +86,14 @@ export async function importFiles(course: string, role: Role, files: string[], d
 }
 
 /** Watcher / sync-arrival pass: register unknown files in place, follow renames, drop records of deleted files. */
-export async function scanCourse(course: string, d: Deps): Promise<{ added: number; removed: number }> {
+const rejected = new Map<string, number>(); // path → size of a folder file that cannot be added (unreadable, too big): not opened again on every scan until it changes
+
+/** `removed`: the shas whose file is gone (the caller stops reading them, like a removal in the card). */
+export async function scanCourse(course: string, d: Deps): Promise<{ added: number; removed: string[] }> {
   const recs = await listFileIndexes(course);
   const p = paths(course);
   let added = 0;
-  let removed = 0;
+  const removed: string[] = [];
   for (const role of ["material", "exercises"] as const) {
     const dir = roleDir(course, role);
     if (!(await fs().exists(dir))) continue;
@@ -99,7 +102,11 @@ export async function scanCourse(course: string, d: Deps): Promise<{ added: numb
       const abs = join(dir, e.name);
       const rel = nfc(abs.slice(p.course.length + 1));
       if (recs.some((r) => r.relPath === rel)) continue;
+      const size = await d.native.size(abs);
+      if (rejected.get(abs) === size) continue;
+      if (size > MAX_BYTES) { rejected.set(abs, size); continue; }
       const sha256 = await d.native.sha256(abs);
+      if ((await d.native.size(abs)) !== size) continue; // still being copied in: the next scan takes it whole
       const same = recs.find((r) => r.sha256 === sha256 && r.role === role);
       if (same) {
         if (!(await fs().exists(join(p.course, same.relPath)))) {
@@ -110,13 +117,14 @@ export async function scanCourse(course: string, d: Deps): Promise<{ added: numb
         continue;
       }
       const r = await register(course, role, abs, sha256, d);
+      if (r.status !== "added") rejected.set(abs, size);
       if (r.status === "added") { added++; recs.push((await listFileIndexes(course)).find((x) => x.sha256 === sha256) as FileIndex); }
     }
   }
   for (const r of recs) {
     if (await fs().exists(join(p.course, r.relPath))) continue;
     await dropIndex(course, r);
-    removed++;
+    removed.push(r.sha256);
   }
   return { added, removed };
 }

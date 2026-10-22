@@ -46,11 +46,21 @@ export function registerFileTools(server: McpServer, o: { openFolder?: (p: strin
   });
   queue.subscribe((e) => (e.done === undefined ? prog.delete(e.sha256) : prog.set(e.sha256, { done: e.done, total: e.total ?? 0 })));
   const deps = importDeps;
+  const builds = new Map<string, Set<string>>(); // course → the files its running plan build reads; a file added meanwhile waits for the next build
+  const scans = new Map<string, Promise<unknown>>(); // one folder scan per course at a time (the card polls)
+
+  /** Follows the folders: files added outside the app are registered, deleted ones are dropped and stop being read (like Remove in the card). */
+  function scan(number: string) {
+    const run = scans.get(number) ?? scanCourse(number, deps()).then(({ removed }) => removed.forEach((sha) => queue.cancel(number, sha))).finally(() => scans.delete(number));
+    scans.set(number, run);
+    return run;
+  }
 
   async function list(number: string): Promise<FilesData> {
-    await scanCourse(number, deps());
+    await scan(number);
     const recs = await listFileIndexes(number);
-    const row = (r: (typeof recs)[number]) => ({ sha: r.sha256, name: r.fileName, pages: r.pageCount, status: r.status, error: r.error, exercises: r.exercises.length, solved: r.exercises.filter((e) => e.referenceSolutionMd).length, ...prog.get(r.sha256) });
+    const mine = builds.get(number);
+    const row = (r: (typeof recs)[number]) => ({ sha: r.sha256, name: r.fileName, pages: r.pageCount, status: r.status, error: r.error, exercises: r.exercises.length, solved: r.exercises.filter((e) => e.referenceSolutionMd).length, inBuild: mine?.has(r.sha256), ...prog.get(r.sha256) });
     const { language, theme } = useSettings.getState().settings;
     return {
       view: "files", language, theme, number,
@@ -108,10 +118,18 @@ export function registerFileTools(server: McpServer, o: { openFolder?: (p: strin
     return out("ok", { ok: true });
   });
 
-  /** Index every pending/failed file against the current plan (part of "Build plan"); returns how many files are indexed after it.
+  /** A plan build starts: it reads the files not scanned now; files added later wait for the next build. `release` when it ends. */
+  async function claim(number: string) {
+    await scan(number);
+    builds.set(number, new Set((await listFileIndexes(number)).filter((r) => r.status === "pending" || r.status === "failed").map((r) => r.sha256)));
+  }
+  const release = (number: string) => void builds.delete(number);
+
+  /** Index every pending/failed file the build claimed against the current plan (part of "Build plan"); returns how many files are indexed after it.
    *  `on` gets the build's files (materials and exercises together) by state, like the file lists: scanned, scanning, not scanned (waiting or failed). */
   async function indexPending(number: string, on: (c: FileCounts) => void = () => undefined) {
-    const todo = (await listFileIndexes(number)).filter((r) => r.status === "pending" || r.status === "failed");
+    const mine = builds.get(number);
+    const todo = (await listFileIndexes(number)).filter((r) => (r.status === "pending" || r.status === "failed") && (!mine || mine.has(r.sha256)));
     const state = new Map(todo.map((r) => [r.sha256, "pending" as string]));
     const report = () => {
       const v = [...state.values()];
@@ -158,5 +176,5 @@ export function registerFileTools(server: McpServer, o: { openFolder?: (p: strin
     return out("ok", { ok: true });
   });
 
-  return { indexPending };
+  return { indexPending, claim, release };
 }
