@@ -6,6 +6,8 @@ const courseNumber = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{1,31}$/);
 const stageId = z.string().regex(/^S\d{3}$/);
 const unitId = z.string().regex(/^U\d{2}$/);
 const context = z.enum(["learn", "practice"]);
+/** M71: evidence the teacher wrote (graded work) — only on node_observed / mistake_observed */
+const evidenceContext = z.enum(["learn", "practice", "teacher"]);
 
 // `university` is written once and never changed (reset = delete the data folder); older files have none.
 export const ShalavJsonSchema = z.object({ formatVersion: z.literal(1), createdAt: ts, university: z.enum(["technion", "huji", "reichman", "braude"]).optional() });
@@ -103,15 +105,15 @@ export const EventSchema = z.discriminatedUnion("type", [
     ...base, type: z.literal("assessment_updated"), stageId, mastery: z.number(), coveredObjectives: z.array(z.number()),
     gaps: z.array(z.string()), reviewTopics: z.array(z.string()), readyToAdvance: z.boolean(), rationale: z.string(),
   }),
-  z.object({ ...base, type: z.literal("mistake_observed"), tag: z.string(), stageIds: z.array(stageId), refId: z.string(), context }),
+  z.object({ ...base, type: z.literal("mistake_observed"), tag: z.string(), stageIds: z.array(stageId), refId: z.string(), context: evidenceContext }),
   z.object({ ...base, type: z.literal("stage_completed"), stageId, by: z.enum(["mastery", "user_override"]), masteryAtCompletion: z.number() }),
   z.object({ ...base, type: z.literal("stage_reopened"), stageId }),
   z.object({ ...base, type: z.literal("mistake_tag_defined"), tag: z.string(), labelHe: z.string(), labelEn: z.string(), description: z.string() }),
   // The tutor/grader grows the student's knowledge graph: a node the plan does not have (a skill, a course convention, a misconception…)
-  z.object({ ...base, type: z.literal("node_added"), nodeId: z.string(), kind: NodeKindSchema, label: z.string().max(80), why: z.string().max(300), stageIds: z.array(stageId), requires: z.array(z.string()), origin: z.enum(["tutor", "grader", "index"]), refId: z.string() }),
+  z.object({ ...base, type: z.literal("node_added"), nodeId: z.string(), kind: NodeKindSchema, label: z.string().max(80), why: z.string().max(300), stageIds: z.array(stageId), requires: z.array(z.string()), origin: z.enum(["tutor", "grader", "index", "teacher"]), refId: z.string() }),
   z.object({ ...base, type: z.literal("node_linked"), from: z.string(), to: z.string(), rel: z.enum(["requires", "misconception_of"]) }),
   // The tutor's own observation of a node (e.g. "cited the section numbers this time"), 0..1
-  z.object({ ...base, type: z.literal("node_observed"), nodeId: z.string(), score: z.number().min(0).max(1), why: z.string().max(300), context }),
+  z.object({ ...base, type: z.literal("node_observed"), nodeId: z.string(), score: z.number().min(0).max(1), why: z.string().max(300), context: evidenceContext, refId: z.string().optional() }),
   z.object({
     ...base, type: z.literal("plan_replaced"), fromVersion: z.number().int(), toVersion: z.number().int(),
     idMap: z.record(z.string(), z.string().nullable()),
@@ -205,6 +207,27 @@ export const IndexedExerciseSchema = z.object({
   part: z.string().nullable().optional(),
 });
 export type IndexedExercise = z.infer<typeof IndexedExerciseSchema>;
+export const TeacherItemSchema = z.object({
+  id: z.string(),
+  page: z.number().int(),
+  type: z.enum(["requirement", "deduction", "praise"]),
+  rule: z.string(),
+  quote: z.string(),
+  points: z.number().nullable(),
+  exercise: z.string().nullable(),
+  /** the situation the comment was written on: what that part asked and what the answer did there */
+  when: z.string(),
+  level: z.enum(["whole", "part", "any"]),
+  answerForms: z.array(AnswerFormSchema),
+  questionTypes: z.array(IndexedExerciseSchema.shape.type),
+  stageIds: z.array(stageId),
+  /** graph nodes the teacher's marks score (resolved ids) */
+  nodes: z.array(z.object({ id: z.string(), score: z.number().min(0).max(1) })),
+  /** deduction: the concept node it concerns, and its mistake tag */
+  concerns: z.string().nullable(),
+  mistake: z.object({ tag: z.string(), labelHe: z.string(), labelEn: z.string(), description: z.string() }).nullable(),
+});
+export type TeacherItem = z.infer<typeof TeacherItemSchema>;
 export const FileIndexSchema = z.object({
   schema: z.literal(1),
   sha256: z.string(),
@@ -227,6 +250,8 @@ export const FileIndexSchema = z.object({
     page: z.number().int(), stageIds: z.array(stageId), summary: z.string(), hasFigure: z.boolean(), text: z.string(),
     /** M41: remarks, warnings, special cases and counterexamples printed on the page (absent in records read before M41). */
     notes: z.array(z.string()).optional(),
+    /** M71, teacher files: what the page is (its text is only what the teacher wrote) */
+    kind: z.enum(["graded_work", "rubric", "remark"]).optional(),
   })),
   exercises: z.array(IndexedExerciseSchema),
   /** M70: answer-writing practices seen in this file's printed solutions, each with that solution's own situation (generalized later, across files) */
@@ -234,6 +259,8 @@ export const FileIndexSchema = z.object({
     occurrences: z.array(z.object({ id: z.string(), label: z.string(), useCase: z.string(), practice: z.string() })),
     absences: z.array(z.object({ label: z.string(), useCase: z.string(), practice: z.string() })),
   }).optional(),
+  /** M71, teacher files: the teacher's requirements, deductions and praise (quotes of the teacher, never the student's answer) */
+  teacherItems: z.array(TeacherItemSchema).optional(),
 });
 export type FileIndex = z.infer<typeof FileIndexSchema>;
 

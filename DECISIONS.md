@@ -182,3 +182,9 @@
 - Teacher notes are a third role folder ("הערות המרצה"), like the other two, so the folder scan, deletion and rename handling work unchanged; Moodle never imports into it.
 - A web-gathered file is recognized by its content sha, written to `.shalav/web-files.json` before the file lands (the folder scan may pick it up at once). Its solutions are Shalav's own and never teach conventions.
 - Solution practices are recorded per occurrence with that solution's own situation; generalizing into conventions happens only across files, in reconcile (M72).
+
+## M71 — Teacher evidence is written once per file content
+- Graded-work evidence carries the file sha as `refId`; a sha already in the log is never written again (re-scan, plan replace). An edited file is a new sha and writes new evidence; the old file's events stay, because the event log is append-only.
+- Repeated mistakes are matched by tag, not by a second AI job: the teacher-notes prompt sees the tags already used and reuses one for the same mistake. Two distinct works or answers with the tag make the misconception node.
+- A teacher file's stored page text is the model's transcription of the teacher's writing only; the raw page (which holds the student's answer) is never stored.
+- Teacher files of one course are scanned one at a time (the tag list and the repeat count read the log), so a waiting teacher file holds one of the course's two queue slots; material and exercise files are unaffected.

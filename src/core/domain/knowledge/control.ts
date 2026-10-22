@@ -42,7 +42,7 @@ export function evidenceByNode(g: Graph, events: Event[]): Map<string, Evidence[
       };
       if (e.nodes?.length) e.nodes.forEach((n) => add(n.id, adj(n.score), 1));
       else spread(e.stageIds, adj(e.score / 100), 0.5);
-    } else if (e.type === "node_observed") add(e.nodeId, e.score, 1);
+    } else if (e.type === "node_observed") add(e.nodeId, e.score, e.context === "teacher" ? 2 : 1); // M71: the teacher's own marks weigh twice an AI grade
     else if (e.type === "assessment_updated") spread([e.stageId], e.mastery, 0.2); // the lesson's checks already count; the tutor's guess only nudges
   }
   return out;

@@ -131,3 +131,36 @@ export const submitExercises = defineTool(
     })).describe("Places in the printed solutions where a practice listed in occurrences was NOT followed in a similar-looking situation; empty if none").default([]),
   }),
 );
+
+// M71: teacher's notes (graded work, rubrics, remarks). Only what the teacher wrote; the student's answers are never content.
+const ExerciseType = submitExercises.schema.shape.exercises.element.shape.type;
+export const submitTeacherNotes = defineTool(
+  "submit_teacher_notes",
+  "Submit what the teacher wrote on every page of the batch, and each requirement, deduction or praise.",
+  z.object({
+    pages: z.array(z.object({
+      page: z.number().int(),
+      kind: z.enum(["graded_work", "rubric", "remark"]),
+      text: z.string().describe("ONLY the teacher's writing on the page (comments, marks, points, corrections, rubric lines, remarks), verbatim; never the student's answer; empty if the teacher wrote nothing"),
+      summary: z.string(),
+      stageIds: z.array(z.string()),
+    })),
+    items: z.array(z.object({
+      page: z.number().int(),
+      type: z.enum(["requirement", "deduction", "praise"]),
+      rule: z.string().describe("What answers in this course must do, in general words, as the teacher means it (≤160 chars); for a deduction, the rule that was broken"),
+      quote: z.string().describe("The teacher's own words this comes from, verbatim; never the student's text"),
+      points: z.number().nullable().describe("Points taken off (negative) or given, if the teacher wrote them").default(null),
+      exercise: z.string().nullable().describe("The question/part the comment was written on, as printed (e.g. \"2b\")").default(null),
+      when: z.string().describe("The situation the comment was written on, concretely: what that part asked and what kind of step the answer took there (e.g. \"the answer bases liability on a statute\"); never the student's own claims or wording"),
+      level: z.enum(["whole", "part", "any"]).describe("whole = about a whole multi-part answer (e.g. order of the parts); part = about one part; any = either").default("any"),
+      answerForms: z.array(AnswerFormSchema).default([]),
+      questionTypes: z.array(ExerciseType).default([]),
+      stageIds: z.array(z.string()).default([]),
+      nodeResults: z.array(z.object({ n: z.number().int().min(1), score: z.number().min(0).max(1) })).describe("Graded work only: each listed node the teacher's marks judge here, and how well the student's work shows it per the teacher (0..1)").default([]),
+      concerns: z.number().int().min(1).nullable().describe("Deduction: the number of the listed node (concept, theorem, technique…) the mistake is about").default(null),
+      mistake: z.object({ tag: z.string(), labelHe: z.string(), labelEn: z.string(), description: z.string() }).nullable()
+        .describe("Deduction: the mistake as a short kebab-case tag; reuse a listed tag when it is the same mistake").default(null),
+    })).default([]),
+  }),
+);

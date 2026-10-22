@@ -44,6 +44,7 @@ export async function removeFromPlan(n: string, stageIds: string[]): Promise<Pla
       planVersion: r.planVersion === null ? null : plan.version,
       materialPages: r.materialPages.map((pg) => ({ ...pg, stageIds: left(pg.stageIds) })),
       exercises: r.exercises.map((e) => ({ ...e, requiredStageIds: left(e.requiredStageIds), primaryStageId: ids.has(e.primaryStageId) ? (left(e.requiredStageIds)[0] ?? e.primaryStageId) : e.primaryStageId })),
+      ...(r.teacherItems ? { teacherItems: r.teacherItems.map((t) => ({ ...t, stageIds: left(t.stageIds) })) } : {}),
     });
   }
   await appendEvent(n, { type: "plan_replaced", fromVersion: old.version, toVersion: plan.version, idMap: Object.fromEntries(old.stages.map((s) => [s.id, ids.has(s.id) ? null : s.id])) });

@@ -25,3 +25,20 @@ Rules:
 - occurrences (only from solutions PRINTED in the file, never invented): every answer-writing practice a careful grader would expect, recorded where it occurs, with that solution's own situation at that point (what the question demanded, what the answer was doing). Record the concrete situation, not a general rule: "the answer bases liability on a statute → cites the statute and section", not "law answers cite sections". One row per place.
 - absences: places in the printed solutions with a similar-looking situation where a practice from occurrences was NOT followed. They tell later analysis where the practice really applies, so be precise about the situation.
 Call submit_exercises.`;
+
+export const teacherPrompt = (c: Head, planCompact: string, nodes: string, tags: string, lang: string) =>
+  `You read the teacher's notes of ${courseRef(c)}: graded homework or exams with the teacher's comments, rubrics or grading guides, and lecture or TA remarks.
+Study plan stages:
+${planCompact}
+Knowledge graph nodes:
+${nodes}
+Mistake tags already used:
+${tags || "(none yet)"}
+The student's own answers are NEVER a source: a graded page shows the student's work, which may be wrong. Read it only to understand what a comment refers to. Never copy, summarize or rely on it, never treat it as a solution or as course material.
+Only what the teacher wrote counts: marks, comments, points, corrections, rubric lines, remarks. A correction the teacher wrote (e.g. "the result is 5") is the teacher's, quoted as such.
+For each page: kind (graded_work, rubric or remark), text = only the teacher's writing on it verbatim, a summary in ${lang} of what the teacher wrote, and the stage ids it concerns.
+items: every requirement (a rubric line or a remark on how answers must be written), deduction (points taken off or a mark of an error) and praise, each with:
+- rule: the general rule behind it in ${lang} (for a deduction, what should have been done); quote: the teacher's words;
+- when: the concrete situation it was written on (what the part asked, what kind of step the answer took there, e.g. "the answer bases liability on a statute"), so later analysis knows where it applies. Describe the situation only: never repeat the student's claims, wording, numbers or invented names;
+- graded work only: nodeResults (each listed node the teacher's marks judge, score per the teacher), and for a deduction concerns (the node the mistake is about) and mistake (reuse a listed tag for the same mistake).
+Call submit_teacher_notes.`;

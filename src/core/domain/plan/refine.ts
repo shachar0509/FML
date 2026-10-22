@@ -82,6 +82,7 @@ export function remapIndex(rec: FileIndex, idMap: Record<string, string | null>,
     planVersion: version,
     materialPages: rec.materialPages.map((p) => ({ ...p, stageIds: list(p.stageIds) })),
     exercises: rec.exercises.map((e) => ({ ...e, requiredStageIds: list(e.requiredStageIds), primaryStageId: m(e.primaryStageId) })),
+    ...(rec.teacherItems ? { teacherItems: rec.teacherItems.map((t) => ({ ...t, stageIds: list(t.stageIds) })) } : {}),
   };
 }
 

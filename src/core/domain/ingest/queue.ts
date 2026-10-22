@@ -1,6 +1,7 @@
 import type { ClaudeGateway } from "@/core/claude/types";
 import type { FileIndex, PlanJson } from "@/core/domain/dataSchemas";
 import { indexExercises, indexMaterial, pageTokenEstimate } from "./index";
+import { indexTeacher, teacherEvidence } from "./teacher";
 import { listFileIndexes, readFileIndex, writeFileIndex } from "./indexStore";
 import { PasswordProtectedError, type OpenSource } from "./types";
 
@@ -33,6 +34,13 @@ export function createIndexQueue(deps: QueueDeps) {
   let idleWaiters: { course?: string; resolve: () => void }[] = [];
   const emit = (e: QueueEvent) => subs.forEach((cb) => cb(e));
   const key = (course: string, sha: string) => `${course}/${sha}`;
+  // M71: one teacher file per course at a time, so the next one sees the mistake tags and evidence the previous one wrote
+  const teacherChain = new Map<string, Promise<unknown>>();
+  const oneTeacherAtATime = <R>(course: string, fn: () => Promise<R>): Promise<R> => {
+    const p = (teacherChain.get(course) ?? Promise.resolve()).then(fn, fn);
+    teacherChain.set(course, p.catch(() => {}));
+    return p;
+  };
 
   class Removed extends Error {}
   /** Writes the record unless the student removed the file meanwhile (no ghost index for a trashed file). */
@@ -60,18 +68,22 @@ export function createIndexQueue(deps: QueueDeps) {
         declined.add(key(course, sha256)); // stays pending; retry() asks again
         return;
       }
-      if (rec.role === "teacher") return; // ponytail: M70 only stores teacher notes; M71 reads them (they stay "not scanned" until then)
       const ctl = new AbortController();
       runningFiles.set(key(course, sha256), ctl);
       rec = await set(course, rec, { status: "indexing", error: null });
       const source = await deps.open({ path: deps.resolve(course, rec), mediaType: rec.mediaType, sha256 });
       try {
-        const index = rec.role === "material" ? indexMaterial : indexExercises;
-        const out = await index({
-          gw: deps.gw(), source, rec, plan, course: head, lang: deps.lang(), signal: ctl.signal,
-          onProgress: (done, total) => emit({ course, sha256, status: "indexing", done, total }),
-        });
-        await set(course, out, {});
+        const index = rec.role === "material" ? indexMaterial : rec.role === "teacher" ? indexTeacher : indexExercises;
+        const go = async (r: FileIndex) => {
+          const out = await index({
+            gw: deps.gw(), source, rec: r, plan, course: head, lang: deps.lang(), signal: ctl.signal,
+            onProgress: (done, total) => emit({ course, sha256, status: "indexing", done, total }),
+          });
+          await set(course, out, {});
+          if (out.role === "teacher") await teacherEvidence(head.courseNumber, plan, out, deps.lang());
+        };
+        const r = rec;
+        await (r.role === "teacher" ? oneTeacherAtATime(course, () => go(r)) : go(r));
       } finally {
         source.close();
       }

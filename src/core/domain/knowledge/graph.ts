@@ -5,7 +5,7 @@ import type { Event, NodeKind, PlanJson } from "@/core/domain/dataSchemas";
  * grown by the tutor/grader (node_added / node_linked events: skills, course conventions, misconceptions).
  * Pure: rebuilt from the plan and the event log, so replay always gives the same graph.
  */
-export type GraphNode = { id: string; kind: NodeKind; label: string; stageIds: string[]; origin: "plan" | "tutor" | "grader" | "index"; why?: string };
+export type GraphNode = { id: string; kind: NodeKind; label: string; stageIds: string[]; origin: "plan" | "tutor" | "grader" | "index" | "teacher"; why?: string };
 export type Graph = { nodes: GraphNode[]; requires: Record<string, string[]> };
 
 /** FNV-1a, 32 bit, base36: works for any script (a slug would turn Hebrew labels into nothing). */

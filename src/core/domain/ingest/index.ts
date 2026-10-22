@@ -23,13 +23,13 @@ export type IndexOpts = {
 const MATERIAL_BATCH = 8;
 const EXERCISE_BATCH = 6; // 1-page overlap => step 5
 const REQUEST_CHARS = 6000;
-const RECORD_CHARS = 8000;
+export const RECORD_CHARS = 8000;
 
 /** 5.3: input tokens shown in the large-file confirmation. */
 export const pageTokenEstimate = (pages: number) => pages * 2200;
 
-const planCompact = (plan: PlanJson) => plan.stages.map((s) => `${s.id} — ${s.title}`).join("\n");
-const slices = <T>(xs: T[], size: number, step: number) => {
+export const planCompact = (plan: PlanJson) => plan.stages.map((s) => `${s.id} — ${s.title}`).join("\n");
+export const slices = <T>(xs: T[], size: number, step: number) => {
   const out: T[][] = [];
   for (let i = 0; i < xs.length; i += step) {
     out.push(xs.slice(i, i + size));
@@ -51,9 +51,9 @@ export async function pool<T, R>(items: T[], n: number, fn: (x: T) => Promise<R>
   await Promise.all(Array.from({ length: Math.min(n, items.length) }, worker));
   return out;
 }
-const PARALLEL = 3;
+export const PARALLEL = 3;
 
-async function pageBlocks(source: PageSource, pages: number[], role: "material" | "exercises"): Promise<Block[]> {
+export async function pageBlocks(source: PageSource, pages: number[], role: "material" | "exercises" | "teacher"): Promise<Block[]> {
   const out: Block[] = [];
   for (const p of pages) {
     out.push({ type: "text", text: `Page ${p}:\n${(await source.text(p)).slice(0, REQUEST_CHARS)}` });
@@ -65,7 +65,7 @@ async function pageBlocks(source: PageSource, pages: number[], role: "material" 
   return out;
 }
 
-const finish = (o: IndexOpts, model: string, patch: Partial<FileIndex>): FileIndex => ({
+export const finish = (o: IndexOpts, model: string, patch: Partial<FileIndex>): FileIndex => ({
   ...o.rec, ...patch, status: "indexed", error: null, indexedAt: nowIso(), indexModel: model, planVersion: o.plan.version,
 });
 
@@ -139,7 +139,7 @@ async function extract(o: IndexOpts, pages: number[], tick: () => void): Promise
   return { exercises: out, model, patterns: occurrences.length || absences.length ? { occurrences, absences } : undefined };
 }
 
-const range = (n: number) => Array.from({ length: n }, (_, i) => i + 1);
+export const range = (n: number) => Array.from({ length: n }, (_, i) => i + 1);
 
 /** 5.6: role `exercises`. */
 export async function indexExercises(o: IndexOpts): Promise<FileIndex> {

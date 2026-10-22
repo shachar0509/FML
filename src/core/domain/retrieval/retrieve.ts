@@ -31,7 +31,7 @@ export type Deps = {
 };
 
 const materialFiles = async (d: Deps, course: Course) =>
-  (await (d.listIndexes ?? listFileIndexes)(course.courseNumber)).filter((f) => f.role === "material" && f.status === "indexed");
+  (await (d.listIndexes ?? listFileIndexes)(course.courseNumber)).filter((f) => (f.role === "material" || f.role === "teacher") && f.status === "indexed"); // M71: teacher pages hold only the teacher's writing
 
 /** M49: the language most of the course's material text is in, by Hebrew vs Latin letters; null without scanned materials. */
 export async function materialsLang(d: Deps, course: Course): Promise<"Hebrew" | "English" | null> {
