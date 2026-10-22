@@ -4,7 +4,7 @@ import { axe, host, LANGS, pageErrors, said, THEMES, toolsCalled } from "./helpe
 for (const lang of LANGS)
   test(`add-course flow (${lang})`, async ({ page }) => {
     await page.goto(host(`lang=${lang}&theme=light`));
-    await page.getByRole("button", { name: lang === "he" ? /הוספת קורס/ : /Add course/ }).click();
+    await page.getByRole("button", { name: lang === "he" ? /הוספת קורס/ : /Add academic course/ }).click();
     await page.getByPlaceholder("01040195").fill("01040195");
     await page.keyboard.press("Enter");
     await expect(page.getByText(lang === "he" ? "תיאור הקורס מהקטלוג" : "Catalog description")).toBeVisible();

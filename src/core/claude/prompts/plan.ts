@@ -1,4 +1,4 @@
-import { uniName } from "@/core/universities";
+import { isCustom, uniName } from "@/core/universities";
 // Spec 10.3 (verbatim apart from placeholders).
 import type { CourseJson } from "@/core/domain/dataSchemas";
 
@@ -19,9 +19,17 @@ S014 Proving limits from the definition (technique)
 S015 Negating the limit definition; proving divergence
 S016 Uniqueness of the limit and boundedness of convergent sequences`;
 
-type Head = Pick<CourseJson, "courseNumber" | "nameHe" | "credits" | "faculty" | "syllabusHe" | "prerequisitesRaw">;
+type Head = Pick<CourseJson, "courseNumber" | "nameHe" | "credits" | "faculty" | "syllabusHe" | "prerequisitesRaw" | "type" | "goal" | "level">;
+
+export const LEVELS = ["has never studied it", "knows a little", "knows the basics", "is fairly comfortable with it", "is advanced"];
+const custom = (c: Head) =>
+  `You are designing a study plan for a self-study course "${c.nameHe}" that the student defined (no university).
+What the student wants to learn:
+${c.syllabusHe}
+${c.goal ? `What the student wants to achieve: ${c.goal}\n` : ""}Current level: ${c.level ?? 1}/5 (the student ${LEVELS[(c.level ?? 1) - 1]}). Start where this level is: do not teach what such a learner already knows, and build on it.`;
 
 const header = (c: Head) =>
+  isCustom(c) ? custom(c) :
   `You are designing a study plan for ${uniName()} course ${c.courseNumber} "${c.nameHe}" (${c.credits} credits, faculty: ${c.faculty}).
 Official syllabus:
 ${c.syllabusHe}
@@ -35,9 +43,9 @@ Build the most fine-grained plan possible: learning must be truly step by step. 
 - One stage introduces at most two new definitions, or exactly one major theorem, or one technique. Never more.
 - A theorem whose proof is examinable gets two stages: kind "theorem" (statement, meaning, use) then kind "proof".
 - Each computational technique is its own "technique" stage, followed by an "applications" stage when it has several standard variants.
-- Every unit ends with an "integration" stage. The plan ends with 2-4 "exam-prep" stages.
-- Follow the syllabus order unless prerequisites force otherwise. Prerequisites refer only to earlier stages.
-- When in doubt, split. A stage teaches one idea, using only baseline knowledge (Israeli 5-unit high-school math/physics and the prerequisite courses), earlier stages, and what it introduces itself. A supporting concept a stage needs but that was not taught earlier must be introduced in that stage (to the needed depth) or in its own earlier stage. Connections to topics taught later belong to the later stage.
+- Every unit ends with an "integration" stage. ${isCustom(c) ? 'The plan ends with 1-3 review and capstone stages (kind "exam-prep") that lead to what the student wants to achieve.' : 'The plan ends with 2-4 "exam-prep" stages.'}
+- ${isCustom(c) ? "Order the topics the way the subject is best learned" : "Follow the syllabus order unless prerequisites force otherwise"}. Prerequisites refer only to earlier stages.
+- When in doubt, split. A stage teaches one idea, using only baseline knowledge (${isCustom(c) ? "what a learner at the student's level already knows" : "Israeli 5-unit high-school math/physics and the prerequisite courses"}), earlier stages, and what it introduces itself. A supporting concept a stage needs but that was not taught earlier must be introduced in that stage (to the needed depth) or in its own earlier stage. Connections to topics taught later belong to the later stage.
 - Write titles and summaries in ${lang}; add the English academic term in parentheses on first use where that is the convention.
 - Decide courseKind: proof-based, computational, programming, mixed or lab.
 

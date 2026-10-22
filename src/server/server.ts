@@ -1,5 +1,5 @@
 import { chooseUniversity } from "@/core/lib/firstRun";
-import { COURSE_ID_RE, UNIVERSITIES, UNIVERSITY_IDS, university } from "@/core/universities";
+import { COURSE_ID_RE, isCustom, UNIVERSITIES, UNIVERSITY_IDS, university } from "@/core/universities";
 import { loadImageB64 } from "@/core/lib/attachments";
 import { getUiCapability, registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 import { McpServer } from "@modelcontextprotocol/server";
@@ -66,6 +66,7 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
             pct: t && t.stagesTotal ? Math.round((100 * t.stagesCompleted) / t.stagesTotal) : 0,
             stage: stage ? `${stage.id} · ${tr(stage.title)}` : null,
             building: builds.building(course.courseNumber),
+            custom: isCustom(course),
           };
         })),
       };

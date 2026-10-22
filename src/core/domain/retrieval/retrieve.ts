@@ -1,3 +1,4 @@
+import { isCustom } from "@/core/universities";
 import { z } from "zod";
 import { callStructured } from "@/core/claude/structured";
 import { lessonBriefPrompt, retrievalPrompt, webFallbackPrompt, type RetrievalReq } from "@/core/claude/prompts/retrieval";
@@ -16,7 +17,7 @@ import { rank } from "./bm25";
 const PAGE_CHARS = 24000;
 const FIGURE_TEXT_MAX = 400;
 
-type Course = { courseNumber: string; nameHe: string; prerequisitesRaw: string };
+type Course = { courseNumber: string; nameHe: string; prerequisitesRaw: string; type?: "academic" | "customCourse" };
 type Lang = "Hebrew" | "English";
 export type Coverage = "full" | "partial" | "none";
 export type Page = { fileName: string; sha256: string; page: number; text: string; hasFigure: boolean };
@@ -108,7 +109,7 @@ export async function consult(d: Deps, i: ConsultIn): Promise<Retrieved> {
   try {
     const boundary = buildKnowledgeBoundary({ course: i.course, plan: i.plan, progress: i.progress, currentStageId: stage.id });
     const r = await gw.send({
-      task: "retrieval", courseNumber: i.course.courseNumber, system: webFallbackPrompt(boundary, res.answerMd || "(nothing)"),
+      task: "retrieval", courseNumber: i.course.courseNumber, system: webFallbackPrompt(boundary, res.answerMd || "(nothing)", isCustom(i.course)),
       messages: [{ role: "user", content: `Request: ${i.question} (purpose: ${i.purpose}; stage ${stage.id} — ${stage.title}). Write in ${i.lang}.` }],
       tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }, submitRetrieval.def],
       toolChoice: { type: "auto" }, signal,

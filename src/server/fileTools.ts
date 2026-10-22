@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { COURSE_ID_RE } from "@/core/universities";
+import { COURSE_ID_RE, isCustom } from "@/core/universities";
 import { appendFile, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
@@ -66,7 +66,7 @@ export function registerFileTools(server: McpServer, o: { openFolder?: (p: strin
       view: "files", language, theme, number,
       materials: recs.filter((r) => r.role === "material").map(row),
       exercises: recs.filter((r) => r.role === "exercises").map(row),
-      moodle: o.moodle?.() ?? null,
+      moodle: (await loadCourse(number).then((c) => c && isCustom(c.course))) ? null : (o.moodle?.() ?? null), // a custom course has no Moodle
     };
   }
 

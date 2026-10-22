@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { applyLanguage, applyTheme } from "@/core/lib/dom";
 import { AddCourse } from "./views/AddCourse";
 import { Course } from "./views/Course";
+import { CustomCourse } from "./views/CustomCourse";
 import { Exercise } from "./views/Exercise";
 import { FigureCard } from "./views/FigureCard";
 import { Home } from "./views/Home";
@@ -94,6 +95,8 @@ export function Cards({ host }: { host: Host }) {
       return (
         <AddCourse example={shown.example} callTool={callTool} open={(n) => open(n, true)} back={back ?? home} />
       );
+    if (shown.view === "custom")
+      return <CustomCourse callTool={callTool} open={(n) => open(n, true)} back={back ?? home} />;
     if (shown.view === "course")
       return (
         <Course
@@ -119,6 +122,7 @@ export function Cards({ host }: { host: Host }) {
         add={(example) =>
           setNav({ view: "add", language: data.language, theme: data.theme, example })
         }
+        custom={() => setNav({ view: "custom", language: data.language, theme: data.theme })}
         open={open}
         settings={() => void go("shalav_settings")}
         choose={(id) => void go("shalav_choose_university", { university: id })}

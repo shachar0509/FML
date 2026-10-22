@@ -6,16 +6,19 @@ export type HomeData = {
   theme: "system" | "light" | "dark";
   /** null until the student has chosen (the card then shows the picker). */
   university: "technion" | "huji" | "reichman" | "braude" | null;
-  courses: { number: string; name: string; credits: number; pct: number; stage: string | null; building?: boolean }[];
+  courses: { number: string; name: string; credits: number; pct: number; stage: string | null; building?: boolean; /** M52: a custom course (no number or credits shown) */ custom?: boolean }[];
 };
 export type Base = { language: "he" | "en"; theme: "system" | "light" | "dark" };
 export type AddData = Base & { view: "add"; example: string };
+export type CustomData = Base & { view: "custom" };
 export type Stage = { id: string; title: string; summary: string; status: "locked" | "available" | "in_progress" | "completed" | "completed_override"; mastery: number };
 export type CourseData = Base & {
   view: "course";
   number: string;
   name: string;
   credits: number;
+  /** M52: a custom course: no number, credits or Moodle */
+  custom: boolean;
   pct: number;
   stagesDone: number;
   stagesTotal: number;
@@ -121,7 +124,7 @@ export type PracticeData = Base & {
   error: string | null;
   summary: { items: number; avgScore: number; newMistakes: string[]; weakStages: { id: string; title: string }[] } | null;
 };
-export type CardData = HomeData | AddData | CourseData | LessonData | McqData | OpenData | ExerciseData | FigureData | StepData | PracticeData | SettingsData;
+export type CardData = HomeData | AddData | CustomData | CourseData | LessonData | McqData | OpenData | ExerciseData | FigureData | StepData | PracticeData | SettingsData;
 
 /** What a card button asks Claude for (shalav_request); no request = "do the pending Shalav work". */
 export type Req =

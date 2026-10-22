@@ -328,7 +328,12 @@
     "creditsLabel": "Credits",
     "syllabus": "Syllabus",
     "syllabusHint": "At least 100 characters ({{n}})",
-    "building": "Building plan…"
+    "building": "Building plan…",
+    "addAcademic": "Add academic course",
+    "addAcademicHint": "A university course, by its number",
+    "addCustom": "Create custom course",
+    "addCustomHint": "Any subject you want to learn",
+    "customCourse": "Custom course"
   },
   "courseHome": {
     "missing": "Course not found.",
@@ -538,5 +543,27 @@
     "note_other": "{{count}} items of the plan aren't in English yet.",
     "button": "Translate to English",
     "running": "Translating the plan to English…"
+  },
+  "custom": {
+    "title": "Create a custom course",
+    "intro": "Learn anything you like: tell us what and where you start from, and the study plan is built around you.",
+    "name": "Course name",
+    "namePh": "e.g. Music theory for guitar",
+    "description": "Course description",
+    "descriptionPh": "What do you want to learn? Which topics, why, and anything you already know or want to skip.",
+    "descriptionHint": "Elaborate as much as you can: the more detail, the better the study plan fits you.",
+    "goal": "Desired outcome",
+    "goalPh": "What do you want to be able to do when you finish?",
+    "optional": "optional",
+    "level": "Current level of knowledge",
+    "levelHint": "Choose 1 to 5 stars",
+    "levels": {
+      "1": "Never studied it",
+      "2": "Know a little",
+      "3": "Know the basics",
+      "4": "Fairly comfortable",
+      "5": "Advanced"
+    },
+    "create": "Create course"
   }
 }

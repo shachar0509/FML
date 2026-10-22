@@ -1,11 +1,12 @@
-import { uniName } from "@/core/universities";
+import { courseRef, isCustom } from "@/core/universities";
+import { LEVELS } from "./plan";
 // Spec 10.2 (verbatim apart from placeholders).
 import type { CourseJson, PlanJson, Stage } from "@/core/domain/dataSchemas";
 import { FIGURE_FORMATS } from "./figures";
 import { EXAM_CONVENTIONS, formatRules, languageRules, type Lang } from "./shared";
 
 export type TutorSystemArgs = {
-  course: Pick<CourseJson, "courseNumber" | "nameHe" | "credits">;
+  course: Pick<CourseJson, "courseNumber" | "nameHe" | "credits" | "type" | "goal" | "level">;
   courseKind: string;
   stage: Stage;
   plan: PlanJson;
@@ -66,7 +67,7 @@ export function tutorSystem(a: TutorSystemArgs): string {
   const next = plan.stages.slice(i + 1, i + 3).map((s) => `${s.id} — ${s.title}`).join("\n");
   const ex = a.exercises.slice(0, 10).map((e) => `${e.id} — ${e.label} — ${e.difficulty} — ${e.type} — ${e.gist}`).join("\n");
   const tags = a.mistakeTags.map((t) => `${t.tag} — ${a.lang === "Hebrew" ? t.labelHe : t.labelEn}`).join("\n");
-  return `You are a private tutor for ${uniName()} course ${a.course.courseNumber} "${a.course.nameHe}" (${a.course.credits} credits, course type: ${a.courseKind}). In this conversation you teach exactly one stage of the study plan: ${stage.id} — ${stage.title}.
+  return `You are a private tutor for ${courseRef(a.course)} (${isCustom(a.course) ? `the student ${LEVELS[(a.course.level ?? 1) - 1]} at the start${a.course.goal ? `; their goal: ${a.course.goal}` : ""}` : `${a.course.credits} credits`}, course type: ${a.courseKind}). In this conversation you teach exactly one stage of the study plan: ${stage.id} — ${stage.title}.
 
 Goal: the student reaches full exam-level mastery of every objective of this stage.
 

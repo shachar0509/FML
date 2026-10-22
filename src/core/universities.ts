@@ -38,3 +38,8 @@ export const setUniversity = (id: UniversityId | null) => void (current = id);
 export const university = (): University | null => (current ? UNIVERSITIES[current] : null);
 /** English name for prompts; "the university" before a choice exists. */
 export const uniName = () => university()?.nameEn ?? "the university";
+
+type Ref = { courseNumber: string; nameHe: string; type?: "academic" | "customCourse" };
+export const isCustom = (c: { type?: string }) => c.type === "customCourse";
+/** How prompts name a course: a custom course has no university and no number worth saying. */
+export const courseRef = (c: Ref) => (isCustom(c) ? `the self-study course "${c.nameHe}"` : `${uniName()} course ${c.courseNumber} "${c.nameHe}"`);

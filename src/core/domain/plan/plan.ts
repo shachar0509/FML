@@ -1,3 +1,4 @@
+import { isCustom } from "@/core/universities";
 import type { CourseJson, PlanJson, Stage, Unit } from "@/core/domain/dataSchemas";
 
 /** Spec 4.4: stage count target range. */
@@ -6,13 +7,15 @@ export function stageRange(credits: number) {
   const max = Math.round(credits * 22);
   return { min, max, target: Math.round((min + max) / 2) };
 }
+/** A custom course has no credits: its size comes from the subject (M52). */
+export const planRange = (c: Pick<CourseJson, "credits" | "type">) => (isCustom(c) ? { min: 12, max: 60, target: 30 } : stageRange(c.credits));
 /** Pass A accepts a result within ±15 % of the range after two failed corrections (4.5); validatePlan uses the same slack. */
 export const SLACK = 0.15;
 
 /** Spec 3.5 validatePlan. Returns human-readable errors (empty = valid). */
-export function validatePlan(plan: PlanJson, credits: number): string[] {
+export function validatePlan(plan: PlanJson, range: number | { min: number; max: number }): string[] {
   const errs: string[] = [];
-  const { min, max } = stageRange(credits);
+  const { min, max } = typeof range === "number" ? stageRange(range) : range;
   const ids = new Set<string>();
   const order = new Map<string, number>();
   plan.stages.forEach((s, i) => {

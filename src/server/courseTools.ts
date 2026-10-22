@@ -1,4 +1,4 @@
-import { COURSE_ID_RE, university } from "@/core/universities";
+import { COURSE_ID_RE, isCustom, university } from "@/core/universities";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import type { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod";
@@ -122,6 +122,22 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, fi
 
   registerAppTool(
     server,
+    "course_custom_create",
+    {
+      title: "Create a custom course",
+      description: "create a course on any subject the student wants to learn (no university): its name, a description, the desired outcome (optional) and the current level 1-5. The study plan is built later with plan_build_request.",
+      inputSchema: z.object({ name: z.string().min(1), description: z.string().min(1), goal: z.string().optional(), level: z.number().int().min(1).max(5) }),
+      _meta: both,
+    },
+    async ({ name, description, goal, level }) => {
+      const n = `C${Date.now().toString(36)}`; // a folder name; never shown
+      await addCourse({ type: "customCourse", courseNumber: n, nameHe: name.trim(), credits: 0, faculty: "", syllabusHe: description.trim(), prerequisitesRaw: "", goal: goal?.trim() || undefined, level });
+      return out(`Custom course "${name}" added. Next the student can add files and presses Build plan when ready; without cards call plan_build_request with number ${n}.`, { ok: true, number: n });
+    },
+  );
+
+  registerAppTool(
+    server,
     "plan_build_request",
     {
       title: "Build or update the plan",
@@ -169,6 +185,7 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, fi
         number,
         name: tr(course.nameHe),
         credits: course.credits,
+        custom: isCustom(course),
         stagesDone: t?.stagesCompleted ?? 0,
         stagesTotal: t?.stagesTotal ?? 0,
         pct: t && t.stagesTotal ? Math.round((100 * t.stagesCompleted) / t.stagesTotal) : 0,

@@ -14,6 +14,8 @@ import { useSettings } from "@/stores/settings";
 
 export type CourseSummary = { course: CourseJson; plan: PlanJson | null; progress: ProgressJson | null };
 export type ManualEntry = Omit<CatalogEntry, "semester">;
+/** M52: a course the student defines (any subject); `syllabusHe` holds its description. */
+export type CustomEntry = ManualEntry & Pick<CourseJson, "goal" | "level"> & { type: "customCourse" };
 export type CreateProgress = { step: "folders" | "plan" | "validate" | "progress"; unit?: { k: number; n: number } };
 
 const root = () => useSettings.getState().settings.dataRoot;
@@ -42,7 +44,7 @@ export async function listCourses(): Promise<CourseSummary[]> {
 }
 
 /** Folders + course.json only; the plan is built later, when the student asks (MCP: "Build plan"). */
-export async function addCourse(entry: CatalogEntry | ManualEntry): Promise<CourseJson> {
+export async function addCourse(entry: CatalogEntry | ManualEntry | CustomEntry): Promise<CourseJson> {
   const p = paths(entry.courseNumber);
   for (const d of [p.materials, p.exercises, p.events, p.history, p.indexFiles, p.attachments]) await fs().mkdir(d);
   const now = nowIso();
@@ -59,6 +61,7 @@ export async function addCourse(entry: CatalogEntry | ManualEntry): Promise<Cour
     planVersion: 1,
     createdAt: now,
     updatedAt: now,
+    ...("type" in entry && { type: entry.type, goal: entry.goal, level: entry.level }),
   };
   await writeJsonAtomic(p.courseJson, course);
   return course;

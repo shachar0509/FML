@@ -1,10 +1,10 @@
-import { uniName } from "@/core/universities";
+import { courseRef, isCustom } from "@/core/universities";
 // Spec 4.6.
 import type { CourseJson } from "@/core/domain/dataSchemas";
 
-export const refinePrompt = (c: Pick<CourseJson, "courseNumber" | "nameHe" | "credits" | "syllabusHe">, plan: string, uncovered: string, lang: string) =>
-  `You are improving the study plan of ${uniName()} course ${c.courseNumber} "${c.nameHe}" (${c.credits} credits) using the student's own course materials.
-Official syllabus:
+export const refinePrompt = (c: Pick<CourseJson, "courseNumber" | "nameHe" | "credits" | "syllabusHe" | "type">, plan: string, uncovered: string, lang: string) =>
+  `You are improving the study plan of ${courseRef(c)}${isCustom(c) ? "" : ` (${c.credits} credits)`} using the student's own course materials.
+${isCustom(c) ? "What the student wants to learn:" : "Official syllabus:"}
 ${c.syllabusHe}
 
 Current plan (stage ids, kinds, titles, summaries). Under each stage: what the course files say about it (material page summaries and example exercises, each labeled with its file); the same subject may appear in several files, so judge each stage once using all its lines:
@@ -25,8 +25,8 @@ Call submit_plan_revision with the full revised outline.`;
 
 export const revisionFixMsg = (errs: string[]) => `The revision is invalid:\n${errs.join("\n")}\nResubmit the full revised outline.`;
 
-export const enrichPrompt = (c: Pick<CourseJson, "courseNumber" | "nameHe">, stages: string, lang: string) =>
-  `You are completing the study plan of ${uniName()} course ${c.courseNumber} "${c.nameHe}" from the student's own course files.
+export const enrichPrompt = (c: Pick<CourseJson, "courseNumber" | "nameHe" | "type">, stages: string, lang: string) =>
+  `You are completing the study plan of ${courseRef(c)} from the student's own course files.
 Each stage below shows what it already teaches (objectives, techniques, edge cases, theorems) and what the course files say about it, from every file that covers it:
 ${stages}
 

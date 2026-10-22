@@ -1,15 +1,15 @@
-import { uniName } from "@/core/universities";
+import { courseRef } from "@/core/universities";
 // Spec 10.4 (verbatim apart from placeholders), plus the M41 notes / traps / key points.
-type Head = { courseNumber: string; nameHe: string };
+type Head = { courseNumber: string; nameHe: string; type?: "academic" | "customCourse" };
 
 export const materialPrompt = (c: Head, planCompact: string, lang: string) =>
-  `You index pages of course material for ${uniName()} course ${c.courseNumber} "${c.nameHe}".
+  `You index pages of course material for ${courseRef(c)}.
 Study plan stages:
 ${planCompact}
 For each page below, list the stage ids whose content appears on the page (empty if none), a summary of at most 40 words in ${lang}, its notes (remarks, warnings, special cases, counterexamples, conditions such as a domain restriction; these are easy to miss and must not be lost), whether the page has a figure, and whether it contains exercises or worked problems. Call submit_material_pages.`;
 
 export const exercisesPrompt = (c: Head, planCompact: string) =>
-  `You extract exercises from pages of a ${uniName()} course exercise file (${c.courseNumber} "${c.nameHe}").
+  `You extract exercises from pages of an exercise file of ${courseRef(c)}.
 Study plan stages:
 ${planCompact}
 Rules:

@@ -1,3 +1,4 @@
+import { isCustom } from "@/core/universities";
 import { hintPrompt, solvePrompt } from "@/core/claude/prompts/practice";
 import { submitHint, submitSolution } from "@/core/claude/practiceTools";
 import { callStructured } from "@/core/claude/structured";
@@ -42,7 +43,7 @@ export async function getSolution(env: Env, ctx: Ctx, ex: Ex, context: Context):
   if (!md) {
     const { value } = await callStructured(env.gw, submitSolution, {
       task: "grading", courseNumber: n,
-      system: solvePrompt(langName(), stageList(ctx, ex.requiredStageIds), boundaryFor(ctx), await digest(env, ctx, ex)),
+      system: solvePrompt(langName(), stageList(ctx, ex.requiredStageIds), boundaryFor(ctx), await digest(env, ctx, ex), isCustom(ctx.course)),
       messages: [{ role: "user", content: `<exercise>${ex.statementMd}</exercise>` }], signal: env.signal,
     });
     md = value.solutionMd;

@@ -28,6 +28,10 @@ export const CourseJsonSchema = z.object({
   planVersion: z.number().int(),
   createdAt: ts,
   updatedAt: ts,
+  // M52: a custom course (any subject, no university); missing = academic. Its description is in syllabusHe.
+  type: z.enum(["academic", "customCourse"]).optional(),
+  goal: z.string().optional(),
+  level: z.number().int().min(1).max(5).optional(),
 });
 export type CourseJson = z.infer<typeof CourseJsonSchema>;
 

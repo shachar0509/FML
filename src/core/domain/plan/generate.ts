@@ -1,4 +1,4 @@
-import { uniName } from "@/core/universities";
+import { isCustom, uniName } from "@/core/universities";
 import { z } from "zod";
 import { callStructured } from "@/core/claude/structured";
 import { detailsPrompt, outlinePrompt, tooFewMsg, tooManyMsg } from "@/core/claude/prompts/plan";
@@ -8,22 +8,23 @@ import type { ClaudeGateway, Message } from "@/core/claude/types";
 import type { CourseJson, PlanJson, Stage, Unit } from "@/core/domain/dataSchemas";
 import { stageId, unitId } from "@/core/lib/ids";
 import { nowIso } from "@/core/lib/time";
-import { outlineText, SLACK, stageRange, validatePlan } from "./plan";
+import { outlineText, planRange, SLACK, validatePlan } from "./plan";
 
-type Head = Pick<CourseJson, "courseNumber" | "nameHe" | "credits" | "faculty" | "syllabusHe" | "prerequisitesRaw">;
+type Head = Pick<CourseJson, "courseNumber" | "nameHe" | "credits" | "faculty" | "syllabusHe" | "prerequisitesRaw" | "type" | "goal" | "level">;
 export type PlanProgress = { step: "plan" | "validate"; unit?: { k: number; n: number } };
 export type Opts = { gw: ClaudeGateway; course: Head; lang: "he" | "en"; onProgress?: (p: PlanProgress) => void; signal?: AbortSignal };
 
+const system = (c: Head) => `You are an expert ${isCustom(c) ? "" : `${uniName()} `}curriculum designer.`;
 const langName = (l: "he" | "en") => (l === "he" ? "Hebrew" : "English");
 const count = (o: PlanOutline) => o.units.reduce((n, u) => n + u.stages.length, 0);
 
 /** Pass A (4.5): outline, up to 2 same-conversation corrections on stage count, then accept within ±15 %. */
 async function passA({ gw, course, lang, signal }: Opts) {
-  const r = stageRange(course.credits);
+  const r = planRange(course);
   let messages: Message[] = [{ role: "user", content: outlinePrompt(course, r, langName(lang)) }];
   for (let fix = 0; ; fix++) {
     const { value, response } = await callStructured(gw, submitPlanOutline, {
-      task: "plan", courseNumber: course.courseNumber, system: `You are an expert ${uniName()} curriculum designer.`, messages, signal,
+      task: "plan", courseNumber: course.courseNumber, system: system(course), messages, signal,
     });
     const n = count(value);
     const msg = n < r.min ? tooFewMsg(n, r.min) : n > r.max ? tooManyMsg(n, r.max) : null;
@@ -64,7 +65,7 @@ export async function detailUnit(opts: Opts, outline: string, unit: Unit): Promi
   let messages: Message[] = [{ role: "user", content: detailsPrompt(course, outline, unit, langName(lang)) }];
   for (let attempt = 0; ; attempt++) {
     const { value, response } = await callStructured(gw, submitUnitDetails, {
-      task: "plan", courseNumber: course.courseNumber, system: `You are an expert ${uniName()} curriculum designer.`, messages, signal,
+      task: "plan", courseNumber: course.courseNumber, system: system(course), messages, signal,
     });
     const got = value.stages.map((s) => s.id);
     const ok = got.length === unit.stageIds.length && unit.stageIds.every((id) => got.includes(id));
@@ -125,7 +126,7 @@ export async function generatePlan(opts: Opts): Promise<PlanJson> {
       };
     }),
   };
-  const errs = validatePlan(plan, course.credits);
+  const errs = validatePlan(plan, planRange(course));
   if (errs.length) throw new ClaudeError("invalid_output", `plan invalid: ${errs.slice(0, 5).join("; ")}`);
   return plan;
 }

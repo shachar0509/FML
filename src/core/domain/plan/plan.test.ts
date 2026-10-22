@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { FakeClaudeGateway, toolCall } from "@/core/claude/fake";
 import { reduceProgress } from "@/core/domain/progress/reduce";
 import { generatePlan } from "./generate";
-import { renderPlanMd, stageRange, validatePlan } from "./plan";
+import { setUniversity } from "@/core/universities";
+import { planRange, renderPlanMd, stageRange, validatePlan } from "./plan";
 
 const course = { courseNumber: "01040195", nameHe: "קורס", credits: 2, faculty: "f", syllabusHe: "s", prerequisitesRaw: "" };
 const outline = (n: number) => ({
@@ -61,6 +62,22 @@ describe("plan", () => {
     const gw = new FakeClaudeGateway([toolCall("submit_plan_outline", outline(36)), wrong, details, details, details]);
     await generatePlan({ gw, course, lang: "en" });
     expect(gw.calls).toHaveLength(5);
+  });
+
+  it("plans a custom course without the university, from its description, goal and level", async () => {
+    setUniversity("technion");
+    const mine = { ...course, credits: 0, type: "customCourse" as const, syllabusHe: "Scales and chords", goal: "Improvise a solo", level: 2 };
+    const gw = new FakeClaudeGateway([toolCall("submit_plan_outline", outline(15)), details, details, details]);
+    const plan = await generatePlan({ gw, course: mine, lang: "en" }); // 15 stages: too few for any academic course, fine here
+    expect(plan.stages).toHaveLength(15);
+    const prompt = JSON.stringify(gw.calls.map((c) => [c.system, c.messages]));
+    expect(prompt).not.toContain("Technion");
+    expect(prompt).not.toContain("credits");
+    expect(prompt).toContain("Scales and chords");
+    expect(prompt).toContain("What the student wants to achieve: Improvise a solo");
+    expect(prompt).toContain("Current level: 2/5 (the student knows a little)");
+    expect(planRange(mine)).toEqual({ min: 12, max: 60, target: 30 });
+    setUniversity(null);
   });
 
   it("validatePlan catches bad prerequisites", async () => {

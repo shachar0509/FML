@@ -814,3 +814,19 @@ Edge cases found with the sample slides, and fixed in the renderer:
 - Change detection: each record keeps `stamp` (size:mtime). Only files whose stamp changed are hashed, so polling every 1.5 s stays cheap. A save that only touched the file (same bytes) just updates the stamp. Records from before M51 are hashed once to get their stamp.
 - Record patches from the scan re-read the record first (they no longer write over the queue's result).
 - Tests: import (edit vs touch), server (mid-build rename stays in the build, edit cancels and waits, delete withdraws the job, rename mid-scan saves the result under the new name), e2e (outside rename keeps "Ready", outside edit shows "press Update plan").
+
+## M52: My courses layout and custom courses
+- **My courses:**
+  - The title is centred.
+  - Settings sits in the corner opposite the reading start: top-left in Hebrew, top-right in English.
+  - Under the title are two equal buttons, each half a course box wide: "Add academic course" (the same flow as before) and "Create custom course". They show also when there are no courses.
+- **Custom course** (`type: "customCourse"` in course.json; a missing type means academic): any subject, created from a card.
+  - The card asks for the name, a description (with a hint to elaborate as much as possible), the desired outcome (optional), and the current level as 1-5 stars (click or arrow keys).
+  - The description is stored as the syllabus. Credits are 0. The id is a hidden folder name (`C…`).
+  - Tool `course_custom_create` is visible to the model too, for hosts without cards.
+  - Home and the course card show "Custom course" in place of the number and credits. The files list has no Moodle import.
+- **AI work without the university:** every prompt names a custom course as "the self-study course «name»".
+  - Plan: the description, desired outcome and level replace the credits, faculty and prerequisites. The level replaces the high-school baseline. The plan ends with review/capstone stages. 12-60 stages instead of the credits range.
+  - The tutor gets the level and the goal.
+  - Grading, solutions and web lookups drop the university.
+- Tests: the custom plan prompt (no university or credits; description, goal and level; 15 stages accepted), server round trip (create, card/Home flag, no Moodle, course.json), e2e (Home layout positions in he/en, the form with stars and keyboard, the new course card has no number or Moodle).

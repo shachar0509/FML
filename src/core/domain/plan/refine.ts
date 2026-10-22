@@ -12,7 +12,7 @@ import { stageId, unitId } from "@/core/lib/ids";
 import { nowIso } from "@/core/lib/time";
 import { useSettings } from "@/stores/settings";
 import { detailUnit, type PlanProgress, type UnitDetails } from "./generate";
-import { outlineText, renderPlanMd, validatePlan } from "./plan";
+import { outlineText, planRange, renderPlanMd, validatePlan } from "./plan";
 import { submitPlanRevision, submitStageAdditions, type PlanRevision, type StageAdditions } from "./refineTool";
 
 const SYSTEM = "You are an expert university curriculum designer.";
@@ -284,7 +284,7 @@ export async function refinePlan(opts: Opts): Promise<PlanJson> {
       return (additions.get(s.id) ?? []).reduce(mergeAdditions, s);
     }),
   };
-  const errs = validatePlan(plan, course.credits);
+  const errs = validatePlan(plan, planRange(course));
   if (errs.length) throw new ClaudeError("invalid_output", `plan invalid: ${errs.slice(0, 5).join("; ")}`);
 
   await writeJsonAtomic(`${p.history}/plan-v${old.version}.json`, old);

@@ -6,7 +6,7 @@ import { Client } from "@modelcontextprotocol/client";
 import { InMemoryTransport } from "@modelcontextprotocol/server";
 import { expect, it } from "vitest";
 import type { CourseData, LookupResult } from "@/cards/types";
-import { PlanJsonSchema } from "@/core/domain/dataSchemas";
+import { CourseJsonSchema, PlanJsonSchema } from "@/core/domain/dataSchemas";
 import { validatePlan } from "@/core/domain/plan/plan";
 import { readJsonFile } from "@/core/lib/fs/atomicWrite";
 import { coursePaths } from "@/core/lib/fs/paths";
@@ -161,3 +161,30 @@ it("builds at once: one chat works through both, each job belongs to its own cou
     expect(seen[n]).toBeGreaterThanOrEqual(4); // outline, two units, the notes
   }
 }, 60_000);
+
+it("creates a custom course: no university in it, no Moodle, shown as custom", async () => {
+  const d = await mkdtemp(join(tmpdir(), "shalav-"));
+  Object.assign(process.env, { SHALAV_CONFIG_DIR: join(d, "c"), SHALAV_CACHE_DIR: join(d, "k"), SHALAV_DOCUMENTS_DIR: join(d, "d") });
+  await writeFile(join(d, "cards.html"), "<html></html>");
+  process.env.SHALAV_CARDS_HTML = join(d, "cards.html");
+  await initNode();
+  const [a, b] = InMemoryTransport.createLinkedPair();
+  const client = new Client({ name: "t", version: "0" });
+  await Promise.all([createServer(undefined, { id: "technion", lookup: async (n) => (n === entry.courseNumber ? entry : null) }).connect(a), client.connect(b)]);
+  const call = (name: string, args: Record<string, unknown> = {}) => client.callTool({ name, arguments: args });
+  await call("shalav_choose_university", { university: "technion" });
+  await call("course_create_request", { number: "01040195" });
+
+  expect((await call("course_custom_create", { name: "Guitar", description: "", level: 2 })).isError).toBe(true); // a description is required
+  const r = await call("course_custom_create", { name: " Guitar ", description: "Scales and chords", goal: "Improvise", level: 2 });
+  const n = sc<{ number: string }>(r).number;
+  expect(n).toMatch(/^C[a-z0-9]+$/);
+  expect(sc<CourseData>(await call("shalav_course", { number: n }))).toMatchObject({ name: "Guitar", custom: true, hasPlan: false });
+  expect(sc<CourseData>(await call("shalav_course", { number: "01040195" })).custom).toBe(false);
+  const home = sc<{ courses: { number: string; custom?: boolean }[] }>(await call("shalav_home")).courses;
+  expect(home.map((c) => [c.number, c.custom])).toEqual([["01040195", false], [n, true]]);
+  expect(sc<{ moodle: unknown }>(await call("files_list", { number: n })).moodle).toBeNull();
+  expect(sc<{ moodle: unknown }>(await call("files_list", { number: "01040195" })).moodle).not.toBeNull();
+  const course = await readJsonFile(coursePaths(useSettings.getState().settings.dataRoot, n).courseJson, CourseJsonSchema);
+  expect(course).toMatchObject({ type: "customCourse", nameHe: "Guitar", syllabusHe: "Scales and chords", goal: "Improvise", level: 2, credits: 0 });
+});

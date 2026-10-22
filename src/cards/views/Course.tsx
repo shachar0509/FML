@@ -102,7 +102,13 @@ export function Course({
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <h1 className="hand text-4xl leading-tight">{data.name}</h1>
           <p className="text-sm text-(--board-muted)">
-            <span dir="ltr">{data.number}</span> · {t("home.credits", { count: data.credits })}
+            {data.custom ? (
+              t("home.customCourse")
+            ) : (
+              <>
+                <span dir="ltr">{data.number}</span> · {t("home.credits", { count: data.credits })}
+              </>
+            )}
           </p>
           {data.hasPlan && (
             <div className="mt-1 flex flex-col gap-1.5">
