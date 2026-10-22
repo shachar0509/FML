@@ -6,6 +6,7 @@ import type { BuildStatus, CourseData, FileCounts, LookupResult } from "@/cards/
 import { type CatalogSource } from "@/core/domain/catalog/catalog";
 import { addCourse, buildPlan, courseExists, loadCourse, type ManualEntry } from "@/core/domain/courses/courses";
 import { newStageIds, refinePlan } from "@/core/domain/plan/refine";
+import { removeFromPlan } from "@/core/domain/plan/remove";
 import { localize, translateCourse } from "@/core/domain/plan/translate";
 import { claude, setClaude } from "@/core/claude/runtime";
 import { useSettings } from "@/stores/settings";
@@ -200,6 +201,21 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, fi
       const cur = data.current && byId.get(data.current);
       const text = `${course.courseNumber} — ${course.nameHe}\n${plan ? `${data.stagesDone}/${data.stagesTotal} stages done${cur ? `; next: ${cur.id} · ${cur.title}` : ""}` : "No study plan yet: the student adds course files, then presses Build plan."}\nOptions: 1) learn the next stage (shalav_start_lesson); 2) practice (shalav_practice); 3) add course files (files_list); 4) build or update the plan from the files (plan_build_request).`;
       return out(text, data);
+    },
+  );
+
+  // M53: delete a whole unit or one stage from the plan (card-only, after the student confirms).
+  registerAppTool(
+    server,
+    "plan_remove",
+    { title: "Delete from the plan", description: "Card-only: delete a unit or a stage from the study plan.", inputSchema: numIn.extend({ unitId: z.string().optional(), stageId: z.string().optional() }), _meta: appOnly },
+    async ({ number, unitId, stageId }) => {
+      if (builds.get(number)?.state === "running") return { ...out("The plan is being built; try again when it is done.", { ok: false }), isError: true };
+      const plan = (await loadCourse(number))?.plan;
+      const ids = unitId ? (plan?.units.find((u) => u.id === unitId)?.stageIds ?? []) : stageId ? [stageId] : [];
+      const next = await removeFromPlan(number, ids);
+      if (!next) return { ...out("Nothing to delete (a plan keeps at least one stage).", { ok: false }), isError: true };
+      return out(`Deleted ${ids.length} stage(s) from the ${number} plan.`, { ok: true });
     },
   );
 

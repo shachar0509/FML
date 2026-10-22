@@ -284,7 +284,7 @@ export async function refinePlan(opts: Opts): Promise<PlanJson> {
       return (additions.get(s.id) ?? []).reduce(mergeAdditions, s);
     }),
   };
-  const errs = validatePlan(plan, planRange(course));
+  const errs = validatePlan(plan, { min: 0, max: planRange(course).max }); // no minimum: the student may have deleted stages (M53), and refine only adds
   if (errs.length) throw new ClaudeError("invalid_output", `plan invalid: ${errs.slice(0, 5).join("; ")}`);
 
   await writeJsonAtomic(`${p.history}/plan-v${old.version}.json`, old);

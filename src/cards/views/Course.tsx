@@ -9,6 +9,7 @@ import {
   Languages,
   Lock,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
@@ -64,6 +65,45 @@ export function Course({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [translating]);
   const [sel, setSel] = useState<string | null>(null);
+  const [del, setDel] = useState<{ unitId?: string; stageId?: string; name: string; count: number } | null>(null); // M53: asking before a delete
+  const remove = (d: NonNullable<typeof del>) => {
+    setDel(null);
+    void callTool("plan_remove", { number: data.number, unitId: d.unitId, stageId: d.stageId }).then(reload);
+  };
+  const ask = (d: NonNullable<typeof del>) => (
+    <div
+      className="flex flex-col gap-2 border-t border-danger/50 bg-danger/5 px-4 py-3"
+      role="alertdialog"
+      aria-label={t("plan.del.title", { name: d.name })}
+    >
+      <p className="text-sm font-medium">{t("plan.del.title", { name: d.name })}</p>
+      {d.unitId && <p className="text-sm">{t("plan.del.unit", { count: d.count })}</p>}
+      {!data.custom && <p className="text-sm">{t("plan.del.academic")}</p>}
+      <p className="text-sm text-muted">{t("plan.del.back")}</p>
+      <div className="flex gap-2">
+        <Button variant="danger" onClick={() => remove(d)}>
+          <Trash2 className="size-4" aria-hidden />
+          {t("plan.del.confirm")}
+        </Button>
+        <Button variant="outline" onClick={() => setDel(null)}>
+          {t("plan.del.keep")}
+        </Button>
+      </div>
+    </div>
+  );
+  const stageCount = data.units.reduce((n, u) => n + u.stages.length, 0);
+  // muted until the row is hovered or focused; always shown on touch screens
+  const trash = (label: string, on: () => void) =>
+    !running && (
+      <button
+        className="me-2 grid size-8 shrink-0 place-items-center rounded-full text-muted opacity-0 transition hover:bg-danger/10 hover:text-danger group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-primary motion-reduce:transition-none [@media(hover:none)]:opacity-100"
+        aria-label={label}
+        title={label}
+        onClick={on}
+      >
+        <Trash2 className="size-4" aria-hidden />
+      </button>
+    );
   const running = data.build?.state === "running";
   const [unread, setUnread] = useState<number | null>(null); // files the next build would read
   const onFiles = useCallback(
@@ -223,8 +263,9 @@ export function Course({
             ).length;
             return (
               <div key={u.id} className={`${panel} overflow-hidden`}>
+                <div className="group flex items-center">
                 <button
-                  className="flex w-full items-center gap-2 px-4 py-3 text-start font-medium hover:bg-border/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+                  className="flex min-w-0 flex-1 items-center gap-2 px-4 py-3 text-start font-medium hover:bg-border/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
                   onClick={() => setOpen({ ...open, [u.id]: !expanded })}
                   aria-expanded={expanded}
                 >
@@ -237,6 +278,12 @@ export function Course({
                     {done}/{u.stages.length}
                   </span>
                 </button>
+                {data.units.length > 1 &&
+                  trash(t("plan.del.unitLabel", { name: u.title }), () =>
+                    setDel({ unitId: u.id, name: u.title, count: u.stages.length }),
+                  )}
+                </div>
+                {del?.unitId === u.id && ask(del)}
                 {expanded && (
                   <div className="fade-in">
                     {u.stages.map((s) => (
@@ -244,8 +291,9 @@ export function Course({
                         key={s.id}
                         className={`border-t border-border ${s.id === data.current ? "bg-primary/5" : ""}`}
                       >
+                        <div className="group flex items-center">
                         <button
-                          className="flex w-full items-center gap-3 px-4 py-2.5 text-start text-sm hover:bg-border/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+                          className="flex min-w-0 flex-1 items-center gap-3 px-4 py-2.5 text-start text-sm hover:bg-border/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
                           onClick={() => setSel(sel === s.id ? null : s.id)}
                           aria-expanded={sel === s.id}
                         >
@@ -258,6 +306,12 @@ export function Course({
                           </span>
                           <span className="text-xs text-muted tabular-nums">{s.mastery}%</span>
                         </button>
+                        {stageCount > 1 &&
+                          trash(t("plan.del.stageLabel", { name: s.title }), () =>
+                            setDel({ stageId: s.id, name: s.title, count: 1 }),
+                          )}
+                        </div>
+                        {del?.stageId === s.id && ask(del)}
                         {sel === s.id && (
                           <p className="fade-in px-4 ps-14 pb-3 text-sm text-muted">{s.summary}</p>
                         )}

@@ -830,3 +830,20 @@ Edge cases found with the sample slides, and fixed in the renderer:
   - The tutor gets the level and the goal.
   - Grading, solutions and web lookups drop the university.
 - Tests: the custom plan prompt (no university or credits; description, goal and level; 15 stages accepted), server round trip (create, card/Home flag, no Moodle, course.json), e2e (Home layout positions in he/en, the form with stars and keyboard, the new course card has no number or Moodle).
+
+## M53: delete units and stages from the plan
+- In the course card, each unit and each stage has a delete (trash) button.
+  - It's faint until the row is hovered or focused, and always shown on touch screens.
+  - It's hidden during a build, and there is no button for the last unit or the last stage.
+- Pressing it asks first, inline under the row (Delete / Keep):
+  - A unit says how many stages go with it.
+  - Academic course: the topic is part of the university course, so skipping it may leave a gap needed in the exam.
+  - Every course: if the topic appears in the course files, Update plan may bring it back. A custom course gets only this line.
+- `removeFromPlan`:
+  - Kept stages keep their ids. Stages are renumbered and prerequisites on deleted stages are dropped. A unit left empty goes.
+  - The old plan is archived in history; plan.json, plan.md and course.json get the new version.
+  - `plan_replaced` maps the deleted stages to null, so their progress stops counting and the current stage moves on.
+  - File indexes are untouched: pages tagged with a deleted stage count as uncovered for the next Update plan, which may add the topic back.
+  - Refuses to empty the plan. The server tool `plan_remove` (card-only) refuses during a build.
+- Update plan no longer enforces the minimum stage count (the student may have deleted below it; refine only adds).
+- Tests: domain (renumbering, prerequisites, archive, progress, unit delete, refusals), server round trip (stage then unit, last unit refused), e2e (warning texts academic vs custom, Keep, unit and stage delete).

@@ -86,6 +86,15 @@ it("looks up, creates a course through the bridge with fake jobs, shows the cour
   expect(sc<LookupResult>(await call("course_lookup", { number: "01040195" })).status).toBe("exists");
   expect((await call("course_create_request", { number: "01040195" })).isError).toBe(true);
   expect((await call("shalav_course", { number: "99999999" })).isError).toBe(true);
+
+  // M53: the student deletes a stage, then the whole second unit; the card shows the shorter plan
+  expect(tools.find((t) => t.name === "plan_remove")?._meta).toMatchObject({ ui: { visibility: ["app"] } });
+  expect((await call("plan_remove", { number: "01040195", stageId: "S001" })).isError).toBeFalsy();
+  expect((await call("plan_remove", { number: "01040195", unitId: "U02" })).isError).toBeFalsy();
+  const after = sc<CourseData>(await call("shalav_course", { number: "01040195" }));
+  expect(after).toMatchObject({ stagesTotal: 34, current: "S002" });
+  expect(after.units.map((u) => u.id)).toEqual(["U01"]);
+  expect((await call("plan_remove", { number: "01040195", unitId: "U01" })).isError).toBe(true); // a plan keeps at least one stage
 }, 20_000);
 
 /** Every job in a tool result (one result may hold several): its number and its own text. */

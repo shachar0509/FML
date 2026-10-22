@@ -165,7 +165,18 @@
     "studyMeanwhile": "The plan is being built in the chat where you pressed the button. You can study in a new chat meanwhile.",
     "updateHint": "Added files? Update the plan: Shalav scans the new files and makes sure every topic in them and in the example exercises has a stage.",
     "build": "Build plan",
-    "update": "Update plan"
+    "update": "Update plan",
+    "del": {
+      "title": "Delete “{{name}}”?",
+      "unit_one": "Its {{count}} stage goes with it.",
+      "unit_other": "Its {{count}} stages go with it.",
+      "academic": "This topic is part of your university course, so skipping it may leave a gap you will need in the exam.",
+      "back": "If it appears in your course files, Update plan may bring it back.",
+      "confirm": "Delete",
+      "keep": "Keep",
+      "unitLabel": "Delete the unit {{name}}",
+      "stageLabel": "Delete the stage {{name}}"
+    }
   },
   "advance": {
     "title": "Move to the next stage?",

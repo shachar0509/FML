@@ -97,7 +97,7 @@ for (const lang of LANGS)
       await page.waitForTimeout(400);
       await page.screenshot({ path: `e2e/tests_output/course/card-course-${lang}-${theme}.png` });
       await axe(page);
-      await page.getByRole("button", { name: lang === "he" ? /גבולות/ : /Limits/ }).click();
+      await page.getByRole("button", { name: /S002 .*%/ }).click(); // the stage row (not Learn or its delete button)
       await expect(page.getByText(lang === "he" ? "תקציר: גבולות" : "Limits summary")).toBeVisible();
       expect(errors).toEqual([]);
     });
@@ -263,4 +263,48 @@ for (const lang of LANGS)
     await axe(page);
     await page.getByRole("region", { name: lang === "he" ? "קבצי לימוד" : "Study files" }).screenshot({ path: `e2e/tests_output/course/card-files-installing-${lang}.png` });
     expect(errors).toEqual([]);
+  });
+
+for (const lang of LANGS)
+  test(`plan: delete a stage or a whole unit, after a warning (${lang})`, async ({ page }) => {
+    const errors = pageErrors(page);
+    await page.goto(host(`lang=${lang}&theme=light&del=1`));
+    await page.locator("ul button").first().click();
+    const squeeze = lang === "he" ? "כלל הסנדוויץ'" : "Squeeze";
+    await page.getByText(squeeze).hover();
+    await page.getByRole("button", { name: lang === "he" ? `מחיקת השלב ${squeeze}` : `Delete the stage ${squeeze}` }).click();
+    const ask = page.getByRole("alertdialog");
+    await expect(ask).toContainText(lang === "he" ? "חלק מהקורס באוניברסיטה" : "part of your university course"); // academic: the exam gap
+    await expect(ask).toContainText(lang === "he" ? "עדכון התוכנית עשוי להחזיר אותו" : "Update plan may bring it back");
+    await ask.getByRole("button", { name: lang === "he" ? "השארה" : "Keep" }).click();
+    await expect(ask).toHaveCount(0);
+    expect(await toolsCalled(page)).not.toContain("plan_remove");
+    // a whole unit says how many stages go with it
+    const series = lang === "he" ? "טורים" : "Series";
+    await page.getByRole("button", { name: lang === "he" ? `מחיקת היחידה ${series}` : `Delete the unit ${series}` }).click();
+    await expect(ask).toContainText(lang === "he" ? "גם שני השלבים שבה יימחקו" : "Its 2 stages go with it");
+    await axe(page);
+    await page.screenshot({ path: `e2e/tests_output/course/card-plan-delete-${lang}.png`, fullPage: true });
+    await ask.getByRole("button", { name: lang === "he" ? "מחיקה" : "Delete" }).click();
+    await expect(page.getByText(series)).toHaveCount(0);
+    await page.getByText(squeeze).hover();
+    await page.getByRole("button", { name: lang === "he" ? `מחיקת השלב ${squeeze}` : `Delete the stage ${squeeze}` }).click();
+    await ask.getByRole("button", { name: lang === "he" ? "מחיקה" : "Delete" }).click();
+    await expect(page.getByText(squeeze)).toHaveCount(0);
+    // the last unit has no delete button
+    await expect(page.getByRole("button", { name: lang === "he" ? /מחיקת היחידה/ : /Delete the unit/ })).toHaveCount(0);
+    expect(errors).toEqual([]);
+  });
+
+for (const lang of LANGS)
+  test(`plan: deleting from a custom course does not warn about the university (${lang})`, async ({ page }) => {
+    await page.goto(host(`lang=${lang}&theme=light&custom=1`));
+    await page.locator("ul > li").filter({ hasText: lang === "he" ? "תורת המוזיקה" : "Music theory" }).getByRole("button").click();
+    const squeeze = lang === "he" ? "כלל הסנדוויץ'" : "Squeeze";
+    await page.getByText(squeeze).hover();
+    await page.getByRole("button", { name: lang === "he" ? `מחיקת השלב ${squeeze}` : `Delete the stage ${squeeze}` }).click();
+    const ask = page.getByRole("alertdialog");
+    await expect(ask).toContainText(lang === "he" ? "עדכון התוכנית עשוי להחזיר אותו" : "Update plan may bring it back");
+    await expect(ask).not.toContainText(lang === "he" ? "אוניברסיטה" : "university");
+    await page.screenshot({ path: `e2e/tests_output/course/card-plan-delete-custom-${lang}.png`, fullPage: true });
   });
