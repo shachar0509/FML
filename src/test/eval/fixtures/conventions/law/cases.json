@@ -130,7 +130,7 @@
       "rows": [
         {
           "question": "A tenant's pipe bursts and floods the flat below. The downstairs tenant sues in negligence. Advise.",
-          "answer": "Issue: was the upstairs tenant negligent in the way he maintained the pipe? Rule: negligence is a failure to take the care a reasonable person would take. Application: he had noticed a damp patch a month earlier and did nothing, which a reasonable person would not do, and the flood followed from that. Conclusion: the upstairs tenant is liable for the damage to the flat below.",
+          "answer": "Issue: was the upstairs tenant negligent in the way he maintained the pipe? Rule: negligence is a failure to take the care a reasonable person would take. Application: Duty. A tenant must foresee that a leak will damage the flat below. Breach. He had noticed a damp patch a month earlier and did nothing, which a reasonable person would not do. Causation. The flood followed from the unrepaired pipe. Conclusion: the upstairs tenant is liable for the damage to the flat below.",
           "triggered": true,
           "met": true,
           "note": "the conclusion is the last paragraph, under its own heading"
@@ -158,7 +158,7 @@
         },
         {
           "question": "A contractor leaves a trench unfenced next to a footpath and a pedestrian falls in at night. Discuss the contractor's liability and the pedestrian's recovery.",
-          "answer": "Issue: whether the contractor breached a duty of care. Rule: a duty is owed to those foreseeably affected, and the standard is the reasonable contractor. Application: pedestrians on the footpath are obviously foreseeable, and a reasonable contractor would have fenced and lit the trench. The fall and the injuries followed. Conclusion: the contractor is liable, and the pedestrian recovers in full unless she walked carelessly.",
+          "answer": "Issue: whether the contractor breached a duty of care. Rule: a duty is owed to those foreseeably affected, and the standard is the reasonable contractor. Application: Duty. Pedestrians on the footpath are obviously foreseeable. Breach. A reasonable contractor would have fenced and lit the trench. Causation. The fall and the injuries followed from the open trench. Defences. Nothing suggests she walked carelessly. Conclusion: the contractor is liable, and the pedestrian recovers in full.",
           "triggered": true,
           "met": true,
           "note": "ends with the conclusion"
@@ -173,7 +173,7 @@
       "rows": [
         {
           "question": "A builder uses cheaper cement than agreed in a contract to renovate a kitchen. The owner discovers cracks after a year. Discuss the owner's remedies.",
-          "answer": "Issue: whether the builder breached the contract and what the owner may claim. Rule: a builder must use the materials agreed, and the owner may claim the cost of putting the work right. Application: the cheaper cement caused the cracks, so the breach is clear, and repair is the measure of damages. Conclusion: the owner may recover the cost of repair.",
+          "answer": "Issue: whether the builder breached the contract and what the owner may claim. Rule: a builder must use the materials agreed, and the owner may claim the cost of putting the work right. Application: Breach. The contract named the cement and the builder used a cheaper one, which caused the cracks. Remedy. Repair is the measure of damages. Conclusion: the owner may recover the cost of repair.",
           "triggered": true,
           "met": true,
           "note": "all four parts in order"
@@ -194,7 +194,7 @@
         },
         {
           "question": "A seller delivers goods that are different in kind from those ordered. Discuss the buyer's rights and the effect of delay in complaining.",
-          "answer": "Issue: whether the goods conform and what follows if the buyer waited. Rule: goods must match the description in the contract and the buyer must give notice of the defect within a reasonable time. Application: the goods were of a different kind, so the seller is in breach, and a two-day wait before notifying is plainly reasonable. Conclusion: the buyer may reject the goods and recover the price.",
+          "answer": "Issue: whether the goods conform and what follows if the buyer waited. Rule: goods must match the description in the contract and the buyer must give notice of the defect within a reasonable time. Application: Conformity. The goods were of a different kind, so the seller is in breach. Notice. A two-day wait before notifying is plainly reasonable. Conclusion: the buyer may reject the goods and recover the price.",
           "triggered": true,
           "met": true,
           "note": "all four parts in order"

@@ -48,7 +48,8 @@ const judgeTool = defineTool(
 );
 const judgeSystem = `You grade answers against ONE course convention. Judge every numbered case on its own.
 triggered: the convention's situation holds for this case (check the trigger against what it names: the question, the answer, or either; a case matching a "not when" line is not triggered; a "level: whole" convention applies only to a whole multi-part answer, "part" to each part).
-met: null when not triggered; otherwise whether the answer does what the rule says (use the "verify" line). Call the tool once with every case.`;
+met: null when not triggered; otherwise whether the answer does what the rule says (use the "verify" line).
+The course may be set in a fictional or foreign jurisdiction or use its own notation: never check names, section numbers or facts against your own outside knowledge; take them as correct unless the case itself shows them wrong. Call the tool once with every case.`;
 const judgeMessage = (c: Convention, rows: Row[]) =>
   [`Rule: ${c.rule}`, `Trigger (checked on ${c.useCase.on}): ${c.useCase.trigger}`, `Not when: ${c.useCase.notWhen.join(" | ") || "-"}`, `Verify: ${c.useCase.verify}`, `Level: ${c.useCase.level}`, "",
     ...rows.map((r, i) => `Case ${i + 1}\nQuestion: ${r.question}\nAnswer: ${r.answer}`)].join("\n");
