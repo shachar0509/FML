@@ -8,7 +8,8 @@ import { newId } from "@/core/lib/ids";
 import { nowIso } from "@/core/lib/time";
 import { addGenerated, type Ctx } from "./exercises";
 import { boundaryFor, langName, stageList, type Env } from "./grade";
-import { completedIds, focusStage, requiredSet, targetDifficulty, type Scope } from "./select";
+import { candidates, listText } from "@/core/domain/knowledge/tag";
+import { completedIds, focusStage, levelOf, requiredSet, targetDifficulty, type Scope } from "./select";
 
 export type Focus = { stageId: string; required: string[] };
 export function chooseFocus(ctx: Ctx, scope: Scope, hot?: string[]): Focus | null {
@@ -26,6 +27,13 @@ async function digest(env: Env, ctx: Ctx, stageId: string) {
   } catch {
     return "";
   }
+}
+
+/** M69: the focus stage's graph nodes (course-wide ones first), numbered with the student's control; the model answers by number. */
+function nodeList(ctx: Ctx, focus: Focus) {
+  const lv = levelOf(ctx);
+  const cands = candidates(lv.g, [focus.stageId, ...focus.required.filter((s) => s !== focus.stageId)]);
+  return { text: listText(cands, lv.k.control), ids: (ns: number[]) => [...new Set(ns.flatMap((x) => cands[x - 1]?.id ?? []))] };
 }
 
 const words = (s: string) => new Set(s.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? []);
@@ -49,7 +57,9 @@ export async function generateExercise(env: Env, ctx: Ctx, focus: Focus, test?: 
     : refsText(refs);
   const boundary = test ? "" : boundaryFor(ctx);
   const type = ctx.course.courseKind === "proof-based" ? "proof" : ctx.course.courseKind === "programming" ? "coding" : "computation";
+  const tags = nodeList(ctx, focus);
   const common = {
+    nodes: tags.text,
     course: ctx.course, lang: langName(), type, difficulty: targetDifficulty(ctx, [focus.stageId]), requiredStages: stageList(ctx, focus.required),
     focusJson: focusJson(ctx, focus.stageId), styleRefs, digest: await digest(env, ctx, focus.stageId), boundary, mistakes: mistakesText(ctx, focus.required),
     ...(test ? { difficulty: Math.max(4, test.like?.difficulty ?? 4) } : {}),
@@ -70,7 +80,7 @@ export async function generateExercise(env: Env, ctx: Ctx, focus: Focus, test?: 
         requiredStageIds: g.requiredStageIds, primaryStageId: focus.stageId as GeneratedExercise["primaryStageId"],
         difficulty: Math.min(5, Math.max(1, g.difficulty)) as GeneratedExercise["difficulty"], type: g.type, estimatedMinutes: g.estimatedMinutes,
         edgeCaseFocus: g.edgeCaseFocus, gist: g.statementMd.slice(0, 120), origin: "generated", styleRefIds: refs.map((r) => r.id),
-        verified: true, gradingNotes: g.gradingNotes, createdAt: nowIso(),
+        verified: true, gradingNotes: g.gradingNotes, createdAt: nowIso(), nodeIds: tags.ids(g.nodes),
       };
       await addGenerated(n, ex);
       return ex;
@@ -81,15 +91,16 @@ export async function generateExercise(env: Env, ctx: Ctx, focus: Focus, test?: 
 }
 
 /** 7.5 batching: 4 questions (2 mcq + 2 open) per call. */
-export async function generateChecks(env: Env, ctx: Ctx, focus: Focus): Promise<(CheckItem & { id: string })[]> {
+export async function generateChecks(env: Env, ctx: Ctx, focus: Focus): Promise<(CheckItem & { id: string; nodeIds: string[] })[]> {
+  const tags = nodeList(ctx, focus);
   const { value } = await callStructured(env.gw, submitPracticeCheck, {
     task: "generation", courseNumber: ctx.course.courseNumber,
     system: checksPrompt({
       lang: langName(), requiredStages: stageList(ctx, focus.required), focusJson: focusJson(ctx, focus.stageId),
-      boundary: boundaryFor(ctx), digest: await digest(env, ctx, focus.stageId), mistakes: mistakesText(ctx, focus.required),
+      boundary: boundaryFor(ctx), digest: await digest(env, ctx, focus.stageId), mistakes: mistakesText(ctx, focus.required), nodes: tags.text,
     }),
     messages: [{ role: "user", content: "Create the questions." }], signal: env.signal,
   });
   const done = completedIds(ctx.progress);
-  return value.items.map((i) => ({ ...i, stageIds: i.stageIds.filter((s) => done.has(s)).length ? i.stageIds.filter((s) => done.has(s)) : [focus.stageId], id: `chk-${newId()}` }));
+  return value.items.map((i) => ({ ...i, stageIds: i.stageIds.filter((s) => done.has(s)).length ? i.stageIds.filter((s) => done.has(s)) : [focus.stageId], id: `chk-${newId()}`, nodeIds: tags.ids(i.nodes) }));
 }

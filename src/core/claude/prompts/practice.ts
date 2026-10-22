@@ -75,6 +75,8 @@ Call submit_solution with { "solutionMd": string }.`;
 export type GenArgs = {
   course: Head; lang: Lang; type: string; difficulty: number; requiredStages: string; focusJson: string;
   styleRefs: string; digest: string; boundary: string; mistakes: string; issues?: string[];
+  /** M69: the stages' graph nodes, numbered, with the student's control */
+  nodes?: string;
 };
 export const generationPrompt = (a: GenArgs) =>
   `Create one new ${a.type} exercise for ${courseRef(a.course)} at difficulty ${a.difficulty} (1-5 scale: ${DIFFICULTY_SCALE}).
@@ -88,7 +90,7 @@ Course material digest (base the exercise on it; follow its notation):
 ${a.boundary}
 The exercise and its reference solution must need nothing beyond the allowed knowledge and these required stages.
 The student repeatedly makes these mistakes; design the exercise so that they matter:
-${a.mistakes || "(none recorded)"}
+${a.mistakes || "(none recorded)"}${a.nodes ? `\nKnowledge graph nodes of these stages (number, kind, label, the student's control):\n${a.nodes}\nAim at the student's weakest nodes; in nodes give the numbers of the listed nodes it tests.` : ""}
 Include at least one edge case or boundary condition.${a.difficulty >= 4 ? " Write it as a real exam question of this course: exam wording and length, usually in several parts (a, b, c)." : ""} Provide a complete exam-level reference solution and grading notes. Write in ${a.lang}.${a.issues?.length ? `\nA previous attempt was rejected for these issues; avoid them:\n${a.issues.map((i) => `- ${i}`).join("\n")}` : ""} Call submit_generated_exercise.`;
 
 export const verificationPrompt = (requiredStages: string, boundary: string) =>
@@ -96,10 +98,10 @@ export const verificationPrompt = (requiredStages: string, boundary: string) =>
 ${boundary}
 Call submit_verification.`;
 
-export const checksPrompt = (a: Pick<GenArgs, "lang" | "requiredStages" | "focusJson" | "boundary" | "digest" | "mistakes">) =>
+export const checksPrompt = (a: Pick<GenArgs, "lang" | "requiredStages" | "focusJson" | "boundary" | "digest" | "mistakes" | "nodes">) =>
   `Create 4 questions in ${a.lang}: 2 MCQ and 2 open, covering different stages of ${a.requiredStages} where possible, focused on: ${a.focusJson}. Use only allowed knowledge:
 ${a.boundary}
-Base them on this course material digest: <materials>${a.digest}</materials> MCQ: exactly 4 options, exactly one correct, distractors built from realistic misconceptions, preferring these recorded student mistakes: ${a.mistakes || "(none recorded)"}. Open: a question answerable in a few sentences, with the expected key points. Call submit_practice_check.`;
+Base them on this course material digest: <materials>${a.digest}</materials> MCQ: exactly 4 options, exactly one correct, distractors built from realistic misconceptions, preferring these recorded student mistakes: ${a.mistakes || "(none recorded)"}. Open: a question answerable in a few sentences, with the expected key points.${a.nodes ? `\nKnowledge graph nodes of these stages (number, kind, label, the student's control):\n${a.nodes}\nAim at the student's weakest nodes; for each question give in nodes the numbers of the listed nodes it tests.` : ""} Call submit_practice_check.`;
 
 export const hintPrompt = (a: {
   lang: Lang; level: number; statement: string; reference: string | null; previous: string[];

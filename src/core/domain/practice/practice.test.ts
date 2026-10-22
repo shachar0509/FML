@@ -12,6 +12,7 @@ import { coursePaths } from "@/core/lib/fs/paths";
 import { useSettings } from "@/stores/settings";
 import { memFs } from "@/test/memfs";
 import { Practice } from "./engine";
+import { allExercises } from "./exercises";
 
 const N = "01040195";
 const stage = (n: number) => ({
@@ -32,12 +33,12 @@ const grade = {
   newNodes: [{ kind: "convention", label: "States the units", why: "no units on the result", stageIds: ["S001", "S999"], score: 0.3 }],
 };
 const replies: Record<string, unknown> = {
-  submit_generated_exercise: { statementMd: "Prove P", referenceSolutionMd: "R", requiredStageIds: ["S001"], difficulty: 3, type: "proof", estimatedMinutes: 10, edgeCaseFocus: ["n=0"], gradingNotes: "n" },
+  submit_generated_exercise: { statementMd: "Prove P", referenceSolutionMd: "R", requiredStageIds: ["S001"], difficulty: 3, type: "proof", estimatedMinutes: 10, edgeCaseFocus: ["n=0"], gradingNotes: "n", nodes: [1, 99] },
   submit_verification: { wellPosed: true, solvable: true, independentSolutionMd: "R", matchesReference: true, requiresStagesBeyond: [], issues: [] },
   submit_grade: grade,
   submit_hint: { hintMd: "think", level: 1, targetsStep: "s1" },
   submit_practice_check: { items: [
-    { kind: "mcq", stageIds: ["S001"], questionMd: "q1", options: ["a", "b", "c", "d"], correctIndex: 2, explanationMd: "e" },
+    { kind: "mcq", stageIds: ["S001"], questionMd: "q1", options: ["a", "b", "c", "d"], correctIndex: 2, explanationMd: "e", nodes: [1] },
     { kind: "mcq", stageIds: ["S001"], questionMd: "q2", options: ["a", "b", "c", "d"], correctIndex: 0, explanationMd: "e" },
     { kind: "open", stageIds: ["S001"], questionMd: "q3", explanationMd: "e", expectedPoints: ["p"] },
     { kind: "open", stageIds: ["S001"], questionMd: "q4", explanationMd: "e", expectedPoints: ["p"] },
@@ -45,11 +46,13 @@ const replies: Record<string, unknown> = {
 };
 const calls: string[] = [];
 let gradeSystem = "";
+let genSystem = "";
 const gw: ClaudeGateway = {
   async send(req: ClaudeRequest) {
     const name = req.tools![0]!.name;
     calls.push(name);
     if (name === "submit_grade") gradeSystem = JSON.stringify(req.system);
+    if (name === "submit_generated_exercise") genSystem = JSON.stringify(req.system);
     return { content: [{ type: "tool_use", id: "t", name, input: replies[name] }], stopReason: "tool_use", usage: usage0, model: "fake" };
   },
 };
@@ -75,6 +78,10 @@ describe("Practice", () => {
     await pr.start({ kind: "all" });
     expect(pr.state!.current?.kind).toBe("E");
     expect(calls.slice(0, 2)).toEqual(["submit_generated_exercise", "submit_verification"]);
+    // M69: the generator sees the stage's nodes by number and tags the exercise (an unknown number is dropped)
+    expect(genSystem).toContain("1. [concept] c — control 10%");
+    const gen = (await allExercises(N)).find((x) => x.id === pr.state!.served[0]);
+    expect(gen && "nodeIds" in gen && gen.nodeIds).toEqual([expect.stringMatching(/^S001\/concept\//)]);
     await settle();
     expect(pr.run).not.toBeNull();
     await pr.run!.hint([]);
@@ -110,6 +117,7 @@ describe("Practice", () => {
     expect(pr.state!.current?.stars).toBe(3); // M65: frozen when served (a 2/5 MCQ, control 0.1)
     await pr.answerMcq(2);
     expect(pr.counters).toMatchObject({ answered: 1, correct: 1 });
+    expect((await events()).find((e) => e.type === "check_answered")).toMatchObject({ nodes: [{ id: expect.stringMatching(/^S001\/concept\//), score: 1 }] }); // M69: per node
     const s = await pr.end();
     expect(s).toMatchObject({ items: 1, avgScore: 100 });
     expect(pr.state).toBeNull();

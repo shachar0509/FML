@@ -15,7 +15,8 @@ import { emptyRun, ExerciseRun, perfect, type RunState } from "./run";
 import { CHECK_DIFFICULTY, completedIds, itemKind, pick, requiredSet, skill, starsFor, type Scope } from "./select";
 import { after, burn, examPool, loadStore, pickTest, saveStore, scopeOf, type Chain, type Note } from "./test";
 
-export type Check = CheckItem & { id: string };
+/** `nodeIds` (M69): the graph nodes it tests, from the generator */
+export type Check = CheckItem & { id: string; nodeIds?: string[] };
 /** `stars` (M65): how hard the item is for this student, frozen when it was produced */
 export type Item = (
   | { kind: "E"; ref: ExerciseRef; run: RunState }
@@ -150,8 +151,10 @@ export class Practice {
     if (!made) return null;
     const it = made.item;
     const ex = it.kind === "E" ? (await allExercises(this.courseNumber)).find((x) => x.id === it.ref.id) : null;
-    const [d, stages] = it.kind === "E" ? [ex?.difficulty ?? 3, ex ? fromExercise(ex).stageIds : []] : [CHECK_DIFFICULTY[it.check.kind], it.check.stageIds];
-    return { ...made, item: { ...it, stars: starsFor(this.ctx, d, stages) } };
+    const [d, stages, nodes]: [number, string[], string[]] = it.kind === "E"
+      ? [ex?.difficulty ?? 3, ex ? fromExercise(ex).stageIds : [], ex && "nodeIds" in ex ? (ex.nodeIds as string[]) : []]
+      : [CHECK_DIFFICULTY[it.check.kind], it.check.stageIds, it.check.nodeIds ?? []];
+    return { ...made, item: { ...it, stars: starsFor(this.ctx, d, stages, nodes) } };
   }
   private async make(): Promise<{ item: Item; served?: string } | null> {
     const st = this.state as PState;
@@ -318,6 +321,7 @@ export class Practice {
     await appendEvent(this.courseNumber, {
       type: "check_answered", stageId: cur.check.stageIds[0] as string, checkId: cur.check.id, kind: "mcq", context: "practice",
       correct, score: correct ? 100 : 0, mistakeTags: [],
+      ...(cur.check.nodeIds?.length ? { nodes: cur.check.nodeIds.map((id) => ({ id, score: correct ? 1 : 0 })) } : {}), // M69
     });
     await this.set({ current: { ...cur, selected } });
     await this.push({ kind: "M", score: correct ? 100 : 0, correct, stageIds: cur.check.stageIds, tags: [] });

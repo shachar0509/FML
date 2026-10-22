@@ -230,6 +230,8 @@ export const GeneratedExerciseSchema = IndexedExerciseSchema.extend({
   verified: z.boolean(),
   gradingNotes: z.string().default(""),
   createdAt: ts,
+  /** M69: the graph nodes it tests (by the generator); none = its stages' nodes */
+  nodeIds: z.array(z.string()).default([]),
 });
 export type GeneratedExercise = z.infer<typeof GeneratedExerciseSchema>;
 export const GeneratedFileSchema = z.object({

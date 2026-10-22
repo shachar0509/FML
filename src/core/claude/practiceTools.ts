@@ -75,6 +75,8 @@ export const submitGeneratedExercise = defineTool(
     estimatedMinutes: z.number(),
     edgeCaseFocus: z.array(z.string()),
     gradingNotes: z.string(),
+    /** M69: numbers of the listed knowledge-graph nodes it tests */
+    nodes: z.array(z.number().int().min(1)).max(8).default([]),
   }),
 );
 export type GeneratedDraft = z.infer<typeof submitGeneratedExercise.schema>;
@@ -90,6 +92,8 @@ export const submitVerification = defineTool(
 
 const checkItem = z.object({
   kind: z.enum(["mcq", "open"]),
+  /** M69: numbers of the listed knowledge-graph nodes it tests */
+  nodes: z.array(z.number().int().min(1)).max(8).default([]),
   stageIds: z.array(z.string()).min(1),
   questionMd: z.string(),
   options: z.array(z.string()).optional(),

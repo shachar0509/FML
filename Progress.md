@@ -214,7 +214,12 @@ Plan: `~/.claude/plans/when-a-job-is-flickering-hellman.md` (approved; read it f
 - `difficulty` is optional in `assign_exercise`; left out, a new exercise gets `targetDifficulty(lesson, its stages)` (about 3★ for this student). The digest names it as the default. The engine's `difficulty_target` tie-break was skipped (another engine call for a rounding tie; add if targets look off).
 - Test: exerciseTools (no difficulty → 2 for a new student, 3★).
 
-**Next (not started):** generator node tags. Follow-ups: retention in question stars, conventions from example solutions at indexing.
+## M69: the generator tags what it tests
+- `submit_generated_exercise` and each `submit_practice_check` item return `nodes` (numbers of the focus stages' listed graph nodes, shown with the student's control; the prompt says to aim at the weakest). `generate.ts` `nodeList()` maps numbers to ids (unknown ones dropped): `GeneratedExercise.nodeIds` (schema default [] keeps old files valid), `Check.nodeIds`.
+- Used by: question stars (`starsFor` on the tested nodes), practice MCQ answers (`check_answered.nodes` per node, 1/0). Open answers and exercises were already tagged by their graders.
+- Tests: practice (prompt lists nodes, generated exercise keeps a known node only, MCQ evidence per node).
+
+**Next (not started):** follow-ups only: retention in question stars, conventions from example solutions at indexing, engine `difficulty_target` tie-break.
 
 ---
 
