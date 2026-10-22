@@ -16,10 +16,15 @@ export type NewEvent = Distribute<Event>;
 const paths = (n: string) => coursePaths(useSettings.getState().settings.dataRoot, n);
 
 /** Append to this device's events file (3.6) and schedule a debounced recompute. */
+/** Told after each new event (the knowledge graph sends answers to its engine). */
+const listeners = new Set<(courseNumber: string, e: Event) => void>();
+export const onEvent = (f: (courseNumber: string, e: Event) => void) => (listeners.add(f), () => void listeners.delete(f));
+
 export async function appendEvent(courseNumber: string, e: NewEvent): Promise<Event> {
   const full = { ...e, id: newId(), ts: nowIso(), deviceId: getDeviceId(), courseNumber } as Event;
   await appendJsonl(paths(courseNumber).eventsFile(full.deviceId), full);
   scheduleRecompute(courseNumber);
+  for (const l of listeners) l(courseNumber, full);
   return full;
 }
 

@@ -1,0 +1,183 @@
+import { join } from "node:path";
+import * as z from "zod";
+import type { Event, PlanJson } from "@/core/domain/dataSchemas";
+import { priorOf, knowledgeOf, rawStars, shownStars, effective, type Knowledge } from "@/core/domain/knowledge/control";
+import { engineNames, graphOf, nodesOfStages, type Graph } from "@/core/domain/knowledge/graph";
+import { loadCtx } from "@/core/domain/practice/exercises";
+import { mapEvents } from "@/core/domain/progress/reduce";
+import { onEvent } from "@/core/domain/progress/store";
+import { readJsonFile, writeJsonAtomic } from "@/core/lib/fs/atomicWrite";
+import { coursePaths } from "@/core/lib/fs/paths";
+import { getDeviceId } from "@/core/lib/device";
+import { useSettings } from "@/stores/settings";
+import type { Engine } from "./engine";
+
+/**
+ * The student's knowledge graph per course (M61): Shalav's event log is the truth; the engine (tutor-mcp) is a derived model that
+ * adds forgetting (FSRS retention), a focus concept and misconceptions. Each device keeps its own engine dir
+ * (`<course>/.shalav/knowledge/<device>/`): two engines writing one synced SQLite file would corrupt it, and the log rebuilds it.
+ * No engine (offline install, unsupported platform, a crash): everything still works from the log alone, without forgetting.
+ */
+const MapSchema = z.object({
+  domainId: z.string().nullable(),
+  names: z.record(z.string(), z.string()),
+  sent: z.array(z.string()),
+  stars: z.number().nullable(),
+});
+type MapFile = z.infer<typeof MapSchema>;
+
+export type Summary = {
+  graph: Graph;
+  k: Knowledge;
+  prior: number;
+  retention: Map<string, number>;
+  /** 0..5, half steps, with hysteresis */
+  stars: number;
+  raw: number;
+  /** share of core/common nodes the student controls (≥ 0.9 after forgetting) */
+  examReady: number;
+  focus: string | null;
+  misconceptions: { id: string; label: string; type: string; detail: string; count: number }[];
+  engine: boolean;
+};
+
+const RELEVANCE = { core: 1, common: 0.7, occasional: 0.4 } as const;
+const relevanceOf = (plan: PlanJson, g: Graph) => {
+  const stage = new Map(plan.stages.map((s) => [s.id, s]));
+  const byNode = new Map(g.nodes.map((n) => [n.id, n]));
+  return (id: string) => {
+    const n = byNode.get(id);
+    const s = n?.stageIds[0] && stage.get(n.stageIds[0]);
+    return s ? RELEVANCE[s.examRelevance] : 0.9; // a course-wide skill the tutor found matters for every answer
+  };
+};
+
+/** Engine calls for one evidence event: one per node it tested. */
+export function interactions(e: Event, g: Graph, names: Record<string, string>): Record<string, unknown>[] {
+  const out: Record<string, unknown>[] = [];
+  const push = (id: string, score: number, activity: string, extra: Record<string, unknown> = {}) => {
+    const concept = names[id];
+    if (!concept) return;
+    const success = score >= 0.7;
+    out.push({
+      concept, activity_type: activity, success, response_time_seconds: 60, confidence: Math.round(score * 100) / 100,
+      ...(success ? {} : { error_type: "KNOWLEDGE_GAP" }), ...extra,
+    });
+  };
+  const of = (nodes: { id: string; score: number }[] | undefined, stageIds: string[], score: number) =>
+    nodes?.length ? nodes : nodesOfStages(g, stageIds).map((n) => ({ id: n.id, score }));
+  if (e.type === "check_answered") {
+    for (const n of of(e.nodes, [e.stageId], e.score / 100)) push(n.id, n.score, e.kind === "mcq" ? "RECALL_EXERCISE" : "FEYNMAN_PROMPT");
+  } else if (e.type === "attempt_graded" && e.verdict !== "unreadable") {
+    const tag = e.mistakes[0];
+    for (const n of of(e.nodes, e.stageIds, e.score / 100)) {
+      const s = Math.max(0, e.solutionRevealedBefore ? Math.min(n.score - 0.1 * e.hintsUsed, 0.6) : n.score - 0.1 * e.hintsUsed);
+      push(n.id, s, "PRACTICE", {
+        hints_requested: e.hintsUsed,
+        ...(s < 0.7 && e.mistakes.length ? { error_type: "LOGIC_ERROR" } : {}),
+        ...(s < 0.7 && tag ? { misconception_type: tag.tag, misconception_detail: tag.note } : {}),
+      });
+    }
+  } else if (e.type === "node_observed") push(e.nodeId, e.score, "PRACTICE", { notes: e.why });
+  return out;
+}
+
+/** This device's knowledge files of a course (the engine's data dir is `engine/` inside). */
+export const knowledgeDir = (n: string) => join(coursePaths(useSettings.getState().settings.dataRoot, n).shalav, "knowledge", getDeviceId());
+
+export function createKnowledge(engineFor: ((course: string) => Engine) | null) {
+  const queues = new Map<string, Promise<unknown>>();
+  const cache = new Map<string, { at: number; s: Summary }>();
+  let downUntil = 0;
+  const mapPath = (n: string) => join(knowledgeDir(n), "map.json");
+  const serial = <T>(n: string, f: () => Promise<T>): Promise<T> => {
+    const run = (queues.get(n) ?? Promise.resolve()).then(f, f);
+    queues.set(n, run.catch(() => undefined));
+    return run;
+  };
+
+  /** Bring the engine up to date: plan + tutor nodes as concepts, then every answer it has not seen. */
+  async function syncEngine(e: Engine, plan: PlanJson, g: Graph, events: Event[], course: { courseNumber: string; nameHe: string }, m: MapFile) {
+    const names = engineNames(g, plan, m.names);
+    const fresh = g.nodes.filter((x) => !m.names[x.id]);
+    const prereq = (ids: string[]) => Object.fromEntries(ids.flatMap((id) => (g.requires[id]?.length ? [[names[id], g.requires[id].map((r) => names[r]).filter(Boolean)]] : [])));
+    const rel = relevanceOf(plan, g);
+    if (!m.domainId) {
+      const r = await e.call("init_domain", { name: `${course.courseNumber} ${course.nameHe}`.slice(0, 120), concepts: g.nodes.map((x) => names[x.id]), prerequisites: prereq(g.nodes.map((x) => x.id)) });
+      m.domainId = String(r.domain_id);
+    } else if (fresh.length) {
+      const snap = (await e.call("get_curriculum_snapshot", { domain_id: m.domainId })).snapshot as { version: number };
+      await e.call("add_concepts", { domain_id: m.domainId, expected_version: snap.version, concepts: fresh.map((x) => names[x.id]), prerequisites: prereq(fresh.map((x) => x.id)), provenance: { source_type: "learner", rationale: "Shalav study plan and the tutor's observations of this student" } });
+    }
+    if (fresh.length) await e.call("set_goal_relevance", { domain_id: m.domainId, relevance: Object.fromEntries(fresh.map((x) => [names[x.id], rel(x.id)])) });
+    m.names = names;
+    const sent = new Set(m.sent);
+    for (const ev of events) {
+      if (sent.has(ev.id)) continue;
+      for (const args of interactions(ev, g, names)) await e.call("record_interaction", { domain_id: m.domainId, ...args });
+      sent.add(ev.id);
+    }
+    m.sent = [...sent];
+  }
+
+  async function compute(n: string): Promise<Summary> {
+    const ctx = await loadCtx(n);
+    const events = mapEvents(ctx.events);
+    const g = graphOf(ctx.plan, events);
+    const prior = priorOf(ctx.course);
+    const k = knowledgeOf(g, events, prior);
+    const m: MapFile = (await readJsonFile(mapPath(n), MapSchema)) ?? { domainId: null, names: {}, sent: [], stars: null };
+    const retention = new Map<string, number>();
+    let focus: string | null = null;
+    let misconceptions: Summary["misconceptions"] = [];
+    let engine = false;
+    if (engineFor && Date.now() > downUntil) {
+      try {
+        const e = engineFor(n);
+        await syncEngine(e, ctx.plan, g, events, ctx.course, m);
+        const byName = new Map(Object.entries(m.names).map(([id, name]) => [name, id]));
+        const olm = await e.call("get_olm_snapshot", { domain_id: m.domainId });
+        for (const [name, st] of Object.entries((olm.mastery_stages ?? {}) as Record<string, { retention_estimate?: number }>)) {
+          const id = byName.get(name);
+          if (id && typeof st.retention_estimate === "number") retention.set(id, st.retention_estimate);
+        }
+        focus = byName.get(String(olm.focus_concept ?? "")) ?? null;
+        const mis = (await e.call("get_misconceptions", { domain_id: m.domainId })).misconceptions as { concept: string; misconception_type: string; last_error_detail?: string; count: number; status: string }[] | undefined;
+        const label = new Map(g.nodes.map((x) => [x.id, x.label]));
+        misconceptions = (mis ?? []).filter((x) => x.status === "active").flatMap((x) => {
+          const id = byName.get(x.concept);
+          return id ? [{ id, label: label.get(id) ?? x.concept, type: x.misconception_type, detail: x.last_error_detail ?? "", count: x.count }] : [];
+        });
+        engine = true;
+      } catch (err) {
+        downUntil = Date.now() + 10 * 60_000; // try again later; meanwhile the log alone
+        console.error("knowledge engine unavailable:", err instanceof Error ? err.message : err);
+      }
+    }
+    const rel = relevanceOf(ctx.plan, g);
+    const raw = rawStars(g, k, retention, rel);
+    const stars = shownStars(m.stars, raw);
+    const exam = g.nodes.filter((x) => rel(x.id) >= 0.7);
+    const examReady = exam.length ? exam.filter((x) => effective(k, x.id, retention) >= 0.9).length / exam.length : 0;
+    await writeJsonAtomic(mapPath(n), { ...m, stars }); // also keeps what reached the engine before a failure (no answer is sent twice)
+    return { graph: g, k, prior, retention, stars, raw, examReady, focus, misconceptions, engine };
+  }
+
+  /** The course's knowledge now (cached briefly; any new answer refreshes it). */
+  async function summary(n: string): Promise<Summary> {
+    const c = cache.get(n);
+    if (c && Date.now() - c.at < 30_000) return c.s;
+    const s = await serial(n, () => compute(n));
+    cache.set(n, { at: Date.now(), s });
+    return s;
+  }
+
+  // every new answer reaches the engine soon (and the next summary sees it)
+  const off = onEvent((n) => {
+    cache.delete(n);
+    void serial(n, () => compute(n)).then((s) => cache.set(n, { at: Date.now(), s })).catch(() => undefined);
+  });
+
+  return { summary, invalidate: (n: string) => cache.delete(n), dispose: off };
+}
+export type KnowledgeService = ReturnType<typeof createKnowledge>;

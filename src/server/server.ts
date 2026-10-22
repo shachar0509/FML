@@ -7,6 +7,7 @@ import { listCourses } from "@/core/domain/courses/courses";
 import { localize } from "@/core/domain/plan/translate";
 import * as z from "zod";
 import { BridgeGateway } from "./bridge";
+import { createKnowledge, type KnowledgeService } from "./knowledge/knowledge";
 import type { HomeData } from "@/cards/types";
 import { useSettings } from "@/stores/settings";
 import type { CatalogSource } from "@/core/domain/catalog/catalog";
@@ -23,8 +24,10 @@ import { INSTRUCTIONS } from "./instructions";
 import { CARDS_URI, readCards } from "./resources";
 
 /** Transport-agnostic: tests connect it to an in-memory transport, main.ts to stdio. */
-export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSource, moodleMake?: (profileDir: string) => Moodle): McpServer {
+export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSource, moodleMake?: (profileDir: string) => Moodle, knowledge: KnowledgeService = createKnowledge(null)): McpServer {
   const server = new McpServer({ name: "shalav", version: "2.0.0" }, { instructions: INSTRUCTIONS });
+  const closed = server.server.onclose;
+  server.server.onclose = () => (knowledge.dispose(), closed?.());
   // Every card result carries its own number (M31). A card claims the number of the result it was created with, so a
   // card the host mounts again (Claude Desktop re-renders the chat after a card's own tool call) keeps its old number
   // and never outranks the newest card; results of a card's own calls (Back, open course) are never a card's first data.

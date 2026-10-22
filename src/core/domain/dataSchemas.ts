@@ -78,11 +78,15 @@ export type Verdict = z.infer<typeof VerdictSchema>;
 export const ExerciseRefSchema = z.object({ source: z.enum(["index", "generated", "tutor"]), id: z.string() });
 export type ExerciseRef = z.infer<typeof ExerciseRefSchema>;
 const base = { id: z.string(), ts, deviceId: z.string(), courseNumber };
+/** Knowledge-graph evidence of one answer: which graph nodes it tested and how well (0..1). Older events have none. */
+const nodeEvidence = z.array(z.object({ id: z.string(), score: z.number().min(0).max(1) })).optional();
+export const NodeKindSchema = z.enum(["concept", "theorem", "technique", "edge", "skill", "convention", "misconception"]);
+export type NodeKind = z.infer<typeof NodeKindSchema>;
 export const EventSchema = z.discriminatedUnion("type", [
   z.object({ ...base, type: z.literal("stage_started"), stageId }),
   z.object({
     ...base, type: z.literal("check_answered"), stageId, checkId: z.string(), kind: z.enum(["mcq", "open"]),
-    context, correct: z.boolean(), score: z.number(), mistakeTags: z.array(z.string()),
+    context, correct: z.boolean(), score: z.number(), mistakeTags: z.array(z.string()), nodes: nodeEvidence,
   }),
   z.object({
     ...base, type: z.literal("attempt_graded"), attemptId: z.string(), exercise: ExerciseRefSchema,
@@ -91,7 +95,7 @@ export const EventSchema = z.discriminatedUnion("type", [
       tag: z.string(), severity: z.enum(["minor", "major", "critical"]), note: z.string().max(120),
     })),
     missingForFullCredit: z.number(), edgeCasesMissed: z.array(z.string()), attachmentHashes: z.array(z.string()),
-    difficulty: z.number(), hasEdgeCaseFocus: z.boolean(), hintsUsed: z.number(), solutionRevealedBefore: z.boolean(),
+    difficulty: z.number(), hasEdgeCaseFocus: z.boolean(), hintsUsed: z.number(), solutionRevealedBefore: z.boolean(), nodes: nodeEvidence,
   }),
   z.object({ ...base, type: z.literal("hint_requested"), exercise: ExerciseRefSchema, level: z.union([z.literal(1), z.literal(2), z.literal(3)]), context }),
   z.object({ ...base, type: z.literal("solution_revealed"), exercise: ExerciseRefSchema, context }),
@@ -103,6 +107,11 @@ export const EventSchema = z.discriminatedUnion("type", [
   z.object({ ...base, type: z.literal("stage_completed"), stageId, by: z.enum(["mastery", "user_override"]), masteryAtCompletion: z.number() }),
   z.object({ ...base, type: z.literal("stage_reopened"), stageId }),
   z.object({ ...base, type: z.literal("mistake_tag_defined"), tag: z.string(), labelHe: z.string(), labelEn: z.string(), description: z.string() }),
+  // The tutor/grader grows the student's knowledge graph: a node the plan does not have (a skill, a course convention, a misconception…)
+  z.object({ ...base, type: z.literal("node_added"), nodeId: z.string(), kind: NodeKindSchema, label: z.string().max(80), why: z.string().max(300), stageIds: z.array(stageId), requires: z.array(z.string()), origin: z.enum(["tutor", "grader", "index"]), refId: z.string() }),
+  z.object({ ...base, type: z.literal("node_linked"), from: z.string(), to: z.string(), rel: z.enum(["requires", "misconception_of"]) }),
+  // The tutor's own observation of a node (e.g. "cited the section numbers this time"), 0..1
+  z.object({ ...base, type: z.literal("node_observed"), nodeId: z.string(), score: z.number().min(0).max(1), why: z.string().max(300), context }),
   z.object({
     ...base, type: z.literal("plan_replaced"), fromVersion: z.number().int(), toVersion: z.number().int(),
     idMap: z.record(z.string(), z.string().nullable()),

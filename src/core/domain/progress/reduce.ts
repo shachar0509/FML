@@ -25,10 +25,28 @@ export function mapEvents(events: Event[]): Event[] {
       return cur;
     };
     const many = (ids: string[]) => ids.map(map).filter((x): x is string => x !== null);
-    if ("stageId" in e) {
+    // knowledge-graph node ids start with their stage (`S003/concept/…`); course-wide nodes (`G/…`) never move
+    const node = (id: string): string | null => {
+      if (!/^S\d{3}\//.test(id)) return id;
+      const s = map(id.slice(0, 4));
+      return s === null ? null : s + id.slice(4);
+    };
+    const nodes = <T extends { id: string }>(l: T[] | undefined) => l?.flatMap((n) => { const id = node(n.id); return id === null ? [] : [{ ...n, id }]; });
+    if (e.type === "node_added") {
+      const id = node(e.nodeId);
+      if (id !== null) out.push({ ...e, nodeId: id, stageIds: many(e.stageIds), requires: e.requires.map(node).filter((x): x is string => x !== null) });
+    } else if (e.type === "node_linked") {
+      const from = node(e.from);
+      const to = node(e.to);
+      if (from !== null && to !== null) out.push({ ...e, from, to });
+    } else if (e.type === "node_observed") {
+      const id = node(e.nodeId);
+      if (id !== null) out.push({ ...e, nodeId: id });
+    } else if ("stageId" in e) {
       const s = map(e.stageId);
-      if (s !== null) out.push({ ...e, stageId: s });
-    } else if (e.type === "attempt_graded" || e.type === "mistake_observed") out.push({ ...e, stageIds: many(e.stageIds) });
+      if (s !== null) out.push(e.type === "check_answered" ? { ...e, stageId: s, nodes: nodes(e.nodes) } : { ...e, stageId: s });
+    } else if (e.type === "attempt_graded") out.push({ ...e, stageIds: many(e.stageIds), nodes: nodes(e.nodes) });
+    else if (e.type === "mistake_observed") out.push({ ...e, stageIds: many(e.stageIds) });
     else out.push(e);
   }
   return out.reverse();
