@@ -25,6 +25,14 @@ describe("tutorSystem", () => {
     expect(s).toContain("E1 — Q1 — 2 — proof — g");
     expect(s).toContain("t1 — Tag one");
   });
+  it("materials in another language: questions in that language, quotes in the original with a translation (M49)", () => {
+    expect(s).not.toContain("materials are mostly in"); // not given: nothing added
+    const args = { course: { courseNumber: "01040195", nameHe: "אינפי", credits: 5.5 }, courseKind: "proof-based", stage: plan.stages[1]!, plan, minExercises: 2, knowledgeBoundary: "", lessonBrief: "", exercises: [], mistakeTags: [] };
+    const he = tutorSystem({ ...args, lang: "English", materialsLang: "Hebrew" });
+    expect(he).toContain("write consult_materials questions in Hebrew");
+    expect(he).toContain("original Hebrew wording in quotes, then its English translation");
+    expect(tutorSystem({ ...args, lang: "Hebrew", materialsLang: "Hebrew" })).not.toContain("materials are mostly in"); // same language: unchanged
+  });
   it("status block", () => {
     const b = statusBlock({ completed: 1, total: 5, mastery: 0.5, covered: [0], gaps: [], reviewTopics: [], missing: ["m"], overriddenPrereqs: [], mistakes: ["x"], idleMinutes: 3 });
     expect(b).toContain("Stages completed: 1 of 5");

@@ -786,3 +786,11 @@ Edge cases found with the sample slides, and fixed in the renderer:
 - **Tests:**
   - `translateTools.test.ts`: `course_translate_request` → a study-lane `submit_translations` job with 40 numbered texts → the course card (name, units, stages, summaries) and Home in English, `missing: 0`; back in Hebrew, the originals.
   - e2e: Back from Settings refetches Home; the 3 s polling during a translation keeps the open file list.
+
+## M49: studying in a language other than the materials'
+- `materialsLang` (retrieve.ts): the language most of the course's scanned material text is in. It counts Hebrew vs Latin letters in the pages' text and never looks at file names; exercises don't count; image-only pages have no text and are skipped.
+- Tutor (rule 11), only when the materials' language differs from the settings language:
+  - write `consult_materials` questions in the materials' language (pages are found by their words);
+  - quote definitions, theorems and rules in the original wording, followed by a translation.
+- Lookup and lesson-brief prompts: a quote stays in the materials' language and is followed by its translation when that differs. When the languages match, nothing changes and nothing extra is spent.
+- Tests: detection (Hebrew text with an English file name counts as Hebrew; mixed; none), tutor rule present only on a mismatch.

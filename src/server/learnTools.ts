@@ -14,7 +14,7 @@ import { checkAdvanceCriteria } from "@/core/domain/progress/criteria";
 import { normalizeTag, reduceProgress } from "@/core/domain/progress/reduce";
 import { appendEvent } from "@/core/domain/progress/store";
 import { resolveExercise, type Ex } from "@/core/domain/practice/exercises";
-import { pagesFor } from "@/core/domain/retrieval/retrieve";
+import { materialsLang, pagesFor } from "@/core/domain/retrieval/retrieve";
 import { parseGeometry, parsePlot } from "@/core/render/figures/specs";
 import { readJsonFile } from "@/core/lib/fs/atomicWrite";
 import { readJsonlDir } from "@/core/lib/fs/jsonl";
@@ -136,6 +136,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
       const exercises = (await listFileIndexes(n)).flatMap((f) => f.exercises).filter((e) => e.primaryStageId === stage.id || e.requiredStageIds.includes(stage.id));
       const system = tutorSystem({
         course: s.course, courseKind: s.course.courseKind, stage, plan: s.plan, minExercises: sets().learning.minExercises, lang, mcp: true,
+        materialsLang: await materialsLang({ gw: bridge }, s.course),
         knowledgeBoundary: buildKnowledgeBoundary({ course: s.course, plan: s.plan, progress: s.progress, currentStageId: stage.id }),
         lessonBrief: brief.trim() || "No indexed course materials match this stage yet; explain in your own words.",
         exercises, mistakeTags: s.progress.mistakes,

@@ -32,6 +32,18 @@ export type Deps = {
 const materialFiles = async (d: Deps, course: Course) =>
   (await (d.listIndexes ?? listFileIndexes)(course.courseNumber)).filter((f) => f.role === "material" && f.status === "indexed");
 
+/** M49: the language most of the course's material text is in, by Hebrew vs Latin letters; null without scanned materials. */
+export async function materialsLang(d: Deps, course: Course): Promise<"Hebrew" | "English" | null> {
+  let he = 0;
+  let en = 0;
+  for (const f of await materialFiles(d, course))
+    for (const p of f.materialPages) {
+      he += p.text.match(/\p{Script=Hebrew}/gu)?.length ?? 0;
+      en += p.text.match(/[A-Za-z]/g)?.length ?? 0; // ponytail: math notation counts as Latin; fine since Hebrew prose outweighs it
+    }
+  return he + en === 0 ? null : he >= en ? "Hebrew" : "English";
+}
+
 /** Spec 9.9 steps 1-2: stage pages (else all pages), BM25-ranked, cut at 24,000 characters. */
 export async function pagesFor(d: Deps, course: Course, stageIds: string[] | null, query: string): Promise<Page[]> {
   const all = (await materialFiles(d, course)).flatMap((f) =>

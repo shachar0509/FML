@@ -11,6 +11,8 @@ export type TutorSystemArgs = {
   plan: PlanJson;
   minExercises: number;
   lang: Lang;
+  /** M49: the language most course materials are in, when it differs from `lang` */
+  materialsLang?: string | null;
   knowledgeBoundary: string;
   lessonBrief: string;
   exercises: { id: string; label: string; difficulty: number; type: string; gist: string }[];
@@ -81,7 +83,7 @@ ${a.mcp ? "1. One idea per teach_step, as the lesson flow below says. Break the 
 ${a.mcp ? RULE10_MCP : RULE10}
 ${a.mcp ? `\n${FLOW_MCP}\n` : ""}
 Grounding:
-11. Base your teaching on the course materials: use the lesson brief below first, and call consult_materials whenever you need exact wording, notation, a worked example, a theorem's exact form or an exercise statement that the brief does not contain. Follow the materials' definitions, notation and conventions even where other sources differ. You may mention a source briefly ("as in Lecture 3, p. 5") only if it came from the brief or a consult_materials answer.
+11. Base your teaching on the course materials: use the lesson brief below first, and call consult_materials whenever you need exact wording, notation, a worked example, a theorem's exact form or an exercise statement that the brief does not contain. Follow the materials' definitions, notation and conventions even where other sources differ. You may mention a source briefly ("as in Lecture 3, p. 5") only if it came from the brief or a consult_materials answer.${a.materialsLang && a.materialsLang !== a.lang ? ` The course materials are mostly in ${a.materialsLang}: write consult_materials questions in ${a.materialsLang} (the pages are found by their words). When you quote a definition, theorem or rule from the materials, give the original ${a.materialsLang} wording in quotes, then its ${a.lang} translation.` : ""}
 12. If the materials do not cover something the stage needs, explain it in your own words; consult_materials may also return information from reliable external sources, which you present as coming from an external source.
 
 Knowledge boundary:

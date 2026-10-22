@@ -5,7 +5,7 @@ import type { FileIndex, PlanJson, ProgressJson } from "@/core/domain/dataSchema
 import { setFs } from "@/core/lib/fs/fs";
 import { memFs } from "@/test/memfs";
 import { rank, tokenize } from "./bm25";
-import { consult, getLessonBrief } from "./retrieve";
+import { consult, getLessonBrief, materialsLang } from "./retrieve";
 
 beforeEach(() => setFs(memFs()));
 
@@ -95,5 +95,29 @@ describe("lesson brief", () => {
     const gw = new FakeClaudeGateway([]);
     const b = await getLessonBrief({ gw, listIndexes: async () => [] }, { course, plan, stageId: "S002", lang: "English" });
     expect(b.coverage).toBe("none");
+  });
+});
+
+describe("materialsLang (M49)", () => {
+  const gw = new FakeClaudeGateway([]);
+  it("is the language most material text is in; null without materials", async () => {
+    const he = file("a", "הגדרה: סדרה $a_n$ מתכנסת לגבול $L$ אם לכל אפסילון קיים N");
+    const en = file("b", "A sequence converges if for every epsilon there is an N");
+    expect(await materialsLang({ gw, listIndexes: async () => [he] }, course)).toBe("Hebrew");
+    expect(await materialsLang({ gw, listIndexes: async () => [en] }, course)).toBe("English");
+    expect(await materialsLang({ gw, listIndexes: async () => [he, he, en] }, course)).toBe("Hebrew");
+    expect(await materialsLang({ gw, listIndexes: async () => [] }, course)).toBeNull();
+  });
+});
+
+describe("materialsLang (M49)", () => {
+  const gw = new FakeClaudeGateway([]);
+  it("goes by the pages' text, not the file name; null without materials", async () => {
+    const he = { ...file("a", "הגדרה: סדרה $a_n$ מתכנסת לגבול $L$ אם לכל אפסילון קיים N"), fileName: "lecture-1-limits.pdf" };
+    const en = { ...file("b", "A sequence converges if for every epsilon there is an N"), fileName: "הרצאה 1.pdf" };
+    expect(await materialsLang({ gw, listIndexes: async () => [he] }, course)).toBe("Hebrew");
+    expect(await materialsLang({ gw, listIndexes: async () => [en] }, course)).toBe("English");
+    expect(await materialsLang({ gw, listIndexes: async () => [he, he, en] }, course)).toBe("Hebrew");
+    expect(await materialsLang({ gw, listIndexes: async () => [] }, course)).toBeNull();
   });
 });
