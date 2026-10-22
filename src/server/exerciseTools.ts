@@ -5,7 +5,7 @@ import * as z from "zod";
 import type { ExerciseData } from "@/cards/types";
 import { pagesFor } from "@/core/domain/retrieval/retrieve";
 import { saveAnswerFile, loadImageB64 } from "@/core/lib/attachments";
-import { canReveal, ExerciseRun, emptyRun } from "@/core/domain/practice/run";
+import { canReveal, ExerciseRun, emptyRun, perfect } from "@/core/domain/practice/run";
 import { figureImages, type Ctx, type Ex } from "@/core/domain/practice/exercises";
 import type { Attachment, Context } from "@/core/domain/practice/grade";
 import { newId } from "@/core/lib/ids";
@@ -23,15 +23,16 @@ const text = (t: string): Content[] => [{ type: "text", text: t }];
 const readable = (g: { verdict: string; legibility: string } | null) => !!g && g.verdict !== "unreadable" && g.legibility !== "illegible";
 const toAtt = (f: z.infer<typeof files>): Attachment[] => f.map((x) => ({ type: "image_ref", ...x }));
 
-type R = { run: ExerciseRun; n: string; context: Context; busy: "grade" | "hint" | "solution" | null; figures: string[] };
+type R = { run: ExerciseRun; n: string; context: Context; busy: "grade" | "hint" | "solution" | "clue" | null; figures: string[] };
 
 /** Exercise card (plan v2 §6.4): Grade / Hint / Show solution run the v1 pipeline as bridge ops; state lives in memory (lost on a restart). */
 export function registerExerciseTools(server: McpServer, bridge: BridgeGateway) {
   const runs = new Map<string, R>();
   // Raw BM25 pages instead of a lesson-brief job: one host round trip less per hint (DECISIONS.md, as in M7).
-  const digest = async (ctx: Ctx, stageId: string) => {
+  // Without a stage (homework, M57) the pages are ranked over all materials by the exercise text.
+  const digest = async (ctx: Ctx, stageId: string | null, query = "") => {
     const stage = ctx.plan.stages.find((x) => x.id === stageId);
-    const pages = await pagesFor({ gw: bridge }, ctx.course, [stageId], [...(stage?.objectives ?? []), ...(stage?.newConcepts ?? [])].join(" "));
+    const pages = await pagesFor({ gw: bridge }, ctx.course, stageId ? [stageId] : null, stage ? [...stage.objectives, ...stage.newConcepts].join(" ") : query);
     let body = "";
     for (const p of pages) {
       const t = `[${p.fileName} p.${p.page}]\n${p.text}\n\n`;
@@ -48,6 +49,7 @@ export function registerExerciseTools(server: McpServer, bridge: BridgeGateway) 
     return {
       view: "exercise", language, theme, number: x.n, runId, difficulty: ex.difficulty, statementMd: ex.statementMd, figures: x.figures,
       hints: s.hints.map(({ level, hintMd }) => ({ level, hintMd })), solutionMd: s.solutionMd, grade: s.grade, canReveal: canReveal(s), busy: x.busy, error: x.run.error,
+      loop: x.run.loop, clues: s.clues ?? [], clueOpen: !!s.clueOpen, perfect: perfect(s.grade),
     };
   }
 
@@ -58,8 +60,8 @@ export function registerExerciseTools(server: McpServer, bridge: BridgeGateway) 
   }
 
   /** Called by assign_exercise (Learn). Practice owns its run and uses adopt(). */
-  async function open(n: string, ex: Ex, context: Context): Promise<ExerciseData> {
-    const run = new ExerciseRun(n, ex, context, { gw: bridge, loadImage: loadImageB64(n), digest }, emptyRun(), async () => undefined);
+  async function open(n: string, ex: Ex, context: Context, loop = false): Promise<ExerciseData> {
+    const run = new ExerciseRun(n, ex, context, { gw: bridge, loadImage: loadImageB64(n), digest }, emptyRun(), async () => undefined, loop);
     return adopt(newId(), n, run, context);
   }
 
@@ -109,6 +111,29 @@ export function registerExerciseTools(server: McpServer, bridge: BridgeGateway) 
     if (!canReveal(x.run.state)) return fail("The solution unlocks after hint 3 or a graded attempt.");
     start(x, "solution", () => x.run.reveal(), () => (x.run.error ? `The solution failed: ${x.run.error}. The student can press Show solution again.` : "The solution is shown in the card. Nothing else to do; wait for the student."));
     return out(`Solution started. ${wait}`, data(runId));
+  });
+
+  // M56 solving loop: Get a clue / I didn't understand / Thank you.
+  registerAppTool(server, "exercise_clue_request", { title: "Get a clue", description: "Card-only: check the work so far and give one small clue (an AI job).", inputSchema: run_.extend({ files }), _meta: appOnly }, async ({ runId, files: f }) => {
+    const x = get(runId);
+    if (!x) return gone();
+    if (x.busy) return out("Already working.", data(runId));
+    start(x, "clue", () => x.run.clue(toAtt(f)), () => (x.run.error ? `The clue failed: ${x.run.error}. The student can press Get a clue again.` : "The clue is shown in the card. Nothing else to do; wait for the student."));
+    return out(`Clue started. ${wait}`, data(runId));
+  });
+  registerAppTool(server, "exercise_clarify_request", { title: "Explain the clue", description: "Card-only: explain the last clue again in other words (an AI job).", inputSchema: run_, _meta: appOnly }, async ({ runId }) => {
+    const x = get(runId);
+    if (!x) return gone();
+    if (x.busy) return out("Already working.", data(runId));
+    if (!x.run.clues.length) return fail("No clue yet.");
+    start(x, "clue", () => x.run.clarify(), () => (x.run.error ? `The explanation failed: ${x.run.error}. The student can press the button again.` : "The explanation is shown in the card. Nothing else to do; wait for the student."));
+    return out(`Explanation started. ${wait}`, data(runId));
+  });
+  registerAppTool(server, "exercise_clue_done", { title: "Thank you", description: "Card-only: close the clue, back to clue / submit.", inputSchema: run_, _meta: appOnly }, async ({ runId }) => {
+    const x = get(runId);
+    if (!x) return gone();
+    await x.run.clueDone();
+    return out("ok", data(runId));
   });
 
   registerAppTool(server, "exercise_retry", { title: "Try again", description: "Card-only: drop the grade and attempt the same exercise again.", inputSchema: run_, _meta: appOnly }, async ({ runId }) => {

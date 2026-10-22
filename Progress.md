@@ -900,3 +900,19 @@ Edge cases found with the sample slides, and fixed in the renderer:
   - When a record goes (its file was deleted), remembered copies are checked again, so a copy left out becomes the file in its folder.
 - Checked on a copy of the real data: before, the lists alternated 0/151 and 1/150 on every poll; after, they stay at 1/150.
 - Tests: scan (both folders plus a same-folder copy: one record, steady over polls, no re-hashing, the copy takes over after the original is deleted), import (other folder = duplicate).
+
+## M56: the solving loop, and Practice on the board
+- New solving loop for written exercises, built on the existing exercise run and card:
+  - The question stays on the board. Two choices under it: **Get a clue** and **Submit full solution** (photos or PDF).
+  - Get a clue: the work so far (optional) is checked for a mistake first. If there is one, the board points to the first mistake without fixing it; otherwise it gives one small clue for the next step only.
+  - After a clue: **I didn't understand the clue** explains the same clue again in other words (added under it on the board, as many times as needed); **Thank you** goes back to the two choices.
+  - Submit full solution: the full review (steps, what's missing, the corrected key step). Perfect = score ≥ 95 and every final answer right (new grader field `finalAnswerCorrect`); then the board says so and the loop ends.
+  - Clues, explanations and the grade use the course material and the nearest example exercises with their solutions (the grade weighs reasoning, explanations and the course's conventions).
+  - Clues count as hints for mastery (at most 3).
+- Where the loop is used:
+  - Practice: every exercise.
+  - Learn: an exercise of difficulty 4–5 in a stage that isn't a concept or definition stage. Intro stages keep the 3 hints.
+- Practice mix follows the level (from the last 10 practice scores): more exercises the better the student does (level 2: 1 in 3, 3: 6 in 10 as before, 4: 8 in 10, 5: all). At difficulty 4–5 new exercises are written as real exam questions (exam wording and length, in parts).
+- Practice looks like the lesson slides: every screen is a board with a handwritten, underlined title; MCQ options are drawn boxes, feedback is in ink. No sticky notes.
+- The "Correct" grade chip had too little contrast; it now uses white (light) / dark (dark) text.
+- Tests: item mix by level, server round trip of the loop (intro stage keeps hints; clue with the work attached, 2 re-explanations, Thank you; 96 with a wrong final answer is not perfect, with it right is), e2e of the loop in he/en, light/dark.

@@ -9,6 +9,8 @@ const DIFFICULTY_SCALE = "1 = direct definition check, 2 = routine, 3 = standard
 export type GradeArgs = {
   course: Head; lang: Lang; statement: string; reference: string | null; gradingNotes: string;
   requiredStages: string; completedTitles: string; mistakeTags: string; boundary: string;
+  /** M56: the course's example exercises with solutions, and the material digest (both optional) */
+  examples?: string; digest?: string;
 };
 
 export const gradingPrompt = (a: GradeArgs) =>
@@ -21,6 +23,8 @@ Scoring (0-100), as in a ${isCustom(a.course) ? "strict" : uniName()} exam:
 
 Reading handwriting: read carefully. If a symbol or step is unclear and it affects the grade, list it in illegibleParts instead of guessing. If the solution cannot be read, set legibility "illegible" and verdict "unreadable".
 
+The score weighs the reasoning, the explanations and the course's conventions (notation, structure and level of detail of its example solutions). finalAnswerCorrect is true only if every final answer is exactly right.
+
 Report the steps in the student's order with a status for each. missingForFullCredit lists concrete additions that would earn full marks. correctedKeyStepMd shows the first wrong or missing step done correctly. Mistakes use kebab-case tags; reuse an existing tag when it fits. Write all feedback in ${a.lang}.
 
 ${languageRules(a.lang)}
@@ -29,7 +33,7 @@ ${EXAM_CONVENTIONS}
 Exercise:
 <exercise>${a.statement}</exercise>
 Reference solution: ${a.reference ?? "No reference solution; solve it yourself first, then grade."}
-Grading notes: ${a.gradingNotes || "(none)"}
+Grading notes: ${a.gradingNotes || "(none)"}${a.examples ? `\nExample exercises of this course with their solutions (the expected conventions):\n${a.examples}` : ""}${a.digest ? `\nCourse material digest:\n<materials>${a.digest}</materials>` : ""}
 Required stages and objectives:
 ${a.requiredStages}
 Completed stages (may be cited):
@@ -57,11 +61,11 @@ ${a.boundary}
 ${DATA}
 You must finish by calling submit_check_grade exactly once.`;
 
-export const solvePrompt = (lang: Lang, requiredStages: string, boundary: string, digest: string, custom = false) =>
-  `Write a complete, exam-level reference solution in ${lang} for the exercise below, as ${custom ? "the course staff" : `a ${uniName()} course staff member`} would publish it. Justify every step. Use only results from these stages: ${requiredStages}.
+export const solvePrompt = (lang: Lang, requiredStages: string, boundary: string, digest: string, custom = false, examples = "") =>
+  `Write a complete, exam-level reference solution in ${lang} for the exercise below, as ${custom ? "the course staff" : `a ${uniName()} course staff member`} would publish it. Justify every step. ${requiredStages ? `Use only results from these stages: ${requiredStages}.` : "Use only what the course material below teaches."}
 ${boundary}
 Follow the notation and conventions of this course material digest:
-<materials>${digest}</materials>
+<materials>${digest}</materials>${examples ? `\nFormat and detail it like these example solutions of the course:\n${examples}` : ""}
 Call submit_solution with { "solutionMd": string }.`;
 
 export type GenArgs = {
@@ -81,7 +85,7 @@ ${a.boundary}
 The exercise and its reference solution must need nothing beyond the allowed knowledge and these required stages.
 The student repeatedly makes these mistakes; design the exercise so that they matter:
 ${a.mistakes || "(none recorded)"}
-Include at least one edge case or boundary condition. Provide a complete exam-level reference solution and grading notes. Write in ${a.lang}.${a.issues?.length ? `\nA previous attempt was rejected for these issues; avoid them:\n${a.issues.map((i) => `- ${i}`).join("\n")}` : ""} Call submit_generated_exercise.`;
+Include at least one edge case or boundary condition.${a.difficulty >= 4 ? " Write it as a real exam question of this course: exam wording and length, usually in several parts (a, b, c)." : ""} Provide a complete exam-level reference solution and grading notes. Write in ${a.lang}.${a.issues?.length ? `\nA previous attempt was rejected for these issues; avoid them:\n${a.issues.map((i) => `- ${i}`).join("\n")}` : ""} Call submit_generated_exercise.`;
 
 export const verificationPrompt = (requiredStages: string, boundary: string) =>
   `Verify this exercise. Solve it independently first, without looking at the reference solution, using only these stages: ${requiredStages}. Then compare with the reference solution. Report whether it is well posed and solvable, whether your answer matches, any stage outside the list that is required (including anything listed as not learned yet below), and every issue.
@@ -107,3 +111,26 @@ ${a.boundary}
 Use only the allowed knowledge above and the exercise's required stages: ${a.requiredStages}. Follow the notation of this course material digest: <materials>${a.digest}</materials>
 ${DATA}
 Write in ${a.lang}. Call submit_hint.`;
+
+type ClueArgs = { lang: Lang; statement: string; reference: string | null; previous: string[]; boundary: string; requiredStages: string; digest: string; examples: string };
+const clueBase = (a: ClueArgs) => `Exercise: <exercise>${a.statement}</exercise>
+Reference solution (never reveal it): ${a.reference ?? "none; solve it yourself first"}
+${a.boundary}
+${a.requiredStages ? `Use only the allowed knowledge above and the exercise's required stages: ${a.requiredStages}.` : "Use only what the course material below teaches."} Follow the notation and methods of the course material and its example exercises:
+<materials>${a.digest}</materials>
+${a.examples ? `Example exercises with solutions:\n${a.examples}\n` : ""}${DATA}
+Write in ${a.lang}.`;
+
+/** M56: the solving loop's "Get a clue": a mistake check first, then one small clue. */
+export const cluePrompt = (a: ClueArgs) =>
+  `The student is solving the exercise below and is stuck. Their work so far is attached (if any).
+First check the work for a mistake. If there is one, set onTrack false and in clueMd point to the FIRST mistake: where it is and why it is wrong, without writing the correction.
+If the work is right so far (or there is none), set onTrack true and give ONE small clue that lets them take the next step only: a guiding question or the name of the idea to use. Never more than the next step, never the answer.
+Clues already given: ${a.previous.length ? a.previous.map((h, i) => `(${i + 1}) ${h}`).join(" ") : "none"}. Do not repeat them.
+${clueBase(a)} Call submit_clue.`;
+
+/** M56: "I didn't understand the clue": the same clue explained differently, no further. */
+export const clarifyPrompt = (a: ClueArgs & { clue: string; tried: string[] }) =>
+  `The student did not understand this clue for the exercise below: <clue>${a.clue}</clue>
+${a.tried.length ? `Explanations already given: ${a.tried.map((h, i) => `(${i + 1}) ${h}`).join(" ")}\n` : ""}Explain the same clue again in other, simpler words (a smaller sub-step, an analogy, a tiny example). Do not go beyond the step the clue is about and do not reveal the solution. Set onTrack true.
+${clueBase(a)} Call submit_clue.`;

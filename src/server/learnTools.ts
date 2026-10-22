@@ -270,7 +270,8 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
       ex = { ref: { source: "tutor", id: newId() }, statementMd: i.statementMd, referenceSolutionMd: i.referenceSolutionMd ?? null, gradingNotes: "", requiredStageIds: ids, stageIds: ids, difficulty: i.difficulty, edgeCaseFocus: i.edgeCaseFocus, figures: [] };
     }
     if (!ex) return fail('Unknown exerciseId and no statementMd. Use an id from the exercise list, or source "new" with statementMd and referenceSolutionMd.');
-    const data = await exercises.open(c.n, ex, "learn");
+    const kind = c.s.plan.stages.find((x) => x.id === ex.stageIds[0])?.kind;
+    const data = await exercises.open(c.n, ex, "learn", ex.difficulty >= 4 && kind !== "concept" && kind !== "definition"); // M56: hard exercises of advanced stages use the solving loop
     return out("Exercise card shown. The student works on paper, uploads a photo and presses Grade; the graded result then comes back to you through the chat. Do not describe the solution.", data);
   });
 

@@ -25,7 +25,7 @@ const plan = PlanJsonSchema.parse({
 const course = { schema: 1, courseNumber: N, nameHe: "קורס", credits: 3, faculty: "f", syllabusHe: "", prerequisitesRaw: "", catalogSemester: null, courseKind: "computational", planVersion: 1, createdAt: "", updatedAt: "" };
 
 const grade = {
-  legibility: "clear", illegibleParts: [], verdict: "partially_correct", score: 70, summaryMd: "ok", steps: [], missingForFullCredit: ["x"],
+  legibility: "clear", illegibleParts: [], verdict: "partially_correct", score: 70, finalAnswerCorrect: false, summaryMd: "ok", steps: [], missingForFullCredit: ["x"],
   mistakes: [{ tag: "Sign Slip", labelHe: "ה", labelEn: "Sign slip", description: "d", severity: "minor", whereMd: "line 2" }],
   edgeCasesMissed: [], correctedKeyStepMd: "", usesMaterialBeyondCompleted: [], stageIds: ["S001"],
 };

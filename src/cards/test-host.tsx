@@ -66,10 +66,22 @@ const exercise: ExerciseData = {
 const graded: ExerciseData = {
   ...exercise, canReveal: true,
   grade: {
-    legibility: "clear", illegibleParts: [], verdict: "partially_correct", score: 70, summaryMd: L("התחלה טובה, חסרה הבחירה של $N$.", "Good start, the choice of $N$ is missing."),
+    legibility: "clear", illegibleParts: [], verdict: "partially_correct", score: 70, finalAnswerCorrect: false, summaryMd: L("התחלה טובה, חסרה הבחירה של $N$.", "Good start, the choice of $N$ is missing."),
     steps: [{ label: L("הכנה", "Setup"), status: "correct", commentMd: L("תקין.", "Fine.") }, { label: L("בחירת N", "Choose N"), status: "missing", commentMd: L("לא נבחר $N$.", "No $N$ given.") }],
     missingForFullCredit: [L("N מפורש", "explicit N")], mistakes: [], edgeCasesMissed: [], correctedKeyStepMd: L("ניקח $N > 1/\\varepsilon$.", "Take $N > 1/\\varepsilon$."), usesMaterialBeyondCompleted: [], stageIds: ["S002"],
   },
+};
+// ?loop=1: the M56 solving loop (clue, I didn't understand, Thank you, then a perfect grade)
+let lx: ExerciseData = { ...exercise, difficulty: 4, loop: true, clues: [], clueOpen: false, perfect: false };
+const loopReply = (name: string): ExerciseData | undefined => {
+  const c = lx.clues ?? [];
+  const last = c.at(-1);
+  if (name === "exercise_clue_request") lx = { ...lx, grade: null, clueOpen: true, clues: [...c, { onTrack: c.length > 0, clueMd: c.length ? L("מה קורה ל-$1/n$ כש-$n > 1/\\varepsilon$?", "What happens to $1/n$ when $n > 1/\\varepsilon$?") : L("בשורה 2 הפכתם את סימן אי-השוויון.", "In line 2 you flipped the inequality sign."), more: [] }] };
+  else if (name === "exercise_clarify_request" && last) lx = { ...lx, clues: [...c.slice(0, -1), { ...last, more: [...last.more, L("בדקו: אם $a < b$ ו-$c < 0$, מה הסימן בין $ac$ ל-$bc$?", "Check: if $a < b$ and $c < 0$, which sign goes between $ac$ and $bc$?")] }] };
+  else if (name === "exercise_clue_done") lx = { ...lx, clueOpen: false };
+  else if (name === "exercise_grade_request") lx = { ...lx, clueOpen: false, perfect: true, grade: { ...(graded.grade as NonNullable<ExerciseData["grade"]>), verdict: "correct", score: 97, finalAnswerCorrect: true, missingForFullCredit: [], steps: [{ label: L("בחירת N", "Choose N"), status: "correct", commentMd: L("מצוין.", "Excellent.") }] } };
+  else if (name !== "exercise_state") return undefined;
+  return lx;
 };
 const practiceBase: PracticeData = {
   ...base, view: "practice", number: "01040195", mode: "choose", units: [{ id: "U01", title: L("גבולות", "Limits") }], stages: [{ id: "S001", title: L("סדרות", "Sequences") }],
@@ -114,7 +126,7 @@ $$
   sideMd: `$\\N \\subset \\Z$\n\n${L("כל טבעי הוא גם שלם.", "Every natural number is an integer.")}`,
 };
 const sample = ADVANCED[q.get("sample") ?? ""];
-const initial: CardData = sample ? { ...step, sideMd: null, ...sample } : (({ lesson, mcq, open, figure, step, exercise, practice: practiceBase, settings } as Record<string, CardData>)[q.get("view") ?? ""] ?? home);
+const initial: CardData = sample ? { ...step, sideMd: null, ...sample } : (({ lesson, mcq, open, figure, step, exercise: q.get("loop") ? lx : exercise, practice: practiceBase, settings } as Record<string, CardData>)[q.get("view") ?? ""] ?? home);
 const said: string[] = [];
 let mode = "inline";
 const reqs: unknown[] = [];
@@ -136,7 +148,7 @@ const lastArgs: Record<string, unknown> = {}; // the last arguments of each tool
 const host: Host = {
   callTool: async (name, args) => (tools.push(name), (lastArgs[name] = args), name === "shalav_request" && reqs.push(args), name === "course_create_request" && (created = true), name === "plan_build_request" && q.get("joined") && (building = true), name === "course_translate_request" && (translating = true), name === "plan_remove" && [args?.stageId, ...(course.units.find((u) => u.id === args?.unitId)?.stages.map((x) => x.id) ?? [])].forEach((id) => typeof id === "string" && gone.add(id)), {
     // ?stale=1: a newer card exists, so this one folds away
-    structuredContent: (name === "shalav_card" ? { latest: q.get("stale") && !args?.claim ? 2 : 1 } : undefined) ?? practiceReply[name] ?? (name === "shalav_settings" ? settings : name === "settings_update" ? { ...settings, ...(args?.language ? { language: args.language } : {}), learning: { ...settings.learning, minExercises: 3 } } : undefined) ?? (name === "course_lookup" ? found : name === "shalav_home" ? home : name === "shalav_course" ? prune(customize(created || tools.includes("course_custom_create") ? noPlan : building ? { ...course, build: { state: "running", step: "plan", pending: 0 } } : { ...course, translate: { ...course.translate, running: translating } }, args?.number)) : name === "course_create_request" ? { ok: true, number: "01040195" } : name === "course_custom_create" ? { ok: true, number: CUSTOM } : name === "files_list" ? ((f: FilesData) => (args?.number === CUSTOM ? { ...f, number: CUSTOM, moodle: null } : f))(building ? filesBuilding : q.get("files") === "outside" ? filesOutside() : files) : name === "lesson_state" ? lesson : name === "stage_complete" ? { ...lesson, status: "completed_override" } : name === "stage_reopen" ? lesson : name === "check_answer" ? { selectedIndex: 1, correct: false, correctIndex: 0, explanationMd: L("כי $1/n \\to 0$.", "Since $1/n \\to 0$.") } : name === "attachment_upload" ? { files: [{ sha256: "a".repeat(64), mediaType: "image/jpeg" }] } : name === "exercise_grade_request" || name === "exercise_state" ? graded : name === "plan_build_request" ? { ok: true, joined: !!q.get("joined") } : name === "moodle_import" ? { ok: true } : name === "course_status" ? (q.get("step") === "index" ? { state: "running", step: "index", files: { scanned: 10, scanning: 2, notScanned: 20, total: 32 }, pending: 1 } : { state: "running", step: "plan", unit: { k: 1, n: 4 }, pending: 1 }) : name === "step_answer" ? { answerMd: L("כי $0$ הוא איבר נייטרלי.", "Because $0$ is neutral.") } : { ok: true }),
+    structuredContent: (name === "shalav_card" ? { latest: q.get("stale") && !args?.claim ? 2 : 1 } : undefined) ?? (q.get("loop") ? loopReply(name) : undefined) ?? practiceReply[name] ?? (name === "shalav_settings" ? settings : name === "settings_update" ? { ...settings, ...(args?.language ? { language: args.language } : {}), learning: { ...settings.learning, minExercises: 3 } } : undefined) ?? (name === "course_lookup" ? found : name === "shalav_home" ? home : name === "shalav_course" ? prune(customize(created || tools.includes("course_custom_create") ? noPlan : building ? { ...course, build: { state: "running", step: "plan", pending: 0 } } : { ...course, translate: { ...course.translate, running: translating } }, args?.number)) : name === "course_create_request" ? { ok: true, number: "01040195" } : name === "course_custom_create" ? { ok: true, number: CUSTOM } : name === "files_list" ? ((f: FilesData) => (args?.number === CUSTOM ? { ...f, number: CUSTOM, moodle: null } : f))(building ? filesBuilding : q.get("files") === "outside" ? filesOutside() : files) : name === "lesson_state" ? lesson : name === "stage_complete" ? { ...lesson, status: "completed_override" } : name === "stage_reopen" ? lesson : name === "check_answer" ? { selectedIndex: 1, correct: false, correctIndex: 0, explanationMd: L("כי $1/n \\to 0$.", "Since $1/n \\to 0$.") } : name === "attachment_upload" ? { files: [{ sha256: "a".repeat(64), mediaType: "image/jpeg" }] } : name === "exercise_grade_request" || name === "exercise_state" ? graded : name === "plan_build_request" ? { ok: true, joined: !!q.get("joined") } : name === "moodle_import" ? { ok: true } : name === "course_status" ? (q.get("step") === "index" ? { state: "running", step: "index", files: { scanned: 10, scanning: 2, notScanned: 20, total: 32 }, pending: 1 } : { state: "running", step: "plan", unit: { k: 1, n: 4 }, pending: 1 }) : name === "step_answer" ? { answerMd: L("כי $0$ הוא איבר נייטרלי.", "Because $0$ is neutral.") } : { ok: true }),
   }),
   say: async (t) => void said.push(t),
   context: () => ({ theme: q.get("theme") ?? undefined, availableDisplayModes: ["inline", "pip"], displayMode: mode }),

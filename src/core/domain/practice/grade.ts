@@ -14,8 +14,9 @@ import { figureImages, type Ctx, type Ex } from "./exercises";
 export type Attachment = Extract<StoredBlock, { type: "image_ref" }>;
 export type LoadImage = (sha256: string, mediaType: "image/jpeg" | "image/png") => Promise<string>;
 /** `digest` lets a host without a cheap model call (the MCP bridge) supply the stage material itself; hints and solutions use it instead of a lesson-brief call. */
-export type Env = { gw: ClaudeGateway; loadImage: LoadImage; signal?: AbortSignal; digest?: (ctx: Ctx, stageId: string) => Promise<string> };
-export type Context = "learn" | "practice";
+export type Env = { gw: ClaudeGateway; loadImage: LoadImage; signal?: AbortSignal; digest?: (ctx: Ctx, stageId: string | null, query: string) => Promise<string> };
+/** "homework" (M57): the student's own homework, not a plan exercise; it writes no progress events. */
+export type Context = "learn" | "practice" | "homework";
 export const MAX_PAGES = 12;
 export class TooManyPages extends Error {
   constructor() {
@@ -41,7 +42,7 @@ export function mistakeTagList(ctx: Ctx, stageIds: string[]): string {
   return [...pick.values()].map((x) => `${x.tag} — ${x.labelEn} — ${x.description}`).join("\n");
 }
 
-async function imageBlocks(env: Env, files: Attachment[]): Promise<Block[]> {
+export async function imageBlocks(env: Env, files: Attachment[]): Promise<Block[]> {
   const out: Block[] = [];
   for (const f of files) out.push({ type: "image", source: { type: "base64", media_type: f.mediaType, data: await env.loadImage(f.sha256, f.mediaType) } });
   return out;
@@ -62,7 +63,7 @@ export async function defineTags(courseNumber: string, ctx: Ctx, tags: { tag: st
   return out;
 }
 
-export type GradeOpts = { hintsUsed: number; solutionRevealed: boolean; context: Context; completedTitles?: string };
+export type GradeOpts = { hintsUsed: number; solutionRevealed: boolean; context: Context; completedTitles?: string; /** M56 loop: the course's conventions to grade by */ examples?: string; digest?: string };
 
 /** Spec 7.6: grade written work; stores the attempt as events. Returns the grade and the attempt id. */
 export async function gradeAttempt(env: Env, ctx: Ctx, ex: Ex, files: Attachment[], o: GradeOpts): Promise<{ grade: Grade; attemptId: string }> {
@@ -72,7 +73,7 @@ export async function gradeAttempt(env: Env, ctx: Ctx, ex: Ex, files: Attachment
   const system = gradingPrompt({
     course: ctx.course, lang: langName(), statement: ex.statementMd, reference: ex.referenceSolutionMd, gradingNotes: ex.gradingNotes,
     requiredStages: stageList(ctx, ex.requiredStageIds), completedTitles: done.map((s) => `${s.id} ${s.title}`).join("\n") || "(none)",
-    mistakeTags: mistakeTagList(ctx, ex.requiredStageIds), boundary: boundaryFor(ctx),
+    mistakeTags: mistakeTagList(ctx, ex.requiredStageIds), boundary: boundaryFor(ctx), examples: o.examples, digest: o.digest,
   });
   const figs = (await figureImages(n, ex)).flatMap((f): Block[] => [{ type: "image", source: { type: "base64", media_type: f.mediaType, data: f.base64 } }]);
   const content: Block[] = [
@@ -82,8 +83,9 @@ export async function gradeAttempt(env: Env, ctx: Ctx, ex: Ex, files: Attachment
   const { value: g } = await callStructured(env.gw, submitGrade, {
     task: "grading", courseNumber: n, system, messages: [{ role: "user", content }], thinkingBudget: THINKING, signal: env.signal,
   });
-  const tags = await defineTags(n, ctx, g.mistakes);
   const attemptId = newId();
+  if (o.context === "homework") return { grade: g, attemptId }; // not a plan exercise: no progress events
+  const tags = await defineTags(n, ctx, g.mistakes);
   const valid = g.stageIds.filter((s) => ex.stageIds.includes(s));
   await appendEvent(n, {
     type: "attempt_graded", attemptId, exercise: ex.ref, stageIds: valid.length ? valid : ex.stageIds, context: o.context,
@@ -99,7 +101,7 @@ export async function gradeAttempt(env: Env, ctx: Ctx, ex: Ex, files: Attachment
 export async function gradeCheck(
   env: Env, ctx: Ctx,
   q: { id: string; stageIds: string[]; questionMd: string; expectedPoints: string[] },
-  answerText: string, files: Attachment[], context: Context,
+  answerText: string, files: Attachment[], context: Exclude<Context, "homework">,
 ): Promise<CheckGrade> {
   const n = ctx.course.courseNumber;
   const { value } = await callStructured(env.gw, submitCheckGrade, {

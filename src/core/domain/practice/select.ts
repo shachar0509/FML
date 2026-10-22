@@ -9,7 +9,17 @@ export type Scope =
   | { kind: "stage"; stageId: string };
 
 export const ITEM_CYCLE = ["E", "E", "M", "E", "O", "E", "E", "M", "E", "O"] as const;
-export const itemKind = (i: number): "E" | "M" | "O" => ITEM_CYCLE[((i % 10) + 10) % 10] ?? "E";
+/** M56: the more advanced the student (level = skill, 2-5; a new student is 3.5), the more of the items are exercises. */
+const CYCLES: Record<number, readonly ("E" | "M" | "O")[]> = {
+  2: ["E", "M", "O"],
+  3: ITEM_CYCLE,
+  4: ["E", "E", "M", "E", "E", "E", "E", "O", "E", "E"],
+  5: ["E"],
+};
+export const itemKind = (i: number, level = 3): "E" | "M" | "O" => {
+  const c = CYCLES[Math.min(5, Math.max(2, Math.floor(level)))] ?? ITEM_CYCLE;
+  return c[((i % c.length) + c.length) % c.length] ?? "E";
+};
 
 const DAY = 86_400_000;
 type Attempt = Extract<Event, { type: "attempt_graded" }>;
@@ -58,14 +68,16 @@ export function eligible(o: EligibleIn): Ex[] {
   });
 }
 
-export function targetDifficulty(events: Event[]): number {
+/** 2-5 from the last 10 practice scores (3.5 until there are 3). */
+export function skill(events: Event[]): number {
   const last = events
     .filter((e): e is Attempt => e.type === "attempt_graded" && e.context === "practice" && e.verdict !== "unreadable")
     .sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts))
     .slice(-10);
   const r = last.length < 3 ? 0.5 : last.reduce((a, e) => a + e.score, 0) / last.length / 100;
-  return Math.min(5, Math.max(2, Math.round(2 + 3 * r)));
+  return 2 + 3 * r;
 }
+export const targetDifficulty = (events: Event[]) => Math.min(5, Math.max(2, Math.round(skill(events))));
 
 export function scoreExercise(e: Ex, c: Ctx & { previous?: Ex | null; target?: number }): number {
   const done = completedIds(c.progress);

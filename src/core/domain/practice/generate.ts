@@ -28,14 +28,22 @@ async function digest(env: Env, ctx: Ctx, stageId: string) {
   }
 }
 
+const words = (s: string) => new Set(s.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? []);
+/** The 3 course exercises nearest the stage (by plan order) or, without a stage, sharing the most words with `query`; solved ones first. */
+export async function nearestExercises(ctx: Ctx, stageId: string | null, query = ""): Promise<IndexedExercise[]> {
+  const q = words(query);
+  const dist = (e: IndexedExercise) =>
+    (e.referenceSolutionMd ? 0 : 1000) + (stageId ? Math.abs(orderOf(ctx, e.primaryStageId) - orderOf(ctx, stageId)) : -[...words(e.statementMd)].filter((w) => q.has(w)).length);
+  return (await listFileIndexes(ctx.course.courseNumber)).flatMap((f) => f.exercises).sort((a, b) => dist(a) - dist(b)).slice(0, 3);
+}
+export const refsText = (refs: IndexedExercise[]) => refs.map((r) => `- ${r.statementMd}${r.referenceSolutionMd ? `\n  Solution: ${r.referenceSolutionMd}` : ""}`).join("\n");
+
 /** 7.5: generate + verify one exercise (one regeneration with the verifier's issues). Null if both attempts fail. */
 export async function generateExercise(env: Env, ctx: Ctx, focus: Focus): Promise<GeneratedExercise | null> {
   const n = ctx.course.courseNumber;
   const done = completedIds(ctx.progress);
-  const refs = (await listFileIndexes(n)).flatMap((f) => f.exercises)
-    .sort((a, b) => Math.abs(orderOf(ctx, a.primaryStageId) - orderOf(ctx, focus.stageId)) - Math.abs(orderOf(ctx, b.primaryStageId) - orderOf(ctx, focus.stageId)))
-    .slice(0, 3);
-  const styleRefs = refs.map((r: IndexedExercise) => `- ${r.statementMd}${r.referenceSolutionMd ? `\n  Solution: ${r.referenceSolutionMd}` : ""}`).join("\n");
+  const refs = await nearestExercises(ctx, focus.stageId);
+  const styleRefs = refsText(refs);
   const type = ctx.course.courseKind === "proof-based" ? "proof" : ctx.course.courseKind === "programming" ? "coding" : "computation";
   const common = {
     course: ctx.course, lang: langName(), type, difficulty: Math.round(targetDifficulty(ctx.events)), requiredStages: stageList(ctx, focus.required),

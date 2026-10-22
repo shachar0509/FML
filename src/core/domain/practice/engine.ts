@@ -10,7 +10,7 @@ import { allExercises, fromExercise, loadCtx, paths, type Ctx, type Ex } from ".
 import { chooseFocus, generateChecks, generateExercise } from "./generate";
 import { gradeCheck, type Attachment, type Env } from "./grade";
 import { emptyRun, ExerciseRun, type RunState } from "./run";
-import { completedIds, itemKind, pick, type Scope } from "./select";
+import { completedIds, itemKind, pick, skill, type Scope } from "./select";
 
 export type Check = CheckItem & { id: string };
 export type Item =
@@ -103,7 +103,7 @@ export class Practice {
     this.ctx = await loadCtx(this.courseNumber);
     const ctx = this.ctx;
     if (st.queueKey !== this.key()) { st.queue = []; st.queueKey = this.key(); } // 7.5: queue is discarded on scope/completed change
-    let kind = itemKind(st.index);
+    let kind = itemKind(st.index, skill(ctx.events));
     if (kind === "E") {
       const exercises = await allExercises(this.courseNumber);
       const prevEx = st.served.length ? exercises.find((x) => x.id === st.served[st.served.length - 1]) : null;
@@ -199,7 +199,7 @@ export class Practice {
           : (this.state as PState).results;
         cur.run = s;
         await this.set({ current: { ...it, run: s }, results });
-      });
+      }, true); // M56: practice exercises use the solving loop
       this.emit();
     })();
   }

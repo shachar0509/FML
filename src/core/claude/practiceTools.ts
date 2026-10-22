@@ -13,6 +13,8 @@ export const submitGrade = defineTool(
     illegibleParts: z.array(z.string()),
     verdict: z.enum(["correct", "partially_correct", "incorrect", "incomplete", "unreadable"]),
     score: z.number().min(0).max(100),
+    /** M56: every final answer exactly right (the score weighs the reasoning, explanations and conventions) */
+    finalAnswerCorrect: z.boolean(),
     summaryMd: z.string(),
     steps: z.array(z.object({
       label: z.string(), status: z.enum(["correct", "error", "missing", "unjustified", "irrelevant"]), commentMd: z.string(),
@@ -38,6 +40,12 @@ export const submitHint = defineTool(
   "submit_hint",
   "Submit the hint.",
   z.object({ hintMd: z.string(), level: z.number().int().min(1).max(3), targetsStep: z.string() }),
+);
+/** M56: the solving loop's clue: the first mistake in the student's work, or one small clue for the next step. */
+export const submitClue = defineTool(
+  "submit_clue",
+  "Submit the clue (or, when the student made a mistake, where the first mistake is).",
+  z.object({ onTrack: z.boolean(), clueMd: z.string() }),
 );
 export const submitSolution = defineTool("submit_solution", "Submit the complete solution.", z.object({ solutionMd: z.string() }));
 

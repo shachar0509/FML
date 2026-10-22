@@ -96,8 +96,13 @@ export type ExerciseData = Base & {
   solutionMd: string | null;
   grade: Grade | null;
   canReveal: boolean;
-  busy: "grade" | "hint" | "solution" | null;
+  busy: "grade" | "hint" | "solution" | "clue" | null;
   error: string | null;
+  /** M56 solving loop: clues (with re-explanations) instead of the 3 hints; `perfect` = graded ≥95 with every final answer right */
+  loop?: boolean;
+  clues?: { onTrack: boolean; clueMd: string; more: string[] }[];
+  clueOpen?: boolean;
+  perfect?: boolean;
 };
 /** Settings card (shalav_settings / app-only settings_update); `conflicts` = sync conflict copies found in the data folder. */
 export type SettingsData = Base & {

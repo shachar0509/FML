@@ -73,3 +73,43 @@ export const Skeleton = ({ lines = 3 }: { lines?: number }) => (
     ))}
   </div>
 );
+
+/** Drawn on the board in marker / chalk: an ink box (a clue, feedback) and a choice box (options, modes). */
+export const inkBox = "rounded-[10px_14px_9px_13px] border-2 border-(--board-ink)/60 px-4 py-3";
+export const chalkChoice =
+  "rounded-[10px_14px_9px_13px] border-2 border-(--board-fg)/30 text-(--board-fg) transition-colors enabled:hover:border-(--board-ink) has-checked:border-(--board-ink) has-checked:bg-(--board-ink)/10 focus-visible:outline-2 focus-visible:outline-primary has-focus-visible:outline-2 has-focus-visible:outline-primary";
+
+/** A lesson-slide board (M56): handwritten title with an ink underline, the content written on it. */
+export const Board = ({
+  title,
+  badge,
+  children,
+  label,
+}: {
+  title?: React.ReactNode;
+  badge?: React.ReactNode;
+  children: React.ReactNode;
+  label?: string;
+}) => (
+  <article
+    aria-label={label}
+    className="board-surface board mb-3 flex min-w-0 flex-col gap-4 overflow-x-auto px-6 py-6 sm:px-8"
+  >
+    {(title || badge) && (
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        {title && (
+          <h2 className="hand text-4xl leading-tight">
+            {title}
+            <span className="ink-underline" aria-hidden />
+          </h2>
+        )}
+        {badge && (
+          <span className="rounded-full bg-(--board-ink)/20 px-2.5 py-0.5 text-xs font-semibold text-(--board-fg) tabular-nums">
+            {badge}
+          </span>
+        )}
+      </div>
+    )}
+    {children}
+  </article>
+);

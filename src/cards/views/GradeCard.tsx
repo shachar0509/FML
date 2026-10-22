@@ -27,7 +27,7 @@ const SEV = {
   critical: "bg-danger text-bg",
 } as const;
 const VERDICT = {
-  correct: "bg-success text-bg",
+  correct: "bg-success text-white dark:text-bg",
   partially_correct: "bg-warning text-bg",
   incorrect: "bg-danger text-bg",
   incomplete: "bg-warning text-bg",

@@ -17,7 +17,7 @@ import { useSettings } from "@/stores/settings";
 import { initNode } from "./platform";
 import { createServer } from "./server";
 
-const unit = (n: number) => ({ title: "u", summary: "s", stages: Array.from({ length: n }, () => ({ title: "t", kind: "concept", summary: "s", prerequisites: [] })) });
+const unit = (n: number) => ({ title: "u", summary: "s", stages: Array.from({ length: n }, (_, i) => ({ title: "t", kind: i % 2 ? "technique" : "concept", summary: "s", prerequisites: [] })) });
 const details = (req: { messages: { content: unknown }[] }) =>
   toolCall("submit_unit_details", {
     stages: (/stage ids ([S\d, ]+)\./.exec(String(req.messages[0]?.content))?.[1]?.split(", ") ?? []).map((id) => ({
@@ -27,7 +27,7 @@ const details = (req: { messages: { content: unknown }[] }) =>
 const sc = <T,>(r: { structuredContent?: unknown }) => r.structuredContent as T;
 const text = (r: { content?: unknown }) => JSON.stringify(r.content);
 const grade = {
-  legibility: "clear", illegibleParts: [], verdict: "partially_correct", score: 70, summaryMd: "ok", steps: [{ label: "s", status: "correct", commentMd: "c" }],
+  legibility: "clear", illegibleParts: [], verdict: "partially_correct", score: 70, finalAnswerCorrect: false, summaryMd: "ok", steps: [{ label: "s", status: "correct", commentMd: "c" }],
   missingForFullCredit: ["N"], mistakes: [{ tag: "Missing N", labelHe: "חסר", labelEn: "Missing N", description: "d", severity: "major", whereMd: "line 2" }],
   edgeCasesMissed: [], correctedKeyStepMd: "k", usesMaterialBeyondCompleted: [], stageIds: ["S001"],
 };
@@ -106,4 +106,29 @@ it("exercise card: hints 1-3, upload, grade through the bridge, solution reveal,
   expect(sc<ExerciseData>(await call("exercise_retry", { runId })).grade).toBeNull();
   expect((await call("exercise_state", { runId: "gone" })).isError).toBe(true);
   expect(sc<LessonData>(await call("lesson_state", { number: n, stageId: "S001" })).view).toBe("lesson");
+
+  // M56 solving loop: a hard exercise of an advanced stage (S002 is a technique) opens with clues instead of hints
+  expect(sc<ExerciseData>(await call("assign_exercise", { stageIds: ["S001"], source: "new", statementMd: "q", difficulty: 4, edgeCaseFocus: [] })).loop).toBe(false); // an intro stage keeps the hints
+  const lp = sc<ExerciseData>(await call("assign_exercise", { stageIds: ["S002"], source: "new", statementMd: "Hard $y$.", referenceSolutionMd: "ref2", difficulty: 4, edgeCaseFocus: [] }));
+  expect(lp).toMatchObject({ loop: true, clues: [], clueOpen: false, perfect: false });
+  const r = lp.runId;
+  expect((await call("exercise_clarify_request", { runId: r })).isError).toBe(true); // nothing to explain yet
+  expect(sc<ExerciseData>(await call("exercise_clue_request", { runId: r, files: up.files })).busy).toBe("clue");
+  let j = await answer({ onTrack: true, clueMd: "think of N" });
+  expect(text(j.job)).toContain("ONE small clue");
+  expect(text(j.job)).toContain("image"); // the work so far is checked
+  for (const m of ["say it simpler", "simplest"]) {
+    await call("exercise_clarify_request", { runId: r });
+    j = await answer({ onTrack: true, clueMd: m });
+    expect(text(j.job)).toContain("think of N");
+  }
+  expect(sc<ExerciseData>(await call("exercise_state", { runId: r }))).toMatchObject({ clueOpen: true, clues: [{ onTrack: true, clueMd: "think of N", more: ["say it simpler", "simplest"] }] });
+  expect(sc<ExerciseData>(await call("exercise_clue_done", { runId: r }))).toMatchObject({ clueOpen: false });
+  // 96 with a wrong final answer is not perfect; 96 with every final answer right is
+  for (const [finalAnswerCorrect, ok] of [[false, false], [true, true]] as const) {
+    await call("exercise_grade_request", { runId: r, files: up.files });
+    j = await answer({ ...grade, verdict: "correct", score: 96, finalAnswerCorrect, mistakes: [], stageIds: ["S002"] });
+    expect(text(j.job)).toContain("finalAnswerCorrect");
+    expect(sc<ExerciseData>(await call("exercise_state", { runId: r })).perfect).toBe(ok);
+  }
 });

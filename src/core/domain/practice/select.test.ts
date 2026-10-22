@@ -15,7 +15,7 @@ const base = { plan, progress, events: [] as Event[], scope: { kind: "all" } as 
 
 describe("practice select", () => {
   it("cycles items", () => {
-    expect([0, 1, 2, 3, 4, 9, 10].map(itemKind).join("")).toBe("EEMEOOE");
+    expect([0, 1, 2, 3, 4, 9, 10].map((i) => itemKind(i)).join("")).toBe("EEMEOOE");
     expect(completedIds(progress)).toEqual(new Set(["S001", "S002"]));
   });
   it("filters eligibility", () => {
@@ -47,4 +47,10 @@ describe("practice select", () => {
     expect(focusStage({ plan, progress, scope: { kind: "stage", stageId: "S001" } })).toBe("S001");
     expect(requiredSet(plan, "S003", completedIds(progress)).sort()).toEqual(["S001", "S002"]);
   });
+});
+
+it("M56: the more advanced the student, the more of the items are exercises", () => {
+  const share = (level: number) => Array.from({ length: 30 }, (_, i) => itemKind(i, level)).filter((k) => k === "E").length;
+  expect([2, 3, 4, 5].map(share)).toEqual([10, 18, 24, 30]);
+  expect(itemKind(0)).toBe("E"); // default level 3 = the old cycle
 });

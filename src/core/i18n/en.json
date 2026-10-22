@@ -489,7 +489,8 @@
       "weak": "Stages to strengthen",
       "none": "None",
       "learnAgain": "Learn again"
-    }
+    },
+    "question": "Question"
   },
   "exercise": {
     "minutes": "about {{n}} min",
@@ -587,5 +588,15 @@
     "files_other": "{{count}} files",
     "countNew": "Only files not already in your course are added.",
     "countPlan": "Only files not already in your course are added, spread over the plan's units so each one gets a fair share."
+  },
+  "loop": {
+    "clue": "Get a clue",
+    "submit": "Submit full solution",
+    "clueN": "Clue {{n}}",
+    "mistake": "Check this first",
+    "notUnderstood": "I didn't understand the clue",
+    "thanks": "Thank you",
+    "perfect": "Perfect! A full, correct solution.",
+    "drop": "Stuck? Upload what you've written so far and press Get a clue. Done? Upload the whole solution (photo or PDF) and submit it."
   }
 }

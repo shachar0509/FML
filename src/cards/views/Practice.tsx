@@ -5,7 +5,7 @@ import { Button } from "@/core/components/ui/button";
 import { Markdown } from "@/core/render/Markdown";
 import type { PracticeData, Go } from "../types";
 import { Exercise } from "./Exercise";
-import { Skeleton, panel } from "../ui";
+import { Board, Skeleton, chalkChoice, inkBox } from "../ui";
 
 type Tool = (
   name: string,
@@ -78,11 +78,15 @@ export function Practice({
         </p>
       )}
 
-      {mode === "locked" && <p className="text-muted">{t("practice.locked")}</p>}
+      {mode === "locked" && (
+        <Board title={t("nav.practice")}>
+          <p>{t("practice.locked")}</p>
+        </Board>
+      )}
 
       {mode === "choose" && (
-        <div className="flex flex-col gap-3">
-          <h1 className="hand text-3xl">{t("practice.chooseTitle")}</h1>
+        <>
+        <Board title={t("practice.chooseTitle")}>
           <div
             role="radiogroup"
             aria-label={t("practice.chooseTitle")}
@@ -91,7 +95,7 @@ export function Practice({
             {(["all", "unit", "weak", "stage"] as const).map((k) => (
               <label
                 key={k}
-                className={`${panel} flex cursor-pointer items-center gap-3 p-3 text-sm transition-colors has-checked:border-primary has-checked:bg-primary/5 has-focus-visible:outline-2 has-focus-visible:outline-primary`}
+                className={`${chalkChoice} flex cursor-pointer items-center gap-3 p-3 text-[15px]`}
               >
                 <input
                   type="radio"
@@ -109,7 +113,7 @@ export function Practice({
               value={pick}
               onChange={(e) => setPick(e.target.value)}
               aria-label={t(scope === "unit" ? "practice.pickUnit" : "practice.pickStage")}
-              className="h-9 rounded-lg border border-border bg-card px-2 text-sm focus-visible:outline-2 focus-visible:outline-primary"
+              className="h-10 rounded-lg border-2 border-(--board-fg)/30 bg-(--board) px-2 text-sm text-(--board-fg) focus-visible:outline-2 focus-visible:outline-primary"
             >
               <option value="">
                 {t(scope === "unit" ? "practice.pickUnit" : "practice.pickStage")}
@@ -121,14 +125,15 @@ export function Practice({
               ))}
             </select>
           )}
+        </Board>
           <Button
-            className="self-start"
+            className="h-11 self-end px-6 text-[15px]"
             disabled={d.loading || ((scope === "unit" || scope === "stage") && !pick)}
             onClick={start}
           >
             {t("practice.start")}
           </Button>
-        </div>
+        </>
       )}
 
       {mode === "item" && (
@@ -155,8 +160,8 @@ export function Practice({
             />
           )}
           {d.item?.kind === "M" && (
-            <div className="flex flex-col gap-2">
-              <div className="board-surface board mb-3 px-5 py-5 text-lg font-medium">
+            <Board title={t("practice.question")}>
+              <div className="text-lg">
                 <Markdown>{d.item.questionMd}</Markdown>
               </div>
               <ul className="flex flex-col gap-2">
@@ -169,9 +174,9 @@ export function Practice({
                       <button
                         disabled={it.selected !== null}
                         onClick={() => void call("practice_answer_mcq", { selected: i })}
-                        className={`flex w-full items-center gap-3 rounded-card border bg-card p-3 text-start text-sm shadow-card transition-colors focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-default ${good ? "border-success bg-success/10" : bad ? "border-danger bg-danger/10" : "border-border enabled:hover:border-primary/60 enabled:hover:bg-primary/5"}`}
+                        className={`${chalkChoice} flex w-full items-center gap-3 p-3 text-start text-[15px] disabled:cursor-default ${good ? "border-success! bg-success/15" : bad ? "border-danger! bg-danger/15" : ""}`}
                       >
-                        <span className="grid size-6 shrink-0 place-items-center rounded-full bg-border/70 text-xs font-semibold">
+                        <span className="hand grid size-7 shrink-0 place-items-center rounded-full border-2 border-(--board-fg)/40 text-base">
                           {letter(i)}
                         </span>
                         <span className="grow">
@@ -195,26 +200,24 @@ export function Practice({
                 })}
               </ul>
               {d.item.explanationMd && (
-                <div
-                  className="rounded-card border border-border bg-card p-4 shadow-card"
-                  role="status"
-                >
+                <div className={`${inkBox} board-note`} role="status">
                   <Markdown>{d.item.explanationMd}</Markdown>
                 </div>
               )}
-            </div>
+            </Board>
           )}
           {d.item?.kind === "O" && (
             <div className="flex flex-col gap-2">
-              <div className="board-surface board mb-3 px-5 py-5 text-lg font-medium">
-                <Markdown>{d.item.questionMd}</Markdown>
-              </div>
-              {d.item.result ? (
+              <Board title={t("practice.question")}>
+                <div className="text-lg">
+                  <Markdown>{d.item.questionMd}</Markdown>
+                </div>
+                {d.item.result && (
                 <div
-                  className={`rounded-card border border-s-4 border-border bg-card p-4 shadow-card ${d.item.result.correct ? "border-s-success" : "border-s-danger"}`}
+                  className={`${inkBox} board-note ${d.item.result.correct ? "border-success!" : "border-danger!"}`}
                   role="status"
                 >
-                  <p className="font-medium">
+                  <p>
                     {d.item.result.correct
                       ? t("practice.correctAnswer")
                       : t("practice.wrongAnswer")}{" "}
@@ -222,7 +225,9 @@ export function Practice({
                   </p>
                   <Markdown>{d.item.result.feedbackMd}</Markdown>
                 </div>
-              ) : (
+                )}
+              </Board>
+              {!d.item.result && (
                 <>
                   <textarea
                     dir={text ? "auto" : undefined}
@@ -270,8 +275,8 @@ export function Practice({
       )}
 
       {mode === "summary" && d.summary && (
-        <div className={`${panel} flex flex-col gap-3 p-4`}>
-          <h1 className="hand text-3xl">{t("practice.summary.title")}</h1>
+        <>
+        <Board title={t("practice.summary.title")}>
           <p>
             {t("practice.summary.items")}: {d.summary.items} · {t("practice.summary.avg")}:{" "}
             {d.summary.avgScore}
@@ -281,15 +286,15 @@ export function Practice({
             {d.summary.newMistakes.join(", ") || t("practice.summary.none")}
           </p>
           <div>
-            <p className="font-medium">{t("practice.summary.weak")}</p>
+            <p className="board-label">{t("practice.summary.weak")}</p>
             {d.summary.weakStages.length === 0 && (
-              <p className="text-muted">{t("practice.summary.none")}</p>
+              <p className="text-(--board-muted)">{t("practice.summary.none")}</p>
             )}
             <ul className="flex flex-col gap-1">
               {d.summary.weakStages.map((s) => (
                 <li key={s.id} className="flex items-center gap-2 text-sm">
                   <span className="grow">
-                    <span dir="ltr" className="font-mono text-xs text-muted">
+                    <span dir="ltr" className="font-mono text-xs text-(--board-muted)">
                       {s.id}
                     </span>{" "}
                     · {s.title}
@@ -297,6 +302,7 @@ export function Practice({
                   <Button
                     variant="outline"
                     size="sm"
+                    className="text-fg"
                     onClick={() =>
                       void call("practice_learn_again", { stageId: s.id }).then(() =>
                         go({ kind: "relearn", stageId: s.id, title: s.title }),
@@ -309,10 +315,11 @@ export function Practice({
               ))}
             </ul>
           </div>
-          <Button className="self-start" onClick={() => setAgain(true)}>
+        </Board>
+          <Button className="h-11 self-end px-6 text-[15px]" onClick={() => setAgain(true)}>
             {t("practice.again")}
           </Button>
-        </div>
+        </>
       )}
     </section>
   );
