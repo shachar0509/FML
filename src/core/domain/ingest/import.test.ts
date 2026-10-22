@@ -14,12 +14,13 @@ let queued: string[];
 let sizes: Record<string, number>;
 let mtimes: Record<string, number>;
 let hashes: Record<string, string>;
+let hashCalls = 0;
 let pages: Record<string, number | Error>;
 const deps = (platform: "macos" | "windows" = "macos"): Deps => ({
   platform,
   enqueue: (_c, sha) => void queued.push(sha),
   native: {
-    sha256: async (p) => hashes[p] ?? `h:${p.slice(p.lastIndexOf("/") + 1)}`,
+    sha256: async (p) => (hashCalls++, hashes[p] ?? `h:${p.slice(p.lastIndexOf("/") + 1)}`),
     size: async (p) => sizes[p] ?? 10,
     modified: async (p) => mtimes[p] ?? 0,
     copy: async (src, dir) => {
@@ -45,6 +46,7 @@ beforeEach(() => {
   sizes = {};
   mtimes = {};
   hashes = {};
+  hashCalls = 0;
   pages = {};
 });
 
@@ -63,8 +65,9 @@ describe("importFiles", () => {
     expect(queued).toHaveLength(2); // ok.pdf + p.jpg; the failed one is not queued
     expect(mem.files.has(`${coursePaths(root(), C).materials}/huge.pdf`)).toBe(false); // rejected copy removed
     expect((await importFiles(C, "material", ["/in/p.heic"], deps("windows")))[0]?.status).toBe("heicWindows");
-    // same hash in the other role is not a duplicate
-    expect((await importFiles(C, "exercises", ["/in/ok.pdf"], deps()))[0]?.status).toBe("added");
+    // the same file for the other folder is a duplicate too: records are per content, a second one would overwrite the first
+    expect((await importFiles(C, "exercises", ["/in/ok.pdf"], deps()))[0]?.status).toBe("duplicate");
+    expect((await listFileIndexes(C)).find((x) => x.fileName === "ok.pdf")?.role).toBe("material");
   });
 });
 
@@ -85,6 +88,23 @@ describe("scanCourse / remove / reindex", () => {
     mem.files.delete(`${p.materials}/renamed.pdf`);
     expect(await scanCourse(C, deps())).toEqual({ added: 0, removed: ["h:new.pdf"] });
     expect(await listFileIndexes(C)).toEqual([]);
+  });
+
+  it("the same file in both folders: one record that stays put (no flipping each scan); the copy takes over when the first goes", async () => {
+    const p = coursePaths(root(), C);
+    mem.files.set(`${p.materials}/conv.pdf`, "x");
+    mem.files.set(`${p.exercises}/conv.pdf`, "x"); // same content (same hash)
+    mem.files.set(`${p.exercises}/conv copy.pdf`, "x");
+    hashes[`${p.exercises}/conv copy.pdf`] = "h:conv.pdf";
+    expect(await scanCourse(C, deps())).toEqual({ added: 1, removed: [] });
+    const hashed = hashCalls;
+    for (let k = 0; k < 3; k++) expect(await scanCourse(C, deps())).toEqual({ added: 0, removed: [] });
+    expect((await listFileIndexes(C)).map((r) => [r.role, r.relPath])).toEqual([["material", "חומרי לימוד/conv.pdf"]]);
+    expect(hashCalls).toBe(hashed); // the copies are not hashed again on every poll
+    mem.files.delete(`${p.materials}/conv.pdf`);
+    expect(await scanCourse(C, deps())).toEqual({ added: 0, removed: ["h:conv.pdf"] });
+    expect(await scanCourse(C, deps())).toEqual({ added: 1, removed: [] });
+    expect((await listFileIndexes(C)).map((r) => r.role)).toEqual(["exercises"]);
   });
 
   it("an edited file is the old version removed and a new one added; a touched or renamed one keeps its scan", async () => {

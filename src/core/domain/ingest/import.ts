@@ -73,7 +73,7 @@ export async function importFiles(course: string, role: Role, files: string[], d
         src = await d.native.heicToJpeg(src);
       }
       const sha256 = await d.native.sha256(src);
-      if (known.some((r) => r.sha256 === sha256 && r.role === role) || out.some((o) => "sha256" in o && o.sha256 === sha256)) {
+      if (known.some((r) => r.sha256 === sha256) || out.some((o) => "sha256" in o && o.sha256 === sha256)) { // one record per content, in either folder
         out.push({ path: orig, status: "duplicate", sha256 });
         continue;
       }
@@ -132,7 +132,13 @@ export async function scanCourse(course: string, d: Deps): Promise<{ added: numb
           const moved = { relPath: rel, fileName: nfc(e.name), stamp }; // renamed or moved: keeps its scan
           Object.assign(same, moved);
           await patch(course, sha256, moved);
-        }
+        } else rejected.set(abs, stamp); // a second copy in the same folder: a duplicate, not opened again
+        continue;
+      }
+      // Index records are per content: the same file in the other folder already has it. Registering this copy would
+      // overwrite that record, and the next scan would flip it back (one file jumping between the lists every poll).
+      if (recs.some((r) => r.sha256 === sha256)) {
+        rejected.set(abs, stamp);
         continue;
       }
       const r = await register(course, role, abs, sha256, d, stamp);
@@ -145,6 +151,8 @@ export async function scanCourse(course: string, d: Deps): Promise<{ added: numb
     await dropIndex(course, r);
     removed.push(r.sha256);
   }
+  // ponytail: forgets every remembered file, not just this course's copies; one re-hash pass after a removal is cheap
+  if (removed.length) rejected.clear(); // a copy left out as a duplicate may be the only one now
   return { added, removed };
 }
 

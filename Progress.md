@@ -890,3 +890,13 @@ Edge cases found with the sample slides, and fixed in the renderer:
 ## M52 fix: custom course placeholders right-to-left in Hebrew
 - The custom course fields used `dir="auto"`. An empty field with that setting is left-to-right, so the Hebrew placeholders ran backwards. Empty fields now follow the card's direction; once text is typed, its own direction applies (an English name in a Hebrew card still reads left-to-right).
 - e2e: the three empty fields are RTL in Hebrew and LTR in English.
+
+## M51 fix: the same file in both folders no longer flips between the lists
+- Symptom: the file lists kept changing with no action from the user; one file appeared in one list and disappeared from the other every 1.5 s, which also made the card lag.
+- Cause: index records are per file content (one record per hash). The same PDF sat in both Study materials and Sample exercises (from a Moodle import). Each scan registered the copy without a record, overwriting the other folder's record, so the two kept taking turns. The import allowed this because its duplicate check was per folder.
+- Fix: one record per content, in either folder.
+  - The import counts the same file for the other folder as a duplicate, as it already did within a folder.
+  - The scan leaves a second copy out, in the other folder or the same one, and remembers it so it is not hashed on every poll.
+  - When a record goes (its file was deleted), remembered copies are checked again, so a copy left out becomes the file in its folder.
+- Checked on a copy of the real data: before, the lists alternated 0/151 and 1/150 on every poll; after, they stay at 1/150.
+- Tests: scan (both folders plus a same-folder copy: one record, steady over polls, no re-hashing, the copy takes over after the original is deleted), import (other folder = duplicate).
