@@ -28,6 +28,8 @@ const grade = {
   legibility: "clear", illegibleParts: [], verdict: "partially_correct", score: 70, finalAnswerCorrect: false, summaryMd: "ok", steps: [], missingForFullCredit: ["x"],
   mistakes: [{ tag: "Sign Slip", labelHe: "ה", labelEn: "Sign slip", description: "d", severity: "minor", whereMd: "line 2" }],
   edgeCasesMissed: [], correctedKeyStepMd: "", usesMaterialBeyondCompleted: [], stageIds: ["S001"],
+  nodeResults: [{ n: 1, score: 0.8 }, { n: 7, score: 1 }],
+  newNodes: [{ kind: "convention", label: "States the units", why: "no units on the result", stageIds: ["S001", "S999"], score: 0.3 }],
 };
 const replies: Record<string, unknown> = {
   submit_generated_exercise: { statementMd: "Prove P", referenceSolutionMd: "R", requiredStageIds: ["S001"], difficulty: 3, type: "proof", estimatedMinutes: 10, edgeCaseFocus: ["n=0"], gradingNotes: "n" },
@@ -42,10 +44,12 @@ const replies: Record<string, unknown> = {
   ] },
 };
 const calls: string[] = [];
+let gradeSystem = "";
 const gw: ClaudeGateway = {
   async send(req: ClaudeRequest) {
     const name = req.tools![0]!.name;
     calls.push(name);
+    if (name === "submit_grade") gradeSystem = JSON.stringify(req.system);
     return { content: [{ type: "tool_use", id: "t", name, input: replies[name] }], stopReason: "tool_use", usage: usage0, model: "fake" };
   },
 };
@@ -81,6 +85,10 @@ describe("Practice", () => {
     const att = (await events()).find((e) => e.type === "attempt_graded")!;
     expect(att).toMatchObject({ hintsUsed: 1, context: "practice", solutionRevealedBefore: false, exercise: { source: "generated" } });
     expect(pr.counters).toEqual({ answered: 1, correct: 0, avg: 70 });
+    // M62: the grader sees the stage's nodes by number; its node results and a new convention are kept (an unknown number and stage are dropped)
+    expect(gradeSystem).toContain("1. [concept] c");
+    expect(att.nodes).toEqual([{ id: expect.stringMatching(/^S001\/concept\//), score: 0.8 }, { id: expect.stringMatching(/^S001\/convention\//), score: 0.3 }]);
+    expect((await events()).filter((e) => e.type === "node_added")).toMatchObject([{ kind: "convention", label: "States the units", stageIds: ["S001"], origin: "grader", refId: att.attemptId }]);
     // reveal is allowed after a graded attempt and counts
     await pr.run!.reveal();
     expect(pr.run!.state.solutionMd).toBe("R");

@@ -4,14 +4,16 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod";
 import type { FigureData, LessonData, McqData, OpenData, StepData } from "@/cards/types";
 import { statusBlock, tutorSystem } from "@/core/claude/prompts/tutor";
-import { askOpenQuestion, assignExercise, consultMaterials, presentMcq, recordCheckResult, updateAssessment } from "@/core/claude/tutorTools";
+import { askOpenQuestion, assignExercise, consultMaterials, presentMcq, recordCheckResult, updateAssessment, updateKnowledgeGraph } from "@/core/claude/tutorTools";
+import { knowledgeOf, priorOf } from "@/core/domain/knowledge/control";
+import { applyNodes, candidates, courseGraph, listText } from "@/core/domain/knowledge/tag";
 import { buildKnowledgeBoundary } from "@/core/domain/boundary/boundary";
 import { localize } from "@/core/domain/plan/translate";
 import { CourseJsonSchema, EventSchema, PlanJsonSchema } from "@/core/domain/dataSchemas";
 import { listFileIndexes } from "@/core/domain/ingest/indexStore";
 import { buildRecap } from "@/core/domain/learn/recap";
 import { checkAdvanceCriteria } from "@/core/domain/progress/criteria";
-import { normalizeTag, reduceProgress } from "@/core/domain/progress/reduce";
+import { mapEvents, normalizeTag, reduceProgress } from "@/core/domain/progress/reduce";
 import { appendEvent } from "@/core/domain/progress/store";
 import { addEntry, checkpoint, createConv, listConvs, loadConv, transcript, type Entry } from "@/core/domain/history/history";
 import { resolveExercise, type Ex } from "@/core/domain/practice/exercises";
@@ -34,12 +36,12 @@ const MATERIAL_CHARS = 6000;
 const out = (text: string, structuredContent?: object) => ({ content: [{ type: "text" as const, text }], ...(structuredContent ? { structuredContent: structuredContent as Record<string, unknown> } : {}) });
 const fail = (text: string) => ({ ...out(text), isError: true as const });
 
-type Check = { kind: "mcq" | "open"; n: string; stageId: string; correctIndex?: number; explanationMd?: string; selected?: number };
+type Check = { kind: "mcq" | "open"; n: string; stageId: string; correctIndex?: number; explanationMd?: string; selected?: number; /** M62: graph nodes the MCQ tests */ nodes?: string[] };
 
 /** Learn (plan v2 §6.3): the host chat is the lesson; the tutor tools record the v1 events and return cards. */
 export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exercises: ReturnType<typeof registerExerciseTools>) {
   /** The lesson the student is in; the tutor tools carry a stageId but no course number. `cid`: its saved conversation (M60), made on its first entry. */
-  let active: { n: string; stageId: string; cid: string | null; title: string } | null = null;
+  let active: { n: string; stageId: string; cid: string | null; title: string; /** M62: the lesson's numbered graph nodes ([STATUS] numbers stay put; new nodes are appended) */ nodes: string[] } | null = null;
   /** M60: every card and student action of the lesson goes to its saved conversation (a failed write never breaks the lesson). */
   async function log(e: Omit<Entry, "at">) {
     const a = active;
@@ -82,11 +84,24 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     };
   }
 
+  /** The lesson's graph nodes in [STATUS] order: the numbers the tutor uses. */
+  function lessonNodes(s: S, stageId: string) {
+    const g = courseGraph(s.plan, s.events);
+    const ids = active?.nodes ?? [];
+    for (const n of candidates(g, [stageId])) if (!ids.includes(n.id)) ids.push(n.id);
+    if (active) active.nodes = ids;
+    const byId = new Map(g.nodes.map((n) => [n.id, n]));
+    return { g, list: ids.flatMap((id) => byId.get(id) ?? []) };
+  }
+
   function status(s: S, stageId: string) {
+    const { g, list } = lessonNodes(s, stageId);
+    const k = knowledgeOf(g, mapEvents(s.events), priorOf(s.course));
     const stage = s.plan.stages.find((x) => x.id === stageId);
     const sp = s.progress.stages[stageId];
     const lang = sets().language;
     return statusBlock({
+      nodes: listText(list, k.control),
       completed: s.progress.totals.stagesCompleted,
       total: s.progress.totals.stagesTotal,
       mastery: Math.round((sp?.tutorMastery ?? 0) * 100) / 100,
@@ -151,7 +166,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
       if (!stage) return fail(`No stage ${stageId}.`);
       const st = s.progress.stages[stage.id]?.status;
       if (st === "locked") return fail(`Stage ${stage.id} is locked: finish its prerequisites (${stage.prerequisites.join(", ")}) first.`);
-      active = { n, stageId: stage.id, cid: saved?.id ?? null, title: `${stage.id} · ${s.tr(stage.title)}` };
+      active = { n, stageId: stage.id, cid: saved?.id ?? null, title: `${stage.id} · ${s.tr(stage.title)}`, nodes: [] };
       if (!saved && (st === "completed" || st === "completed_override"))
         return out(`Stage ${stage.id} — ${stage.title} is already completed. The card shows a review with "Learn this stage again"; do not teach unless the student reopens it.`, lessonData(s, stage.id));
       if (st === "available") {
@@ -212,7 +227,8 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     if (!c) return fail(NO_LESSON);
     if (i.correctIndex >= i.options.length) return fail("correctIndex is outside options.");
     const checkId = newId();
-    checks.set(checkId, { kind: "mcq", n: c.n, stageId: c.stageId, correctIndex: i.correctIndex, explanationMd: i.explanationMd });
+    const ids = active?.nodes ?? [];
+    checks.set(checkId, { kind: "mcq", n: c.n, stageId: c.stageId, correctIndex: i.correctIndex, explanationMd: i.explanationMd, nodes: i.nodes.flatMap((x) => ids[x - 1] ?? []) });
     const { language, theme } = sets();
     const data: McqData = { view: "mcq", language, theme, checkId, questionMd: i.questionMd, options: i.options };
     await log({ who: "tutor", kind: "mcq", text: `${i.questionMd}\nOptions: ${i.options.map((o, k) => `(${k + 1}) ${o}`).join(" ")}`, card: data, extra: { checkId, correctIndex: i.correctIndex, explanationMd: i.explanationMd } });
@@ -334,7 +350,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
       if (k.selected === undefined) {
         k.selected = selectedIndex;
         const correct = selectedIndex === k.correctIndex;
-        await appendEvent(k.n, { type: "check_answered", stageId: k.stageId, checkId, kind: "mcq", context: "learn", correct, score: correct ? 100 : 0, mistakeTags: [] });
+        await appendEvent(k.n, { type: "check_answered", stageId: k.stageId, checkId, kind: "mcq", context: "learn", correct, score: correct ? 100 : 0, mistakeTags: [], ...(k.nodes?.length ? { nodes: k.nodes.map((id) => ({ id, score: correct ? 1 : 0 })) } : {}) });
         await log({ who: "student", kind: "check", text: `Chose option ${selectedIndex + 1} (${correct ? "correct" : "wrong"}).`, extra: { checkId, selectedIndex } });
       }
       const correct = k.selected === k.correctIndex;
@@ -361,11 +377,35 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     const c = await ctx(k?.stageId);
     if (!c) return fail(NO_LESSON);
     const tags = await defineTags(c.n, c.s.events, i.mistakes);
-    if (k?.kind === "mcq") for (const tag of tags) await appendEvent(c.n, { type: "mistake_observed", tag, stageIds: [c.stageId], refId: i.checkToolUseId, context: "learn" });
-    else
-      await appendEvent(c.n, { type: "check_answered", stageId: c.stageId, checkId: i.checkToolUseId, kind: "open", context: "learn", correct: i.correct, score: i.score, mistakeTags: tags });
+    const { g, list } = lessonNodes(c.s, c.stageId);
+    const nodes = await applyNodes(c.n, c.s.plan, g, list, i, i.checkToolUseId, "tutor");
+    if (k?.kind === "mcq") {
+      // the card already recorded the choice: the misconception and per-node scores come as observations
+      for (const tag of tags) await appendEvent(c.n, { type: "mistake_observed", tag, stageIds: [c.stageId], refId: i.checkToolUseId, context: "learn" });
+      for (const x of nodes) await appendEvent(c.n, { type: "node_observed", nodeId: x.id, score: x.score, why: "MCQ answer", context: "learn" });
+    } else
+      await appendEvent(c.n, { type: "check_answered", stageId: c.stageId, checkId: i.checkToolUseId, kind: "open", context: "learn", correct: i.correct, score: i.score, mistakeTags: tags, ...(nodes.length ? { nodes } : {}) });
     await log({ who: "tutor", kind: "check", text: `Answer ${i.correct ? "correct" : "not correct"} (${i.score}).` });
     return out(JSON.stringify({ ok: true, mistakeTags: tags }));
+  });
+
+  server.registerTool(updateKnowledgeGraph.def.name, { title: "Update knowledge graph", description: updateKnowledgeGraph.def.description, inputSchema: updateKnowledgeGraph.schema }, async (i) => {
+    const c = await ctx();
+    if (!c) return fail(NO_LESSON);
+    const { g, list } = lessonNodes(c.s, c.stageId);
+    const ref = `lesson:${active?.cid ?? c.stageId}`;
+    const added = await applyNodes(c.n, c.s.plan, g, list, { nodeResults: [], newNodes: i.add }, ref, "tutor");
+    for (const [k, x] of added.entries()) await appendEvent(c.n, { type: "node_observed", nodeId: x.id, score: x.score, why: i.add[k]?.why ?? "added by the tutor", context: "learn" });
+    for (const o of i.observe) {
+      const n = list[o.n - 1];
+      if (n) await appendEvent(c.n, { type: "node_observed", nodeId: n.id, score: o.score, why: o.why, context: "learn" });
+    }
+    for (const l of i.link) {
+      const [from, to] = [list[l.from - 1], list[l.to - 1]];
+      if (from && to && from.id !== to.id) await appendEvent(c.n, { type: "node_linked", from: from.id, to: to.id, rel: l.rel });
+    }
+    const s = (await load(c.n)) as S;
+    return out(`Graph updated. The numbered list now:\n${listText(lessonNodes(s, c.stageId).list)}`);
   });
 
   server.registerTool(updateAssessment.def.name, { title: "Update assessment", description: updateAssessment.def.description, inputSchema: updateAssessment.schema }, async (i) => {

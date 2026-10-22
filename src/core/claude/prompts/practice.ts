@@ -1,5 +1,6 @@
 import { courseRef, isCustom, uniName } from "@/core/universities";
 // Spec 10.5-10.8 (placeholders filled by the caller).
+import { nodeRules } from "@/core/domain/knowledge/tag";
 import { EXAM_CONVENTIONS, languageRules, type Lang } from "./shared";
 
 type Head = { courseNumber: string; nameHe: string; type?: "academic" | "customCourse" };
@@ -11,7 +12,10 @@ export type GradeArgs = {
   requiredStages: string; completedTitles: string; mistakeTags: string; boundary: string;
   /** M56: the course's example exercises with solutions, and the material digest (both optional) */
   examples?: string; digest?: string;
+  /** M62: the student's knowledge-graph nodes this answer may test, numbered */
+  nodes?: string;
 };
+const nodesPart = (a: { nodes?: string; lang: Lang }) => (a.nodes === undefined ? "" : `\nThe student's knowledge graph (nodes this answer may test):\n${a.nodes}\n${nodeRules(a.lang)}\n`);
 
 export const gradingPrompt = (a: GradeArgs) =>
   `You are a strict, fair exam grader for ${courseRef(a.course)}. Grade the student's handwritten solution in the images.
@@ -40,7 +44,7 @@ Completed stages (may be cited):
 ${a.completedTitles}
 Existing mistake tags:
 ${a.mistakeTags || "(none)"}
-
+${nodesPart(a)}
 ${a.boundary ? `${a.boundary}
 Your feedback, steps and corrected key step use only the allowed knowledge above. A correct student argument that uses more is not penalized.` : "Your feedback, steps and corrected key step use the methods and notation of the course material and example exercises given here."}
 If the uploaded work does not answer this exercise, give verdict "incorrect", score 0, summary "This doesn't appear to answer the given exercise", and no mistakes.
@@ -48,7 +52,7 @@ ${DATA}
 
 You must finish by calling submit_grade exactly once.`;
 
-export const checkGradingPrompt = (a: Pick<GradeArgs, "course" | "lang" | "mistakeTags" | "boundary"> & { question: string; expectedPoints: string[] }) =>
+export const checkGradingPrompt = (a: Pick<GradeArgs, "course" | "lang" | "mistakeTags" | "boundary" | "nodes"> & { question: string; expectedPoints: string[] }) =>
   `You are a strict, fair exam grader for ${courseRef(a.course)}. Grade the student's short answer (typed and/or in the images) to the question below.
 Score 0-100 by how many of the expected key points are present and correct; correct = true only if the answer is essentially right. Mistakes use kebab-case tags; reuse an existing tag when it fits. Write feedback in ${a.lang}.
 ${languageRules(a.lang)}
@@ -57,7 +61,7 @@ Expected key points:
 ${a.expectedPoints.map((p) => `- ${p}`).join("\n")}
 Existing mistake tags:
 ${a.mistakeTags || "(none)"}
-${a.boundary}
+${nodesPart(a)}${a.boundary}
 ${DATA}
 You must finish by calling submit_check_grade exactly once.`;
 

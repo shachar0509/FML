@@ -117,6 +117,24 @@ it("runs a lesson: start, questions, events, status, completion, reopen + recap"
   expect(ev.filter((e) => e.type === "mistake_tag_defined")).toHaveLength(1); // tag reused
   expect(ev.filter((e) => e.type === "check_answered").at(-1)).toMatchObject({ kind: "open", correct: true, score: 90, mistakeTags: ["sign-error"] });
 
+  // M62: [STATUS] numbers the lesson's graph nodes; answers are tagged by number; a skill the tutor adds exists once
+  expect(text(start)).toMatch(/knowledge graph for this lesson[^]*1\. \[concept\] t — control 10%/);
+  const tq = sc<McqData>(await call("present_mcq", { stageId: "S001", questionMd: "q2", options: ["a", "b"], correctIndex: 1, explanationMd: "", conceptTags: [], nodes: [1, 9] }));
+  await call("check_answer", { checkId: tq.checkId, selectedIndex: 1 });
+  const s1 = (await events()).find((e) => e.type === "check_answered" && e.checkId === tq.checkId);
+  expect(s1).toMatchObject({ nodes: [{ id: expect.stringMatching(/^S001\/concept\//), score: 1 }] }); // 9 is not listed: dropped
+  const skill = { kind: "skill", label: "Cites statute + section", why: "never cites the section number", stageIds: [], score: 0.2 };
+  expect(text(await call("update_knowledge_graph", { add: [skill] }))).toContain("2. [skill] Cites statute + section");
+  const oq2 = sc<{ checkId: string }>(await call("ask_open_question", { stageId: "S001", questionMd: "cite?", expectedPoints: ["x"], allowAttachment: false })).checkId;
+  await call("record_check_result", { checkToolUseId: oq2, correct: false, score: 60, mistakes: [], nodeResults: [{ n: 1, score: 0.8 }], newNodes: [{ ...skill, label: " cites  STATUTE + section", score: 0.4 }] });
+  ev = await events();
+  expect(ev.filter((e) => e.type === "node_added")).toMatchObject([{ nodeId: expect.stringMatching(/^G\/skill\//), origin: "tutor" }]);
+  expect(ev.find((e) => e.type === "check_answered" && e.checkId === oq2)).toMatchObject({ nodes: [{ score: 0.8 }, { id: expect.stringMatching(/^G\/skill\//), score: 0.4 }] });
+  const skillControl = async () => Number(/2\. \[skill\] Cites statute \+ section — control (\d+)%/.exec(text(await call("shalav_lesson_status")))?.[1]);
+  const before = await skillControl();
+  await call("update_knowledge_graph", { observe: [{ n: 2, score: 1, why: "cited section 12 this time" }] });
+  expect(await skillControl()).toBeGreaterThan(before); // later answers raise it
+
   // assessment -> criteria + status
   const as = await call("update_assessment", { stageId: "S001", mastery: 0.6, coveredObjectives: [0], gaps: ["limits"], reviewTopics: [], readyToAdvance: false, rationale: "halfway" });
   expect(JSON.parse(((as.content as { text: string }[])[0] as { text: string }).text)).toMatchObject({ ok: true, advanceCriteriaMet: false });

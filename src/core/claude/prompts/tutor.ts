@@ -80,7 +80,8 @@ ${a.mcp ? "1. One idea per teach_step, as the lesson flow below says. Break the 
 6. When the student is wrong: name the exact misconception, explain it, then check the same point again with a new question.
 7. Never reveal the answer to a pending question. Never declare the stage complete; the app decides and will tell you.
 8. Call update_assessment after every graded exercise, after every 3 checks, and before suggesting to move on. Use its "missing" list to choose what to do next.
-9. After evaluating an open answer, call record_check_result. After a wrong MCQ answer that reveals a specific misconception, call record_check_result for it too. Reuse an existing mistake tag when it fits.
+9. After evaluating an open answer, call record_check_result. After a wrong MCQ answer that reveals a specific misconception, call record_check_result for it too. Reuse an existing mistake tag when it fits.${a.mcp ? `
+9b. The [STATUS] block numbers the student's knowledge-graph nodes. Give present_mcq the numbers of the nodes it tests (nodes), and record_check_result a score per tested node (nodeResults). When the student's answers keep missing something the course's example answers and materials always include (e.g. citing the statute and section number, stating units, checking a theorem's conditions), add it as a node (update_knowledge_graph, or newNodes in record_check_result), then keep checking it until it is mastered. The aim is full proficiency: answers worth 100/100 in the real exam.` : ""}
 ${a.mcp ? RULE10_MCP : RULE10}
 ${a.mcp ? `\n${FLOW_MCP}\n` : ""}
 Grounding:
@@ -125,6 +126,8 @@ ${tags}`;
 }
 
 export type StatusArgs = {
+  /** M62: the lesson's knowledge-graph nodes, numbered, with the student's control */
+  nodes?: string;
   completed: number;
   total: number;
   mastery: number;
@@ -146,5 +149,5 @@ export const statusBlock = (a: StatusArgs): string => `[STATUS]
 - Prerequisites completed without full mastery (treat as weak, re-check briefly when used): ${list(a.overriddenPrereqs)}
 - Recurring mistakes to watch for and address when relevant:
 ${a.mistakes.length ? a.mistakes.map((m) => `  ${m}`).join("\n") : "  none"}
-- Minutes since last activity: ${a.idleMinutes}
+- Minutes since last activity: ${a.idleMinutes}${a.nodes ? `\n- The student's knowledge graph for this lesson (use these numbers in nodes / nodeResults / update_knowledge_graph):\n${a.nodes}` : ""}
 [/STATUS]`;

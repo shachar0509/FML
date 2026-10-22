@@ -5,6 +5,7 @@ import { callStructured } from "@/core/claude/structured";
 import type { Block, ClaudeGateway } from "@/core/claude/types";
 import { buildKnowledgeBoundary } from "@/core/domain/boundary/boundary";
 import type { StoredBlock } from "@/core/domain/dataSchemas";
+import { applyNodes, candidates, courseGraph, listText } from "@/core/domain/knowledge/tag";
 import { normalizeTag } from "@/core/domain/progress/reduce";
 import { appendEvent } from "@/core/domain/progress/store";
 import { newId } from "@/core/lib/ids";
@@ -71,11 +72,14 @@ export type GradeOpts = { hintsUsed: number; solutionRevealed: boolean; context:
 export async function gradeAttempt(env: Env, ctx: Ctx, ex: Ex, files: Attachment[], o: GradeOpts): Promise<{ grade: Grade; attemptId: string }> {
   if (files.length > MAX_PAGES) throw new TooManyPages();
   const n = ctx.course.courseNumber;
+  const gr = courseGraph(ctx.plan, ctx.events);
+  const cands = o.context === "homework" ? [] : candidates(gr, ex.stageIds);
   const done = ctx.plan.stages.filter((s) => ["completed", "completed_override"].includes(ctx.progress.stages[s.id]?.status ?? ""));
   const system = gradingPrompt({
     course: ctx.course, lang: langName(), statement: ex.statementMd, reference: ex.referenceSolutionMd, gradingNotes: ex.gradingNotes,
     requiredStages: stageList(ctx, ex.requiredStageIds), completedTitles: done.map((s) => `${s.id} ${s.title}`).join("\n") || "(none)",
     mistakeTags: mistakeTagList(ctx, ex.requiredStageIds), boundary: boundaryOf(ctx, ex), examples: o.examples, digest: o.digest,
+    nodes: o.context === "homework" ? undefined : listText(cands),
   });
   const figs = (await figureImages(n, ex)).flatMap((f): Block[] => [{ type: "image", source: { type: "base64", media_type: f.mediaType, data: f.base64 } }]);
   const content: Block[] = [
@@ -88,13 +92,14 @@ export async function gradeAttempt(env: Env, ctx: Ctx, ex: Ex, files: Attachment
   const attemptId = newId();
   if (o.context === "homework") return { grade: g, attemptId }; // not a plan exercise: no progress events
   const tags = await defineTags(n, ctx, g.mistakes);
+  const nodes = await applyNodes(n, ctx.plan, gr, cands, g, attemptId, "grader");
   const valid = g.stageIds.filter((s) => ex.stageIds.includes(s));
   await appendEvent(n, {
     type: "attempt_graded", attemptId, exercise: ex.ref, stageIds: valid.length ? valid : ex.stageIds, context: o.context,
     verdict: g.legibility === "illegible" ? "unreadable" : g.verdict, score: g.score,
     mistakes: g.mistakes.map((m, i) => ({ tag: tags[i] as string, severity: m.severity, note: clip(m.whereMd || m.description, 120) })),
     missingForFullCredit: g.missingForFullCredit.length, edgeCasesMissed: g.edgeCasesMissed, attachmentHashes: files.map((f) => f.sha256),
-    difficulty: ex.difficulty, hasEdgeCaseFocus: ex.edgeCaseFocus.length > 0, hintsUsed: o.hintsUsed, solutionRevealedBefore: o.solutionRevealed,
+    difficulty: ex.difficulty, hasEdgeCaseFocus: ex.edgeCaseFocus.length > 0, hintsUsed: o.hintsUsed, solutionRevealedBefore: o.solutionRevealed, nodes,
   });
   return { grade: g, attemptId };
 }
@@ -106,15 +111,18 @@ export async function gradeCheck(
   answerText: string, files: Attachment[], context: Exclude<Context, "homework">,
 ): Promise<CheckGrade> {
   const n = ctx.course.courseNumber;
+  const g = courseGraph(ctx.plan, ctx.events);
+  const cands = candidates(g, q.stageIds);
   const { value } = await callStructured(env.gw, submitCheckGrade, {
     task: "grading", courseNumber: n,
-    system: checkGradingPrompt({ course: ctx.course, lang: langName(), question: q.questionMd, expectedPoints: q.expectedPoints, mistakeTags: mistakeTagList(ctx, q.stageIds), boundary: boundaryFor(ctx) }),
+    system: checkGradingPrompt({ course: ctx.course, lang: langName(), question: q.questionMd, expectedPoints: q.expectedPoints, mistakeTags: mistakeTagList(ctx, q.stageIds), boundary: boundaryFor(ctx), nodes: listText(cands) }),
     messages: [{ role: "user", content: [{ type: "text", text: `<student_answer>${answerText || "(see images)"}</student_answer>` }, ...(await imageBlocks(env, files))] }],
     signal: env.signal,
   });
   const tags = await defineTags(n, ctx, value.mistakes);
+  const nodes = await applyNodes(n, ctx.plan, g, cands, value, q.id, "grader");
   await appendEvent(n, {
-    type: "check_answered", stageId: q.stageIds[0] as string, checkId: q.id, kind: "open", context, correct: value.correct, score: value.score, mistakeTags: tags,
+    type: "check_answered", stageId: q.stageIds[0] as string, checkId: q.id, kind: "open", context, correct: value.correct, score: value.score, mistakeTags: tags, nodes,
   });
   return value;
 }

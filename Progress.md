@@ -171,7 +171,14 @@ Plan: `~/.claude/plans/when-a-job-is-flickering-hellman.md` (approved; read it f
 - Spike facts: BKT swings (8–30 good → 0.94; 2 misses → 0.51 → 0.27), hence the gentle layer; answers without the assessment-attempt protocol are "unverified" (we use estimate + `retention_estimate`); no API to seed mastery (prior is Shalav-side).
 - Tests: `knowledge.test.ts` (core, 12) and `src/server/knowledge/knowledge.test.ts` (fake engine, fallback; real binary with `TUTOR_MCP_BIN=…/tutor-mcp`).
 
-**Next (not started):** M62 node-tagged evidence (grader `nodeResults`/`newNodes`/`sameAs` by local numbers, tutor `update_knowledge_graph` tool + `present_mcq`/`ask_open_question`/`record_check_result` nodes, generator/indexer nodes) → M63 migration (stage mastery from control with max(old) guard; select/targetDifficulty/itemKind/weak/focus from knowledge) → M64 Customized practice for custom courses (`upto` scope, 2 options, all units with disabled ones) + tutor digest → M65 stars UI (questions frozen at serve, course card stars + exam-ready), web gathering at current+next level, i18n, e2e.
+## M62: node-tagged evidence + the graph the tutor writes
+- `src/core/domain/knowledge/tag.ts`: `candidates(g, stageIds)` (the stages' nodes, then course-wide ones, ≤40), `listText` ("3. [concept] גבול — control 40%"), zod `nodeFields` (`nodeResults: {n, score}[]`, `newNodes: {kind skill|convention|misconception, label, why, stageIds, sameAs?, score}[]`, both default `[]`), `nodeRules` prompt text, `applyNodes` (numbers → ids, unknown numbers/stages dropped; a label already in the graph, normalized, any kind, is that node; ≤300 dynamic nodes; writes `node_added` with the evidence ref).
+- Graders: `submit_grade` / `submit_check_grade` get the fields; the prompts list the exercise stages' nodes; `attempt_graded` / `check_answered` store `nodes`. Homework: none.
+- Tutor: [STATUS] lists the lesson's nodes with control, numbered (`active.nodes`; numbers stay put, new nodes appended). `present_mcq.nodes` → the card's `check_answered` gets per-node 1/0; `record_check_result` gets the fields (open → on the event; MCQ → `node_observed`). New tool `update_knowledge_graph` (add / link / observe). Prompt rule 9b.
+- Skipped: generator and indexer node tags (practice MCQs and generated exercises still count for their stages' nodes at half weight); add when question stars (M65) need the exact nodes.
+- Tests: grader keeps node results + a new convention, drops unknown number/stage (practice.test); lesson: [STATUS] numbers, MCQ tags, the tutor's "Cites statute + section" skill created once (a second spelling maps to it), later observations raise its control (learnTools.test).
+
+**Next (not started):** M63 migration (stage mastery from control with max(old) guard; select/targetDifficulty/itemKind/weak/focus from knowledge) → M64 Customized practice for custom courses (`upto` scope, 2 options, all units with disabled ones) + tutor digest → M65 stars UI (questions frozen at serve, course card stars + exam-ready), web gathering at current+next level, i18n, e2e.
 
 ---
 

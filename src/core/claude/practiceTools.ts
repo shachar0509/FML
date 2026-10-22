@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { nodeFields } from "@/core/domain/knowledge/tag";
 import { defineTool } from "./tools";
 
 // 7.5-7.7. Tool schemas for grading, hints, solving, generation and verification.
@@ -25,6 +26,7 @@ export const submitGrade = defineTool(
     correctedKeyStepMd: z.string(),
     usesMaterialBeyondCompleted: z.array(z.string()),
     stageIds: z.array(z.string()),
+    ...nodeFields,
   }),
 );
 export type Grade = z.infer<typeof submitGrade.schema>;
@@ -32,7 +34,7 @@ export type Grade = z.infer<typeof submitGrade.schema>;
 export const submitCheckGrade = defineTool(
   "submit_check_grade",
   "Submit the grade of the student's short answer.",
-  z.object({ correct: z.boolean(), score: z.number().min(0).max(100), feedbackMd: z.string(), mistakes: z.array(mistakeFull) }),
+  z.object({ correct: z.boolean(), score: z.number().min(0).max(100), feedbackMd: z.string(), mistakes: z.array(mistakeFull), ...nodeFields }),
 );
 export type CheckGrade = z.infer<typeof submitCheckGrade.schema>;
 
