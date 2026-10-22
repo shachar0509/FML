@@ -1,4 +1,6 @@
 import type { FileIndex } from "@/core/domain/dataSchemas";
+import { z } from "zod";
+import { readJsonFile } from "@/core/lib/fs/atomicWrite";
 import { fs } from "@/core/lib/fs/fs";
 import { coursePaths, join, nfc } from "@/core/lib/fs/paths";
 import { nowIso } from "@/core/lib/time";
@@ -33,7 +35,9 @@ const baseName = (p: string) => p.slice(p.lastIndexOf("/") + 1);
 
 const stampOf = async (abs: string, d: Pick<Deps, "native">) => `${await d.native.size(abs)}:${await d.native.modified(abs)}`;
 const paths = (course: string) => coursePaths(useSettings.getState().settings.dataRoot, course);
-const roleDir = (course: string, role: Role) => (role === "material" ? paths(course).materials : paths(course).exercises);
+const roleDir = (course: string, role: Role) => (role === "material" ? paths(course).materials : role === "teacher" ? paths(course).teacher : paths(course).exercises);
+/** M70: files "Find materials online" wrote (by content), so their solutions never count as the course's */
+const webShas = async (course: string) => new Set((await readJsonFile(paths(course).webFiles, z.array(z.string()))) ?? []);
 
 /** Steps 3 (dup check) and 5-6 for a file that already sits in its role folder. */
 async function register(course: string, role: Role, abs: string, sha256: string, d: Deps, stamp?: string): Promise<ImportOutcome> {
@@ -42,6 +46,7 @@ async function register(course: string, role: Role, abs: string, sha256: string,
     schema: 1, sha256, fileName: nfc(baseName(abs)), relPath: nfc(abs.slice(paths(course).course.length + 1)), role,
     mediaType: MEDIA[ext] ?? "application/octet-stream", pageCount: 1, addedAt: nowIso(), stamp: stamp ?? (await stampOf(abs, d)), status: "pending", error: null,
     indexedAt: null, indexModel: null, planVersion: null, materialPages: [], exercises: [],
+    ...((await webShas(course)).has(sha256) ? { origin: "web" as const } : {}),
   };
   try {
     const src = await d.open({ path: abs, mediaType: rec.mediaType, sha256 });
@@ -106,7 +111,7 @@ export async function scanCourse(course: string, d: Deps): Promise<{ added: numb
   const p = paths(course);
   let added = 0;
   const removed: string[] = [];
-  for (const role of ["material", "exercises"] as const) {
+  for (const role of ["material", "exercises", "teacher"] as const) {
     const dir = roleDir(course, role);
     if (!(await fs().exists(dir))) continue;
     for (const e of await fs().readDir(dir)) {

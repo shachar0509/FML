@@ -6,6 +6,7 @@ import { memFs } from "@/test/memfs";
 import { importFiles, reindex, removeFile, scanCourse, type Deps } from "./import";
 import type { FileIndex } from "@/core/domain/dataSchemas";
 import { listFileIndexes, writeFileIndex } from "./indexStore";
+import { writeJsonAtomic } from "@/core/lib/fs/atomicWrite";
 import { PasswordProtectedError, TooManyPagesError } from "./types";
 
 const C = "01040195";
@@ -88,6 +89,18 @@ describe("scanCourse / remove / reindex", () => {
     mem.files.delete(`${p.materials}/renamed.pdf`);
     expect(await scanCourse(C, deps())).toEqual({ added: 0, removed: ["h:new.pdf"] });
     expect(await listFileIndexes(C)).toEqual([]);
+  });
+
+  it("M70: the teacher's-notes folder is a third role; a file Find materials online wrote is marked as Shalav's own", async () => {
+    const p = coursePaths(root(), C);
+    mem.files.set(`${p.teacher}/hw2 graded.pdf`, "x");
+    await writeJsonAtomic(p.webFiles, ["h:web.md"]);
+    mem.files.set(`${p.exercises}/web.md`, "x");
+    expect(await scanCourse(C, deps())).toEqual({ added: 2, removed: [] });
+    const recs = await listFileIndexes(C);
+    expect(recs.find((r) => r.fileName === "hw2 graded.pdf")).toMatchObject({ role: "teacher", relPath: "הערות המרצה/hw2 graded.pdf" });
+    expect(recs.find((r) => r.fileName === "web.md")?.origin).toBe("web");
+    expect(recs.find((r) => r.fileName === "hw2 graded.pdf")?.origin).toBeUndefined();
   });
 
   it("the same file in both folders: one record that stays put (no flipping each scan); the copy takes over when the first goes", async () => {

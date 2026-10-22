@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { ToolDef } from "./types";
+import { AnswerFormSchema } from "@/core/domain/dataSchemas";
 
 /** A tool = its JSON Schema (sent to the API) + the zod mirror used to validate the result (9.3). */
 export type Tool<T extends z.ZodType> = { def: ToolDef; schema: T };
@@ -113,7 +114,20 @@ export const submitExercises = defineTool(
         edgeCaseFocus: z.array(z.string()).describe("Traps a careful solver must check, one short line each: a domain of definition, division by zero, a boundary or degenerate case, a condition that makes the answer undefined or not exist, a hypothesis that fails. Include traps you see only by thinking the solution through, even if no solution is printed; empty if none").default([]),
         keyPoints: z.array(z.string()).describe("The specific idea, trick or condition this exercise needs beyond the routine method of its topic, one short line each; empty if it is routine").default([]),
         gist: z.string(),
+        answerForms: z.array(AnswerFormSchema).describe("What the answer to this part must contain: graph (a sketch or plot), drawing (a diagram), table, numeric (a number, often with units), formula (an exact expression), proof, written (an explanation or argument in words), code, choice (pick an option); several may apply").default([]),
+        question: z.string().describe("The number of the question this part belongs to, as printed (e.g. \"2\"); the same on every part of one question").default(""),
+        part: z.string().nullable().describe("The part's own mark as printed (e.g. \"a\", \"ii\"); null for a question without parts").default(null),
       }),
     ),
+    occurrences: z.array(z.object({
+      label: z.string().describe("The label of the part whose printed solution shows it"),
+      useCase: z.string().describe("This solution's own situation at that point, concretely: what the question demanded and what the answer was doing (e.g. \"the answer bases the duty of care on a statute\")"),
+      practice: z.string().describe("What the solution did there that a careful grader would expect (e.g. \"cites the statute and its section number\")"),
+    })).describe("Answer-writing practices seen in the PRINTED solutions of this batch, one row per place they occur; empty when no solution is printed").default([]),
+    absences: z.array(z.object({
+      label: z.string(),
+      useCase: z.string().describe("A situation in a printed solution that resembles one listed in occurrences"),
+      practice: z.string().describe("The practice from occurrences that this solution did NOT follow there"),
+    })).describe("Places in the printed solutions where a practice listed in occurrences was NOT followed in a similar-looking situation; empty if none").default([]),
   }),
 );

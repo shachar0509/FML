@@ -5,6 +5,11 @@ import { setFs } from "@/core/lib/fs/fs";
 import { useSettings } from "@/stores/settings";
 import { memFs } from "@/test/memfs";
 import { writeFileIndex } from "./indexStore";
+import { z } from "zod";
+import { usage0 } from "@/core/claude/fake";
+import { readJsonFile } from "@/core/lib/fs/atomicWrite";
+import { sha256Hex } from "@/core/lib/hash";
+import { coursePaths } from "@/core/lib/fs/paths";
 import { gatherWeb, shares } from "./web";
 
 const N = "Cabc";
@@ -55,4 +60,16 @@ it("asks for full, elaborated solutions, not summaries (the student learns to wr
   expect(ask).toMatch(/Current level: 3\/5[^]*other half one level up, 4\/5/);
   await expect(gatherWeb(gw, course, "he", 3, undefined, 5)).rejects.toThrow("stop");
   expect(ask).toMatch(/Current level: 5\/5[^]*top level/);
+});
+
+it("M70: every file it writes is recorded (by content) as Shalav's own before it lands", async () => {
+  const md = "# Ex\n\nSolution: in full.\n\nhttps://example.edu/a";
+  const gw: ClaudeGateway = {
+    send: async (r) => ({ content: [{ type: "tool_use", id: "t", name: r.tools?.[0]?.name ?? "", input: { items: [{ role: "exercises", title: "Set 1", markdown: md }] } }], stopReason: "tool_use", usage: usage0, model: "m" }),
+  };
+  const course: CourseJson = { schema: 1, courseNumber: N, nameHe: "ק", credits: 0, faculty: "", syllabusHe: "s", prerequisitesRaw: "", catalogSemester: null, courseKind: "mixed", planVersion: 1, createdAt: "t", updatedAt: "t" };
+  const r = await gatherWeb(gw, course, "en", 1);
+  expect(r.saved).toHaveLength(1);
+  const p = coursePaths("/r", N);
+  expect(await readJsonFile(p.webFiles, z.array(z.string()))).toEqual([await sha256Hex(`${md}\n`)]);
 });

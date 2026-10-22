@@ -9,7 +9,7 @@ export interface PageSource {
   /** Whitespace-collapsed text of the page (5.4). Empty for images. */
   text(page: number): Promise<string>;
   /** 5.4: <400 chars, or has image paint ops, or role is exercises; never for txt/md. */
-  imageNeeded(page: number, role: "material" | "exercises"): Promise<boolean>;
+  imageNeeded(page: number, role: "material" | "exercises" | "teacher"): Promise<boolean>;
   /** JPEG q0.85, long edge <= 1568 px, disk-cached in appCacheDir()/pages/<sha256>/p<N>.jpg (5.4, 9.8). */
   image(page: number): Promise<Rendered>;
   /** Crop a figure from the page rendered at 2400 px long edge with 2 % padding; PNG bytes (<=1 MB else JPEG 0.9, see `ext`). */

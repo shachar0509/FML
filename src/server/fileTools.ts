@@ -23,7 +23,7 @@ const both = { ui: { resourceUri: CARDS_URI, visibility: ["model" as const, "app
 const appOnly = { ui: { resourceUri: CARDS_URI, visibility: ["app" as const] } };
 const num = z.string().regex(COURSE_ID_RE);
 const numIn = z.object({ number: num });
-const role = z.enum(["material", "exercises"]);
+const role = z.enum(["material", "exercises", "teacher"]);
 const out = (text: string, structuredContent: object) => ({ content: [{ type: "text" as const, text }], structuredContent: structuredContent as Record<string, unknown> });
 const fail = (text: string) => ({ ...out(text, { ok: false, error: text }), isError: true });
 
@@ -66,6 +66,7 @@ export function registerFileTools(server: McpServer, o: { openFolder?: (p: strin
       view: "files", language, theme, number,
       materials: recs.filter((r) => r.role === "material").map(row),
       exercises: recs.filter((r) => r.role === "exercises").map(row),
+      teacher: recs.filter((r) => r.role === "teacher").map(row),
       moodle: (await loadCourse(number).then((c) => c && isCustom(c.course))) ? null : (o.moodle?.() ?? null), // a custom course has no Moodle
     };
   }
@@ -114,7 +115,7 @@ export function registerFileTools(server: McpServer, o: { openFolder?: (p: strin
 
   registerAppTool(server, "files_open_folder", { title: "Open course folder", description: "Card-only: reveal the course folder in Finder/Explorer.", inputSchema: z.object({ number: num, role }), _meta: appOnly }, async ({ number, role: r }) => {
     const p = coursePaths(root(), number);
-    await (o.openFolder ?? openFolder)(r === "material" ? p.materials : p.exercises);
+    await (o.openFolder ?? openFolder)(r === "material" ? p.materials : r === "teacher" ? p.teacher : p.exercises);
     return out("ok", { ok: true });
   });
 

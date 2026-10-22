@@ -176,6 +176,9 @@ export const SessionLineSchema = z.discriminatedUnion("kind", [
 export type SessionLine = z.infer<typeof SessionLineSchema>;
 
 // 3.9
+/** M70: what kind of answer a part asks for (several may apply) */
+export const AnswerFormSchema = z.enum(["graph", "drawing", "table", "numeric", "formula", "proof", "written", "code", "choice"]);
+export type AnswerForm = z.infer<typeof AnswerFormSchema>;
 export const IndexedExerciseSchema = z.object({
   id: z.string(),
   label: z.string(),
@@ -196,6 +199,10 @@ export const IndexedExerciseSchema = z.object({
   /** M41: the specific idea or trick this exercise needs beyond the routine method (absent in records read before M41). */
   keyPoints: z.array(z.string()).optional(),
   gist: z.string(),
+  /** M70: the answer forms the part asks for; the question it belongs to ("2") and its part ("a"; null = a single-part question). Absent before M70. */
+  answerForms: z.array(AnswerFormSchema).optional(),
+  question: z.string().optional(),
+  part: z.string().nullable().optional(),
 });
 export type IndexedExercise = z.infer<typeof IndexedExerciseSchema>;
 export const FileIndexSchema = z.object({
@@ -203,7 +210,9 @@ export const FileIndexSchema = z.object({
   sha256: z.string(),
   fileName: z.string(),
   relPath: z.string(),
-  role: z.enum(["material", "exercises"]),
+  role: z.enum(["material", "exercises", "teacher"]),
+  /** M70: "web" = written by Find materials online (its solutions never teach conventions); absent = the student's or Moodle's */
+  origin: z.literal("web").optional(),
   mediaType: z.string(),
   pageCount: z.number().int(),
   addedAt: ts,
@@ -220,6 +229,11 @@ export const FileIndexSchema = z.object({
     notes: z.array(z.string()).optional(),
   })),
   exercises: z.array(IndexedExerciseSchema),
+  /** M70: answer-writing practices seen in this file's printed solutions, each with that solution's own situation (generalized later, across files) */
+  patterns: z.object({
+    occurrences: z.array(z.object({ id: z.string(), label: z.string(), useCase: z.string(), practice: z.string() })),
+    absences: z.array(z.object({ label: z.string(), useCase: z.string(), practice: z.string() })),
+  }).optional(),
 });
 export type FileIndex = z.infer<typeof FileIndexSchema>;
 

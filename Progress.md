@@ -219,7 +219,15 @@ Plan: `~/.claude/plans/when-a-job-is-flickering-hellman.md` (approved; read it f
 - Used by: question stars (`starsFor` on the tested nodes), practice MCQ answers (`check_answered.nodes` per node, 1/0). Open answers and exercises were already tagged by their graders.
 - Tests: practice (prompt lists nodes, generated exercise keeps a known node only, MCQ evidence per node).
 
-**Next (not started):** follow-ups only: retention in question stars, conventions from example solutions at indexing, engine `difficulty_target` tie-break.
+## M70–M74: course conventions (in progress). The full approved plan is `CONVENTIONS_PLAN.md`. Read it before each step; it moves to `archive/` when M74 is done.
+## M70: teacher's notes role, web-file marker, question structure and solution practices at index time
+- `TEACHER_DIR` "הערות המרצה" (`paths.teacher`, conflicts SKIP); role `"teacher"` in FileIndex, `fileTools` (upload, list `FilesData.teacher`, open folder), `scanCourse` walks it; `imageNeeded` is always true for it. The queue **skips** teacher files until M71 reads them (they show as "not scanned").
+- Web files: `gatherWeb` appends the content sha to `.shalav/web-files.json` **before** writing the file; `register()` sets `FileIndex.origin = "web"`.
+- Index: `IndexedExercise.answerForms` / `question` / `part` (optional; `AnswerFormSchema`); `submitExercises` + `exercisesPrompt` return `occurrences` {label, useCase (that solution's own situation), practice} and `absences`, stored as `FileIndex.patterns` (ids `<sha8>-o<n>`, deduped over the batch overlap). Only from printed solutions.
+- Card: third zone "Teacher's notes & comments" with a hint (only the teacher's comments count). i18n `files.teacher*`. test-host `?files=teacher`.
+- Tests: import (teacher role, web origin), indexing (question/part/forms, occurrences dedupe), web (sha recorded), fileTools (teacher upload), e2e course (teacher zone).
+
+**Next:** M71 teacher-notes analysis (see `CONVENTIONS_PLAN.md` §3) + the eval `CliGateway` and first fixtures (Verification A), then M72–M74.
 
 ---
 

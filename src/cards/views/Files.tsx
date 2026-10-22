@@ -10,7 +10,7 @@ type Tool = (
   name: string,
   args?: Record<string, unknown>,
 ) => Promise<{ structuredContent?: unknown; isError?: boolean }>;
-type Role = "material" | "exercises";
+type Role = "material" | "exercises" | "teacher";
 const CHUNK = 2 * 1024 * 1024; // raw bytes; base64 stays under the 4 MB tool limit
 
 const b64 = (buf: ArrayBuffer) => {
@@ -327,7 +327,7 @@ export function Files({
   }
 
   if (!d) return null;
-  const zone = (role: Role, title: string, add: string, rows: FileRow[]) => {
+  const zone = (role: Role, title: string, add: string, rows: FileRow[], hint?: string) => {
     const state = STATES.find((s) => s.key === filter[role]);
     const shown = sortNames(state ? rows.filter(state.has) : rows, i18n.language);
     const pages = Math.max(1, Math.ceil(shown.length / PAGE));
@@ -361,6 +361,7 @@ export function Files({
           </button>
         </h3>
       )}
+      {hint && <p className="text-sm text-muted">{hint}</p>}
       {rows.length > 0 && (
         <Legend
           rows={rows}
@@ -482,6 +483,7 @@ export function Files({
       <h2 className={h2}>{t("files.filter")}</h2>
       {zone("material", t("files.materials"), t("files.addMaterials"), d.materials)}
       {zone("exercises", t("files.exercises"), t("files.addExercises"), d.exercises)}
+      {zone("teacher", t("files.teacher"), t("files.addTeacher"), d.teacher ?? [], t("files.teacherHint"))}
       {d.moodle && (
         <div className={`${panel} flex flex-col gap-2 p-4`}>
           <h3 className="font-medium">{t("moodle.title")}</h3>

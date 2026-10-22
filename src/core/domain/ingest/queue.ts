@@ -60,6 +60,7 @@ export function createIndexQueue(deps: QueueDeps) {
         declined.add(key(course, sha256)); // stays pending; retry() asks again
         return;
       }
+      if (rec.role === "teacher") return; // ponytail: M70 only stores teacher notes; M71 reads them (they stay "not scanned" until then)
       const ctl = new AbortController();
       runningFiles.set(key(course, sha256), ctl);
       rec = await set(course, rec, { status: "indexing", error: null });

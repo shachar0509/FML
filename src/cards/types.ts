@@ -58,6 +58,8 @@ export type FilesData = Base & {
   number: string;
   materials: FileRow[];
   exercises: FileRow[];
+  /** M70: the student's real teacher's notes and comments (graded work, rubrics, remarks) */
+  teacher: FileRow[];
   moodle: MoodleState | null;
 };
 /** Moodle import (plan M14b). `url` null = the student must paste their Moodle address. */

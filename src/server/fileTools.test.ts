@@ -147,3 +147,11 @@ it("renamed mid-scan: the scan's result keeps the new name", async () => {
   await call("shalav_submit_job", { jobId: Number(/job #(\d+)/.exec(job)?.[1]), input: { pages: [{ page: 1, stageIds: ["S001"], summary: "s", hasFigure: false, hasExercises: false }] } });
   expect(await listFileIndexes(num)).toMatchObject([{ fileName: "b.txt", status: "indexed" }]); // as written, before any scan fixes it
 });
+
+it("M70: the teacher's notes zone takes uploads and lists them apart", async () => {
+  const { call, num } = await boot();
+  expect(sc<{ status: string }>(await call("file_upload_chunk", { number: num, role: "teacher", name: "hw2 graded.txt", index: 0, total: 1, data: b64("missing section number") })).status).toBe("added");
+  const f = sc<FilesData>(await call("files_list", { number: num }));
+  expect(f.teacher).toMatchObject([{ name: "hw2 graded.txt", status: "pending" }]);
+  expect(f.materials).toEqual([]);
+});

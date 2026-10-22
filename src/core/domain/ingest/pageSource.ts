@@ -58,7 +58,7 @@ export const openSource: OpenSource = async ({ path, mediaType, sha256 }) => {
       return pageText(await doc.getPage(n));
     },
     async imageNeeded(n, role) {
-      if (role === "exercises") return true;
+      if (role !== "material") return true; // exercises and teacher notes (handwritten marks) are always read as images
       return (await pageText(await doc.getPage(n))).length < 400 || hasImagePaint(await doc.getPage(n));
     },
     image: (n) =>

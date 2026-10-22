@@ -1,4 +1,4 @@
-import { EXERCISES_DIR, MATERIALS_DIR } from "@/constants";
+import { EXERCISES_DIR, MATERIALS_DIR, TEACHER_DIR } from "@/constants";
 
 export const nfc = (s: string): string => s.normalize("NFC");
 export const join = (...parts: string[]): string =>
@@ -23,6 +23,9 @@ export const coursePaths = (root: string, courseNumber: string) => {
     progressMd: join(c, "progress.md"),
     materials: join(c, MATERIALS_DIR),
     exercises: join(c, EXERCISES_DIR),
+    teacher: join(c, TEACHER_DIR),
+    /** M70: shas of the files "Find materials online" wrote (their solutions are Shalav's own, never course conventions) */
+    webFiles: join(s, "web-files.json"),
     shalav: s,
     events: join(s, "events"),
     eventsFile: (deviceId: string) => join(s, "events", `${deviceId}.jsonl`),

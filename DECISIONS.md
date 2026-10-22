@@ -177,3 +177,8 @@
 
 ## M66 — Replay check on a synthetic history
 - Both real data roots have empty event logs, so the M63 acceptance replay used a seeded synthetic history instead (kept as a test). Stage status cannot change by construction (it comes from events, not mastery); the diff confirmed it and that mastery only rises.
+
+## M70 — Teacher's notes are a folder role; web files are marked by content
+- Teacher notes are a third role folder ("הערות המרצה"), like the other two, so the folder scan, deletion and rename handling work unchanged; Moodle never imports into it.
+- A web-gathered file is recognized by its content sha, written to `.shalav/web-files.json` before the file lands (the folder scan may pick it up at once). Its solutions are Shalav's own and never teach conventions.
+- Solution practices are recorded per occurrence with that solution's own situation; generalizing into conventions happens only across files, in reconcile (M72).

@@ -1,11 +1,11 @@
-import { EXERCISES_DIR, MATERIALS_DIR } from "@/constants";
+import { EXERCISES_DIR, MATERIALS_DIR, TEACHER_DIR } from "@/constants";
 import { fs } from "./fs";
 
 /** Provider conflict copies (plan v2 §6.9): `x (1).json`, `x (conflicted copy).json`, `x (Case Conflict).json`. */
 const COPY = /( \(\d+\)| \([^)]*(conflicted copy|case conflict)[^)]*\))(\.[^.]+)?$/i;
 export const isConflictCopy = (name: string): boolean => COPY.test(name);
 
-const SKIP = new Set([MATERIALS_DIR, EXERCISES_DIR, "attachments", "crops"]);
+const SKIP = new Set([MATERIALS_DIR, EXERCISES_DIR, TEACHER_DIR, "attachments", "crops"]);
 
 /** Data files (json/jsonl/md) under the data root that look like sync conflict copies, relative to the root. */
 export async function findConflictCopies(root: string, dir = root): Promise<string[]> {

@@ -141,6 +141,24 @@ for (const lang of LANGS)
       expect(errors).toEqual([]);
     });
 
+// M70: the teacher's notes zone (third, with its hint)
+for (const lang of LANGS)
+  for (const theme of THEMES)
+    test(`course files: teacher's notes zone (${lang}/${theme})`, async ({ page }) => {
+      const errors = pageErrors(page);
+      await page.goto(host(`lang=${lang}&theme=${theme}&files=teacher`));
+      await page.locator("ul button").first().click();
+      const zone = page.getByRole("button", { name: lang === "he" ? /הערות המרצה/ : /Teacher's notes & comments/ });
+      await expect(zone).toBeVisible();
+      await expect(page.getByText(lang === "he" ? /נלקחות רק הערות המרצה/ : /Only the teacher's comments are used/)).toBeVisible();
+      await zone.click();
+      await expect(page.getByText(lang === "he" ? "תרגיל בית 2 - בדוק.pdf" : "hw2 graded.pdf")).toBeVisible();
+      await page.waitForTimeout(400);
+      await axe(page);
+      await page.getByRole("region", { name: lang === "he" ? "קבצי לימוד" : "Study files" }).screenshot({ path: `e2e/tests_output/course/card-files-teacher-${lang}-${theme}.png` });
+      expect(errors).toEqual([]);
+    });
+
 for (const lang of LANGS)
   test(`course files: 10 per page, sorted, filtered by scan state (${lang})`, async ({ page }) => {
     const errors = pageErrors(page);

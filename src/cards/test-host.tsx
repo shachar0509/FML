@@ -43,6 +43,7 @@ const files: FilesData = {
   moodle: { url: "https://moodle.example.ac.il/", connected: q.get("files") === "importing", busy: q.get("files") === "importing" ? "sync" : q.get("files") === "installing" ? "install" : null, last: null, progress: q.get("files") === "importing" ? { done: 3, total: 8 } : q.get("files") === "installing" ? { done: 42, total: 100 } : null },
   materials: [{ sha: "a1", name: "lecture1.pdf", pages: 12, status: "indexed", error: null, exercises: 0, solved: 0 }, { sha: "a2", name: "lecture2.pdf", pages: 9, status: q.get("files") === "read" ? "indexed" : "pending", error: null, exercises: 0, solved: 0 }, ...(q.get("files") === "mix" ? [{ sha: "a3", name: "lecture3.pdf", pages: 4, status: "indexing" as const, error: null, exercises: 0, solved: 0, done: 1, total: 4 }] : []), ...(q.get("files") === "many" ? many : [])],
   exercises: [{ sha: "b1", name: "hw1.pdf", pages: 3, status: "indexed", error: null, exercises: 5, solved: 3 }],
+  teacher: q.get("files") === "teacher" ? [{ sha: "t1", name: L("תרגיל בית 2 - בדוק.pdf", "hw2 graded.pdf"), pages: 4, status: "pending", error: null, exercises: 0, solved: 0 }] : [],
 };
 // a plan build is running: lecture2 is read by it, lecture4 was added meanwhile (waits for the next build)
 const filesBuilding: FilesData = { ...files, materials: [...files.materials.map((f) => (f.status === "pending" ? { ...f, inBuild: true } : f)), { sha: "a4", name: "lecture4.pdf", pages: 3, status: "pending", error: null, exercises: 0, solved: 0 }] };
