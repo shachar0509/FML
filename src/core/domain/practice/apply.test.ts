@@ -95,6 +95,8 @@ describe("M73 conventions applied", () => {
     expect(sys.submit_grade).toContain("C2. [example solutions] Label the axes");
     expect(sys.submit_grade).not.toContain("Only in stage 2");
     expect(sys.submit_grade).toContain("only your own knowledge");
+    expect(sys.submit_grade).toContain("never by the topic"); // a Sale Law topic resting on a precedent does not rely on a statute
+    expect(sys.submit_grade).toContain("judged ONLY by its \\\"met when\\\" line"); // the rest of the answer never moves met
     expect(msg.submit_grade).toContain("<student_answer>section 15</student_answer>");
     // the fact check saw the course's own solution, never the web file
     expect(msg.submit_fact_check).toContain("Under section 15");

@@ -119,7 +119,8 @@ describe("indexing", () => {
       { id: "abcdef01-o2", ...occ("3", "cites the statute and section") },
     ]);
     expect(out.patterns?.absences).toHaveLength(1);
-    expect(system).toMatch(/Every computed final result[^\n]*always record its form[^\n]*decimals[^\n]*units/); // reconcile can compare the forms of two files' results
+    expect(system).toMatch(/Every computed final result[^\n]*always record its form[^\n]*decimal places printed; significant figures only when the solution itself says so[^\n]*units/); // reconcile can compare the forms of two files' results
+    expect(system).toMatch(/layout of a whole multi-part answer is also a practice[^\n]*once per question/); // number-parts is learnable
   });
 });
 

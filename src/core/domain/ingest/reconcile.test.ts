@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { FakeClaudeGateway, toolCall } from "@/core/claude/fake";
 import type { ClaudeRequest } from "@/core/claude/types";
 import { type Convention, type ConventionsFile, ConventionsFileSchema, EventSchema, type FileIndex, type PlanJson, type TeacherItem } from "@/core/domain/dataSchemas";
+import { useCasePrompt } from "@/core/claude/prompts/conventions";
 import { nodeId } from "@/core/domain/knowledge/graph";
 import { appendEvent } from "@/core/domain/progress/store";
 import { setDeviceId } from "@/core/lib/device";
@@ -349,5 +350,15 @@ describe("reconcileConventions", () => {
     await writeFileIndex(N, sol(B, ["S1"]));
     await expect(run(new FakeClaudeGateway([toolCall("submit_use_case_clusters", { clusters: [] }), toolCall("submit_use_case_merge", { useCases: [] })]))).rejects.toThrow("script exhausted");
     expect(await readJsonFile(P.conventions, ConventionsFileSchema)).toBeNull();
+  });
+});
+
+describe("use-case prompt (eval fixes)", () => {
+  it("only rival practices are inconsistent; companions are separate conventions; triggers are actions, not topics", () => {
+    const p = useCasePrompt("English");
+    expect(p).toContain("One practice per rule"); // law cite + explain-the-test, programming trace + final result
+    expect(p).toContain("Only rivals vary"); // split: units and rounding were logged inconsistent
+    expect(p).toContain("2.70 is both"); // one practice described two ways is not a variation
+    expect(p).toContain("never a topic");
   });
 });

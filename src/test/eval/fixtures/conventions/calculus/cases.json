@@ -58,7 +58,7 @@
     {
       "key": "graph-axes-asymptotes",
       "source": "solutions",
-      "match": "label\\w*.{0,30}ax[ie]s|ax[ie]s.{0,30}label|mark\\w*.{0,40}asymptot|asymptot\\w*.{0,40}(mark|dash|draw)",
+      "match": "^(?![\\s\\S]*(justif|limit))[\\s\\S]*(label\\w*.{0,30}ax[ie]s|ax[ie]s.{0,30}label|mark\\w*.{0,40}asymptot|asymptot\\w*.{0,40}(mark|dash|draw))",
       "rows": [
         {
           "question": "Sketch the graph of $h(x) = \\frac{2x}{x^2-4}$.",
@@ -269,7 +269,7 @@
     {
       "key": "justify-steps",
       "source": "solutions",
-      "match": "(justif|reason|explain)\\w*.{0,30}(each|every) step|(each|every) step.{0,40}(justif|reason|explain|rule|cited|named)|nam(e|ing) the (rule|theorem)",
+      "match": "(justif|reason|explain)\\w*.{0,30}(each|every) step|(each|every) step.{0,40}(justif|reason|explain|rule|cited|named)|nam(e|ing) the (\\w+ )?(rule|theorem)",
       "rows": [
         {
           "question": "Prove that $x^2+y^2 \\ge 2xy$ for all real $x, y$.",
@@ -311,7 +311,7 @@
     {
       "key": "mcq-tf-short",
       "source": "solutions",
-      "match": "(choice|letter|option|verdict|true|false).{0,60}(one|single|short|brief)[- ](line|sentence|reason|justification|explanation)|(one|single)[- ](line|sentence) (reason|justification|explanation)",
+      "match": "(choice|letter|option|verdict|true|false).{0,60}(one|single|short|brief)[- ](line|sentence|reason|justification|explanation)|(one|single)[- ](line|sentence) (reason|justification|explanation)|false[^.;]{0,80}counterexample",
       "rows": [
         {
           "question": "Multiple choice: the derivative of $\\ln(2x)$ is (A) $1/x$ (B) $2/x$ (C) $1/(2x)$ (D) $\\ln 2$.",
@@ -321,11 +321,11 @@
           "note": "choice + one line"
         },
         {
-          "question": "True or false: if $\\sum a_n$ converges then $a_n \\to 0$.",
-          "answer": "True.",
+          "question": "True or false: every function continuous on $(0,1)$ is bounded there.",
+          "answer": "False.",
           "triggered": true,
           "met": false,
-          "note": "the verdict alone, without the one-line reason every training MCQ/TF answer gives"
+          "note": "the verdict alone, without the counterexample every training true/false answer gives"
         },
         {
           "question": "True or false: a function bounded on $[0,1]$ attains a maximum there.",
@@ -352,6 +352,6 @@
     }
   ],
   "forbid": [],
-  "notes": "Occurrences per convention (file + question). graph-axes-asymptotes (4, 3 files): 2023 Q1(a), 2023 Q6, 2024 Q1(a), physics P3(a); computation parts without graphs: 2023 Q1(b,c), 2024 Q1(b,c), physics P1. theorem-conditions (5, 3 files): 2023 Q2 (MVT), 2023 Q7(a) (FTC), 2024 Q2 (IVT), 2024 Q6 (Rolle), physics P2 (MVT); direct computations without a theorem: 2023 Q5, 2024 Q5, 2024 Q7, physics P1, P7. numeric-units-2dp (7, 2 files: calc-exam-2024 and physics): 2024 Q5(b), Q5(c), physics P1(a), P1(b), P2, P3(c), P7. exact-symbolic (5, 3 files): 2023 Q1(c), 2023 Q5, 2024 Q1(c), physics P3(b), physics P5. The two form a legitimate 'similar use cases, different practices' pair, distinguished by physical measured data vs pure/symbolic. number-parts (level whole, 6, 3 files): 2023 Q1, Q7; 2024 Q1, Q5; physics P1, P3; single-part solutions carry no letters. justify-steps (many, in proofs and computations): 2023 Q1(b), Q2, Q5, Q7; 2024 Q1(b), Q2, Q6; physics P2, P3(b), P5, P7. mcq-tf-short (6, 3 files): 2023 Q3, Q4; 2024 Q3, Q4; physics P4, P6. Other incidental habits (e.g. bold 'Answer:') are not expected conventions; the eval should not fail on extra learned conventions, only on missing expected ones and on forbidden ones. The resistor row in exact-symbolic is a deliberate near miss: measured data, so exact-symbolic is not triggered. MATCHING: as in the law fixture, each 'match' is a case-insensitive regex, but here over the learned RULE text only (matchOn: 'rule'), not rule + useCase: the triggers and notWhen of the paired conventions name each other's context ('measured data, not symbolic'), so matching the useCase would make the keys collide. The exact/decimals regexes use a negative lookahead so a rule demanding one form is never taken for the other. RISKS: 7 conventions from 3 files. Weakest: theorem-conditions vs justify-steps (a model may fold 'check the theorem's conditions' into 'justify each step'; then the theorem rows still pass only if the merged rule's trigger stays limited to answers that use a theorem, which it will not, so this is a real failure to report, not a fixture defect); theorem-conditions has absences the model must explain as routine rules (product/quotient rule, integration by parts, evaluating a definite integral by an antiderivative): the direct-computation rows depend on that notWhen. mcq-tf-short is an extra convention (not in the plan list).",
+  "notes": "Occurrences per convention (file + question). graph-axes-asymptotes (4, 3 files): 2023 Q1(a), 2023 Q6, 2024 Q1(a), physics P3(a); computation parts without graphs: 2023 Q1(b,c), 2024 Q1(b,c), physics P1. theorem-conditions (5, 3 files): 2023 Q2 (MVT), 2023 Q7(a) (FTC), 2024 Q2 (IVT), 2024 Q6 (Rolle), physics P2 (MVT); direct computations without a theorem: 2023 Q5, 2024 Q5, 2024 Q7, physics P1, P7. numeric-units-2dp (7, 2 files: calc-exam-2024 and physics): 2024 Q5(b), Q5(c), physics P1(a), P1(b), P2, P3(c), P7. exact-symbolic (5, 3 files): 2023 Q1(c), 2023 Q5, 2024 Q1(c), physics P3(b), physics P5. The two form a legitimate 'similar use cases, different practices' pair, distinguished by physical measured data vs pure/symbolic. number-parts (level whole, 6, 3 files): 2023 Q1, Q7; 2024 Q1, Q5; physics P1, P3; single-part solutions carry no letters. justify-steps (many, in proofs and computations): 2023 Q1(b), Q2, Q5, Q7; 2024 Q1(b), Q2, Q6; physics P2, P3(b), P5, P7. mcq-tf-short (6, 3 files): 2023 Q3, Q4; 2024 Q3, Q4; physics P4, P6. Other incidental habits (e.g. bold 'Answer:') are not expected conventions; the eval should not fail on extra learned conventions, only on missing expected ones and on forbidden ones. The resistor row in exact-symbolic is a deliberate near miss: measured data, so exact-symbolic is not triggered. MATCHING: as in the law fixture, each 'match' is a case-insensitive regex, but here over the learned RULE text only (matchOn: 'rule'), not rule + useCase: the triggers and notWhen of the paired conventions name each other's context ('measured data, not symbolic'), so matching the useCase would make the keys collide. The exact/decimals regexes use a negative lookahead so a rule demanding one form is never taken for the other. RISKS: 7 conventions from 3 files. Weakest: theorem-conditions vs justify-steps (a model may fold 'check the theorem's conditions' into 'justify each step'; then the theorem rows still pass only if the merged rule's trigger stays limited to answers that use a theorem, which it will not, so this is a real failure to report, not a fixture defect); theorem-conditions has absences the model must explain as routine rules (product/quotient rule, integration by parts, evaluating a definite integral by an antiderivative): the direct-computation rows depend on that notWhen. mcq-tf-short is an extra convention (not in the plan list). FIXES after the first M73 pass (2026-10-23): the graph key never matches a 'justify the asymptote with limits' rule (a separate, faithful convention: every source sketch computes its limits); every source true/false answer is 'False' + counterexample, so the TF rows are judged by that convention and the bare-verdict row is a false claim (no source shows a 'True' verdict); 'name the <x> rule' counts for justify-steps.",
   "matchOn": "rule"
 }
