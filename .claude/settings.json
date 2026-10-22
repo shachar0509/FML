@@ -1,0 +1,6 @@
+{
+  "enabledPlugins": {
+    "swift-lsp@claude-plugins-official": false,
+    "presentation-skills@garden-skills": false
+  }
+}

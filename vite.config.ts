@@ -9,5 +9,5 @@ export default defineConfig({
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   clearScreen: false,
   server: { port: 1420, strictPort: true },
-  test: { exclude: ["e2e/**", "node_modules/**"], environment: "jsdom", globals: true, setupFiles: ["src/test/setup.ts"] },
+  test: { reporters: ["dot"], exclude: ["e2e/**", "node_modules/**"], environment: "jsdom", globals: true, setupFiles: ["src/test/setup.ts"] },
 });
