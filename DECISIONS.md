@@ -174,3 +174,6 @@
 - Question stars use control from the event log, not the engine's retention: they must be computed synchronously when a question is served, and forgetting already shows in the course stars and the tutor's reviews.
 - Quick questions have no difficulty of their own: MCQ counts as 2/5, an open question as 3/5.
 - A lesson exercise reopened from a saved lesson gets its stars again (its run is rebuilt); MCQ/Open cards keep the saved ones.
+
+## M66 — Replay check on a synthetic history
+- Both real data roots have empty event logs, so the M63 acceptance replay used a seeded synthetic history instead (kept as a test). Stage status cannot change by construction (it comes from events, not mastery); the diff confirmed it and that mastery only rises.

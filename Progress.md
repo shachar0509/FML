@@ -201,7 +201,12 @@ Plan: `~/.claude/plans/when-a-job-is-flickering-hellman.md` (approved; read it f
 - `gatherWeb(…, level)`: half the documents at the student's level now, half one level up (top level: perfect it); the course card's web level is the same number.
 - Tests: select (starsFor), practice (frozen MCQ stars), learnTools (MCQ card stars), knowledge (shownLevel floor), web (current/next prompt), courseTools (card knowledge), e2e exercise/course/lesson star labels.
 
-**Next (not started):** open plan items: the M63 replay acceptance check (old vs new code on a recorded history and a read-only copy of the real data root, incl. `knowledgeOf` speed); mistake summaries in the UI from the engine's misconceptions; `assign_exercise` default difficulty = the target (engine `difficulty_target` as tie-break). Follow-ups: node tags from the generator/indexer (per-exercise nodes instead of whole stages), retention in question stars, conventions from example solutions at indexing.
+## M66: replay acceptance check
+- The real data roots (`~/Documents/Shalav`, `ShalavTest`) have no events yet, so the check runs on a synthetic history: `progress/replay.test.ts` (36-stage plan, ~3.9k events of every kind, seeded). It stays as a test (speed bound, mastery in 0..1); `REPLAY_OUT=<file>` writes every stage's status and mastery.
+- One-off diff against pre-M63 `5ba733e` (a worktree running the same test): 0 status changes, 0 mastery drops, 11 of 36 stages higher (max +0.10); reduce 7 ms → 11 ms.
+- Rerun on real data once it exists: the same diff with the real `plan.json` and events.
+
+**Next (not started):** mistake summaries in the UI from the engine's misconceptions; `assign_exercise` default difficulty = the target (engine `difficulty_target` as tie-break); generator node tags. Follow-ups: retention in question stars, conventions from example solutions at indexing.
 
 ---
 
