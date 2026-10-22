@@ -26,7 +26,6 @@ export type CourseData = Base & {
   hasPlan: boolean;
   /** Set while a plan build is running or after it failed. */
   build: BuildStatus | null;
-  canPractice: boolean;
   watch: { label: string; count: number; stageIds: string[] }[];
   units: { id: string; title: string; stages: Stage[] }[];
   /** M48: texts of the plan and name not yet in the settings language (0 = all shown in it), and whether a translation runs. */

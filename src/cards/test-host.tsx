@@ -28,7 +28,7 @@ const home: HomeData = {
 const st = (id: string, title: string, status: CourseData["units"][number]["stages"][number]["status"], mastery: number) => ({ id, title, summary: L(`תקציר: ${title}`, `${title} summary`), status, mastery });
 const course: CourseData = {
   view: "course", language: lang, theme: "system", number: "01040195", name: home.courses[0]?.name ?? "Calculus", credits: 5.5, pct: 17, stagesDone: 1, stagesTotal: 3,
-  current: "S002", hasPlan: true, build: null, canPractice: true, custom: false, web: null, translate: { missing: q.get("tr") ? 12 : 0, running: false },
+  current: "S002", hasPlan: true, build: null, custom: false, web: null, translate: { missing: q.get("tr") ? 12 : 0, running: false },
   watch: [{ label: lang === "he" ? "שכחו את תנאי ההתכנסות" : "Forgot the convergence condition", count: 3, stageIds: ["S002"] }],
   units: [{ id: "U01", title: lang === "he" ? "סדרות" : "Sequences", stages: [st("S001", L("הגדרה", "Definition"), "completed", 90), st("S002", L("גבולות", "Limits"), "in_progress", 40), st("S003", L("כלל הסנדוויץ'", "Squeeze"), "locked", 0)] },
     // ?del=1: a second unit, so a whole unit can be deleted
@@ -154,7 +154,7 @@ const reqs: unknown[] = [];
 let created = false; // after course_create_request the course has no plan yet
 let translating = false; // ?tr=1: the plan has 12 texts not in this language; Translate starts a run
 let building = false; // ?joined=1: Update plan joins a build that another chat is running
-const noPlan: CourseData = { ...course, hasPlan: false, pct: 0, stagesDone: 0, stagesTotal: 0, current: null, canPractice: false, watch: [], units: [] };
+const noPlan: CourseData = { ...course, hasPlan: false, pct: 0, stagesDone: 0, stagesTotal: 0, current: null, watch: [], units: [] };
 // course Cm1abc (?custom=1 in Home, or made with course_custom_create): a custom course; its files have no Moodle box
 const CUSTOM = "Cm1abc";
 const gone = new Set<string>(); // stages deleted with plan_remove

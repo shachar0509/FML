@@ -906,7 +906,7 @@ Edge cases found with the sample slides, and fixed in the renderer:
   - The question stays on the board. Two choices under it: **Get a clue** and **Submit full solution** (photos or PDF).
   - Get a clue: the work so far (optional) is checked for a mistake first. If there is one, the board points to the first mistake without fixing it; otherwise it gives one small clue for the next step only.
   - After a clue: **I didn't understand the clue** explains the same clue again in other words (added under it on the board, as many times as needed); **Thank you** goes back to the two choices.
-  - Submit full solution: the full review (steps, what's missing, the corrected key step). Perfect = score ≥ 95 and every final answer right (new grader field `finalAnswerCorrect`); then the board says so and the loop ends.
+  - Submit full solution: the full review (steps, what's missing, the corrected key step). Perfect = score over 95 and every final answer right (new grader field `finalAnswerCorrect`); then the board says so and the loop ends.
   - Clues, explanations and the grade use the course material and the nearest example exercises with their solutions (the grade weighs reasoning, explanations and the course's conventions).
   - Clues count as hints for mastery (at most 3).
 - Where the loop is used:
@@ -923,7 +923,7 @@ Edge cases found with the sample slides, and fixed in the renderer:
   - The student uploads the pages (photos or PDF, up to 12). The host model reads them (job `submit_homework`): each question transcribed faithfully in its language with LaTeX, the pages it's on, and the assignment's name. A single question is exactly one.
   - Homework then asks how to solve it: **Solve with the tutor**.
   - Each question runs the solving loop (M56); its original pages show with it and go to the grader. There is no plan stage, so the course material is ranked by the question's text, plus the nearest example exercises.
-  - A perfect answer (≥95 and every final answer right) puts the pages the student submitted (their own handwriting) into the solution file, and the question gets a ✓ in the question list. **Next question** goes to the next unsolved one; any question can be opened from the list.
+  - A perfect answer (over 95 and every final answer right) puts the pages the student submitted (their own handwriting) into the solution file, and the question gets a ✓ in the question list. **Next question** goes to the next unsolved one; any question can be opened from the list.
   - **Download solutions (k)** is always there (disabled until one is solved). It builds `solution.pdf` from the accepted pages in question order (one A4 page per photo, `@napi-rs/canvas`, nothing downloaded) and opens the system's Save as dialog (macOS `osascript`, Windows `SaveFileDialog`, Linux `zenity`); the card shows where it was saved.
   - Homework writes no progress events: it doesn't move mastery or mistakes.
   - Single question: after a perfect answer, **New question**.
@@ -943,3 +943,7 @@ Edge cases found with the sample slides, and fixed in the renderer:
   - The PDF is kept with the homework (`.shalav/homework/<id>.pdf`), so downloading it again is instant.
 - The card, on the board: the questions with ✓ as they're solved, "Solving question k of n…", then the PDF step, then **Download solutions** (the same Save as dialog as M57).
 - Tests: solutions page (MathML, direction, escaped title), server round trip (2 solve jobs with the question and its page, then ready; the downloaded file holds the name, questions, solutions and math; printing stubbed), e2e (choice, progress, browser-download step, ready, download) in he/en, light/dark.
+
+## M57/M58 fix: Practice opens without a completed stage; homework isn't held to Shalav progress
+- The course card's Practice button was disabled until a stage was completed; homework and single questions don't need that, so it is enabled whenever there's a plan (normal practice still says it's locked). The `shalav_practice` description says the same.
+- Homework clues and grading no longer get the knowledge boundary built from Shalav progress ("not learned yet"); homework follows the course's own schedule, so they use the course material and example exercises (as the AI solve already did).

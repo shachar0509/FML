@@ -17,7 +17,7 @@ export type RunState = {
 };
 export const emptyRun = (): RunState => ({ hints: [], solutionMd: null, grade: null, attemptId: null, attempts: 0, clues: [], clueOpen: false });
 /** M56: a perfect answer = over 95% for reasoning, explanations and conventions, and every final answer right. */
-export const perfect = (g: Grade | null) => !!g && g.score >= 95 && g.finalAnswerCorrect && g.verdict !== "unreadable";
+export const perfect = (g: Grade | null) => !!g && g.score > 95 && g.finalAnswerCorrect && g.verdict !== "unreadable";
 /** 7.7: "Show full solution" appears after level 3 or after a graded attempt. */
 export const canReveal = (s: RunState) => !s.solutionMd && (s.hints.length >= 3 || s.attempts > 0);
 

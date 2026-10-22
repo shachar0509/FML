@@ -41,8 +41,8 @@ ${a.completedTitles}
 Existing mistake tags:
 ${a.mistakeTags || "(none)"}
 
-${a.boundary}
-Your feedback, steps and corrected key step use only the allowed knowledge above. A correct student argument that uses more is not penalized.
+${a.boundary ? `${a.boundary}
+Your feedback, steps and corrected key step use only the allowed knowledge above. A correct student argument that uses more is not penalized.` : "Your feedback, steps and corrected key step use the methods and notation of the course material and example exercises given here."}
 If the uploaded work does not answer this exercise, give verdict "incorrect", score 0, summary "This doesn't appear to answer the given exercise", and no mistakes.
 ${DATA}
 

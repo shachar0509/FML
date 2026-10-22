@@ -218,7 +218,7 @@ export function Course({
             {t("nav.learn")}
             {cur ? ` — ${cur.id}` : ""}
           </Button>
-          <Button variant="outline" disabled={!data.canPractice} onClick={practice}>
+          <Button variant="outline" onClick={practice}>
             <Dumbbell className="size-4" aria-hidden />
             {t("nav.practice")}
           </Button>

@@ -124,10 +124,10 @@ it("exercise card: hints 1-3, upload, grade through the bridge, solution reveal,
   }
   expect(sc<ExerciseData>(await call("exercise_state", { runId: r }))).toMatchObject({ clueOpen: true, clues: [{ onTrack: true, clueMd: "think of N", more: ["say it simpler", "simplest"] }] });
   expect(sc<ExerciseData>(await call("exercise_clue_done", { runId: r }))).toMatchObject({ clueOpen: false });
-  // 96 with a wrong final answer is not perfect; 96 with every final answer right is
-  for (const [finalAnswerCorrect, ok] of [[false, false], [true, true]] as const) {
+  // 96 with a wrong final answer is not perfect; 95 (not over 95) is not either; 96 with every final answer right is
+  for (const [score, finalAnswerCorrect, ok] of [[96, false, false], [95, true, false], [96, true, true]] as const) {
     await call("exercise_grade_request", { runId: r, files: up.files });
-    j = await answer({ ...grade, verdict: "correct", score: 96, finalAnswerCorrect, mistakes: [], stageIds: ["S002"] });
+    j = await answer({ ...grade, verdict: "correct", score, finalAnswerCorrect, mistakes: [], stageIds: ["S002"] });
     expect(text(j.job)).toContain("finalAnswerCorrect");
     expect(sc<ExerciseData>(await call("exercise_state", { runId: r })).perfect).toBe(ok);
   }

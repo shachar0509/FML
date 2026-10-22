@@ -125,7 +125,7 @@ export function registerPracticeTools(server: McpServer, bridge: BridgeGateway, 
     "shalav_practice",
     {
       title: "Practice",
-      description: "Open the Practice card for a course (needs a completed stage). Optional scope: {kind:'all'|'weak'} or {kind:'unit',unitId} or {kind:'stage',stageId}; without it the card lets the student choose.",
+      description: "Open the Practice card for a course (needs a plan): solve the student's homework or one question with the tutor (or have the AI solve the homework), or normal practice of completed stages. Optional scope (normal practice only): {kind:'all'|'weak'} or {kind:'unit',unitId} or {kind:'stage',stageId}; without it the card lets the student choose.",
       inputSchema: z.object({ courseNumber: num, scope: scopeSchema.optional() }),
       _meta: { ui: { resourceUri: CARDS_URI } },
     },

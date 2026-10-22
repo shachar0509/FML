@@ -60,7 +60,7 @@ export const examples = async (ctx: Ctx, ex: Ex) =>
 
 async function clueArgs(env: Env, ctx: Ctx, ex: Ex) {
   return {
-    lang: langName(), statement: ex.statementMd, reference: ex.referenceSolutionMd, boundary: boundaryFor(ctx),
+    lang: langName(), statement: ex.statementMd, reference: ex.referenceSolutionMd, boundary: ex.stageIds.length ? boundaryFor(ctx) : "", // homework follows the course's own schedule, not Shalav progress
     requiredStages: stageList(ctx, ex.requiredStageIds), digest: await digest(env, ctx, ex), examples: await examples(ctx, ex),
   };
 }

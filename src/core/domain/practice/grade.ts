@@ -73,7 +73,7 @@ export async function gradeAttempt(env: Env, ctx: Ctx, ex: Ex, files: Attachment
   const system = gradingPrompt({
     course: ctx.course, lang: langName(), statement: ex.statementMd, reference: ex.referenceSolutionMd, gradingNotes: ex.gradingNotes,
     requiredStages: stageList(ctx, ex.requiredStageIds), completedTitles: done.map((s) => `${s.id} ${s.title}`).join("\n") || "(none)",
-    mistakeTags: mistakeTagList(ctx, ex.requiredStageIds), boundary: boundaryFor(ctx), examples: o.examples, digest: o.digest,
+    mistakeTags: mistakeTagList(ctx, ex.requiredStageIds), boundary: ex.stageIds.length ? boundaryFor(ctx) : "", examples: o.examples, digest: o.digest,
   });
   const figs = (await figureImages(n, ex)).flatMap((f): Block[] => [{ type: "image", source: { type: "base64", media_type: f.mediaType, data: f.base64 } }]);
   const content: Block[] = [

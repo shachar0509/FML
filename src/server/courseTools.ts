@@ -195,7 +195,6 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, fi
         current: progress?.currentStageId ?? null,
         hasPlan: !!plan,
         build: b.state === "running" || b.state === "failed" ? b : null,
-        canPractice: stages.some((s) => s.status === "completed" || s.status === "completed_override"),
         watch: (progress?.mistakes ?? []).filter((m) => !m.resolved).slice(0, 5).map((m) => ({ label: language === "he" ? m.labelHe : m.labelEn, count: m.count, stageIds: m.stageIds })),
         units: (plan?.units ?? []).map((u) => ({ id: u.id, title: tr(u.title), stages: u.stageIds.flatMap((id) => byId.get(id) ?? []) })),
         translate: { missing, running: translating.has(number) },

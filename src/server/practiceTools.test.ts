@@ -153,6 +153,7 @@ it("practice card: scope, generated exercise through the bridge, MCQ, open answe
   await call("exercise_grade_request", { runId: q1.runId, files: sol });
   const gj = await job({ ...g, finalAnswerCorrect: true });
   expect(gj).toContain("Show A");
+  expect(gj).not.toContain("KNOWLEDGE BOUNDARY"); // homework follows the course, not Shalav progress
   expect(sc<PracticeData>(await call("practice_state", { courseNumber: n })).hw?.questions.map((q) => q.accepted)).toEqual([true, false, false]);
   expect((await readJsonlDir(coursePaths(useSettings.getState().settings.dataRoot, n).events, EventSchema)).length).toBe(before); // homework moves no mastery
   expect(sc<PracticeData>(await call("homework_open", { courseNumber: n, index: 2 })).hw?.exercise).toMatchObject({ statementMd: "Show C", grade: null });
