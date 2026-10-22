@@ -21,6 +21,14 @@ for (const lang of LANGS)
     await expect(page.getByText(lang === "he" ? "לחצו Enter" : "Press Enter")).toBeVisible();
   });
 
+// M76: the one-time study-engine download shows in the course card
+for (const lang of LANGS)
+  test(`course card: engine download (${lang})`, async ({ page }) => {
+    await page.goto(host(`lang=${lang}&theme=light&engine=1`));
+    await page.locator("ul button").first().click();
+    await expect(page.getByText(lang === "he" ? "מכינים את מנוע הלמידה (פעם אחת, 42%)…" : "Preparing the study engine (once, 42%)…")).toBeVisible();
+  });
+
 for (const lang of LANGS)
   for (const theme of THEMES)
     test(`course card (${lang}/${theme})`, async ({ page }) => {

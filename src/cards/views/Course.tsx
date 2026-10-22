@@ -56,14 +56,15 @@ export function Course({
   // a translation or a web search is running: show the texts as they arrive, and when it ends
   const translating = data.translate.running;
   const searching = !!data.web?.running;
+  const installing = data.engineInstall !== null; // the one-time study-engine download
   const [webCount, setWebCount] = useState(3); // M55: how many new files to find
   const stop = (kind: string) => () => void callTool("shalav_cancel", { key: `${kind}:${data.number}` });
   useEffect(() => {
-    if (!translating && !searching) return;
+    if (!translating && !searching && !installing) return;
     const h = setInterval(reload, 3000);
     return () => clearInterval(h);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [translating, searching]);
+  }, [translating, searching, installing]);
   const [sel, setSel] = useState<string | null>(null);
   const [del, setDel] = useState<{ unitId?: string; stageId?: string; name: string; count: number } | null>(null); // M53: asking before a delete
   const remove = (d: NonNullable<typeof del>) => {
@@ -157,6 +158,7 @@ export function Course({
               <Bar pct={data.pct} tone="bg-(--board-ink)" track="bg-(--board-muted)/30" />
             </div>
           )}
+          {installing && <p className="mt-1 text-xs text-(--board-muted)">{t("stars.engineInstalling", { pct: data.engineInstall })}</p>}
           {data.knowledge && (
             <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-(--board-muted)">
               {t("stars.yourLevel")}

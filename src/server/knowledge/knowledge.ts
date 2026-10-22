@@ -12,6 +12,7 @@ import { coursePaths } from "@/core/lib/fs/paths";
 import { getDeviceId } from "@/core/lib/device";
 import { useSettings } from "@/stores/settings";
 import type { Engine } from "./engine";
+import { ENGINE_VERSION } from "./install";
 
 /**
  * The student's knowledge graph per course (M61): Shalav's event log is the truth; the engine (tutor-mcp) is a derived model that
@@ -24,6 +25,11 @@ const MapSchema = z.object({
   names: z.record(z.string(), z.string()),
   sent: z.array(z.string()),
   stars: z.number().nullable(),
+  /** M76: the engine release that holds `domainId` (missing = v0.6.1, the only one before M76) */
+  engine: z.string().optional(),
+  highStakes: z.boolean().optional(),
+  /** M76: plan updates (`plan_replaced`) already applied to `names` (missing = all of them) */
+  moved: z.number().optional(),
 });
 type MapFile = z.infer<typeof MapSchema>;
 
@@ -98,9 +104,20 @@ export function createKnowledge(engineFor: ((course: string) => Engine) | null) 
   };
 
   /** Bring the engine up to date: plan + tutor nodes as concepts, then every answer it has not seen. */
-  async function syncEngine(e: Engine, plan: PlanJson, g: Graph, events: Event[], course: { courseNumber: string; nameHe: string }, m: MapFile) {
+  async function syncEngine(e: Engine, plan: PlanJson, g: Graph, events: Event[], course: Pick<CourseJson, "courseNumber" | "nameHe" | "type">, m: MapFile) {
+    // M76: a plan update moves stages (`plan_replaced` S003 → S004): their nodes keep their engine concepts and history.
+    // A node of a removed stage (or one a moved stage took the id of) is kept as `gone/…`, so its name is never reused.
+    const maps = events.flatMap((ev) => (ev.type === "plan_replaced" ? [ev.idMap] : []));
+    for (const idMap of maps.slice(m.moved ?? maps.length)) {
+      const staged = (id: string) => /^S\d{3}\//.test(id) && id.slice(0, 4) in idMap;
+      const move = new Map(Object.entries(m.names).filter(([id]) => staged(id)).map(([id, name]) => [idMap[id.slice(0, 4)] ? `${idMap[id.slice(0, 4)]}${id.slice(4)}` : `gone/${id}`, name]));
+      const stay = Object.entries(m.names).filter(([id]) => !staged(id)).map(([id, name]) => [move.has(id) ? `gone/${id}` : id, name]);
+      m.names = Object.fromEntries([...stay, ...move]);
+    }
+    m.moved = maps.length;
     const names = engineNames(g, plan, m.names);
     const fresh = g.nodes.filter((x) => !m.names[x.id]);
+    const seeded = !m.domainId; // a new domain (also after a re-seed, which keeps the names) gets every node's relevance
     const prereq = (ids: string[]) => Object.fromEntries(ids.flatMap((id) => (g.requires[id]?.length ? [[names[id], g.requires[id].map((r) => names[r]).filter(Boolean)]] : [])));
     const rel = relevanceOf(plan, g);
     if (!m.domainId) {
@@ -110,7 +127,12 @@ export function createKnowledge(engineFor: ((course: string) => Engine) | null) 
       const snap = (await e.call("get_curriculum_snapshot", { domain_id: m.domainId })).snapshot as { version: number };
       await e.call("add_concepts", { domain_id: m.domainId, expected_version: snap.version, concepts: fresh.map((x) => names[x.id]), prerequisites: prereq(fresh.map((x) => x.id)), provenance: { source_type: "learner", rationale: "Shalav study plan and the tutor's observations of this student" } });
     }
-    if (fresh.length) await e.call("set_goal_relevance", { domain_id: m.domainId, relevance: Object.fromEntries(fresh.map((x) => [names[x.id], rel(x.id)])) });
+    if (!isCustom(course) && !m.highStakes) {
+      await e.call("mark_domain_high_stakes", { domain_id: m.domainId }); // an exam is coming (one-way; Shalav never claims "demonstrated")
+      m.highStakes = true;
+    }
+    const relNodes = seeded ? g.nodes : fresh;
+    if (relNodes.length) await e.call("set_goal_relevance", { domain_id: m.domainId, relevance: Object.fromEntries(relNodes.map((x) => [names[x.id], rel(x.id)])) });
     m.names = names;
     const sent = new Set(m.sent);
     for (const ev of events) {
@@ -132,23 +154,37 @@ export function createKnowledge(engineFor: ((course: string) => Engine) | null) 
     let focus: string | null = null;
     let misconceptions: Summary["misconceptions"] = [];
     let engine = false;
+    const read = async (e: Engine) => {
+      retention.clear();
+      await syncEngine(e, ctx.plan, g, events, ctx.course, m);
+      const byName = new Map(Object.entries(m.names).map(([id, name]) => [name, id]));
+      const label = new Map(g.nodes.map((x) => [x.id, x.label]));
+      const olm = await e.call("get_olm_snapshot", { domain_id: m.domainId });
+      for (const [name, st] of Object.entries((olm.mastery_stages ?? {}) as Record<string, { retention_estimate?: number }>)) {
+        const id = byName.get(name);
+        if (id && label.has(id) && typeof st.retention_estimate === "number") retention.set(id, st.retention_estimate); // a node gone from the plan stays in the engine
+      }
+      const f = byName.get(String(olm.focus_concept ?? ""));
+      focus = f && label.has(f) ? f : null; // the engine never forgets a node: a retired convention is not in the graph
+      const mis = (await e.call("get_misconceptions", { domain_id: m.domainId })).misconceptions as { concept: string; misconception_type: string; last_error_detail?: string; count: number; status: string }[] | undefined;
+      misconceptions = (mis ?? []).filter((x) => x.status === "active").flatMap((x) => {
+        const id = byName.get(x.concept);
+        return id && label.has(id) ? [{ id, label: label.get(id) ?? x.concept, type: x.misconception_type, detail: x.last_error_detail ?? "", count: x.count }] : [];
+      });
+    };
     if (engineFor && Date.now() > downUntil) {
       try {
         const e = engineFor(n);
-        await syncEngine(e, ctx.plan, g, events, ctx.course, m);
-        const byName = new Map(Object.entries(m.names).map(([id, name]) => [name, id]));
-        const olm = await e.call("get_olm_snapshot", { domain_id: m.domainId });
-        for (const [name, st] of Object.entries((olm.mastery_stages ?? {}) as Record<string, { retention_estimate?: number }>)) {
-          const id = byName.get(name);
-          if (id && typeof st.retention_estimate === "number") retention.set(id, st.retention_estimate);
+        // M76: a new engine release, or a wiped engine DB (unknown domain): a fresh domain, rebuilt from the log (once)
+        const reset = () => Object.assign(m, { domainId: null, sent: [], highStakes: false, engine: ENGINE_VERSION });
+        if ((m.engine ?? "v0.6.1") !== ENGINE_VERSION) {
+          if (m.domainId) await e.call("delete_domain", { domain_id: m.domainId, confirm: true }).catch(() => undefined);
+          reset();
         }
-        const label = new Map(g.nodes.map((x) => [x.id, x.label]));
-        const f = byName.get(String(olm.focus_concept ?? ""));
-        focus = f && label.has(f) ? f : null; // the engine never forgets a node: a retired convention is not in the graph
-        const mis = (await e.call("get_misconceptions", { domain_id: m.domainId })).misconceptions as { concept: string; misconception_type: string; last_error_detail?: string; count: number; status: string }[] | undefined;
-        misconceptions = (mis ?? []).filter((x) => x.status === "active").flatMap((x) => {
-          const id = byName.get(x.concept);
-          return id && label.has(id) ? [{ id, label: label.get(id) ?? x.concept, type: x.misconception_type, detail: x.last_error_detail ?? "", count: x.count }] : [];
+        await read(e).catch(async (err: unknown) => {
+          if (!/domain not found|get domain by id|curriculum version not found/.test(err instanceof Error ? err.message : "")) throw err;
+          reset();
+          await read(e);
         });
         engine = true;
       } catch (err) {
@@ -180,7 +216,8 @@ export function createKnowledge(engineFor: ((course: string) => Engine) | null) 
     void serial(n, () => compute(n)).then((s) => cache.set(n, { at: Date.now(), s })).catch(() => undefined);
   });
 
-  return { summary, invalidate: (n: string) => cache.delete(n), dispose: off };
+  /** M76: the one-time engine download, 0..99 while it runs (the course card shows it) */
+  return { summary, invalidate: (n: string) => cache.delete(n), dispose: off, installing: null as number | null };
 }
 export type KnowledgeService = ReturnType<typeof createKnowledge>;
 

@@ -223,6 +223,7 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, fi
         // M65: web materials at the student's level now (self-rated until the graph says more)
         web: isCustom(course) ? { running: gathering.has(number), level: Math.round(kn?.stars ?? course.level ?? 1) } : null,
         knowledge: kn,
+        engineInstall: knowledge?.installing ?? null,
       };
       const cur = data.current && byId.get(data.current);
       const text = `${course.courseNumber} — ${course.nameHe}\n${plan ? `${data.stagesDone}/${data.stagesTotal} stages done${cur ? `; next: ${cur.id} · ${cur.title}` : ""}` : "No study plan yet: the student adds course files, then presses Build plan."}\nOptions: 1) learn the next stage (shalav_start_lesson); 2) practice (shalav_practice); 3) add course files (files_list); 4) build or update the plan from the files (plan_build_request).`;

@@ -41,6 +41,8 @@ export type CourseData = Base & {
   web: { running: boolean; level: number } | null;
   /** M65: the student's stars (0-5, half steps; a custom course never shows below its self-rated level) and, for academic courses, the exam-ready share (0-100) */
   knowledge: { stars: number; examReady: number | null } | null;
+  /** M76: the one-time study-engine download, % (null when not downloading) */
+  engineInstall: number | null;
 };
 /** A plan build's files by scan state, materials and exercises together. */
 export type FileCounts = { scanned: number; scanning: number; notScanned: number; total: number };
