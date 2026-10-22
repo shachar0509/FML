@@ -53,13 +53,8 @@ export function Course({
   reload: () => void;
   practice: () => void;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [open, setOpen] = useState<Record<string, boolean>>({});
-  // the language was switched in Settings (instant, card-side): fetch the course again for its texts in that language
-  useEffect(() => {
-    if (i18n.language !== data.language) reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [i18n.language, data.language]);
   // a translation is running: show the texts as they arrive
   const translating = data.translate.running;
   useEffect(() => {

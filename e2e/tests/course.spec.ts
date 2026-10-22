@@ -226,6 +226,12 @@ for (const lang of LANGS)
     expect(await toolsCalled(page)).toContain("course_translate_request");
     expect(await said(page)).toEqual([lang === "he" ? "▶️ המשך" : "▶️ Continue"]); // the chat does the translating
     await expect(page.getByText(lang === "he" ? "מתרגמים את התוכנית לעברית…" : "Translating the plan to English…")).toBeVisible();
+    // the card reloads every 3 s meanwhile and keeps what the student opened
+    const mats = page.getByRole("button", { name: lang === "he" ? /חומרי לימוד/ : /Study materials/ });
+    await mats.click();
+    await page.waitForTimeout(3500);
+    expect((await toolsCalled(page)).filter((n) => n === "shalav_course").length).toBeGreaterThan(2);
+    await expect(mats).toHaveAttribute("aria-expanded", "true");
     expect(errors).toEqual([]);
   });
 

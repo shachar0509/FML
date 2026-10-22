@@ -779,3 +779,10 @@ Edge cases found with the sample slides, and fixed in the renderer:
 - Shown translated: the course card (name, unit and stage titles, summaries), Home (name, next stage), lesson title and next stage, practice unit and stage titles. Model-facing text and ids are unchanged.
 - Course card: "N items of the plan aren't in English yet" + **Translate to English / תרגום לעברית** (`course_translate_request`, study lane; the card sends ▶️ Continue). While it runs: Waiting, with a reload every 3 s so texts appear as they arrive. After a language switch in Settings, the course card fetches itself again.
 - Tests: translate unit tests (lookup, fallback, missing, one run then nothing left, per language). e2e: the note, the button, ▶️ Continue, the waiting label.
+
+## M48 fix: no lost translations, a round-trip test, Home follows a language switch
+- **Bug:** parts answered together (parallel submits) each wrote `translations.<lang>.json` through the same `<file>.tmp`. A rename could fail (the whole run fails), or an older snapshot could land last and drop answers. Saves are now chained, so they run one at a time and the last holds every answer.
+- **Language switch:** the refetch moved from the course card to `Cards.tsx`. Home and the course card both fetch again when the card language differs from their data, so Back from Settings shows Home's course names in the new language.
+- **Tests:**
+  - `translateTools.test.ts`: `course_translate_request` → a study-lane `submit_translations` job with 40 numbered texts → the course card (name, units, stages, summaries) and Home in English, `missing: 0`; back in Hebrew, the originals.
+  - e2e: Back from Settings refetches Home; the 3 s polling during a translation keeps the open file list.

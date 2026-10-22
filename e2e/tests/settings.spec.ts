@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { axe, host, LANGS, pageErrors, THEMES } from "./helpers";
+import { axe, host, LANGS, pageErrors, THEMES, toolsCalled } from "./helpers";
 
 for (const lang of LANGS)
   for (const theme of THEMES)
@@ -27,5 +27,9 @@ for (const lang of LANGS)
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(other === "en" ? "Settings" : "הגדרות");
     await expect(page.locator("html")).toHaveAttribute("dir", other === "en" ? "ltr" : "rtl");
     await expect(page.getByRole("button", { name: other === "en" ? "English" : "עברית" })).toHaveAttribute("aria-pressed", "true");
+    // Back to Home: fetched again for its course names in the new language
+    const homes = (await toolsCalled(page)).filter((n) => n === "shalav_home").length;
+    await page.getByRole("button", { name: other === "en" ? "Back to the previous screen" : "חזרה למסך הקודם" }).click();
+    await expect.poll(async () => (await toolsCalled(page)).filter((n) => n === "shalav_home").length).toBe(homes + 1);
     expect(errors).toEqual([]);
   });

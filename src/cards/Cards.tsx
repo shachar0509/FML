@@ -18,7 +18,7 @@ import { useShalav } from "./useShalav";
 
 export function Cards({ host }: { host: Host }) {
   const { data, stale, ctx, callTool, go: ask, asked, clearAsked, displayMode } = useShalav(host);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [mode, setMode] = useState(ctx.displayMode ?? "inline");
   const canPin = !!ctx.availableDisplayModes?.includes("pip");
   const pinned = mode === "pip";
@@ -38,6 +38,16 @@ export function Cards({ host }: { host: Host }) {
     ctx.theme === "light" || ctx.theme === "dark" ? ctx.theme : (data?.theme ?? "system");
   useEffect(() => applyLanguage(language), [language]);
   useEffect(() => applyTheme(theme), [theme]);
+  // The language was switched in Settings (card-side, at once): fetch Home or the course again for its texts in that language.
+  useEffect(() => {
+    const l = i18n.language;
+    if (!shown || l === shown.language || (shown.view !== "home" && shown.view !== "course")) return;
+    void callTool(shown.view === "home" ? "shalav_home" : "shalav_course", shown.view === "course" ? { number: shown.number } : undefined).then((r) => {
+      const v = r.structuredContent as CardData | undefined;
+      if (v && "view" in v) push(v, true);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [i18n.language, shown?.view, shown?.language]);
   // "Press Enter" hint after a button put the short line in the chat box; gone after 90 s or when the model answers.
   useEffect(() => {
     if (!asked) return;

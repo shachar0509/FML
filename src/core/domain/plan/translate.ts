@@ -56,6 +56,9 @@ export async function translateCourse(gw: ClaudeGateway, course: CourseJson, pla
   const todo = missing(courseTexts(course, plan), d, lang);
   const parts = Array.from({ length: Math.ceil(todo.length / CHUNK) }, (_, k) => todo.slice(k * CHUNK, (k + 1) * CHUNK));
   const to = lang === "he" ? "Hebrew" : "English";
+  // parts answered together (parallel submits) save one after another: one temp file never collides, and the last save holds every answer
+  let saving = Promise.resolve();
+  const save = () => (saving = saving.then(() => writeJsonAtomic(path(course.courseNumber, lang), d)));
   await pool(parts, 3, async (texts) => {
     const { value } = await callStructured(gw, submitTranslations, {
       task: "plan",
@@ -68,7 +71,7 @@ export async function translateCourse(gw: ClaudeGateway, course: CourseJson, pla
       const src = texts[i - 1];
       if (src && text.trim()) d[src] = text.trim();
     }
-    await writeJsonAtomic(path(course.courseNumber, lang), d);
+    await save();
   });
   return todo.length;
 }
