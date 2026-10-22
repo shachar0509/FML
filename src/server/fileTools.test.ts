@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/client";
@@ -9,6 +9,7 @@ import type { FilesData } from "@/cards/types";
 import { FakeClaudeGateway, toolCall } from "@/core/claude/fake";
 import { setClaude } from "@/core/claude/runtime";
 import { createCourse } from "@/core/domain/courses/courses";
+import { listFileIndexes } from "@/core/domain/ingest/indexStore";
 import { coursePaths } from "@/core/lib/fs/paths";
 import { useSettings } from "@/stores/settings";
 import { initNode } from "./platform";
@@ -98,7 +99,7 @@ it("uploads in chunks, lists, indexes through the bridge, removes", async () => 
   expect(sc<FilesData>(await call("files_list", { number: num })).materials).toEqual([]);
 });
 
-it("follows the folders: a file added mid-build waits for the next build, one deleted mid-build stops being read", async () => {
+it("follows the folders mid-build: an added file waits for the next build, a renamed one stays in it, an edited one is cancelled and waits", async () => {
   const { call, num } = await boot();
   const dir = coursePaths(useSettings.getState().settings.dataRoot, num).materials;
   await writeFile(join(dir, "a.txt"), "limits of sequences"); // put there outside the app
@@ -111,9 +112,38 @@ it("follows the folders: a file added mid-build waits for the next build, one de
   expect(f.materials.map((m) => [m.name, m.status, !!m.inBuild])).toEqual([["a.txt", "indexing", true], ["late.txt", "pending", false]]);
   expect(sc<{ files: unknown }>(await call("course_status", { number: num })).files).toMatchObject({ total: 1 }); // late.txt is not in this build
 
-  await rm(join(dir, "a.txt")); // deleted outside the app while it is read: its job is withdrawn, like Remove in the card
+  await rename(join(dir, "a.txt"), join(dir, "b.txt")); // renamed outside the app while it is read: same file, the build goes on
   f = sc<FilesData>(await call("files_list", { number: num }));
-  expect(f.materials.map((m) => m.name)).toEqual(["late.txt"]);
+  expect(f.materials.map((m) => [m.name, m.status, !!m.inBuild])).toEqual([["b.txt", "indexing", true], ["late.txt", "pending", false]]);
+
+  await writeFile(join(dir, "b.txt"), "limits of sequences, edited"); // edited while it is read: the old version is cancelled, the new one waits for the next build
+  f = sc<FilesData>(await call("files_list", { number: num }));
+  expect(f.materials.map((m) => [m.name, m.status, !!m.inBuild]).sort()).toEqual([["b.txt", "pending", false], ["late.txt", "pending", false]]);
+
+  await rm(join(dir, "late.txt")); // deleted outside the app: gone, like Remove in the card
   await vi.waitFor(async () => expect(sc<{ state: string }>(await call("course_status", { number: num })).state).toBe("done"));
-  expect(sc<FilesData>(await call("files_list", { number: num })).materials).toMatchObject([{ name: "late.txt", status: "pending", inBuild: undefined }]); // the next Update plan reads it
+  expect(sc<FilesData>(await call("files_list", { number: num })).materials).toMatchObject([{ name: "b.txt", status: "pending", inBuild: undefined }]); // the next Update plan reads it
+});
+
+it("deleted mid-build: the file's job is withdrawn and the build ends", async () => {
+  const { call, num } = await boot();
+  const dir = coursePaths(useSettings.getState().settings.dataRoot, num).materials;
+  await writeFile(join(dir, "a.txt"), "limits of sequences");
+  await call("plan_build_request", { number: num });
+  expect(JSON.stringify((await call("shalav_next_job", { build: true })).content)).toContain("limits of sequences");
+  await rm(join(dir, "a.txt"));
+  expect(sc<FilesData>(await call("files_list", { number: num })).materials).toEqual([]);
+  await vi.waitFor(async () => expect(sc<{ state: string }>(await call("course_status", { number: num })).state).toBe("done"));
+});
+
+it("renamed mid-scan: the scan's result keeps the new name", async () => {
+  const { call, num } = await boot();
+  const dir = coursePaths(useSettings.getState().settings.dataRoot, num).materials;
+  await writeFile(join(dir, "a.txt"), "limits of sequences");
+  await call("plan_build_request", { number: num });
+  const job = JSON.stringify((await call("shalav_next_job", { build: true })).content);
+  await rename(join(dir, "a.txt"), join(dir, "b.txt"));
+  await call("files_list", { number: num });
+  await call("shalav_submit_job", { jobId: Number(/job #(\d+)/.exec(job)?.[1]), input: { pages: [{ page: 1, stageIds: ["S001"], summary: "s", hasFigure: false, hasExercises: false }] } });
+  expect(await listFileIndexes(num)).toMatchObject([{ fileName: "b.txt", status: "indexed" }]); // as written, before any scan fixes it
 });

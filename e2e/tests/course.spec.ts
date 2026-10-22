@@ -198,13 +198,16 @@ for (const lang of LANGS)
   });
 
 for (const lang of LANGS)
-  test(`course: files added or deleted in the folder outside the app show up by themselves (${lang})`, async ({ page }) => {
+  test(`course: files added, deleted, renamed or edited in the folder outside the app show up by themselves (${lang})`, async ({ page }) => {
     const errors = pageErrors(page);
     await page.goto(host(`lang=${lang}&files=outside`));
     await page.locator("ul button").first().click();
     await page.getByRole("button", { name: lang === "he" ? /חומרי לימוד/ : /Study materials/ }).click();
     await expect(page.getByText("outside.pdf")).toBeVisible({ timeout: 4000 }); // no click: the card follows the folder
     await expect(page.getByText("lecture2.pdf")).toBeHidden();
+    await expect(page.getByText("lecture1-final.pdf").locator("..")).toContainText(lang === "he" ? "מוכן" : "Ready"); // renamed: keeps its scan
+    await page.getByRole("button", { name: lang === "he" ? /תרגילים לדוגמה/ : /Sample exercises/ }).click();
+    await expect(page.getByText("hw1.pdf").locator("..")).toContainText(lang === "he" ? /לחצו על/ : /press Update plan/); // edited: to be scanned again
     await page.waitForTimeout(400); // card fade-in
     await page.getByRole("region", { name: lang === "he" ? "קבצי לימוד" : "Study files" }).screenshot({ path: `e2e/tests_output/course/card-files-outside-${lang}.png` });
     expect(errors).toEqual([]);

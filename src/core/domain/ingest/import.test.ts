@@ -4,13 +4,15 @@ import { coursePaths } from "@/core/lib/fs/paths";
 import { useSettings } from "@/stores/settings";
 import { memFs } from "@/test/memfs";
 import { importFiles, reindex, removeFile, scanCourse, type Deps } from "./import";
-import { listFileIndexes } from "./indexStore";
+import type { FileIndex } from "@/core/domain/dataSchemas";
+import { listFileIndexes, writeFileIndex } from "./indexStore";
 import { PasswordProtectedError, TooManyPagesError } from "./types";
 
 const C = "01040195";
 let mem: ReturnType<typeof memFs>;
 let queued: string[];
 let sizes: Record<string, number>;
+let mtimes: Record<string, number>;
 let hashes: Record<string, string>;
 let pages: Record<string, number | Error>;
 const deps = (platform: "macos" | "windows" = "macos"): Deps => ({
@@ -19,6 +21,7 @@ const deps = (platform: "macos" | "windows" = "macos"): Deps => ({
   native: {
     sha256: async (p) => hashes[p] ?? `h:${p.slice(p.lastIndexOf("/") + 1)}`,
     size: async (p) => sizes[p] ?? 10,
+    modified: async (p) => mtimes[p] ?? 0,
     copy: async (src, dir) => {
       const dest = `${dir}/${src.slice(src.lastIndexOf("/") + 1)}`;
       mem.files.set(dest, "x");
@@ -40,6 +43,7 @@ beforeEach(() => {
   setFs(mem);
   queued = [];
   sizes = {};
+  mtimes = {};
   hashes = {};
   pages = {};
 });
@@ -81,6 +85,21 @@ describe("scanCourse / remove / reindex", () => {
     mem.files.delete(`${p.materials}/renamed.pdf`);
     expect(await scanCourse(C, deps())).toEqual({ added: 0, removed: ["h:new.pdf"] });
     expect(await listFileIndexes(C)).toEqual([]);
+  });
+
+  it("an edited file is the old version removed and a new one added; a touched or renamed one keeps its scan", async () => {
+    const f = `${coursePaths(root(), C).materials}/a.pdf`;
+    mem.files.set(f, "x");
+    await scanCourse(C, deps());
+    const [old] = await listFileIndexes(C);
+    await writeFileIndex(C, { ...(old as FileIndex), status: "indexed" });
+    mtimes[f] = 1; // saved again, same bytes
+    expect(await scanCourse(C, deps())).toEqual({ added: 0, removed: [] });
+    expect(await listFileIndexes(C)).toMatchObject([{ sha256: "h:a.pdf", status: "indexed", stamp: "10:1" }]);
+    mtimes[f] = 2; // edited
+    hashes[f] = "h:a2";
+    expect(await scanCourse(C, deps())).toEqual({ added: 1, removed: ["h:a.pdf"] });
+    expect(await listFileIndexes(C)).toMatchObject([{ sha256: "h:a2", fileName: "a.pdf", status: "pending" }]);
   });
 
   it("does not open an unreadable folder file again until it changes", async () => {

@@ -804,3 +804,13 @@ Edge cases found with the sample slides, and fixed in the renderer:
   - Build plan claims the files that aren't scanned when it's pressed. A file added meanwhile isn't read: it shows "press Update plan" (not "Waiting to scan") and is left for the next build.
   - A file deleted outside the app mid-build is handled like Remove in the card: its scan is cancelled and its pending AI jobs are withdrawn, and it leaves the build's counts.
 - Tests: server round trip (external add, then mid-build add + delete, build ends, the late file stays pending), scan skips a file that changes while being hashed and doesn't reopen an unreadable one (`import.test.ts`), e2e for the folder change and for the late file's label during a build.
+
+## M51: renamed and edited files in the course folders
+- **Renamed or moved inside the same folder** (same content): it's the same file. The card shows the new name at the next poll and the file keeps its scan. During a build it stays in the build: its scan goes on and the result is saved under the new name (the index queue keeps the name as it is on disk).
+- **Edited** (same path, new content): the old version is removed like Remove in the card, and the new version is a new file.
+  - Outside a build it shows "not scanned – press Update plan".
+  - During a build the old version's scan is cancelled and its AI jobs withdrawn; the new version waits for the next build.
+- Moving a file between Study materials and Sample exercises is a removal plus a new file.
+- Change detection: each record keeps `stamp` (size:mtime). Only files whose stamp changed are hashed, so polling every 1.5 s stays cheap. A save that only touched the file (same bytes) just updates the stamp. Records from before M51 are hashed once to get their stamp.
+- Record patches from the scan re-read the record first (they no longer write over the queue's result).
+- Tests: import (edit vs touch), server (mid-build rename stays in the build, edit cancels and waits, delete withdraws the job, rename mid-scan saves the result under the new name), e2e (outside rename keeps "Ready", outside edit shows "press Update plan").

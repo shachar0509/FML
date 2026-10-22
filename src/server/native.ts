@@ -70,6 +70,7 @@ export async function openFolder(path: string): Promise<void> {
 export const native: Native = {
   sha256,
   size: async (p) => (await stat(p)).size,
+  modified: async (p) => (await stat(p)).mtimeMs,
   copy: importCopy,
   heicToJpeg,
   trash,

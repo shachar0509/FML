@@ -3,7 +3,7 @@ import { fs } from "@/core/lib/fs/fs";
 import { coursePaths, join, nfc } from "@/core/lib/fs/paths";
 import { nowIso } from "@/core/lib/time";
 import { useSettings } from "@/stores/settings";
-import { listFileIndexes, writeFileIndex } from "./indexStore";
+import { listFileIndexes, readFileIndex, writeFileIndex } from "./indexStore";
 import { PasswordProtectedError, TooManyPagesError, type OpenSource } from "./types";
 
 export type Role = FileIndex["role"];
@@ -15,6 +15,8 @@ export type ImportOutcome =
 export type Native = {
   sha256(path: string): Promise<string>;
   size(path: string): Promise<number>;
+  /** last modification time (ms) */
+  modified(path: string): Promise<number>;
   copy(src: string, destDir: string): Promise<string>;
   heicToJpeg(src: string): Promise<string>;
   trash(path: string): Promise<void>;
@@ -29,15 +31,16 @@ export const PICKER_EXTENSIONS = [...Object.keys(MEDIA), "heic"];
 export const extOf = (p: string) => /\.([^./]+)$/.exec(p)?.[1]?.toLowerCase() ?? "";
 const baseName = (p: string) => p.slice(p.lastIndexOf("/") + 1);
 
+const stampOf = async (abs: string, d: Pick<Deps, "native">) => `${await d.native.size(abs)}:${await d.native.modified(abs)}`;
 const paths = (course: string) => coursePaths(useSettings.getState().settings.dataRoot, course);
 const roleDir = (course: string, role: Role) => (role === "material" ? paths(course).materials : paths(course).exercises);
 
 /** Steps 3 (dup check) and 5-6 for a file that already sits in its role folder. */
-async function register(course: string, role: Role, abs: string, sha256: string, d: Deps): Promise<ImportOutcome> {
+async function register(course: string, role: Role, abs: string, sha256: string, d: Deps, stamp?: string): Promise<ImportOutcome> {
   const ext = extOf(abs);
   const rec: FileIndex = {
     schema: 1, sha256, fileName: nfc(baseName(abs)), relPath: nfc(abs.slice(paths(course).course.length + 1)), role,
-    mediaType: MEDIA[ext] ?? "application/octet-stream", pageCount: 1, addedAt: nowIso(), status: "pending", error: null,
+    mediaType: MEDIA[ext] ?? "application/octet-stream", pageCount: 1, addedAt: nowIso(), stamp: stamp ?? (await stampOf(abs, d)), status: "pending", error: null,
     indexedAt: null, indexModel: null, planVersion: null, materialPages: [], exercises: [],
   };
   try {
@@ -85,10 +88,19 @@ export async function importFiles(course: string, role: Role, files: string[], d
   return out;
 }
 
-/** Watcher / sync-arrival pass: register unknown files in place, follow renames, drop records of deleted files. */
-const rejected = new Map<string, number>(); // path → size of a folder file that cannot be added (unreadable, too big): not opened again on every scan until it changes
+const rejected = new Map<string, string>(); // path → stamp of a folder file that cannot be added (unreadable, too big): not opened again on every scan until it changes
 
-/** `removed`: the shas whose file is gone (the caller stops reading them, like a removal in the card). */
+/** Patches a record as it is on disk now (the index queue may have written it since the scan listed it). */
+async function patch(course: string, sha256: string, p: Partial<FileIndex>) {
+  const cur = await readFileIndex(course, sha256);
+  if (cur) await writeFileIndex(course, { ...cur, ...p });
+}
+
+/**
+ * Watcher / sync-arrival pass: register unknown files in place, follow renames, drop records of deleted files.
+ * An edited file (same path, other content) is the old version removed and a new file added: it waits for the next Build / Update plan.
+ * `removed`: the shas whose file is gone or changed (the caller stops reading them, like a removal in the card).
+ */
 export async function scanCourse(course: string, d: Deps): Promise<{ added: number; removed: string[] }> {
   const recs = await listFileIndexes(course);
   const p = paths(course);
@@ -101,23 +113,30 @@ export async function scanCourse(course: string, d: Deps): Promise<{ added: numb
       if (!e.isFile || e.name.startsWith(".") || !MEDIA[extOf(e.name)]) continue;
       const abs = join(dir, e.name);
       const rel = nfc(abs.slice(p.course.length + 1));
-      if (recs.some((r) => r.relPath === rel)) continue;
+      const known = recs.find((r) => r.relPath === rel);
       const size = await d.native.size(abs);
-      if (rejected.get(abs) === size) continue;
-      if (size > MAX_BYTES) { rejected.set(abs, size); continue; }
+      const stamp = `${size}:${await d.native.modified(abs)}`;
+      if (known ? known.stamp === stamp : rejected.get(abs) === stamp) continue; // unchanged since the last scan
+      if (size > MAX_BYTES) { rejected.set(abs, stamp); continue; }
       const sha256 = await d.native.sha256(abs);
-      if ((await d.native.size(abs)) !== size) continue; // still being copied in: the next scan takes it whole
+      if ((await d.native.size(abs)) !== size) continue; // still being copied in or saved: the next scan takes it whole
+      if (known) {
+        if (known.sha256 === sha256) { await patch(course, sha256, { stamp }); continue; } // touched only, or first seen since stamps
+        recs.splice(recs.indexOf(known), 1); // edited: the old version's index goes
+        await dropIndex(course, known);
+        removed.push(known.sha256);
+      }
       const same = recs.find((r) => r.sha256 === sha256 && r.role === role);
       if (same) {
         if (!(await fs().exists(join(p.course, same.relPath)))) {
-          same.relPath = rel; // renamed or moved
-          same.fileName = nfc(e.name);
-          await writeFileIndex(course, same);
+          const moved = { relPath: rel, fileName: nfc(e.name), stamp }; // renamed or moved: keeps its scan
+          Object.assign(same, moved);
+          await patch(course, sha256, moved);
         }
         continue;
       }
-      const r = await register(course, role, abs, sha256, d);
-      if (r.status !== "added") rejected.set(abs, size);
+      const r = await register(course, role, abs, sha256, d, stamp);
+      if (r.status !== "added") rejected.set(abs, stamp);
       if (r.status === "added") { added++; recs.push((await listFileIndexes(course)).find((x) => x.sha256 === sha256) as FileIndex); }
     }
   }

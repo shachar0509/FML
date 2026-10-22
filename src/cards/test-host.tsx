@@ -42,9 +42,12 @@ const files: FilesData = {
 };
 // a plan build is running: lecture2 is read by it, lecture4 was added meanwhile (waits for the next build)
 const filesBuilding: FilesData = { ...files, materials: [...files.materials.map((f) => (f.status === "pending" ? { ...f, inBuild: true } : f)), { sha: "a4", name: "lecture4.pdf", pages: 3, status: "pending", error: null, exercises: 0, solved: 0 }] };
-// ?files=outside: after the first list, lecture2.pdf was deleted and outside.pdf added in the folder (not through the app)
+// ?files=outside: after the first list, in the folders (not through the app): lecture2.pdf deleted, outside.pdf added, lecture1.pdf renamed (keeps its scan), hw1.pdf edited (to be scanned again)
 let lists = 0;
-const filesOutside = (): FilesData => (lists++ ? { ...files, materials: [files.materials[0] as FileRow, { sha: "o1", name: "outside.pdf", pages: 2, status: "pending", error: null, exercises: 0, solved: 0 }] } : files);
+const filesOutside = (): FilesData =>
+  lists++
+    ? { ...files, materials: [{ ...(files.materials[0] as FileRow), name: "lecture1-final.pdf" }, { sha: "o1", name: "outside.pdf", pages: 2, status: "pending", error: null, exercises: 0, solved: 0 }], exercises: [{ sha: "b2", name: "hw1.pdf", pages: 3, status: "pending", error: null, exercises: 0, solved: 0 }] }
+    : files;
 const base = { language: lang, theme: "system" } as const;
 const lesson: LessonData = {
   ...base, view: "lesson", number: "01040195", stageId: "S002", title: L("גבולות של סדרות", "Limits of sequences"), status: "in_progress", mastery: 40, next: { id: "S003", title: L("כלל הסנדוויץ'", "Squeeze") },

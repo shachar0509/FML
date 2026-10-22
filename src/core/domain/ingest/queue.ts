@@ -37,8 +37,9 @@ export function createIndexQueue(deps: QueueDeps) {
   class Removed extends Error {}
   /** Writes the record unless the student removed the file meanwhile (no ghost index for a trashed file). */
   async function set(course: string, rec: FileIndex, patch: Partial<FileIndex>): Promise<FileIndex> {
-    if (!(await readFileIndex(course, rec.sha256))) throw new Removed();
-    const next = { ...rec, ...patch };
+    const cur = await readFileIndex(course, rec.sha256);
+    if (!cur) throw new Removed();
+    const next = { ...rec, ...patch, relPath: cur.relPath, fileName: cur.fileName, stamp: cur.stamp }; // renamed in the folder meanwhile: the name as it is now
     await writeFileIndex(course, next);
     emit({ course, sha256: rec.sha256, status: next.status, error: next.error });
     return next;

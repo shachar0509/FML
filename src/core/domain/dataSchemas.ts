@@ -194,6 +194,8 @@ export const FileIndexSchema = z.object({
   mediaType: z.string(),
   pageCount: z.number().int(),
   addedAt: ts,
+  /** M50: size:mtime the folder file had when last seen, so an edit is noticed without hashing every file on every scan (absent before M50). */
+  stamp: z.string().optional(),
   status: z.enum(["pending", "indexing", "indexed", "failed"]),
   error: z.string().nullable(),
   indexedAt: ts.nullable(),
