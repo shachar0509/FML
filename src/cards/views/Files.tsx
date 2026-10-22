@@ -385,7 +385,7 @@ export function Files({
             className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-2 text-sm first-of-type:border-t-0 first-of-type:pt-0"
           >
             <FileText className="size-4 shrink-0 text-muted" aria-hidden />
-            <span className="min-w-0 flex-1 truncate" dir="auto">
+            <span className="min-w-0 flex-1 truncate text-center" dir="auto">
               {f.name}
             </span>
             {role === "exercises" && f.status === "indexed" && (

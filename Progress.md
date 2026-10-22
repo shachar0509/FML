@@ -745,6 +745,7 @@ Edge cases found with the sample slides, and fixed in the renderer:
 ## M43: file lists show 10 at a time, sorted, and filter by scan state
 - Each list shows up to 10 files. ‹ › arrows at the bottom (flipped in RTL) and "11–20 of 23" go to the previous/next 10. The pager shows only when there are more than 10.
 - The legend counts are toggle buttons (`aria-pressed`): a state shows only its files and opens the list. Pressing it again, or Total, clears the filter. A state with 0 files is disabled.
+- File names are centered so Hebrew and English names line up.
 - Sorted alphabetically, names in the settings language first (Hebrew names first in Hebrew). `Intl.Collator` with numeric order, so "2" comes before "10".
 - Filter and page are kept per list. A page left empty (after a delete or a filter) shows the last page.
 - e2e: `files=many` fixture (23 files, mixed names and states); checks sort order, paging, filter on/off, Total, axe.
