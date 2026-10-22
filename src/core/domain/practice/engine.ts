@@ -147,7 +147,7 @@ export class Practice {
     const ctx = this.ctx;
     if (st.scope.kind === "test") return this.produceTest(st, st.scope.stageIds);
     if (st.queueKey !== this.key()) { st.queue = []; st.queueKey = this.key(); } // 7.5: queue is discarded on scope/completed change
-    let kind = itemKind(st.index, skill(ctx.events));
+    let kind = itemKind(st.index, skill(ctx));
     if (kind === "E") {
       const exercises = await allExercises(this.courseNumber);
       const prevEx = st.served.length ? exercises.find((x) => x.id === st.served[st.served.length - 1]) : null;

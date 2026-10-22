@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Event, PlanJson } from "@/core/domain/dataSchemas";
 import { control, knowledgeOf, priorOf, questionStars, rawStars, shownStars, targetDifficulty } from "./control";
-import { mapEvents } from "@/core/domain/progress/reduce";
+import { mapEvents, reduceProgress } from "@/core/domain/progress/reduce";
 import { engineNames, graphOf, nodeId, planGraph } from "./graph";
 
 const stage = (id: string, order: number, x: Partial<PlanJson["stages"][number]> = {}) => ({
@@ -126,5 +126,21 @@ describe("stars", () => {
     expect(questionStars(targetDifficulty(m, false), m)).toBe(3);
     expect(questionStars(targetDifficulty(m, true), m)).toBe(4);
     expect(targetDifficulty(0.1, false)).toBe(2);
+  });
+});
+
+describe("M63: stage mastery on the graph", () => {
+  const ev = (x: object) => ({ ...base, id: Math.random().toString(), ...x }) as Event;
+  const now = "2026-02-01T00:00:00Z";
+  it("never below the older formula; nothing answered is 0 (no prior credit); every node of the stage counts", () => {
+    expect(reduceProgress(plan, [], now).stages.S001?.mastery).toBe(0);
+    const guess = ev({ type: "assessment_updated", stageId: "S001", mastery: 0.9, coveredObjectives: [], gaps: [], reviewTopics: [], readyToAdvance: false, rationale: "" });
+    expect(reduceProgress(plan, [guess], now).stages.S001?.mastery).toBe(0.9); // the old formula's value is kept
+    // the tutor saw the student master one of S002's two nodes: half the stage, not all of it
+    const lim = nodeId("S002", "concept", "גבול");
+    const seen = Array.from({ length: 12 }, () => ev({ type: "node_observed", nodeId: lim, score: 1, why: "w" }));
+    const m = reduceProgress(plan, seen, now).stages.S002?.mastery ?? 0;
+    expect(m).toBeGreaterThan(0.4);
+    expect(m).toBeLessThan(0.5);
   });
 });

@@ -130,6 +130,14 @@ it("runs a lesson: start, questions, events, status, completion, reopen + recap"
   ev = await events();
   expect(ev.filter((e) => e.type === "node_added")).toMatchObject([{ nodeId: expect.stringMatching(/^G\/skill\//), origin: "tutor" }]);
   expect(ev.find((e) => e.type === "check_answered" && e.checkId === oq2)).toMatchObject({ nodes: [{ score: 0.8 }, { id: expect.stringMatching(/^G\/skill\//), score: 0.4 }] });
+  // a wrong MCQ tagged with node 1, then record_check_result scoring node 1 again: still one zero on it
+  const wq = sc<McqData>(await call("present_mcq", { stageId: "S001", questionMd: "q3", options: ["a", "b"], correctIndex: 1, explanationMd: "", conceptTags: [], nodes: [1] }));
+  await call("check_answer", { checkId: wq.checkId, selectedIndex: 0 });
+  await call("record_check_result", { checkToolUseId: wq.checkId, correct: false, score: 0, mistakes: [], nodeResults: [{ n: 1, score: 0 }] });
+  const n1 = (ev.find((e) => e.type === "check_answered" && e.checkId === oq2) as { nodes: { id: string }[] }).nodes[0]?.id;
+  ev = await events();
+  expect(ev.filter((e) => e.type === "node_observed" && e.nodeId === n1)).toHaveLength(0);
+  expect(ev.find((e) => e.type === "check_answered" && e.checkId === wq.checkId)).toMatchObject({ nodes: [{ id: n1, score: 0 }] });
   const skillControl = async () => Number(/2\. \[skill\] Cites statute \+ section — control (\d+)%/.exec(text(await call("shalav_lesson_status")))?.[1]);
   const before = await skillControl();
   await call("update_knowledge_graph", { observe: [{ n: 2, score: 1, why: "cited section 12 this time" }] });

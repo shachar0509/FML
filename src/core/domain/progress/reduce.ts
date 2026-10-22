@@ -1,4 +1,6 @@
 import type { Event, MistakeSummary, PlanJson, ProgressJson, StageProgress } from "@/core/domain/dataSchemas";
+import { knowledgeOf } from "@/core/domain/knowledge/control";
+import { graphOf, nodesOfStages } from "@/core/domain/knowledge/graph";
 
 const DAY = 86_400_000;
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -159,7 +161,10 @@ export function reduceProgress(plan: PlanJson, rawEvents: Event[], now: string):
     }
   }
 
-  // Mastery and completion.
+  // Mastery and completion. M63: also the student's control of the stage's graph nodes (all of them, prior 0: the
+  // self-rated level of a custom course is no completion credit); max() with the older formula, so no student goes back.
+  const graph = graphOf(plan, events);
+  const know = knowledgeOf(graph, events, 0);
   const done = (id: string) => {
     const l = state.get(id)?.life;
     return l?.type === "stage_completed";
@@ -171,7 +176,10 @@ export function reduceProgress(plan: PlanJson, rawEvents: Event[], now: string):
     const item = ema(st.items);
     const prac = ema(st.items.filter((i) => i.ctx === "practice"));
     sp.practiceMastery = prac === null ? null : r2(prac);
-    sp.mastery = r2(sp.tutorMastery === null ? (item ?? 0) : item === null ? sp.tutorMastery : 0.4 * sp.tutorMastery + 0.6 * item);
+    const old = sp.tutorMastery === null ? (item ?? 0) : item === null ? sp.tutorMastery : 0.4 * sp.tutorMastery + 0.6 * item;
+    const nodes = nodesOfStages(graph, [s.id]);
+    const ctl = nodes.length ? nodes.reduce((a, n) => a + (know.control.get(n.id) ?? 0), 0) / nodes.length : 0;
+    sp.mastery = r2(Math.max(old, ctl));
     if (st.assess) {
       sp.coveredObjectives = st.assess.coveredObjectives;
       sp.gaps = st.assess.gaps;

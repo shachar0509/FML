@@ -1,5 +1,8 @@
 // Practice selection, spec 7.2-7.5. Pure.
-import type { Event, GeneratedExercise, IndexedExercise, PlanJson, ProgressJson } from "@/core/domain/dataSchemas";
+import type { CourseJson, Event, GeneratedExercise, IndexedExercise, PlanJson, ProgressJson } from "@/core/domain/dataSchemas";
+import { knowledgeOf, meanControl, priorOf, targetDifficulty as aimAt, type Knowledge } from "@/core/domain/knowledge/control";
+import { graphOf, nodesOfStages, type Graph } from "@/core/domain/knowledge/graph";
+import { mapEvents } from "@/core/domain/progress/reduce";
 
 export type Ex = IndexedExercise | GeneratedExercise;
 export type Scope =
@@ -25,7 +28,7 @@ export const itemKind = (i: number, level = 3): "E" | "M" | "O" => {
 
 const DAY = 86_400_000;
 type Attempt = Extract<Event, { type: "attempt_graded" }>;
-type Ctx = { plan: PlanJson; progress: ProgressJson; events: Event[] };
+type Ctx = { plan: PlanJson; progress: ProgressJson; events: Event[]; course?: Pick<CourseJson, "type" | "level"> };
 type EligibleIn = Ctx & { exercises: Ex[]; scope: Scope; servedIds: string[]; now: string };
 
 export function completedIds(progress: ProgressJson): Set<string> {
@@ -70,24 +73,37 @@ export function eligible(o: EligibleIn): Ex[] {
   });
 }
 
-/** 2-5 from the last 10 practice scores (3.5 until there are 3). */
-export function skill(events: Event[]): number {
-  const last = events
-    .filter((e): e is Attempt => e.type === "attempt_graded" && e.context === "practice" && e.verdict !== "unreadable")
-    .sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts))
-    .slice(-10);
-  const r = last.length < 3 ? 0.5 : last.reduce((a, e) => a + e.score, 0) / last.length / 100;
-  return 2 + 3 * r;
-}
-export const targetDifficulty = (events: Event[]) => Math.min(5, Math.max(2, Math.round(skill(events))));
+/** M63: the student's knowledge graph (control per node; a custom course starts at its self-rated level). */
+type Level = { g: Graph; k: Knowledge; prior: number };
+export const levelOf = (c: Ctx): Level => {
+  const ev = mapEvents(c.events);
+  const g = graphOf(c.plan, ev);
+  const prior = c.course ? priorOf(c.course) : 0.1;
+  return { g, k: knowledgeOf(g, ev, prior), prior };
+};
+const controlOf = (lv: Level, stageIds: string[]) => meanControl(lv.k, nodesOfStages(lv.g, stageIds).map((n) => n.id), lv.prior);
 
-export function scoreExercise(e: Ex, c: Ctx & { previous?: Ex | null; target?: number }): number {
+/** 2-5: how well the student controls what they completed (the practice scope); 3.5 before anything is completed. */
+export function skill(c: Ctx, lv = levelOf(c)): number {
+  const done = [...completedIds(c.progress)];
+  return done.length ? 2 + 3 * controlOf(lv, done) : 3.5;
+}
+/** The difficulty (2-5) that makes an exercise on these stages about 3★ for this student; 4★ after 3 good answers in a row there. */
+export function targetDifficulty(c: Ctx, stageIds: string[], lv = levelOf(c)): number {
+  const want = new Set(stageIds);
+  const last = c.events
+    .filter((e): e is Attempt => e.type === "attempt_graded" && e.verdict !== "unreadable" && e.stageIds.some((s) => want.has(s)))
+    .slice(-3);
+  return Math.max(2, aimAt(controlOf(lv, stageIds), last.length === 3 && last.every((a) => a.score >= 85)));
+}
+
+export function scoreExercise(e: Ex, c: Ctx & { previous?: Ex | null; target?: number; level?: Level }): number {
   const done = completedIds(c.progress);
   const mo = maxOrder(c.plan, done);
   const depth = mo ? maxOrder(c.plan, e.requiredStageIds) / mo : 0;
   const tries = attemptsOf(c.events, e.id);
   const fresh = tries.length === 0 ? 1 : Math.max(...tries.map((a) => a.score)) < 90 ? 0.5 : 0;
-  const diffFit = 1 - Math.abs(e.difficulty - (c.target ?? targetDifficulty(c.events))) / 4;
+  const diffFit = 1 - Math.abs(e.difficulty - (c.target ?? targetDifficulty(c, e.requiredStageIds, c.level))) / 4;
   const p = c.previous;
   const variety = p ? (p.type === e.type ? -0.3 : 0) + (p.primaryStageId === e.primaryStageId ? -0.2 : 0) : 0;
   return 0.4 * depth + 0.25 * weak(e, c) + 0.15 * fresh + 0.2 * diffFit + variety;
@@ -95,9 +111,9 @@ export function scoreExercise(e: Ex, c: Ctx & { previous?: Ex | null; target?: n
 
 export function pick(o: EligibleIn & { previous?: Ex | null; rng?: () => number }) {
   const pool = eligible(o);
-  const target = targetDifficulty(o.events);
+  const level = levelOf(o);
   const top = pool
-    .map((e) => ({ e, s: scoreExercise(e, { ...o, target }) }))
+    .map((e) => ({ e, s: scoreExercise(e, { ...o, level }) }))
     .sort((a, b) => b.s - a.s)
     .slice(0, 5);
   const first = top[0];

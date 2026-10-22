@@ -105,8 +105,7 @@ describe("Practice", () => {
     await pr.open();
     await pr.start({ kind: "all" });
     await settle();
-    await pr.advance(); // item 2 is E again; generation succeeds from the same fake
-    await pr.advance(); // item 3 = M (from the batch)
+    await pr.advance(); // item 2 = M (from the batch): S001 completed with no answers is level ~2.3, the E-M-O cycle
     expect(pr.state!.current?.kind).toBe("M");
     await pr.answerMcq(2);
     expect(pr.counters).toMatchObject({ answered: 1, correct: 1 });

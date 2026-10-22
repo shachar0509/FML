@@ -382,7 +382,8 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     if (k?.kind === "mcq") {
       // the card already recorded the choice: the misconception and per-node scores come as observations
       for (const tag of tags) await appendEvent(c.n, { type: "mistake_observed", tag, stageIds: [c.stageId], refId: i.checkToolUseId, context: "learn" });
-      for (const x of nodes) await appendEvent(c.n, { type: "node_observed", nodeId: x.id, score: x.score, why: "MCQ answer", context: "learn" });
+      // nodes the MCQ was tagged with already got the choice's 1/0: counting them again would double a miss
+      for (const x of nodes) if (!k.nodes?.includes(x.id)) await appendEvent(c.n, { type: "node_observed", nodeId: x.id, score: x.score, why: "MCQ answer", context: "learn" });
     } else
       await appendEvent(c.n, { type: "check_answered", stageId: c.stageId, checkId: i.checkToolUseId, kind: "open", context: "learn", correct: i.correct, score: i.score, mistakeTags: tags, ...(nodes.length ? { nodes } : {}) });
     await log({ who: "tutor", kind: "check", text: `Answer ${i.correct ? "correct" : "not correct"} (${i.score}).` });

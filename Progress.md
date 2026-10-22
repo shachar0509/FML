@@ -178,7 +178,16 @@ Plan: `~/.claude/plans/when-a-job-is-flickering-hellman.md` (approved; read it f
 - Skipped: generator and indexer node tags (practice MCQs and generated exercises still count for their stages' nodes at half weight); add when question stars (M65) need the exact nodes.
 - Tests: grader keeps node results + a new convention, drops unknown number/stage (practice.test); lesson: [STATUS] numbers, MCQ tags, the tutor's "Cites statute + section" skill created once (a second spelling maps to it), later observations raise its control (learnTools.test).
 
-**Next (not started):** M63 migration (stage mastery from control with max(old) guard; select/targetDifficulty/itemKind/weak/focus from knowledge) → M64 Customized practice for custom courses (`upto` scope, 2 options, all units with disabled ones) + tutor digest → M65 stars UI (questions frozen at serve, course card stars + exam-ready), web gathering at current+next level, i18n, e2e.
+- Fix: a wrong MCQ tagged with nodes, then `record_check_result` scoring them again, counted the miss twice; tagged nodes are now skipped there.
+- `candidates` lists course-wide nodes first (≤15 kept), so a tutor-written skill never falls off a long list.
+
+## M63: mastery and practice selection on the graph
+- `reduceProgress`: stage `mastery` = max(older formula, mean control of **all** the stage's nodes with prior 0). No student goes back; the self-rated level of a custom course gives no completion credit. `criteria.ts` unchanged.
+- `select.ts`: `levelOf(ctx)` (graph + control, custom prior); `skill(ctx)` = 2 + 3 × control of the completed stages' nodes (3.5 before any); `targetDifficulty(ctx, stageIds)` = control.ts target (~3★ for this student, 4★ after 3 answers ≥85 there), min 2; `pick`/`scoreExercise` fit each exercise to its own stages; `generate` aims at the focus stage. `weak()`/`focusStage()` read progress mastery, so they follow the graph through `reduceProgress`.
+- Deferred to M64 (needs `KnowledgeService` in the practice engine): the engine's focus concept, misconceptions and due reviews in selection and summaries.
+- Tests: reduce (0 with nothing answered, the tutor's 0.9 kept, one mastered node of two = ~half), select (level and target from control, custom prior, stretch), practice tests set the student's control for the item mix.
+
+**Next (not started):** M64 Customized practice for custom courses (`upto` scope, 2 options, all units with disabled ones) + tutor digest → M65 stars UI (questions frozen at serve, course card stars + exam-ready), web gathering at current+next level, i18n, e2e.
 
 ---
 

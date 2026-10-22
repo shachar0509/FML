@@ -11,6 +11,7 @@ import type { ExerciseData, PracticeData } from "@/cards/types";
 import { FakeClaudeGateway, toolCall } from "@/core/claude/fake";
 import { setClaude } from "@/core/claude/runtime";
 import { createCourse } from "@/core/domain/courses/courses";
+import { nodeId } from "@/core/domain/knowledge/graph";
 import { EventSchema } from "@/core/domain/dataSchemas";
 import { appendEvent } from "@/core/domain/progress/store";
 import { readJsonlDir } from "@/core/lib/fs/jsonl";
@@ -69,6 +70,8 @@ it("practice card: scope, generated exercise through the bridge, MCQ, open answe
   // nothing completed yet
   expect(sc<PracticeData>(await call("shalav_practice", { courseNumber: n }))).toMatchObject({ view: "practice", mode: "locked" });
   await appendEvent(n, { type: "stage_completed", stageId: "S001", by: "mastery", masteryAtCompletion: 0.9 });
+  // M63: the item mix follows the student's control of S001: about half = level 3, the classic E-E-M-E-O cycle
+  for (let i = 0; i < 12; i++) await appendEvent(n, { type: "node_observed", nodeId: nodeId("S001", "concept", "t"), score: 0.5, why: "w", context: "learn" });
   const chooser = sc<PracticeData>(await call("shalav_practice", { courseNumber: n }));
   expect(chooser).toMatchObject({ mode: "choose", stages: [{ id: "S001" }] });
 

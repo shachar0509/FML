@@ -50,7 +50,7 @@ export async function generateExercise(env: Env, ctx: Ctx, focus: Focus, test?: 
   const boundary = test ? "" : boundaryFor(ctx);
   const type = ctx.course.courseKind === "proof-based" ? "proof" : ctx.course.courseKind === "programming" ? "coding" : "computation";
   const common = {
-    course: ctx.course, lang: langName(), type, difficulty: Math.round(targetDifficulty(ctx.events)), requiredStages: stageList(ctx, focus.required),
+    course: ctx.course, lang: langName(), type, difficulty: targetDifficulty(ctx, [focus.stageId]), requiredStages: stageList(ctx, focus.required),
     focusJson: focusJson(ctx, focus.stageId), styleRefs, digest: await digest(env, ctx, focus.stageId), boundary, mistakes: mistakesText(ctx, focus.required),
     ...(test ? { difficulty: Math.max(4, test.like?.difficulty ?? 4) } : {}),
   };

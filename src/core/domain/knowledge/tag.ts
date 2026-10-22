@@ -16,12 +16,12 @@ export const courseGraph = (plan: PlanJson, events: Event[]) => graphOf(plan, ma
 /** tutor/grader-written nodes per course */
 export const MAX_DYNAMIC = 300;
 
-/** The nodes an answer about these stages can test: theirs first, then the course-wide ones (skills, conventions). */
+/** The nodes an answer about these stages can test: the course-wide ones (skills, conventions; room kept so they never fall off), then theirs. */
 export function candidates(g: Graph, stageIds: string[]): GraphNode[] {
   const want = new Set(stageIds);
   const own = g.nodes.filter((n) => n.stageIds.some((s) => want.has(s)));
   const wide = g.nodes.filter((n) => !n.stageIds.length);
-  return [...own, ...wide].slice(0, MAX_LIST);
+  return [...wide.slice(0, 15), ...own].slice(0, MAX_LIST);
 }
 
 export const listText = (c: GraphNode[], control?: Map<string, number>) =>
