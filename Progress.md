@@ -210,7 +210,11 @@ Plan: `~/.claude/plans/when-a-job-is-flickering-hellman.md` (approved; read it f
 - `watchList(summary, progress mistakes, lang)` (knowledge.ts): the engine's active misconceptions, one row per mistake tag (its course label when known), counts summed, the stages of their nodes, top 5. Null when the engine is off or sees none: the card keeps the progress mistakes (unresolved). The practice summary and the tutor's [STATUS] mistakes are unchanged (the tutor's digest already lists the engine's misconceptions).
 - Test: knowledge (labels from the course tags, engine off → null).
 
-**Next (not started):** `assign_exercise` default difficulty = the target (engine `difficulty_target` as tie-break); generator node tags. Follow-ups: retention in question stars, conventions from example solutions at indexing.
+## M68: assign_exercise defaults to the student's target difficulty
+- `difficulty` is optional in `assign_exercise`; left out, a new exercise gets `targetDifficulty(lesson, its stages)` (about 3★ for this student). The digest names it as the default. The engine's `difficulty_target` tie-break was skipped (another engine call for a rounding tie; add if targets look off).
+- Test: exerciseTools (no difficulty → 2 for a new student, 3★).
+
+**Next (not started):** generator node tags. Follow-ups: retention in question stars, conventions from example solutions at indexing.
 
 ---
 

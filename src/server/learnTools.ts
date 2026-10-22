@@ -342,7 +342,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     let ex: Ex | null = i.source === "index" && i.exerciseId ? await resolveExercise(c.n, { source: "index", id: i.exerciseId }) : null;
     if (!ex && i.statementMd) {
       const ids = i.stageIds.length ? i.stageIds : [c.stageId];
-      ex = { ref: { source: "tutor", id: newId() }, statementMd: i.statementMd, referenceSolutionMd: i.referenceSolutionMd ?? null, gradingNotes: "", requiredStageIds: ids, stageIds: ids, difficulty: i.difficulty, edgeCaseFocus: i.edgeCaseFocus, figures: [] };
+      ex = { ref: { source: "tutor", id: newId() }, statementMd: i.statementMd, referenceSolutionMd: i.referenceSolutionMd ?? null, gradingNotes: "", requiredStageIds: ids, stageIds: ids, difficulty: i.difficulty ?? targetDifficulty(c.s, ids), edgeCaseFocus: i.edgeCaseFocus, figures: [] };
     }
     if (!ex) return fail('Unknown exerciseId and no statementMd. Use an id from the exercise list, or source "new" with statementMd and referenceSolutionMd.');
     const kind = c.s.plan.stages.find((x) => x.id === ex.stageIds[0])?.kind;

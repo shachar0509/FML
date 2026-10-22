@@ -54,7 +54,8 @@ export const assignExercise = defineTool(
     exerciseId: z.string().optional(),
     statementMd: z.string().optional(),
     referenceSolutionMd: z.string().optional(),
-    difficulty: z.number().int().min(1).max(5),
+    /** M68: leave it out to get the student's target (about 3★ hard for them) */
+    difficulty: z.number().int().min(1).max(5).optional().describe("1-5; omit to use the student's target difficulty"),
     edgeCaseFocus: z.array(z.string()),
   }),
 );

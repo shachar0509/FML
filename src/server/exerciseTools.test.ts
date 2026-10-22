@@ -58,6 +58,8 @@ it("exercise card: hints 1-3, upload, grade through the bridge, solution reveal,
   const card = await call("assign_exercise", { stageIds: ["S001"], source: "new", statementMd: "Prove $x$.", referenceSolutionMd: "ref", difficulty: 2, edgeCaseFocus: [] });
   const ex = sc<ExerciseData>(card);
   expect(ex).toMatchObject({ view: "exercise", statementMd: "Prove $x$.", hints: [], grade: null, canReveal: false, busy: null });
+  // M68: without a difficulty the exercise gets the student's target (nothing answered: 2), and its stars for them
+  expect(sc<ExerciseData>(await call("assign_exercise", { stageIds: ["S001"], source: "new", statementMd: "Prove $y$.", referenceSolutionMd: "r", edgeCaseFocus: [] }))).toMatchObject({ difficulty: 2, stars: 3 });
   expect(JSON.stringify(card.structuredContent)).not.toContain("ref"); // the reference solution stays on the server
   const runId = ex.runId;
 

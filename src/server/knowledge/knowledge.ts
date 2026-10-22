@@ -211,7 +211,7 @@ export function digest(s: Summary, o: { custom: boolean; stageIds: string[]; tar
     `- Active misconceptions: ${items(s.misconceptions.slice(0, 4).map((m) => `${m.label}: ${m.type}${m.detail ? ` — ${m.detail}` : ""} (×${m.count})`))}`,
     `- Reviews due (known, now fading): ${items(dueNodes(s).slice(0, 4).map((id) => label.get(id) ?? id))}`,
     ...(s.focus ? [`- Suggested focus: ${label.get(s.focus) ?? s.focus}`] : []),
-    `- Target: questions about 3★ hard for this student (assign_exercise difficulty ${o.target}/5); one step harder after a success streak. Bring every node to full proficiency (100/100 exam answers); one or two misses are not a reason to step down.`,
+    `- Target: questions about 3★ hard for this student (assign_exercise difficulty ${o.target}/5, its default); one step harder after a success streak. Bring every node to full proficiency (100/100 exam answers); one or two misses are not a reason to step down.`,
   ].join("\n");
 }
 
