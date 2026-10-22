@@ -150,6 +150,10 @@ export type PracticeData = Base & {
   mode: "locked" | "choose" | "item" | "summary";
   units: { id: string; title: string }[];
   stages: { id: string; title: string }[];
+  /** M64: a custom course (practice: Normal and Customized only) */
+  custom: boolean;
+  /** M64 Customized: every plan unit; `ready` = something up to it was learned */
+  allUnits: { id: string; title: string; ready: boolean }[];
   counters: { answered: number; correct: number; avg: number };
   item: PracticeItem | null;
   /** Claude is preparing the next item or grading an answer */

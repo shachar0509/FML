@@ -12,7 +12,7 @@ import { useSettings } from "@/stores/settings";
 import { initNode } from "../platform";
 import { EnginePool, type Engine } from "./engine";
 import { engineAsset } from "./install";
-import { createKnowledge, interactions } from "./knowledge";
+import { createKnowledge, digest, hotStages, interactions } from "./knowledge";
 
 const stage = (id: string, order: number, x: Partial<PlanJson["stages"][number]> = {}) => ({
   id, unitId: "U01", order, title: `t${id}`, summary: "s", kind: "concept" as const, objectives: [], newConcepts: [], theorems: [], techniques: [], prerequisites: [], edgeCases: [], examRelevance: "core" as const, estimatedMinutes: 30, ...x,
@@ -86,6 +86,14 @@ describe("knowledge service", () => {
     expect(s.retention.get(seq)).toBe(0.5);
     expect(s.focus).toBe(nodeId("S001", "concept", "גבול"));
     expect(s.misconceptions).toEqual([expect.objectContaining({ id: seq, type: "sign-flip" })]);
+    // M64: practice ranks the stages the engine points at; the tutor gets the digest
+    expect(hotStages(s)).toEqual(["S001"]);
+    const d = digest(s, { custom: true, stageIds: ["S001"], target: 3 });
+    expect(d).toMatch(/now at \d(\.5)?★ of 5/);
+    expect(d).toContain("סדרה: sign-flip — flips (×2)");
+    expect(d).toContain("Suggested focus: גבול");
+    expect(d).toContain("difficulty 3/5");
+    expect(d).not.toContain("טור"); // S002 is not learned
 
     // the tutor adds a skill: it reaches the engine as a new concept; the old answer is not sent again
     await appendEvent(N, { type: "node_added", nodeId: nodeId(null, "skill", "Cites the section"), kind: "skill", label: "Cites the section", why: "w", stageIds: [], requires: [], origin: "grader", refId: "a" });

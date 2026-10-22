@@ -48,7 +48,8 @@ export class Practice {
   private prefetching: Promise<void> | null = null;
   private ac = new AbortController();
 
-  constructor(readonly courseNumber: string, private env: Omit<Env, "signal">) {}
+  /** `hot` (M64): the stages the knowledge engine points at now (focus, misconceptions, reviews due) */
+  constructor(readonly courseNumber: string, private env: Omit<Env, "signal">, private hot: () => Promise<string[]> = async () => []) {}
   subscribe = (f: () => void) => (this.subs.add(f), () => void this.subs.delete(f));
   private emit() {
     this.subs.forEach((f) => f());
@@ -76,6 +77,7 @@ export class Practice {
     const he = useSettings.getState().settings.language === "he";
     const stage = (id: string) => `${id} · ${p?.stages.find((s) => s.id === id)?.title ?? ""}`;
     if (sc.kind === "unit") return p?.units.find((u) => u.id === sc.unitId)?.title ?? sc.unitId;
+    if (sc.kind === "upto") return `${he ? "עד" : "Up to"} ${p?.units.find((u) => u.id === sc.unitId)?.title ?? sc.unitId}`;
     if (sc.kind === "stage") return stage(sc.stageId);
     if (sc.kind === "weak") return he ? "נושאים חלשים" : "Weak topics";
     if (sc.kind === "test" && sc.stageIds) return sc.stageIds.slice(0, 3).map(stage).join(", ") + (sc.stageIds.length > 3 ? "…" : "");
@@ -147,15 +149,17 @@ export class Practice {
     const ctx = this.ctx;
     if (st.scope.kind === "test") return this.produceTest(st, st.scope.stageIds);
     if (st.queueKey !== this.key()) { st.queue = []; st.queueKey = this.key(); } // 7.5: queue is discarded on scope/completed change
+    const hot = await this.hot().catch(() => []);
+    if (st.scope.kind === "upto") return this.produceUpto(st, hot);
     let kind = itemKind(st.index, skill(ctx));
     if (kind === "E") {
       const exercises = await allExercises(this.courseNumber);
       const prevEx = st.served.length ? exercises.find((x) => x.id === st.served[st.served.length - 1]) : null;
-      const base = { exercises, plan: ctx.plan, progress: ctx.progress, events: ctx.events, scope: st.scope, servedIds: st.served, now: nowIso(), previous: prevEx ?? null };
+      const base = { exercises, plan: ctx.plan, progress: ctx.progress, events: ctx.events, course: ctx.course, scope: st.scope, servedIds: st.served, now: nowIso(), previous: prevEx ?? null };
       const p = pick(base);
       let chosen = p.exercise;
       if (!chosen || p.needsGeneration) {
-        const focus = chooseFocus(ctx, st.scope);
+        const focus = chooseFocus(ctx, st.scope, hot);
         const gen = focus ? await generateExercise(this.e, ctx, focus).catch(() => null) : null;
         if (gen) chosen = gen; // otherwise serve the best eligible one, if any (7.5)
       }
@@ -166,7 +170,7 @@ export class Practice {
     const i = st.queue.findIndex((c) => c.kind === want);
     let check = st.queue[i];
     if (!check) {
-      const focus = chooseFocus(ctx, st.scope);
+      const focus = chooseFocus(ctx, st.scope, hot);
       if (!focus) return null;
       st.queue = [...st.queue, ...(await generateChecks(this.e, ctx, focus))];
       check = st.queue.find((c) => c.kind === want) ?? st.queue[0];
@@ -174,6 +178,15 @@ export class Practice {
     if (!check) return null;
     st.queue = st.queue.filter((c) => c.id !== check?.id);
     return { item: check.kind === "mcq" ? { kind: "M", check, selected: null } : { kind: "O", check, answer: null, result: null } };
+  }
+
+  /** M64 Customized practice: always a new exercise (at the student's target difficulty) on a learned stage up to the unit; a course one when generation fails. */
+  private async produceUpto(st: PState, hot: string[]): Promise<{ item: Item; served: string } | null> {
+    const focus = chooseFocus(this.ctx, st.scope, hot);
+    if (!focus) return null;
+    const gen = await generateExercise(this.e, this.ctx, focus).catch(() => null);
+    const chosen = gen ?? pick({ exercises: await allExercises(this.courseNumber), ...this.ctx, scope: st.scope, servedIds: st.served, now: nowIso() }).exercise;
+    return chosen ? { item: { kind: "E", ref: fromExercise(chosen).ref, run: emptyRun() }, served: chosen.id } : null;
   }
 
   /** M59: a past exam question (burned once served), or a new verified one like it when the concept's exam questions are used up. */

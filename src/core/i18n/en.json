@@ -501,7 +501,13 @@
       "normal": "Normal practice",
       "normalText": "Practice what you've learned in Shalav, at your level.",
       "test": "Test practice",
-      "testText": "Only questions from past exams in your course files, each one once. Get one wrong and you get similar ones until it is perfect."
+      "testText": "Only questions from past exams in your course files, each one once. Get one wrong and you get similar ones until it is perfect.",
+      "custom": "Customized practice",
+      "customText": "New exercises on everything you learned up to the unit you choose, at your level, solved step by step with the tutor."
+    },
+    "custom": {
+      "pick": "Practice what you learned up to which unit?",
+      "notLearned": "Nothing learned yet"
     },
     "test": {
       "title": "Test practice",

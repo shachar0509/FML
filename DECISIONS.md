@@ -163,3 +163,8 @@
 
 ## M20 — A `rows` block instead of Hebrew inside KaTeX
 - Board layouts put a Hebrew name beside each aligned formula. KaTeX has no Hebrew metrics and lays `\text{}` out left to right, so names inside `aligned` render badly. A fenced `rows` block keeps the names as normal (bidi-correct) text and renders each formula's lhs / relation / rhs in a CSS grid, which also lines the relations up across rows. Boxes reuse GitHub-alert syntax (`> [!theorem]`) so the Markdown stays readable as plain text.
+
+## M64 — Customized practice generates; the engine only reorders
+- Customized practice (custom courses) always generates a new exercise, as asked ("a loop of generated exercises"); an existing course exercise is served only when generation fails, so the loop never stops for one bad job. Normal practice keeps the full mix.
+- The engine's focus/misconceptions/reviews only add a bonus to the focus stage (+0.5); they never pick outside the scope, and practice works the same without the engine.
+- The tutor's digest waits at most 5 s for the engine; a slow engine drops the digest for that [STATUS] instead of stalling the lesson.

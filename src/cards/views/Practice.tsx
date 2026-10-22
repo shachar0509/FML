@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, ClipboardList, FileQuestion, Repeat, Timer, X } from "lucide-react";
+import { Check, ClipboardList, FileQuestion, Repeat, SlidersHorizontal, Timer, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Markdown } from "@/core/render/Markdown";
@@ -37,7 +37,9 @@ export function Practice({
   const [pick, setPick] = useState("");
   const [text, setText] = useState("");
   // M57: which practice: own homework, one question, test practice (M59) or normal practice (a session already running picks it)
-  const [kind, setKind] = useState<"homework" | "single" | "test" | "normal" | null>(kindOf(data));
+  // M64: a custom course has Normal and Customized (up to a unit) only
+  const [kind, setKind] = useState<"homework" | "single" | "test" | "normal" | "custom" | null>(kindOf(data));
+  const [unit, setUnit] = useState("");
   const n = d.number;
   // The host renders the card from its stored result (e.g. back in this chat later): show the live state.
   useEffect(() => {
@@ -133,7 +135,10 @@ export function Practice({
         )}
         <Board title={t("practice.modes.title")}>
           <div className="grid gap-3">
-            {([["homework", ClipboardList], ["single", FileQuestion], ["test", Timer], ["normal", Repeat]] as const).map(([k, Icon]) => (
+            {(d.custom
+              ? ([["normal", Repeat], ["custom", SlidersHorizontal]] as const)
+              : ([["homework", ClipboardList], ["single", FileQuestion], ["test", Timer], ["normal", Repeat]] as const)
+            ).map(([k, Icon]) => (
               <button
                 key={k}
                 onClick={() => setKind(k)}
@@ -161,6 +166,49 @@ export function Practice({
         set={(x) => (setD(x), setAgain(false))}
         back={() => setKind(null)}
       />
+    );
+
+  if (kind === "custom" && (mode === "choose" || mode === "locked"))
+    return (
+      <section className="flex flex-col gap-4" aria-label={t("nav.practice")}>
+        <Button variant="ghost" className="self-start" onClick={() => setKind(null)}>
+          {t("homework.back")}
+        </Button>
+        <Board title={t("practice.modes.custom")}>
+          <p>{t("practice.custom.pick")}</p>
+          <div role="radiogroup" aria-label={t("practice.custom.pick")} className="grid gap-2">
+            {d.allUnits.map((u) => (
+              <label
+                key={u.id}
+                className={`${chalkChoice} flex items-center gap-3 p-3 text-[15px] ${u.ready ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}
+              >
+                <input
+                  type="radio"
+                  name="unit"
+                  className="size-4 accent-[var(--primary)]"
+                  disabled={!u.ready}
+                  checked={unit === u.id}
+                  onChange={() => setUnit(u.id)}
+                />
+                <span className="grow">{u.title}</span>
+                {!u.ready && <span className="text-sm text-(--board-muted)">{t("practice.custom.notLearned")}</span>}
+              </label>
+            ))}
+          </div>
+        </Board>
+        {d.error && (
+          <p className="text-sm text-danger" role="alert">
+            {t(d.error, { defaultValue: d.error })}
+          </p>
+        )}
+        <Button
+          className="h-11 self-end px-6 text-[15px]"
+          disabled={d.loading || !unit}
+          onClick={() => (setAgain(false), void call("practice_start_request", { scope: { kind: "upto", unitId: unit } }))}
+        >
+          {t("practice.start")}
+        </Button>
+      </section>
     );
 
   return (

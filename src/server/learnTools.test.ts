@@ -119,6 +119,7 @@ it("runs a lesson: start, questions, events, status, completion, reopen + recap"
 
   // M62: [STATUS] numbers the lesson's graph nodes; answers are tagged by number; a skill the tutor adds exists once
   expect(text(start)).toMatch(/knowledge graph for this lesson[^]*1\. \[concept\] t — control 10%/);
+  expect(text(start)).toMatch(/The student.s knowledge now:[^]{0,8}- Level: 0(\.5)?★ of 5 of the whole course; exam-ready 0%[^]*Weakest nodes of what was learned: t \(10%\)[^]*100\/100/); // M64 digest
   const tq = sc<McqData>(await call("present_mcq", { stageId: "S001", questionMd: "q2", options: ["a", "b"], correctIndex: 1, explanationMd: "", conceptTags: [], nodes: [1, 9] }));
   await call("check_answer", { checkId: tq.checkId, selectedIndex: 1 });
   const s1 = (await events()).find((e) => e.type === "check_answered" && e.checkId === tq.checkId);

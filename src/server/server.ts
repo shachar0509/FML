@@ -98,8 +98,8 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
   const files = registerFileTools(server, { moodle });
   const builds = registerCourseTools(server, bridge, files, catalog);
   const exercises = registerExerciseTools(server, bridge);
-  const learn = registerLearnTools(server, bridge, exercises);
-  registerHistoryTools(server, registerPracticeTools(server, bridge, exercises).forget);
+  const learn = registerLearnTools(server, bridge, exercises, knowledge);
+  registerHistoryTools(server, registerPracticeTools(server, bridge, exercises, knowledge).forget);
   registerSettingsTools(server);
 
   // Card requests (M15): the card posts only "▶️ Continue" in the chat; what it wants waits here for shalav_next_job.

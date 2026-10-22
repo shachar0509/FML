@@ -27,6 +27,8 @@ import { nowIso } from "@/core/lib/time";
 import { useSettings } from "@/stores/settings";
 import type { BridgeGateway } from "./bridge";
 import { registerExerciseTools } from "./exerciseTools";
+import { digest, type KnowledgeService } from "./knowledge/knowledge";
+import { completedIds, targetDifficulty } from "@/core/domain/practice/select";
 import { CARDS_URI } from "./resources";
 
 const appOnly = { ui: { resourceUri: CARDS_URI, visibility: ["app" as const] } };
@@ -39,7 +41,7 @@ const fail = (text: string) => ({ ...out(text), isError: true as const });
 type Check = { kind: "mcq" | "open"; n: string; stageId: string; correctIndex?: number; explanationMd?: string; selected?: number; /** M62: graph nodes the MCQ tests */ nodes?: string[] };
 
 /** Learn (plan v2 §6.3): the host chat is the lesson; the tutor tools record the v1 events and return cards. */
-export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exercises: ReturnType<typeof registerExerciseTools>) {
+export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exercises: ReturnType<typeof registerExerciseTools>, knowledge?: KnowledgeService) {
   /** The lesson the student is in; the tutor tools carry a stageId but no course number. `cid`: its saved conversation (M60), made on its first entry. */
   let active: { n: string; stageId: string; cid: string | null; title: string; /** M62: the lesson's numbered graph nodes ([STATUS] numbers stay put; new nodes are appended) */ nodes: string[] } | null = null;
   /** M60: every card and student action of the lesson goes to its saved conversation (a failed write never breaks the lesson). */
@@ -94,7 +96,15 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     return { g, list: ids.flatMap((id) => byId.get(id) ?? []) };
   }
 
-  function status(s: S, stageId: string) {
+  /** M64: the engine's view for [STATUS]; a slow or failing engine never holds the lesson up (then no digest). */
+  async function knowledgeDigest(s: S, stageId: string) {
+    const sum = knowledge && (await Promise.race([knowledge.summary(s.course.courseNumber).catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), 5000))]));
+    if (!sum) return undefined;
+    const stageIds = [...completedIds(s.progress), stageId];
+    return digest(sum, { custom: s.course.type === "customCourse", stageIds, target: targetDifficulty({ plan: s.plan, progress: s.progress, events: s.events, course: s.course }, [stageId]) });
+  }
+
+  async function status(s: S, stageId: string) {
     const { g, list } = lessonNodes(s, stageId);
     const k = knowledgeOf(g, mapEvents(s.events), priorOf(s.course));
     const stage = s.plan.stages.find((x) => x.id === stageId);
@@ -102,6 +112,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     const lang = sets().language;
     return statusBlock({
       nodes: listText(list, k.control),
+      digest: await knowledgeDigest(s, stageId),
       completed: s.progress.totals.stagesCompleted,
       total: s.progress.totals.stagesTotal,
       mastery: Math.round((sp?.tutorMastery ?? 0) * 100) / 100,
@@ -194,14 +205,14 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
         await log({ who: "student", kind: "request", text: "Came back to this lesson." });
         return out([
           system,
-          status(s, stage.id),
+          await status(s, stage.id),
           `THE LESSON SO FAR (saved; the student left and came back):\n${transcript(saved)}`,
           "The student is back at the last checkpoint, shown in the card. Continue the lesson from exactly there: one short welcome-back sentence, then the next move (if the card is a question, wait for the answer). Do not re-teach what is above.",
         ].join("\n\n"), await resumed(n, saved));
       }
       const text = [
         system,
-        status(s, stage.id),
+        await status(s, stage.id),
         recap,
         "The lesson card is shown. Begin the lesson now: one short sentence in the chat, then teach_step with the overview and the first small idea. Do not ask any question in this first message.",
       ].filter(Boolean).join("\n\n");
@@ -216,7 +227,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
       const c = await ctx();
       if (!c) return fail(NO_LESSON);
       const k = criteria(c.s, c.stageId);
-      return out(`${status(c.s, c.stageId)}\nAdvancement criteria met: ${k.met ? "yes (the student can press Complete stage)" : "no"}`);
+      return out(`${await status(c.s, c.stageId)}\nAdvancement criteria met: ${k.met ? "yes (the student can press Complete stage)" : "no"}`);
     },
   );
 
@@ -420,7 +431,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     const s = (await load(c.n)) as S;
     const k = criteria(s, c.stageId);
     // The fresh [STATUS] comes with the result: no shalav_lesson_status round trip after every assessment.
-    return { content: [{ type: "text" as const, text: JSON.stringify({ ok: true, advanceCriteriaMet: k.met, missing: k.missing }) }, { type: "text" as const, text: status(s, c.stageId) }] };
+    return { content: [{ type: "text" as const, text: JSON.stringify({ ok: true, advanceCriteriaMet: k.met, missing: k.missing }) }, { type: "text" as const, text: await status(s, c.stageId) }] };
   });
 
   // Plan v2 §6.3 allows raw pages for short retrievals; always doing that saves a host round trip (DECISIONS.md).

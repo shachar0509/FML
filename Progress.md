@@ -187,7 +187,14 @@ Plan: `~/.claude/plans/when-a-job-is-flickering-hellman.md` (approved; read it f
 - Deferred to M64 (needs `KnowledgeService` in the practice engine): the engine's focus concept, misconceptions and due reviews in selection and summaries.
 - Tests: reduce (0 with nothing answered, the tutor's 0.9 kept, one mastered node of two = ~half), select (level and target from control, custom prior, stretch), practice tests set the student's control for the item mix.
 
-**Next (not started):** M64 Customized practice for custom courses (`upto` scope, 2 options, all units with disabled ones) + tutor digest → M65 stars UI (questions frozen at serve, course card stars + exam-ready), web gathering at current+next level, i18n, e2e.
+## M64: Customized practice (custom courses) + the tutor's knowledge digest
+- Scope `{kind:"upto", unitId}` (`select.ts` `uptoStages`; `scopeSchema`): completed stages of the units up to and including it. `Practice.produceUpto`: E items only, always generated at the target difficulty (a course exercise only when generation fails), solving loop as all practice exercises; title "Up to <unit>".
+- `focusStage(…, hot)` / `chooseFocus(ctx, scope, hot)`: stages the engine points at (`hotStages(summary)`: focus concept, active misconceptions, controlled nodes with retention < 0.7) rank first (+0.5). `Practice` gets them through a `hot()` callback from `registerPracticeTools(…, knowledge)`. Also fixed: normal `pick` now gets `course` (custom prior).
+- Card: `PracticeData.custom` + `allUnits {id,title,ready}`; a custom course shows only Normal and Customized; Customized lists every unit, disabled ("Nothing learned yet") when nothing up to it is completed. i18n `practice.modes.custom*`, `practice.custom.*`. test-host `?custom=1`.
+- Tutor: [STATUS] (now async) ends with "The student's knowledge now" (`digest()` in `knowledge.ts`): ★ level (custom) or ★ + exam-ready % (academic), 5 weakest nodes of what was learned, misconceptions, reviews due, engine focus, target difficulty for assign_exercise, the 100/100 + gentle rule. Waits ≤ 5 s for the engine summary, else no digest.
+- Tests: select (`upto`, hot), practice (Customized generates only exercises), knowledge (hotStages, digest), learnTools ([STATUS] digest), e2e practice-modes (custom: 2 modes, disabled unit, start).
+
+**Next (not started):** M65 stars UI (shared `Stars` in ui.tsx; question stars frozen at serve on Exercise/MCQ/Open; course card student stars + exam-ready), web gathering at current+next level, i18n, e2e (relevant specs), then screenshot review.
 
 ---
 

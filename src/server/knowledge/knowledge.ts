@@ -181,3 +181,35 @@ export function createKnowledge(engineFor: ((course: string) => Engine) | null) 
   return { summary, invalidate: (n: string) => cache.delete(n), dispose: off };
 }
 export type KnowledgeService = ReturnType<typeof createKnowledge>;
+
+/** M64: the stages the engine points at now: its focus concept, active misconceptions, and controlled nodes it says are fading. */
+export function hotStages(s: Summary): string[] {
+  const byId = new Map(s.graph.nodes.map((n) => [n.id, n]));
+  const ids = [s.focus, ...s.misconceptions.map((m) => m.id), ...dueNodes(s)];
+  return [...new Set(ids.flatMap((id) => (id && byId.get(id)?.stageIds) || []))];
+}
+/** Nodes the student controlled that the engine's forgetting model says need a review now. */
+const dueNodes = (s: Summary) => [...s.retention].filter(([id, r]) => r < 0.7 && (s.k.control.get(id) ?? 0) >= 0.6).map(([id]) => id);
+
+/** M64: the tutor's view of the student's graph: level, weakest nodes of what is learned, misconceptions, reviews due, the target. */
+export function digest(s: Summary, o: { custom: boolean; stageIds: string[]; target: number }): string {
+  const want = new Set(o.stageIds);
+  const label = new Map(s.graph.nodes.map((n) => [n.id, n.label]));
+  const pct = (id: string) => `${Math.round(effective(s.k, id, s.retention) * 100)}%`;
+  const weakest = s.graph.nodes
+    .filter((n) => !n.stageIds.length || n.stageIds.some((x) => want.has(x)))
+    .filter((n) => effective(s.k, n.id, s.retention) < 0.9)
+    .sort((a, b) => effective(s.k, a.id, s.retention) - effective(s.k, b.id, s.retention))
+    .slice(0, 5);
+  const items = (a: string[]) => (a.length ? a.join("; ") : "none");
+  return [
+    o.custom
+      ? `- Level: the student is now at ${s.stars}★ of 5 in this course (from their self-rated level up). Goal: 5★.`
+      : `- Level: ${s.stars}★ of 5 of the whole course; exam-ready ${Math.round(s.examReady * 100)}% (core/common nodes at ≥ 90%). Goal: 100%.`,
+    `- Weakest nodes of what was learned: ${items(weakest.map((n) => `${n.label} (${pct(n.id)})`))}`,
+    `- Active misconceptions: ${items(s.misconceptions.slice(0, 4).map((m) => `${m.label}: ${m.type}${m.detail ? ` — ${m.detail}` : ""} (×${m.count})`))}`,
+    `- Reviews due (known, now fading): ${items(dueNodes(s).slice(0, 4).map((id) => label.get(id) ?? id))}`,
+    ...(s.focus ? [`- Suggested focus: ${label.get(s.focus) ?? s.focus}`] : []),
+    `- Target: questions about 3★ hard for this student (assign_exercise difficulty ${o.target}/5); one step harder after a success streak. Bring every node to full proficiency (100/100 exam answers); one or two misses are not a reason to step down.`,
+  ].join("\n");
+}

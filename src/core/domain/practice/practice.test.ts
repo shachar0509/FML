@@ -114,4 +114,19 @@ describe("Practice", () => {
     expect(pr.state).toBeNull();
     pr.close();
   });
+
+  it("M64 Customized: only new exercises, on what was learned up to the unit", async () => {
+    await appendEvent(N, { type: "stage_completed", stageId: "S002", by: "mastery", masteryAtCompletion: 0.9 });
+    const pr = new Practice(N, { gw, loadImage: async () => "" }, async () => ["S001"]);
+    await pr.open();
+    await pr.start({ kind: "upto", unitId: "U01" });
+    await settle();
+    await pr.advance();
+    await settle();
+    await pr.advance();
+    expect(calls.filter((c) => c === "submit_generated_exercise")).toHaveLength(3);
+    expect(calls).not.toContain("submit_practice_check"); // never an MCQ or open question
+    expect(pr.state!.current?.kind).toBe("E");
+    pr.close();
+  });
 });

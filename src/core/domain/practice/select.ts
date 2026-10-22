@@ -11,7 +11,9 @@ export type Scope =
   | { kind: "weak" }
   | { kind: "stage"; stageId: string }
   /** M59 Test practice: past exam questions only; `stageIds` null = the whole course */
-  | { kind: "test"; stageIds: string[] | null };
+  | { kind: "test"; stageIds: string[] | null }
+  /** M64 Customized practice (custom courses): what was learned in the plan's units up to and including this one */
+  | { kind: "upto"; unitId: string };
 
 export const ITEM_CYCLE = ["E", "E", "M", "E", "O", "E", "E", "M", "E", "O"] as const;
 /** M56: the more advanced the student (level = skill, 2-5; a new student is 3.5), the more of the items are exercises. */
@@ -47,6 +49,15 @@ const unresolved = (p: ProgressJson) => p.mistakes.filter((m) => !m.resolved);
 const attemptsOf = (events: Event[], id: string): Attempt[] =>
   events.filter((e): e is Attempt => e.type === "attempt_graded" && e.exercise.id === id && e.verdict !== "unreadable");
 
+/** The stages of the plan's units up to and including `unitId` (plan order). */
+export function uptoStages(plan: PlanJson, unitId: string): Set<string> {
+  const i = plan.units.findIndex((u) => u.id === unitId);
+  return new Set(plan.units.slice(0, i + 1).flatMap((u) => u.stageIds));
+}
+/** The stages a scope narrows to (null = no stage limit). */
+const scopeStages = (plan: PlanJson, sc: Scope): Set<string> | null =>
+  sc.kind === "unit" ? new Set(plan.units.find((u) => u.id === sc.unitId)?.stageIds) : sc.kind === "upto" ? uptoStages(plan, sc.unitId) : null;
+
 export function weak(e: Ex, c: Ctx): number {
   const ids = e.requiredStageIds;
   const mean = ids.length
@@ -60,7 +71,7 @@ export function eligible(o: EligibleIn): Ex[] {
   const done = completedIds(o.progress);
   const now = Date.parse(o.now);
   const served = new Set(o.servedIds);
-  const unitStages = o.scope.kind === "unit" ? new Set(o.plan.units.find((u) => u.id === (o.scope as { unitId: string }).unitId)?.stageIds) : null;
+  const unitStages = scopeStages(o.plan, o.scope);
   return o.exercises.filter((e) => {
     if (!e.requiredStageIds.every((s) => done.has(s)) || served.has(e.id)) return false;
     if (o.scope.kind === "stage" && e.primaryStageId !== o.scope.stageId) return false;
@@ -125,10 +136,12 @@ export function pick(o: EligibleIn & { previous?: Ex | null; rng?: () => number 
   return { exercise: (top[i] ?? first).e, bestScore, needsGeneration: bestScore < 0.45 };
 }
 
-export function focusStage(o: { plan: PlanJson; progress: ProgressJson; scope: Scope }): string | null {
+/** `hot` (M64): stages the knowledge engine points at (its focus concept, active misconceptions, reviews due); they rank first. */
+export function focusStage(o: { plan: PlanJson; progress: ProgressJson; scope: Scope; hot?: string[] }): string | null {
   const done = completedIds(o.progress);
   const bad = unresolved(o.progress);
-  const unitStages = o.scope.kind === "unit" ? new Set(o.plan.units.find((u) => u.id === (o.scope as { unitId: string }).unitId)?.stageIds) : null;
+  const hot = new Set(o.hot);
+  const unitStages = scopeStages(o.plan, o.scope);
   const cands = o.plan.stages.filter((s) => {
     if (!done.has(s.id)) return false;
     if (o.scope.kind === "stage") return s.id === o.scope.stageId;
@@ -139,7 +152,7 @@ export function focusStage(o: { plan: PlanJson; progress: ProgressJson; scope: S
   const mo = maxOrder(o.plan, done) || 1;
   let best: string | null = null, bs = -Infinity;
   for (const s of cands) {
-    const v = (0.6 * s.order) / mo + 0.4 * (1 - mastery(o.progress, s.id));
+    const v = (0.6 * s.order) / mo + 0.4 * (1 - mastery(o.progress, s.id)) + (hot.has(s.id) ? 0.5 : 0);
     if (v > bs) {
       bs = v;
       best = s.id;

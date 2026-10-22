@@ -112,3 +112,23 @@ for (const lang of LANGS)
     await page.screenshot({ path: `e2e/tests_output/practice-modes/ai-continued-${lang}.png` });
     expect(errors).toEqual([]);
   });
+
+// M64: a custom course practices Normal or Customized (up to a unit; units with nothing learned are disabled)
+for (const lang of LANGS)
+  for (const theme of THEMES)
+    test(`custom course: two modes, Customized up to a unit (${lang}/${theme})`, async ({ page }) => {
+      const errors = pageErrors(page);
+      const he = lang === "he";
+      await page.goto(host(`view=practice&lang=${lang}&theme=${theme}&custom=1`));
+      await expect(page.locator(".board-surface button")).toHaveCount(2);
+      await page.getByRole("button", { name: he ? /תרגול מותאם/ : /Customized practice/ }).click();
+      await expect(page.getByRole("radio", { name: he ? /טורים/ : /Series/ })).toBeDisabled();
+      const start = page.getByRole("button", { name: he ? "התחל" : "Start" });
+      await expect(start).toBeDisabled();
+      await page.getByRole("radio", { name: he ? /גבולות/ : /Limits/ }).check();
+      await axe(page);
+      await page.screenshot({ path: `e2e/tests_output/practice-modes/custom-${lang}-${theme}.png` });
+      await start.click();
+      await expect(page.getByRole("button", { name: he ? "השאלה הבאה" : "Next question" })).toBeVisible();
+      expect(errors).toEqual([]);
+    });

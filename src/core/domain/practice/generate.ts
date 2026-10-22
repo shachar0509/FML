@@ -11,8 +11,8 @@ import { boundaryFor, langName, stageList, type Env } from "./grade";
 import { completedIds, focusStage, requiredSet, targetDifficulty, type Scope } from "./select";
 
 export type Focus = { stageId: string; required: string[] };
-export function chooseFocus(ctx: Ctx, scope: Scope): Focus | null {
-  const stageId = focusStage({ plan: ctx.plan, progress: ctx.progress, scope });
+export function chooseFocus(ctx: Ctx, scope: Scope, hot?: string[]): Focus | null {
+  const stageId = focusStage({ plan: ctx.plan, progress: ctx.progress, scope, hot });
   return stageId ? { stageId, required: requiredSet(ctx.plan, stageId, completedIds(ctx.progress)) } : null;
 }
 

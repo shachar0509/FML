@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Event, IndexedExercise, PlanJson, ProgressJson } from "@/core/domain/dataSchemas";
-import { completedIds, eligible, focusStage, itemKind, pick, requiredSet, skill, targetDifficulty } from "./select";
+import { completedIds, eligible, focusStage, itemKind, pick, requiredSet, skill, targetDifficulty, uptoStages } from "./select";
 
 const st = (id: string, order: number, prerequisites: string[] = []) => ({ id, unitId: "U01", order, prerequisites, title: id, newConcepts: [], theorems: [], techniques: [], edgeCases: [] }) as unknown as PlanJson["stages"][number];
 const plan = { units: [{ id: "U01", stageIds: ["S001", "S002", "S003"] }], stages: [st("S001", 1), st("S002", 2, ["S001"]), st("S003", 3, ["S002"])] } as unknown as PlanJson;
@@ -52,6 +52,16 @@ describe("practice select", () => {
     expect(focusStage({ plan, progress, scope: { kind: "weak" } })).toBe("S002");
     expect(focusStage({ plan, progress, scope: { kind: "stage", stageId: "S001" } })).toBe("S001");
     expect(requiredSet(plan, "S003", completedIds(progress)).sort()).toEqual(["S001", "S002"]);
+  });
+  it("M64: Customized (up to a unit) narrows to the learned stages of the units up to it; the engine's hot stages rank first", () => {
+    const two = { ...plan, units: [{ id: "U01", stageIds: ["S001"] }, { id: "U02", stageIds: ["S002", "S003"] }] } as unknown as PlanJson;
+    expect(uptoStages(two, "U01")).toEqual(new Set(["S001"]));
+    expect(uptoStages(two, "U02")).toEqual(new Set(["S001", "S002", "S003"]));
+    const exercises = [ex("a", ["S001"]), ex("e", ["S002"])];
+    expect(eligible({ ...base, plan: two, exercises, scope: { kind: "upto", unitId: "U01" } }).map((e) => e.id)).toEqual(["a"]);
+    expect(focusStage({ plan: two, progress, scope: { kind: "upto", unitId: "U01" } })).toBe("S001");
+    expect(focusStage({ plan: two, progress, scope: { kind: "upto", unitId: "U02" } })).toBe("S002"); // S003 is not learned
+    expect(focusStage({ plan: two, progress, scope: { kind: "all" }, hot: ["S001"] })).toBe("S001");
   });
 });
 

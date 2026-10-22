@@ -128,6 +128,8 @@ ${tags}`;
 export type StatusArgs = {
   /** M62: the lesson's knowledge-graph nodes, numbered, with the student's control */
   nodes?: string;
+  /** M64: the knowledge digest (level, weakest nodes, misconceptions, reviews due, the target) */
+  digest?: string;
   completed: number;
   total: number;
   mastery: number;
@@ -149,5 +151,5 @@ export const statusBlock = (a: StatusArgs): string => `[STATUS]
 - Prerequisites completed without full mastery (treat as weak, re-check briefly when used): ${list(a.overriddenPrereqs)}
 - Recurring mistakes to watch for and address when relevant:
 ${a.mistakes.length ? a.mistakes.map((m) => `  ${m}`).join("\n") : "  none"}
-- Minutes since last activity: ${a.idleMinutes}${a.nodes ? `\n- The student's knowledge graph for this lesson (use these numbers in nodes / nodeResults / update_knowledge_graph):\n${a.nodes}` : ""}
+- Minutes since last activity: ${a.idleMinutes}${a.nodes ? `\n- The student's knowledge graph for this lesson (use these numbers in nodes / nodeResults / update_knowledge_graph):\n${a.nodes}` : ""}${a.digest ? `\n- The student's knowledge now:\n${a.digest.replace(/^/gm, "  ")}` : ""}
 [/STATUS]`;

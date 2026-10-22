@@ -86,6 +86,8 @@ const loopReply = (name: string): ExerciseData | undefined => {
 const practiceBase: PracticeData = {
   ...base, view: "practice", number: "01040195", mode: "choose", units: [{ id: "U01", title: L("גבולות", "Limits") }], stages: [{ id: "S001", title: L("סדרות", "Sequences") }],
   counters: { answered: 0, correct: 0, avg: 0 }, item: null, loading: false, error: null, summary: null, hw: null,
+  // ?custom=1: a custom course (M64: Normal and Customized only; unit 2 has nothing learned)
+  custom: !!q.get("custom"), allUnits: [{ id: "U01", title: L("גבולות", "Limits"), ready: true }, { id: "U02", title: L("טורים", "Series"), ready: false }],
   test: {
     exams: 12, left: 9, units: [{ id: "U01", title: L("גבולות", "Limits"), stageIds: ["S001"] }, { id: "U02", title: L("טורים", "Series"), stageIds: ["S002"] }],
     weak: [{ id: "S002", title: L("טורים", "Series") }], active: false, note: null, noteStage: null, scoping: false, notes: null, error: null,
