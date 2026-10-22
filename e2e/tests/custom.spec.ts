@@ -42,11 +42,18 @@ for (const lang of LANGS)
     await page.locator("ul > li").filter({ hasText: lang === "he" ? "תורת המוזיקה" : "Music theory" }).getByRole("button").click();
     await expect(page.getByText(lang === "he" ? "חומרים מהאינטרנט" : "Materials from the internet")).toBeVisible();
     await expect(page.getByText(lang === "he" ? /לרמה שלכם \(2\/5\)/ : /match your level \(2\/5\)/)).toBeVisible();
+    // the bar sets how many new files to find (only files not in the course yet; spread over the plan's units)
+    const bar = page.getByRole("slider", { name: lang === "he" ? /כמה קבצים לחפש/ : /How many files to find/ });
+    await expect(bar).toHaveValue("3");
+    await bar.fill("5");
+    await expect(page.getByText(lang === "he" ? "5 קבצים" : "5 files")).toBeVisible();
+    await expect(page.getByText(lang === "he" ? /רק קבצים שעוד אין בקורס, מפוזרים בין יחידות התוכנית/ : /Only files not already in your course are added, spread over the plan's units/)).toBeVisible();
     await page.waitForTimeout(400); // the plan's fade-in
     await axe(page);
     await page.screenshot({ path: `e2e/tests_output/custom/card-custom-web-${lang}.png`, fullPage: true });
     await page.getByRole("button", { name: lang === "he" ? "חיפוש חומרים ברשת" : "Find materials online" }).click();
     expect(await toolsCalled(page)).toContain("course_web_request");
+    expect(await page.evaluate(() => (window as unknown as { __args: Record<string, unknown> }).__args.course_web_request)).toMatchObject({ count: 5 });
     await expect(page.getByText(lang === "he" ? "מחפש חומרים ברשת…" : "Searching the web for materials…")).toBeVisible();
     expect(await said(page)).toEqual([lang === "he" ? "▶️ המשך" : "▶️ Continue"]); // the study lane picks the job up
     expect(errors).toEqual([]);

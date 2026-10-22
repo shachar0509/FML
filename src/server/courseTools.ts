@@ -238,15 +238,15 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, fi
   });
 
   // M54: "Find materials online" on a custom course card. Study lane: the card sends "▶️ Continue"; the files appear in the card as they are saved.
-  registerAppTool(server, "course_web_request", { title: "Find materials online", description: "Card-only: gather study materials and exercises from the web for a custom course, at the student's level.", inputSchema: numIn, _meta: appOnly }, async ({ number }) => {
+  registerAppTool(server, "course_web_request", { title: "Find materials online", description: "Card-only: gather `count` new study materials and exercise sets from the web for a custom course, at the student's level.", inputSchema: numIn.extend({ count: z.number().int().min(1).max(10).default(3) }), _meta: appOnly }, async ({ number, count }) => {
     const c = await loadCourse(number);
     if (!c || !isCustom(c.course)) return { ...out(`No custom course ${number}.`, { error: "missing" }), isError: true };
     if (gathering.has(number)) return out("Already gathering.", { ok: true });
     gathering.add(number);
     bridge.run(
       `Finding study materials online for "${c.course.nameHe}"`,
-      (signal) => gatherWeb(claude(), c.course, look().language, signal).finally(() => gathering.delete(number)),
-      (names) => [{ type: "text", text: `${names.length} file(s) were added to the course: ${names.join(", ")}. Tell the student in one short sentence that they are in the course files and that Build plan (or Update plan) reads them.` }],
+      (signal) => gatherWeb(claude(), c.course, look().language, count, signal).finally(() => gathering.delete(number)),
+      ({ saved, skipped }) => [{ type: "text", text: `${saved.length} of ${count} requested file(s) were added to the course: ${saved.join(", ") || "none"}${skipped ? ` (${skipped} found document(s) were already in the course and were not added)` : ""}. Tell the student in one short sentence that they are in the course files and that Build plan (or Update plan) reads them.` }],
     ).done.catch(() => undefined);
     return out("Gathering.", { ok: true });
   });

@@ -581,6 +581,11 @@
     "title": "Materials from the internet",
     "body": "Claude searches the web for study texts and practice exercises that match your level ({{level}}/5) and adds them to your course files. Then press {{plan}} to fit the plan to them.",
     "button": "Find materials online",
-    "running": "Searching the web for materials…"
+    "running": "Searching the web for materials…",
+    "count": "How many files to find",
+    "files_one": "1 file",
+    "files_other": "{{count}} files",
+    "countNew": "Only files not already in your course are added.",
+    "countPlan": "Only files not already in your course are added, spread over the plan's units so each one gets a fair share."
   }
 }

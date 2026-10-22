@@ -871,3 +871,18 @@ Edge cases found with the sample slides, and fixed in the renderer:
 - A deleted prerequisite hands down its own prerequisites (delete S002: S003 waits for S001), so stages don't unlock out of order.
 - Knowledge boundary (tutor, grading, practice): a custom course's baseline is what a learner at the student's level knows, not 5-unit high-school maths and prerequisite courses.
 - Test: the index tags and the inherited prerequisite after a delete.
+
+## M55: Find materials online: how many, no duplicates, balanced over the plan
+- A slider sets how many files to find (1-10, default 3) and shows the number. The note under it says only files not already in the course are added, spread over the plan's units when there is a plan.
+- Like the Moodle import, nothing already in the course folders comes again:
+  - The request lists the file names already in the materials and exercise folders, and the source URLs their `.md` files cite.
+  - A returned document is not added if a file with that name is already there, if its text equals a file already there, or if it cites only sources already used. The reason goes back to the model.
+  - When fewer than N new files arrived, the same chat is asked for the missing ones (up to 2 more rounds).
+  - Never more than N are saved.
+- With a plan, the N documents are shared out over the units so material is balanced:
+  - Each unit's coverage is its scanned pages and exercises.
+  - The share goes one document at a time to the unit with the least; a document weighs as much as an average scanned file.
+  - The request names each unit's share and its stage titles.
+  - Without a plan, the request covers the whole subject.
+- The job's summary says how many of N were added, and how many found documents were already in the course.
+- Tests: balancing (`web.test.ts`), server round trip (existing file and its source named in the request; same name / same text / used source rejected; follow-up round asks for the 2 missing; capped at 3), e2e (the slider value reaches the request).

@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/client";
@@ -197,25 +197,43 @@ it("creates a custom course: no university in it, no Moodle, shown as custom", a
   const course = await readJsonFile(coursePaths(useSettings.getState().settings.dataRoot, n).courseJson, CourseJsonSchema);
   expect(course).toMatchObject({ type: "customCourse", nameHe: "Guitar", syllabusHe: "Scales and chords", goal: "Improvise", level: 2, credits: 0 });
 
-  // M54: materials from the web, at the student's level; they show in the files, not scanned until Build plan
+  // M54/M55: N new files from the web, at the student's level; nothing already in the folders comes again (like the Moodle import)
   expect((await call("course_web_request", { number: "01040195" })).isError).toBe(true); // academic courses have no web search
   expect(sc<CourseData>(await call("shalav_course", { number: "01040195" })).web).toBeNull();
-  expect((await call("course_web_request", { number: n })).isError).toBeFalsy();
+  const cp = coursePaths(useSettings.getState().settings.dataRoot, n);
+  await mkdir(cp.materials, { recursive: true });
+  await writeFile(join(cp.materials, "Intervals.md"), "# Intervals\n\nA third is ...\n\nhttps://example.org/intervals\n");
+  expect((await call("course_web_request", { number: n, count: 3 })).isError).toBeFalsy();
   expect(sc<CourseData>(await call("shalav_course", { number: n })).web).toEqual({ running: true, level: 2 });
-  const job = JSON.stringify((await call("shalav_next_job")).content).replaceAll("\\n", "\n");
-  expect(job).toContain("submit_web_materials");
+  const jobText = async (r: { content?: unknown }) => JSON.stringify(r.content).replaceAll("\\n", "\n");
+  let job = await jobText(await call("shalav_next_job"));
+  expect(job).toContain("Find exactly 3 new document(s)");
   expect(job).toContain("Current level: 2/5 (the student knows a little)");
   expect(job).toContain("Improvise");
   expect(job).not.toContain("Technion");
-  const items = [
-    { role: "material", title: "Scales: the basics", markdown: "# Scales\n\nA scale is ...\n\nSources: https://example.org/scales" },
-    { role: "material", title: "Scales: the basics", markdown: "# Scales again" }, // same title: a second file, not an overwrite
-    { role: "exercises", title: "Chords / practice", markdown: "1. Build a C major chord.\n\nSolutions: C-E-G" },
-  ];
-  const done = await call("shalav_submit_job", { jobId: Number(/job #(\d+)/.exec(job)?.[1]), input: { items } });
-  expect(JSON.stringify(done.content)).toContain("3 file(s) were added");
+  expect(job).toContain("- intervals"); // already in the folder: named in the request
+  expect(job).toContain("- https://example.org/intervals");
+  const id = (t: string) => Number(/job #(\d+)/.exec(t)?.[1]);
+  let done = await call("shalav_submit_job", { jobId: id(job), input: { items: [
+    { role: "material", title: "Scales: the basics", markdown: "# Scales\n\nA scale is ...\n\nhttps://example.org/scales" },
+    { role: "material", title: "Scales: the basics", markdown: "# Scales, other text" }, // same name: not added
+    { role: "material", title: "Thirds", markdown: "# Intervals\n\nA third is ...\n\nhttps://example.org/intervals" }, // same text as the file there
+    { role: "material", title: "More intervals", markdown: "Fifths ... https://example.org/intervals/" }, // only a source already used
+  ] } });
+  // one new file so far: the same chat is asked for the 2 missing ones, told what was not added
+  job = await jobText(done);
+  if (!job.includes("submit_web_materials")) job = await jobText(await call("shalav_next_job"));
+  expect(job).toContain("2 more new document(s) are needed");
+  expect(job).toContain('\\"Thirds\\": same text as a file already there');
+  done = await call("shalav_submit_job", { jobId: id(job), input: { items: [
+    { role: "exercises", title: "Chords / practice", markdown: "1. Build a C major chord.\n\nSolutions: C-E-G\n\nhttps://example.org/chords" },
+    { role: "material", title: "Modes", markdown: "# Modes ... https://example.org/modes" },
+    { role: "material", title: "Extra", markdown: "# Never asked for" }, // over the count: not added
+  ] } });
+  expect(JSON.stringify(done.content)).toContain("3 of 3 requested file(s) were added");
+  expect(JSON.stringify(done.content)).toContain("3 found document(s) were already in the course");
   expect(sc<CourseData>(await call("shalav_course", { number: n })).web?.running).toBe(false);
   const f = sc<{ materials: { name: string; status: string }[]; exercises: { name: string; status: string }[] }>(await call("files_list", { number: n }));
-  expect(f.materials.map((x) => [x.name, x.status]).sort()).toEqual([["Scales the basics (2).md", "pending"], ["Scales the basics.md", "pending"]]);
+  expect(f.materials.map((x) => [x.name, x.status]).sort()).toEqual([["Intervals.md", "pending"], ["Modes.md", "pending"], ["Scales the basics.md", "pending"]]);
   expect(f.exercises.map((x) => x.name)).toEqual(["Chords practice.md"]);
 });

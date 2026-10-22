@@ -60,6 +60,7 @@ export function Course({
   // a translation or a web search is running: show the texts as they arrive, and when it ends
   const translating = data.translate.running;
   const searching = !!data.web?.running;
+  const [webCount, setWebCount] = useState(3); // M55: how many new files to find
   useEffect(() => {
     if (!translating && !searching) return;
     const h = setInterval(reload, 3000);
@@ -346,11 +347,28 @@ export function Course({
                   </p>
                 </div>
               </div>
+              <div className="flex flex-col gap-1.5 text-sm font-medium">
+                <span className="flex items-baseline justify-between gap-2">
+                  {t("web.count")}
+                  <output className="text-primary tabular-nums">{t("web.files", { count: webCount })}</output>
+                </span>
+                <input
+                  type="range"
+                  min={1}
+                  max={10}
+                  value={webCount}
+                  onChange={(e) => setWebCount(Number(e.target.value))}
+                  aria-label={t("web.count")}
+                  aria-valuetext={t("web.files", { count: webCount })}
+                  className="w-full accent-[var(--primary)]"
+                />
+                <span className="text-xs font-normal text-muted">{t(data.hasPlan ? "web.countPlan" : "web.countNew")}</span>
+              </div>
               <Button
                 className="self-start"
                 variant="outline"
                 onClick={() =>
-                  void callTool("course_web_request", { number: data.number }).then(() => {
+                  void callTool("course_web_request", { number: data.number, count: webCount }).then(() => {
                     reload();
                     return go();
                   })
