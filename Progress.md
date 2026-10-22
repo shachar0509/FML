@@ -916,3 +916,16 @@ Edge cases found with the sample slides, and fixed in the renderer:
 - Practice looks like the lesson slides: every screen is a board with a handwritten, underlined title; MCQ options are drawn boxes, feedback is in ink. No sticky notes.
 - The "Correct" grade chip had too little contrast; it now uses white (light) / dark (dark) text.
 - Tests: item mix by level, server round trip of the loop (intro stage keeps hints; clue with the work attached, 2 re-explanations, Thank you; 96 with a wrong final answer is not perfect, with it right is), e2e of the loop in he/en, light/dark.
+
+## M57: Practice modes, single question, homework with the tutor
+- Practice opens on a choice of three modes (on the board): **Solve homework**, **Single question**, **Normal practice** (the existing scope picker; still locked until a stage is completed). A running session or homework reopens where it was.
+- Homework / single question:
+  - The student uploads the pages (photos or PDF, up to 12). The host model reads them (job `submit_homework`): each question transcribed faithfully in its language with LaTeX, the pages it's on, and the assignment's name. A single question is exactly one.
+  - Homework then asks how to solve it: **Solve with the tutor**.
+  - Each question runs the solving loop (M56); its original pages show with it and go to the grader. There is no plan stage, so the course material is ranked by the question's text, plus the nearest example exercises.
+  - A perfect answer (≥95 and every final answer right) puts the pages the student submitted (their own handwriting) into the solution file, and the question gets a ✓ in the question list. **Next question** goes to the next unsolved one; any question can be opened from the list.
+  - **Download solutions (k)** is always there (disabled until one is solved). It builds `solution.pdf` from the accepted pages in question order (one A4 page per photo, `@napi-rs/canvas`, nothing downloaded) and opens the system's Save as dialog (macOS `osascript`, Windows `SaveFileDialog`, Linux `zenity`); the card shows where it was saved.
+  - Homework writes no progress events: it doesn't move mastery or mistakes.
+  - Single question: after a perfect answer, **New question**.
+- State: `.shalav/homework/current.json` per course (kept under its id when left).
+- Tests: images to PDF (pages, sizes, photos embedded), server round trip (read job with the pages; loop card with the question's page; 96 with a wrong final answer not accepted, right one accepted; no events; open another question; download cancelled, then saved with 1 page; single question keeps one), e2e (modes, homework flow with download, single question) in he/en, light/dark.

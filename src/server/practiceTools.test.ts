@@ -4,8 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/client";
 import { InMemoryTransport } from "@modelcontextprotocol/server";
-import { expect, it } from "vitest";
-import type { PracticeData } from "@/cards/types";
+import { readFile } from "node:fs/promises";
+import { createCanvas } from "@napi-rs/canvas";
+import { expect, it, vi } from "vitest";
+import type { ExerciseData, PracticeData } from "@/cards/types";
 import { FakeClaudeGateway, toolCall } from "@/core/claude/fake";
 import { setClaude } from "@/core/claude/runtime";
 import { createCourse } from "@/core/domain/courses/courses";
@@ -16,6 +18,10 @@ import { coursePaths } from "@/core/lib/fs/paths";
 import { useSettings } from "@/stores/settings";
 import { initNode } from "./platform";
 import { createServer } from "./server";
+
+// M57: the Save as dialog picks this path ("" = cancelled)
+const saveTo = vi.hoisted(() => ({ path: "" }));
+vi.mock("./native", async (orig) => ({ ...(await orig<typeof import("./native")>()), saveDialog: async () => saveTo.path || null }));
 
 const unit = (n: number) => ({ title: "u", summary: "s", stages: Array.from({ length: n }, () => ({ title: "t", kind: "concept", summary: "s", prerequisites: [] })) });
 const details = (req: { messages: { content: unknown }[] }) =>
@@ -112,4 +118,50 @@ it("practice card: scope, generated exercise through the bridge, MCQ, open answe
   expect((await call("practice_end", { courseNumber: n })).isError).toBe(true);
   const ev = await readJsonlDir(coursePaths(useSettings.getState().settings.dataRoot, n).events, EventSchema);
   expect(ev.filter((e) => e.type === "check_answered")).toHaveLength(2);
+
+  // ----- M57: homework with the tutor -----
+  const upload = async (name: string) => sc<{ files: { sha256: string; mediaType: string }[] }>(await call("attachment_upload", { number: n, name, mime: "image/png", base64: createCanvas(60, 80 + name.length).toBuffer("image/png").toString("base64") })).files;
+  const pages = [...(await upload("p1.png")), ...(await upload("p22.png"))];
+  async function job(input: object) {
+    const t = text(await call("shalav_next_job"));
+    const id = Number(/# Shalav job #(\d+)/.exec(t)?.[1]);
+    expect(id).toBeGreaterThan(0);
+    await call("shalav_submit_job", { jobId: id, input });
+    return t;
+  }
+  const hs = sc<PracticeData>(await call("homework_start", { courseNumber: n, kind: "homework", files: pages }));
+  expect(hs.hw).toMatchObject({ kind: "homework", how: null, splitting: true, questions: [] });
+  const read = await job({ name: "HW 3", questions: [{ label: "Q1", statementMd: "Show A", pages: [1] }, { label: "Q2", statementMd: "Show B", pages: [2, 9] }, { label: "Q3", statementMd: "Show C", pages: [2] }] });
+  expect(read).toContain("submit_homework");
+  expect(read).toContain("image"); // the pages go to the host model
+  let hw = sc<PracticeData>(await call("practice_state", { courseNumber: n })).hw;
+  expect(hw).toMatchObject({ name: "HW 3", splitting: false, exercise: null, questions: [{ label: "Q1", accepted: false }, { label: "Q2" }, { label: "Q3" }] });
+  hw = sc<PracticeData>(await call("homework_how", { courseNumber: n, how: "tutor" })).hw;
+  const q1 = hw?.exercise as ExerciseData;
+  expect(q1).toMatchObject({ loop: true, statementMd: "Show A", figures: [expect.stringContaining("data:image/jpeg")] }); // its page is shown with it
+  expect((await call("homework_download", { courseNumber: n })).isError).toBe(true); // nothing solved yet
+  const before = (await readJsonlDir(coursePaths(useSettings.getState().settings.dataRoot, n).events, EventSchema)).length;
+  const sol = await upload("mine.png");
+  const g = { legibility: "clear", illegibleParts: [], verdict: "correct", score: 96, summaryMd: "ok", steps: [], missingForFullCredit: [], mistakes: [], edgeCasesMissed: [], correctedKeyStepMd: "", usesMaterialBeyondCompleted: [], stageIds: [] };
+  await call("exercise_grade_request", { runId: q1.runId, files: sol });
+  await job({ ...g, finalAnswerCorrect: false }); // a wrong final answer is not accepted
+  expect(sc<PracticeData>(await call("practice_state", { courseNumber: n })).hw?.questions[0]?.accepted).toBe(false);
+  await call("exercise_grade_request", { runId: q1.runId, files: sol });
+  const gj = await job({ ...g, finalAnswerCorrect: true });
+  expect(gj).toContain("Show A");
+  expect(sc<PracticeData>(await call("practice_state", { courseNumber: n })).hw?.questions.map((q) => q.accepted)).toEqual([true, false, false]);
+  expect((await readJsonlDir(coursePaths(useSettings.getState().settings.dataRoot, n).events, EventSchema)).length).toBe(before); // homework moves no mastery
+  expect(sc<PracticeData>(await call("homework_open", { courseNumber: n, index: 2 })).hw?.exercise).toMatchObject({ statementMd: "Show C", grade: null });
+  // download: cancelled, then saved where the student picked; the PDF holds their own page
+  expect(text(await call("homework_download", { courseNumber: n }))).toContain("cancelled");
+  saveTo.path = join(d, "out.pdf");
+  expect(sc<PracticeData>(await call("homework_download", { courseNumber: n })).hw?.saved).toBe(saveTo.path);
+  const pdf = (await readFile(saveTo.path)).toString("latin1");
+  expect(pdf.match(/\/Type\s*\/Page\b/g)).toHaveLength(1);
+  // a single question; starting it ends the homework
+  const single = sc<PracticeData>(await call("homework_start", { courseNumber: n, kind: "single", files: [pages[0]] }));
+  expect(single.hw).toMatchObject({ kind: "single", how: "tutor", splitting: true });
+  await job({ name: "q", questions: [{ label: "1", statementMd: "Only", pages: [1] }, { label: "2", statementMd: "dropped", pages: [1] }] });
+  expect(sc<PracticeData>(await call("practice_state", { courseNumber: n })).hw).toMatchObject({ questions: [{ label: "1" }], exercise: { statementMd: "Only", loop: true } });
+  expect(sc<PracticeData>(await call("homework_end", { courseNumber: n })).hw).toBeNull();
 });

@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Check, X } from "lucide-react";
+import { Check, ClipboardList, FileQuestion, Repeat, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Markdown } from "@/core/render/Markdown";
 import type { PracticeData, Go } from "../types";
 import { Exercise } from "./Exercise";
+import { Homework } from "./Homework";
 import { Board, Skeleton, chalkChoice, inkBox } from "../ui";
 
 type Tool = (
@@ -30,6 +31,10 @@ export function Practice({
   const [scope, setScope] = useState<"all" | "unit" | "weak" | "stage">("all");
   const [pick, setPick] = useState("");
   const [text, setText] = useState("");
+  // M57: which practice: own homework, one question, or normal practice (a session already running picks it)
+  const [kind, setKind] = useState<"homework" | "single" | "normal" | null>(
+    data.hw ? data.hw.kind : data.mode === "item" || data.mode === "summary" ? "normal" : null,
+  );
   const n = d.number;
   const call = async (name: string, args: Record<string, unknown> = {}) => {
     const r = await callTool(name, { courseNumber: n, ...args });
@@ -67,6 +72,41 @@ export function Practice({
   const list = scope === "unit" ? d.units : scope === "stage" ? d.stages : [];
   const mode = d.mode === "summary" && again ? "choose" : d.mode;
 
+  if (d.hw || kind === "homework" || kind === "single")
+    return (
+      <Homework
+        number={n}
+        kind={d.hw?.kind ?? (kind === "single" ? "single" : "homework")}
+        hw={d.hw}
+        callTool={callTool}
+        go={go}
+        set={setD}
+        back={() => setKind(null)}
+      />
+    );
+  if (!kind)
+    return (
+      <section className="flex flex-col gap-4" aria-label={t("nav.practice")}>
+        <Board title={t("practice.modes.title")}>
+          <div className="grid gap-3">
+            {([["homework", ClipboardList], ["single", FileQuestion], ["normal", Repeat]] as const).map(([k, Icon]) => (
+              <button
+                key={k}
+                onClick={() => setKind(k)}
+                className={`${chalkChoice} flex items-start gap-3 p-4 text-start`}
+              >
+                <Icon className="mt-1 size-5 shrink-0 text-(--board-ink)" aria-hidden />
+                <span className="flex flex-col gap-1">
+                  <span className="text-[17px] font-semibold">{t(`practice.modes.${k}`)}</span>
+                  <span className="text-sm text-(--board-muted)">{t(`practice.modes.${k}Text`)}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </Board>
+      </section>
+    );
+
   return (
     <section className="flex flex-col gap-4" aria-label={t("nav.practice")}>
       {d.error && (
@@ -79,9 +119,14 @@ export function Practice({
       )}
 
       {mode === "locked" && (
-        <Board title={t("nav.practice")}>
+        <Board title={t("practice.modes.normal")}>
           <p>{t("practice.locked")}</p>
         </Board>
+      )}
+      {(mode === "locked" || mode === "choose") && (
+        <Button variant="ghost" className="self-start" onClick={() => setKind(null)}>
+          {t("homework.back")}
+        </Button>
       )}
 
       {mode === "choose" && (

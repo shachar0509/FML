@@ -6,6 +6,7 @@ for (const lang of LANGS)
     test(`practice card (${lang}/${theme})`, async ({ page }) => {
       const errors = pageErrors(page);
       await page.goto(host(`view=practice&lang=${lang}&theme=${theme}`));
+      await page.getByRole("button", { name: lang === "he" ? /תרגול רגיל/ : /Normal practice/ }).click();
       await expect(page.getByRole("radio")).toHaveCount(4);
       await axe(page);
       await page.getByRole("button", { name: lang === "he" ? "התחל" : "Start" }).click();

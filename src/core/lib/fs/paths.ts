@@ -30,6 +30,8 @@ export const coursePaths = (root: string, courseNumber: string) => {
     practiceSessions: join(s, "sessions", "practice"),
     practiceSessionFile: (deviceId: string) => join(s, "sessions", "practice", `${deviceId}.jsonl`),
     attachments: join(s, "attachments"),
+    /** M57: the homework / single question being solved (`current.json`), and ended ones by id */
+    homework: join(s, "homework"),
     indexFiles: join(s, "index", "files"),
     indexFile: (sha256: string) => join(s, "index", "files", `${sha256}.json`),
     crops: join(s, "index", "crops"),

@@ -118,8 +118,24 @@ export type PracticeItem =
   | { kind: "E"; exercise: ExerciseData }
   | { kind: "M"; questionMd: string; options: string[]; selected: number | null; correctIndex: number | null; explanationMd: string | null }
   | { kind: "O"; questionMd: string; answer: string | null; result: { correct: boolean; score: number; feedbackMd: string } | null };
+/** M57: the homework (or single question) in Practice. */
+export type HomeworkData = {
+  kind: "single" | "homework";
+  how: "tutor" | "ai" | null;
+  name: string;
+  /** the host model is reading the uploaded pages */
+  splitting: boolean;
+  questions: { label: string; accepted: boolean }[];
+  current: number;
+  /** the loop card of the current question (tutor) */
+  exercise: ExerciseData | null;
+  error: string | null;
+  /** where the last download was saved */
+  saved?: string | null;
+};
 export type PracticeData = Base & {
   view: "practice";
+  hw: HomeworkData | null;
   number: string;
   mode: "locked" | "choose" | "item" | "summary";
   units: { id: string; title: string }[];

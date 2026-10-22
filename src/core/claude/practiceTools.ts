@@ -47,6 +47,12 @@ export const submitClue = defineTool(
   "Submit the clue (or, when the student made a mistake, where the first mistake is).",
   z.object({ onTrack: z.boolean(), clueMd: z.string() }),
 );
+/** M57: the questions of an uploaded homework, transcribed. */
+export const submitHomework = defineTool(
+  "submit_homework",
+  "Submit the questions transcribed from the homework pages.",
+  z.object({ name: z.string(), questions: z.array(z.object({ label: z.string(), statementMd: z.string(), pages: z.array(z.number().int().min(1)) })).min(1).max(30) }),
+);
 export const submitSolution = defineTool("submit_solution", "Submit the complete solution.", z.object({ solutionMd: z.string() }));
 
 export const submitGeneratedExercise = defineTool(

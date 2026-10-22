@@ -134,3 +134,12 @@ export const clarifyPrompt = (a: ClueArgs & { clue: string; tried: string[] }) =
   `The student did not understand this clue for the exercise below: <clue>${a.clue}</clue>
 ${a.tried.length ? `Explanations already given: ${a.tried.map((h, i) => `(${i + 1}) ${h}`).join(" ")}\n` : ""}Explain the same clue again in other, simpler words (a smaller sub-step, an analogy, a tiny example). Do not go beyond the step the clue is about and do not reveal the solution. Set onTrack true.
 ${clueBase(a)} Call submit_clue.`;
+
+/** M57: transcribe an uploaded homework (or one question) into separate questions. */
+export const splitPrompt = (lang: Lang, single: boolean) =>
+  `The attached images are the pages of ${single ? "ONE question" : "a homework assignment"} the student uploaded, in order (page 1 first).
+${single ? "Transcribe it as exactly one question." : "Split it into its questions, in order. A question with parts (a, b, c) stays one question with its parts. Skip cover pages, instructions and submission rules."}
+Transcribe each question faithfully and completely, in its original language: the same wording, data and numbering, with math in LaTeX ($...$, $$...$$) and tables in Markdown. When a question uses shared data or a definition given earlier in the assignment, include it so the question stands alone. Describe a drawing only in words the question needs; the original pages are shown next to it.
+label: the question's name as the assignment gives it, in ${lang} (e.g. "${lang === "Hebrew" ? "שאלה 2" : "Question 2"}"). pages: the page numbers the question is on. name: a short name for the assignment (its title, or "${lang === "Hebrew" ? "שיעורי בית" : "Homework"}").
+${DATA}
+Call submit_homework.`;

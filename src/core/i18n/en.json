@@ -490,7 +490,16 @@
       "none": "None",
       "learnAgain": "Learn again"
     },
-    "question": "Question"
+    "question": "Question",
+    "modes": {
+      "title": "How do you want to practice?",
+      "homework": "Solve homework",
+      "homeworkText": "Upload your homework and solve it question by question with the tutor, or let the AI solve it for you.",
+      "single": "Single question",
+      "singleText": "Upload one question and solve it together with the tutor.",
+      "normal": "Normal practice",
+      "normalText": "Practice what you've learned in Shalav, at your level."
+    }
   },
   "exercise": {
     "minutes": "about {{n}} min",
@@ -598,5 +607,39 @@
     "thanks": "Thank you",
     "perfect": "Perfect! A full, correct solution.",
     "drop": "Stuck? Upload what you've written so far and press Get a clue. Done? Upload the whole solution (photo or PDF) and submit it."
+  },
+  "homework": {
+    "title": {
+      "homework": "Solve homework",
+      "single": "Single question"
+    },
+    "intro": {
+      "homework": "Upload the homework pages. Shalav reads the questions, then you choose how to solve them.",
+      "single": "Upload the question. You'll solve it with the tutor: ask for a clue when you're stuck, and submit your full solution when you're done."
+    },
+    "drop": {
+      "homework": "Photos or a PDF of the homework (up to 12 pages)",
+      "single": "A photo or PDF of the question"
+    },
+    "read": "Read it",
+    "reading": "Reading the questions…",
+    "failed": "We couldn't read it. Try clearer photos.",
+    "again": "Start over",
+    "back": "Back",
+    "how": "How do you want to solve it?",
+    "found_one": "1 question",
+    "found_other": "{{count}} questions",
+    "tutor": "Solve with the tutor",
+    "tutorText": "One question at a time, with clues when you're stuck. Each perfect solution goes into your solution file, in your own handwriting.",
+    "questions": "Questions",
+    "accepted": "in your solutions",
+    "added": "Added to your solutions.",
+    "allDone": "All the questions are solved! Download your solutions.",
+    "next": "Next question",
+    "solved": "Solved!",
+    "newQuestion": "New question",
+    "download": "Download solutions ({{n}})",
+    "saved": "Saved to {{path}}",
+    "end": "Leave"
   }
 }

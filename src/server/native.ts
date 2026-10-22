@@ -67,6 +67,23 @@ export async function openFolder(path: string): Promise<void> {
   });
 }
 
+/** M57: the system's Save as dialog; the chosen path (with `.pdf`), or null when cancelled. */
+export async function saveDialog(name: string): Promise<string | null> {
+  const env = { ...process.env, SHALAV_N: name };
+  try {
+    const { stdout } =
+      process.platform === "darwin"
+        ? await run("osascript", ["-e", "on run argv", "-e", "activate", "-e", "return POSIX path of (choose file name default name (item 1 of argv))", "-e", "end run", name])
+        : process.platform === "win32"
+          ? await run("powershell", ["-NoProfile", "-STA", "-Command", "Add-Type -AssemblyName System.Windows.Forms; $d = New-Object System.Windows.Forms.SaveFileDialog; $d.FileName = $env:SHALAV_N; $d.Filter = 'PDF|*.pdf'; if ($d.ShowDialog() -eq 'OK') { $d.FileName }"], { env })
+          : await run("zenity", ["--file-selection", "--save", "--confirm-overwrite", `--filename=${name}`]);
+    const p = stdout.trim();
+    return p ? (/\.pdf$/i.test(p) ? p : `${p}.pdf`) : null;
+  } catch {
+    return null; // cancelled (or no dialog available)
+  }
+}
+
 export const native: Native = {
   sha256,
   size: async (p) => (await stat(p)).size,

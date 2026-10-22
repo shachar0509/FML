@@ -12,6 +12,8 @@ export type RunState = {
   /** M56 solving loop: clues so far (`more` = re-explanations after "I didn't understand"); `clueOpen` until "Thank you" */
   clues?: { onTrack: boolean; clueMd: string; more: string[] }[];
   clueOpen?: boolean;
+  /** the pages of the last graded attempt (M57: a perfect one goes into the homework's solution file) */
+  files?: string[];
 };
 export const emptyRun = (): RunState => ({ hints: [], solutionMd: null, grade: null, attemptId: null, attempts: 0, clues: [], clueOpen: false });
 /** M56: a perfect answer = over 95% for reasoning, explanations and conventions, and every final answer right. */
@@ -104,7 +106,7 @@ export class ExerciseRun {
       const { grade, attemptId } = await gradeAttempt(this.env, ctx, this.ex, files, {
         hintsUsed: Math.min(3, this.state.hints.length + this.clues.length), solutionRevealed: !!this.state.solutionMd, context: this.context, ...conv,
       });
-      await this.set({ ...this.state, grade, attemptId, attempts: this.state.attempts + 1, clueOpen: false });
+      await this.set({ ...this.state, grade, attemptId, attempts: this.state.attempts + 1, clueOpen: false, files: files.map((f) => f.sha256) });
       return grade;
     });
   }

@@ -19,11 +19,14 @@ export function Exercise({
   callTool,
   go,
   title,
+  onData,
 }: {
   data: ExerciseData;
   callTool: Tool;
   go: Go;
   title?: string;
+  /** every new state of the card (the homework list follows a perfect answer) */
+  onData?: (d: ExerciseData) => void;
 }) {
   const { t } = useTranslation();
   const [d, setD] = useState(data);
@@ -33,7 +36,10 @@ export function Exercise({
   const done = readable(d.grade);
   const apply = (r: { structuredContent?: unknown; isError?: boolean }) => {
     setErr(!!r.isError || !r.structuredContent);
-    if (!r.isError && r.structuredContent) setD(r.structuredContent as ExerciseData);
+    if (!r.isError && r.structuredContent) {
+      setD(r.structuredContent as ExerciseData);
+      onData?.(r.structuredContent as ExerciseData);
+    }
     return !r.isError;
   };
 

@@ -3,14 +3,21 @@ import { localize } from "@/core/domain/plan/translate";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import type { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod";
-import type { PracticeData } from "@/cards/types";
+import { writeFile } from "node:fs/promises";
+import type { HomeworkData, PracticeData } from "@/cards/types";
 import { loadCtx } from "@/core/domain/practice/exercises";
 import { Practice } from "@/core/domain/practice/engine";
 import { completedIds, type Scope } from "@/core/domain/practice/select";
+import { acceptedPages, asExercise, endHomework, loadHomework, newHomework, saveHomework, splitHomework, type Homework } from "@/core/domain/practice/homework";
+import { ExerciseRun, perfect } from "@/core/domain/practice/run";
+import { fs } from "@/core/lib/fs/fs";
 import { loadImageB64 } from "@/core/lib/attachments";
+import { coursePaths } from "@/core/lib/fs/paths";
 import { useSettings } from "@/stores/settings";
 import type { BridgeGateway } from "./bridge";
 import type { registerExerciseTools } from "./exerciseTools";
+import { saveDialog } from "./native";
+import { imagesToPdf } from "./pdf";
 import { CARDS_URI } from "./resources";
 
 const appOnly = { ui: { resourceUri: CARDS_URI, visibility: ["app" as const] } };
@@ -18,6 +25,7 @@ const num = z.string().regex(COURSE_ID_RE);
 const scopeSchema = z.union([z.object({ kind: z.enum(["all", "weak"]) }), z.object({ kind: z.literal("unit"), unitId: z.string() }), z.object({ kind: z.literal("stage"), stageId: z.string() })]);
 const out = (text: string, structuredContent?: object) => ({ content: [{ type: "text" as const, text }], ...(structuredContent ? { structuredContent: structuredContent as Record<string, unknown> } : {}) });
 const fail = (text: string) => ({ ...out(text), isError: true as const });
+const files = z.array(z.object({ sha256: z.string().regex(/^[0-9a-f]{64}$/), mediaType: z.enum(["image/jpeg", "image/png"]) })).min(1).max(12);
 
 /** Practice card (plan v2 §6.5): the v1 `Practice` engine, one session per course in memory (its state is also saved as v1 `ui` lines). */
 export function registerPracticeTools(server: McpServer, bridge: BridgeGateway, exercises: ReturnType<typeof registerExerciseTools>) {
@@ -32,6 +40,40 @@ export function registerPracticeTools(server: McpServer, bridge: BridgeGateway, 
       sessions.set(n, p);
     }
     return p;
+  }
+
+  // ----- M57: homework / single question -----
+  const env = (n: string) => ({ gw: bridge, loadImage: loadImageB64(n), digest: exercises.digest });
+  const reading = new Set<string>(); // courses whose uploaded pages the host model is reading
+  const hwError = new Map<string, string>();
+  const hwRuns = new Map<string, ExerciseRun>();
+
+  async function hwData(n: string): Promise<HomeworkData | null> {
+    const hw = await loadHomework(n);
+    if (!hw) return null;
+    let exercise: HomeworkData["exercise"] = null;
+    const i = hw.current;
+    if (hw.how === "tutor" && hw.questions[i]) {
+      const key = `hw-${hw.id}-${i}`;
+      let run = hwRuns.get(key);
+      if (!run) {
+        // A perfect answer's pages (the student's own) become that question's part of the solution file.
+        run = new ExerciseRun(n, asExercise(n, hw, i), "homework", env(n), (hw.questions[i] as Homework["questions"][number]).run, async (st) => {
+          const h = await loadHomework(n);
+          const q = h?.id === hw.id ? h.questions[i] : null;
+          if (!h || !q) return;
+          q.run = st;
+          if (perfect(st.grade) && st.files?.length) q.accepted = st.files;
+          await saveHomework(n, h);
+        }, true);
+        hwRuns.set(key, run);
+      }
+      exercise = await exercises.adopt(key, n, run, "homework");
+    }
+    return {
+      kind: hw.kind, how: hw.how, name: hw.name, splitting: reading.has(n), current: i, exercise, error: hwError.get(n) ?? null,
+      questions: hw.questions.map((q) => ({ label: q.label, accepted: !!q.accepted })),
+    };
   }
 
   async function data(n: string, p: Practice): Promise<PracticeData> {
@@ -55,7 +97,7 @@ export function registerPracticeTools(server: McpServer, bridge: BridgeGateway, 
       mode: p.summary ? "summary" : st ? "item" : done.size ? "choose" : "locked",
       units: ctx.plan.units.filter((u) => u.stageIds.some((s) => done.has(s))).map((u) => ({ id: u.id, title: tr(u.title) })),
       stages: ctx.plan.stages.filter((s) => done.has(s.id)).map((s) => ({ id: s.id, title: tr(s.title) })),
-      counters: p.counters, item, loading: p.loading, error: p.error, summary: p.summary,
+      counters: p.counters, item, loading: p.loading, error: p.error, summary: p.summary, hw: await hwData(n),
     };
   }
 
@@ -107,6 +149,57 @@ export function registerPracticeTools(server: McpServer, bridge: BridgeGateway, 
     if (!p.state) return fail("No session.");
     await p.end();
     return out("ok", await data(courseNumber, p));
+  });
+  const state = async (n: string, text = "ok", extra?: Partial<HomeworkData>) => {
+    const d = await data(n, await session(n));
+    return out(text, d.hw && extra ? { ...d, hw: { ...d.hw, ...extra } } : d);
+  };
+  app("homework_start", "upload a homework (or one question) and have it read (an AI job).", { kind: z.enum(["single", "homework"]), files }, async ({ courseNumber: n, kind, files: f }: { courseNumber: string; kind: Homework["kind"]; files: z.infer<typeof files> }) => {
+    if (reading.has(n)) return fail("Already reading a homework.");
+    await endHomework(n);
+    const hw = newHomework(kind, f.map((x) => ({ type: "image_ref" as const, ...x })));
+    await saveHomework(n, hw);
+    hwError.delete(n);
+    reading.add(n);
+    const { done } = bridge.run(`read ${kind === "single" ? "the question" : "the homework"}`, async () => {
+      try {
+        await saveHomework(n, await splitHomework(env(n), n, hw));
+      } catch (e) {
+        hwError.set(n, e instanceof Error ? e.message : String(e));
+      } finally {
+        reading.delete(n);
+      }
+    }, () => [{ type: "text", text: "Read. The card shows the questions; do not repeat them, wait for the student." }]);
+    done.catch(() => undefined);
+    return state(n, "Reading started. Call shalav_next_job now.");
+  });
+  app("homework_how", "solve with the tutor (the solving loop).", { how: z.enum(["tutor"]) }, async ({ courseNumber: n, how }: { courseNumber: string; how: "tutor" }) => {
+    const hw = await loadHomework(n);
+    if (!hw) return fail("No homework.");
+    await saveHomework(n, { ...hw, how });
+    return state(n);
+  });
+  app("homework_open", "show another question.", { index: z.number().int().min(0) }, async ({ courseNumber: n, index }: { courseNumber: string; index: number }) => {
+    const hw = await loadHomework(n);
+    if (!hw?.questions[index]) return fail("No such question.");
+    await saveHomework(n, { ...hw, current: index });
+    return state(n);
+  });
+  app("homework_download", "save the solutions so far as a PDF where the student picks (Save as dialog).", {}, async ({ courseNumber: n }: { courseNumber: string }) => {
+    const hw = await loadHomework(n);
+    const pages = hw ? acceptedPages(hw) : [];
+    if (!hw || !pages.length) return fail("No solved question yet.");
+    const dir = coursePaths(useSettings.getState().settings.dataRoot, n).attachments;
+    const pdf = await imagesToPdf(await Promise.all(pages.map((sha) => fs().readBytes(`${dir}/${sha}.jpg`))), hw.name || "solution");
+    const path = await saveDialog("solution.pdf");
+    if (!path) return state(n, "cancelled");
+    await writeFile(path, pdf);
+    return state(n, `saved to ${path}`, { saved: path });
+  });
+  app("homework_end", "leave the homework / question.", {}, async ({ courseNumber: n }: { courseNumber: string }) => {
+    await endHomework(n);
+    hwError.delete(n);
+    return state(n);
   });
   app("practice_learn_again", "reopen a weak stage from the summary.", { stageId: z.string() }, async ({ courseNumber, stageId }: { courseNumber: string; stageId: string }) => {
     const p = await session(courseNumber);
