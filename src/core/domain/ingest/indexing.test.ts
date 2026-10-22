@@ -100,8 +100,10 @@ describe("indexing", () => {
 
   it("M70: keeps each part's question, part and answer forms, and the printed solutions' practices with their own situations (overlap deduped)", async () => {
     const occ = (label: string, practice: string) => ({ label, useCase: `in ${label}, the answer bases liability on a statute`, practice });
+    let system = "";
     const gw = {
       async send(r: ClaudeRequest) {
+        system = r.system;
         const first = pagesIn(r)[0] === 1;
         return { usage: {} as never, model: "m", ...toolCall("submit_exercises", {
           exercises: first ? [ex("2a", { question: "2", part: "a", answerForms: ["graph", "written"], referenceSolutionMd: "s" })] : [],
@@ -117,6 +119,7 @@ describe("indexing", () => {
       { id: "abcdef01-o2", ...occ("3", "cites the statute and section") },
     ]);
     expect(out.patterns?.absences).toHaveLength(1);
+    expect(system).toMatch(/Every computed final result[^\n]*always record its form[^\n]*decimals[^\n]*units/); // reconcile can compare the forms of two files' results
   });
 });
 
