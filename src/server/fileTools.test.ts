@@ -62,6 +62,8 @@ it("uploads in chunks, lists, indexes through the bridge, removes", async () => 
   const job = JSON.stringify((await call("shalav_next_job", { build: true })).content);
   const id = Number(/job #(\d+)/.exec(job)?.[1]);
   expect(job).toContain("limits of sequences");
+  // the build counts its files by state (not "file 1 of 1" as soon as they are queued)
+  expect(sc<{ step: string; files: unknown }>(await call("course_status", { number: num }))).toMatchObject({ step: "index", files: { scanned: 0, scanning: 1, notScanned: 0, total: 1 } });
   const done = await call("shalav_submit_job", { jobId: id, input: { pages: [{ page: 1, stageIds: ["S001"], summary: "s", hasFigure: false, hasExercises: false }] } });
   // the same run then refines the plan for coverage
   const rev = JSON.stringify(done.content);

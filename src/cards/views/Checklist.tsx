@@ -1,9 +1,25 @@
 import { Check, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { BuildStatus, Go } from "../types";
+import type { BuildStatus, FileCounts, Go } from "../types";
 import { Waiting } from "./Waiting";
 
 const STEPS = ["plan", "index", "cover"] as const;
+const DOTS = { scanned: "bg-success", scanning: "bg-warning", notScanned: "bg-danger", total: "bg-muted" } as const;
+
+/** The scan step's files by state, colored like the file lists' legend. */
+function Counts({ c }: { c: FileCounts }) {
+  const { t } = useTranslation();
+  return (
+    <span className="flex flex-wrap gap-x-3 text-xs text-muted">
+      {(Object.keys(DOTS) as (keyof FileCounts)[]).map((k) => (
+        <span key={k} className="flex items-center gap-1">
+          <span className={`size-2 rounded-full ${DOTS[k]}`} aria-hidden />
+          {t(`files.state.${k}`)} <span className="font-medium text-fg tabular-nums">{c[k]}</span>
+        </span>
+      ))}
+    </span>
+  );
+}
 /** Plan build checklist (v1 §4.3): spinner -> check. */
 export function Checklist({ b, go }: { b: BuildStatus; go: Go }) {
   const { t } = useTranslation();
@@ -25,10 +41,9 @@ export function Checklist({ b, go }: { b: BuildStatus; go: Go }) {
               <span className="size-4 rounded-full border-2 border-border" aria-hidden />
             )}
             <span className={i > cur ? "text-muted" : ""}>
-              {i === cur && b.unit
-                ? t(s === "plan" ? "plan.detailing" : "plan.reading", b.unit)
-                : t(`plan.step.${s}`)}
+              {i === cur && s === "plan" && b.unit ? t("plan.detailing", b.unit) : t(`plan.step.${s}`)}
             </span>
+            {i === cur && s === "index" && b.files && <Counts c={b.files} />}
           </li>
         ))}
       </ul>

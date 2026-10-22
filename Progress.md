@@ -749,3 +749,8 @@ Edge cases found with the sample slides, and fixed in the renderer:
 - Sorted alphabetically, names in the settings language first (Hebrew names first in Hebrew). `Intl.Collator` with numeric order, so "2" comes before "10".
 - Filter and page are kept per list. A page left empty (after a delete or a filter) shows the last page.
 - e2e: `files=many` fixture (23 files, mixed names and states); checks sort order, paging, filter on/off, Total, axe.
+
+## M44: the build's scan step counts files by state
+- Bug: the step said "Scanning file 32 of 32" while only the first file was scanning. `indexPending` counted every queue event without page progress as "done", and that includes the `pending` event each file sends when it's queued.
+- Now `indexPending` tracks each of the build's files by its latest queue status and reports `{ scanned, scanning, notScanned, total }` (materials and exercises together; a removed file drops out of the total). The checklist shows them with the file lists' dots and wording: נסרק בהצלחה / בסריקה / לא נסרק / סה״כ.
+- Tests: fileTools (mid-scan `course_status` = 0/1/0 of 1) and an e2e scan-step check with a screenshot.

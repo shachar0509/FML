@@ -188,6 +188,23 @@ for (const lang of LANGS)
   });
 
 for (const lang of LANGS)
+  test(`course: the scan step counts the build's files by state (${lang})`, async ({ page }) => {
+    const errors = pageErrors(page);
+    await page.goto(host(`lang=${lang}&joined=1&step=index`)); // 10 scanned, 2 scanning, 20 waiting of 32
+    await page.locator("ul button").first().click();
+    await page.getByRole("button", { name: lang === "he" ? "עדכון התוכנית" : "Update plan" }).click();
+    const step = page.getByRole("listitem").filter({ hasText: lang === "he" ? "סה״כ" : "Total" }).first();
+    await expect(step).toContainText(lang === "he" ? "נסרק בהצלחה 10" : "Scanned 10");
+    await expect(step).toContainText(lang === "he" ? "בסריקה 2" : "Scanning 2");
+    await expect(step).toContainText(lang === "he" ? "לא נסרק 20" : "Not scanned 20");
+    await expect(step).toContainText(lang === "he" ? "סה״כ 32" : "Total 32");
+    await page.waitForTimeout(400); // card fade-in
+    await axe(page);
+    await page.getByRole("status").filter({ has: step }).screenshot({ path: `e2e/tests_output/course/card-build-scan-${lang}.png` });
+    expect(errors).toEqual([]);
+  });
+
+for (const lang of LANGS)
   test(`course files: first Moodle import downloads the browser (${lang})`, async ({ page }) => {
     const errors = pageErrors(page);
     await page.goto(host(`lang=${lang}&files=installing`));

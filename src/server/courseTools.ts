@@ -2,7 +2,7 @@ import { COURSE_ID_RE, university } from "@/core/universities";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import type { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod";
-import type { BuildStatus, CourseData, LookupResult } from "@/cards/types";
+import type { BuildStatus, CourseData, FileCounts, LookupResult } from "@/cards/types";
 import { type CatalogSource } from "@/core/domain/catalog/catalog";
 import { addCourse, buildPlan, courseExists, loadCourse, type ManualEntry } from "@/core/domain/courses/courses";
 import { newStageIds, refinePlan } from "@/core/domain/plan/refine";
@@ -15,11 +15,11 @@ import { nodeCatalog } from "./platform";
 const both = { ui: { resourceUri: CARDS_URI, visibility: ["model" as const, "app" as const] } }; // also usable as plain tools in hosts without cards (Claude Code)
 const lookupIn = z.object({ number: z.string() });
 const numIn = z.object({ number: z.string().regex(COURSE_ID_RE) });
-type Build = { state: "running" | "done" | "failed"; progress: { step: "plan" | "index" | "cover"; unit?: { k: number; n: number } } | null; error: string | null };
+type Build = { state: "running" | "done" | "failed"; progress: { step: "plan" | "index" | "cover"; unit?: { k: number; n: number }; files?: FileCounts } | null; error: string | null };
 const out = (text: string, structuredContent: object) => ({ content: [{ type: "text" as const, text }], structuredContent: structuredContent as Record<string, unknown> });
 
 /** Courses and plan (plan v2 §6.2): lookup, create/retry as bridge operations, status polling, Course Home data. */
-export function registerCourseTools(server: McpServer, bridge: BridgeGateway, indexPending: (n: string, on: (k: number, n: number) => void) => Promise<number>, source?: CatalogSource) {
+export function registerCourseTools(server: McpServer, bridge: BridgeGateway, indexPending: (n: string, on: (c: FileCounts) => void) => Promise<number>, source?: CatalogSource) {
   const catalog = () => source ?? nodeCatalog();
   setClaude(bridge); // domain code (createCourse/buildPlan) talks to the host model through the bridge
   const builds = new Map<string, Build>();
@@ -45,7 +45,7 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, in
             if (r.planError) throw new Error(r.planError);
             had = (await loadCourse(n))?.plan ?? null;
           }
-          const indexed = await indexPending(n, (k, total) => (b.progress = { step: "index", unit: total ? { k, n: total } : undefined }));
+          const indexed = await indexPending(n, (files) => (b.progress = { step: "index", files: files.total ? files : undefined }));
           let added = 0;
           // Serial by design: refine starts only after every file of this course is read (indexPending waits for them), and one build per course runs at a time.
           const c = await loadCourse(n);
@@ -69,7 +69,7 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, in
   const status = (n: string): BuildStatus => {
     const b = builds.get(n);
     if (!b) return { state: "none" };
-    return { state: b.state, step: b.progress?.step, unit: b.progress?.unit, error: b.error, pending: bridge.pending() };
+    return { state: b.state, step: b.progress?.step, unit: b.progress?.unit, files: b.progress?.files, error: b.error, pending: bridge.pending() };
   };
 
   registerAppTool(server, "course_lookup", { title: "Look up a course", description: "look a course number up in the university catalog (Technion only; other universities need manual entry).", inputSchema: lookupIn, _meta: both }, async ({ number }) => {

@@ -165,8 +165,7 @@
     "studyMeanwhile": "The plan is being built in the chat where you pressed the button. You can study in a new chat meanwhile.",
     "updateHint": "Added files? Update the plan: Shalav scans the new files and makes sure every topic in them and in the example exercises has a stage.",
     "build": "Build plan",
-    "update": "Update plan",
-    "reading": "Scanning file {{k}} of {{n}}"
+    "update": "Update plan"
   },
   "advance": {
     "title": "Move to the next stage?",

@@ -6,7 +6,7 @@ import { basename, join } from "node:path";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import type { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod";
-import type { FilesData } from "@/cards/types";
+import type { FileCounts, FilesData } from "@/cards/types";
 import { claude } from "@/core/claude/runtime";
 import { loadCourse, courseExists } from "@/core/domain/courses/courses";
 import { importFiles, reindex, removeFile, scanCourse, type Deps } from "@/core/domain/ingest/import";
@@ -108,13 +108,22 @@ export function registerFileTools(server: McpServer, o: { openFolder?: (p: strin
     return out("ok", { ok: true });
   });
 
-  /** Index every pending/failed file against the current plan (part of "Build plan"); returns how many files are indexed after it. */
-  async function indexPending(number: string, on: (k: number, n: number) => void = () => undefined) {
+  /** Index every pending/failed file against the current plan (part of "Build plan"); returns how many files are indexed after it.
+   *  `on` gets the build's files (materials and exercises together) by state, like the file lists: scanned, scanning, not scanned (waiting or failed). */
+  async function indexPending(number: string, on: (c: FileCounts) => void = () => undefined) {
     const todo = (await listFileIndexes(number)).filter((r) => r.status === "pending" || r.status === "failed");
-    const left = new Set(todo.map((r) => r.sha256));
-    on(0, todo.length);
+    const state = new Map(todo.map((r) => [r.sha256, "pending" as string]));
+    const report = () => {
+      const v = [...state.values()];
+      on({ scanned: v.filter((s) => s === "indexed").length, scanning: v.filter((s) => s === "indexing").length, notScanned: v.filter((s) => s === "pending" || s === "failed").length, total: v.length });
+    };
+    report();
     const off = queue.subscribe((e) => {
-      if (e.done === undefined && left.delete(e.sha256)) on(todo.length - left.size, todo.length);
+      if (e.course !== number || !state.has(e.sha256)) return;
+      if (e.status === "removed") state.delete(e.sha256);
+      else if (state.get(e.sha256) !== e.status) state.set(e.sha256, e.status);
+      else return; // page progress of a file already scanning
+      report();
     });
     try {
       for (const r of todo) await queue.retry(number, r.sha256);

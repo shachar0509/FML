@@ -27,7 +27,9 @@ export type CourseData = Base & {
   watch: { label: string; count: number; stageIds: string[] }[];
   units: { id: string; title: string; stages: Stage[] }[];
 };
-export type BuildStatus = { state: "none" | "running" | "done" | "failed"; step?: "plan" | "index" | "cover"; unit?: { k: number; n: number }; error?: string | null; pending?: number };
+/** A plan build's files by scan state, materials and exercises together. */
+export type FileCounts = { scanned: number; scanning: number; notScanned: number; total: number };
+export type BuildStatus = { state: "none" | "running" | "done" | "failed"; step?: "plan" | "index" | "cover"; unit?: { k: number; n: number }; files?: FileCounts; error?: string | null; pending?: number };
 export type LookupResult =
   | { status: "invalid" }
   /** `manual` = the university has no online catalog; `number` is the normalised course id. */
