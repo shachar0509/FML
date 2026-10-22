@@ -122,6 +122,17 @@ describe("M73 conventions applied", () => {
     expect(grade.score).toBe(80);
   });
 
+  it("a course page less relevant to the doubt than the grader's own key does not overrule it: no call, no deduction", async () => {
+    replies.submit_fact_check = { results: [{ n: 1, verdict: "wrong", source: "sol.md, Q2", quote: "q", note: "n" }] };
+    const key = { ...ex, referenceSolutionMd: "Notice of defect is section 14: the buyer must inform the seller of the defect, notice under section 14, not section 15." };
+    const { grade } = await gradeAttempt(env, await loadCtx(N), key, [], { hintsUsed: 0, solutionRevealed: false, context: "practice" });
+    expect(calls).not.toContain("submit_fact_check");
+    expect(grade.score).toBe(80);
+    // the course's solution outweighs a key that hardly speaks to the doubt: checked as before
+    await gradeAttempt(env, await loadCtx(N), ex, [], { hintsUsed: 0, solutionRevealed: false, context: "practice", examples: "- Unrelated.\n  Solution: R" });
+    expect(calls).toContain("submit_fact_check");
+  });
+
   it("the eval's path: a typed answer to a question with no stage (homework) sees every convention and writes no events", async () => {
     const before = (await events()).length;
     await gradeAttempt(env, await loadCtx(N), { ...ex, stageIds: [], requiredStageIds: [] }, [], { hintsUsed: 0, solutionRevealed: false, context: "homework", answerText: "my answer" });

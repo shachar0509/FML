@@ -10,6 +10,8 @@ import { langName, type Env } from "./grade";
  * M73: a grader's doubt that comes only from its own knowledge is settled by the course's own files, never by the model alone.
  * Word search (BM25) with the grader's own phrasings, so a page saying it in other words is found, plus the pages of the
  * exercise's stages (tagged by meaning at scan time); then one small check reads only those pages.
+ * A page counts only if it is at least as relevant to the doubt as the pieces the grader was given (reference solution,
+ * example solutions, expected points), ranked in the same call: the course page must outweigh the key it would overrule.
  */
 export type Dispute = { claim: string; believed: string; points: number; finalAnswer: boolean; queries: string[] };
 type Doc = { id: string; head: string; text: string; stageIds: string[] };
@@ -29,10 +31,13 @@ async function docsOf(n: string): Promise<Doc[]> {
   return out;
 }
 
-/** The pages for one doubt: the best word matches anywhere, then the best of the exercise's stages. */
-export function pagesForDispute(docs: Doc[], d: Dispute, stageIds: string[]): Doc[] {
+/** The pages for one doubt: the best word matches anywhere, then the best of the exercise's stages; none below the best given piece. */
+export function pagesForDispute(docs: Doc[], d: Dispute, stageIds: string[], given: string[] = []): Doc[] {
   const q = [...d.queries, d.claim, d.believed].join(" ");
-  const ranked = rank(docs, q).filter((r) => r.score > 0);
+  const keys = given.filter((g) => g.trim()).map((text, i) => ({ id: `given:${i}`, text }));
+  const all = rank([...docs, ...keys], q);
+  const bar = Math.max(0, ...all.filter((r) => r.id.startsWith("given:")).map((r) => r.score));
+  const ranked = all.filter((r) => !r.id.startsWith("given:") && r.score > 0 && r.score >= bar);
   const byId = new Map(docs.map((x) => [x.id, x]));
   const st = new Set(stageIds);
   const ids = ranked.slice(0, PER).map((r) => r.id);
@@ -43,13 +48,14 @@ export function pagesForDispute(docs: Doc[], d: Dispute, stageIds: string[]): Do
 export type Settled = { deduct: number; finalWrong: boolean; notes: string[] };
 
 /** Nothing found, or the pages don't settle it: no deduction (a fair grader may miss a slip; it never punishes a right answer). */
-export async function settleDisputes(env: Env, ctx: Ctx, stageIds: string[], ds: Dispute[]): Promise<Settled> {
+/** `given`: the pieces the grader was given as the key (see pagesForDispute). */
+export async function settleDisputes(env: Env, ctx: Ctx, stageIds: string[], ds: Dispute[], given: string[] = []): Promise<Settled> {
   const none: Settled = { deduct: 0, finalWrong: false, notes: [] };
   if (!ds.length) return none;
   const docs = await docsOf(ctx.course.courseNumber);
   const parts = ds.map((d, i) => {
     let chars = 0; // an equal share per doubt, so a long first page never leaves the others without any
-    const pages = pagesForDispute(docs, d, stageIds).filter((p, k) => (chars += p.text.length) <= CHARS / ds.length || !k);
+    const pages = pagesForDispute(docs, d, stageIds, given).filter((p, k) => (chars += p.text.length) <= CHARS / ds.length || !k);
     return { d, pages, text: `Doubt ${i + 1}: the answer says "${d.claim}"; the grader believes "${d.believed}".\n${pages.map((p) => `<page source="${p.head}">${p.text}</page>`).join("\n") || "(no matching page)"}` };
   });
   if (!parts.some((p) => p.pages.length)) return none;

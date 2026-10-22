@@ -103,7 +103,9 @@ export async function gradeAttempt(env: Env, ctx: Ctx, ex: Ex, files: Attachment
   const { value } = await callStructured(env.gw, submitGrade, {
     task: "grading", courseNumber: n, system, messages: [{ role: "user", content }], thinkingBudget: THINKING, signal: env.signal,
   });
-  const f = await settleDisputes(env, ctx, ex.stageIds, value.disputed);
+  // ponytail: refsText's "- statement" lines split back into exercises; a list inside a statement splits it further (a lower bar, never a higher one)
+  const given = [ex.referenceSolutionMd ?? "", ...(o.examples ?? "").split(/\n(?=- )/)];
+  const f = await settleDisputes(env, ctx, ex.stageIds, value.disputed, given);
   const g: Grade = !f.deduct && !f.notes.length ? value : {
     ...value, score: Math.max(0, value.score - f.deduct), finalAnswerCorrect: value.finalAnswerCorrect && !f.finalWrong,
     summaryMd: [value.summaryMd, ...f.notes].join("\n\n"),
@@ -139,7 +141,7 @@ export async function gradeCheck(
     messages: [{ role: "user", content: [{ type: "text", text: `<student_answer>${answerText || "(see images)"}</student_answer>` }, ...(await imageBlocks(env, files))] }],
     signal: env.signal,
   });
-  const f = await settleDisputes(env, ctx, q.stageIds, v.disputed);
+  const f = await settleDisputes(env, ctx, q.stageIds, v.disputed, [q.expectedPoints.join("\n")]);
   const value: CheckGrade = !f.deduct && !f.notes.length ? v : { ...v, score: Math.max(0, v.score - f.deduct), feedbackMd: [v.feedbackMd, ...f.notes].join("\n\n") };
   const tags = await defineTags(n, ctx, value.mistakes);
   const nodes = withConventions(await applyNodes(n, ctx.plan, g, cands, value, q.id, "grader"), ctx.conventions ?? [], conv.list, value.conventions);
