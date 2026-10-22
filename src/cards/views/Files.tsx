@@ -378,25 +378,26 @@ export function Files({
           {t("files.dropHint")}
         </p>
       )}
-      {open[role] &&
-        shown.slice(p * PAGE, (p + 1) * PAGE).map((f) => (
+      {open[role] && (
+        // one grid for all rows: each column is as wide in every row, so names line up whatever the label beside them
+        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto_auto] items-center gap-x-3 gap-y-2">
+        {shown.slice(p * PAGE, (p + 1) * PAGE).map((f) => (
           <div
             key={f.sha}
-            className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-2 text-sm first-of-type:border-t-0 first-of-type:pt-0"
+            className="col-span-full grid grid-cols-subgrid items-center gap-y-2 border-t border-border pt-2 text-sm first-of-type:border-t-0 first-of-type:pt-0"
           >
             <FileText className="size-4 shrink-0 text-muted" aria-hidden />
             <span className="min-w-0 flex-1 truncate text-center" dir="auto">
               {f.name}
             </span>
-            {role === "exercises" && f.status === "indexed" && (
-              <span className="text-xs text-muted">
-                {t("files.exercisesFound", { count: f.exercises })}
-                {f.exercises > 0 &&
-                  ` · ${t("files.solved", { count: f.solved })} · ${t("files.unsolved", { count: f.exercises - f.solved })}`}
-              </span>
-            )}
-            <span className="text-xs text-muted">{t("files.pages", { count: f.pages })}</span>
-            <Chip f={f} hasPlan={hasPlan} building={live} />
+            <span className="justify-self-end text-xs text-muted">
+              {role === "exercises" && f.status === "indexed" &&
+                `${t("files.exercisesFound", { count: f.exercises })}${f.exercises > 0 ? ` · ${t("files.solved", { count: f.solved })} · ${t("files.unsolved", { count: f.exercises - f.solved })}` : ""} · `}
+              {t("files.pages", { count: f.pages })}
+            </span>
+            <span className="justify-self-start">
+              <Chip f={f} hasPlan={hasPlan} building={live} />
+            </span>
             <FileMenu
               f={f}
               building={live}
@@ -411,7 +412,7 @@ export function Files({
             />
             {del === f.sha && (
               <div
-                className="flex w-full flex-col gap-2 rounded-lg border border-danger/50 p-3"
+                className="col-span-full flex flex-col gap-2 rounded-lg border border-danger/50 p-3"
                 role="alertdialog"
                 aria-label={t("files.removeTitle")}
               >
@@ -435,6 +436,8 @@ export function Files({
             )}
           </div>
         ))}
+        </div>
+      )}
       {open[role] && pages > 1 && (
         <nav className="flex items-center justify-center gap-2 border-t border-border pt-2 text-xs text-muted" aria-label={t("files.pager", { title })}>
           <Button variant="outline" size="sm" aria-label={t("files.prev")} disabled={p === 0} onClick={() => go(p - 1)}>

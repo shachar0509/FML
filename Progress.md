@@ -764,3 +764,8 @@ Edge cases found with the sample slides, and fixed in the renderer:
 - While a build runs, a file not scanned yet shows "ממתין לסריקה / Waiting to scan". When no build is running it shows "Not scanned yet — press Update plan / Build plan".
 - Re-scan in the ⋯ menu is disabled for every file until the build ends. Open and Delete stay available.
 - e2e: in the joined-build test, the label, no "press Update plan", and Re-scan disabled on a scanned file.
+
+## M47: file rows line up
+- File names were centered in the space left after the page count and the status label. Labels of different widths ("Ready" vs "Not scanned yet — press Update plan") moved each name to a different center.
+- The rows now share one grid (CSS subgrid): icon | name | pages (and exercise counts) | label | ⋯. Every column is as wide in every row, so names, page counts and labels line up.
+- e2e: the course spec was flaky because a 1-day-old orphaned `pnpm dev` (1 GB) was reused. After killing it, 20/20 passed in 30 s.
