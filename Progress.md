@@ -929,3 +929,17 @@ Edge cases found with the sample slides, and fixed in the renderer:
   - Single question: after a perfect answer, **New question**.
 - State: `.shalav/homework/current.json` per course (kept under its id when left).
 - Tests: images to PDF (pages, sizes, photos embedded), server round trip (read job with the pages; loop card with the question's page; 96 with a wrong final answer not accepted, right one accepted; no events; open another question; download cancelled, then saved with 1 page; single question keeps one), e2e (modes, homework flow with download, single question) in he/en, light/dark.
+
+## M58: homework solved by the AI, as a PDF
+- After the homework is read, the second choice is **Let the AI solve it**.
+- One job per question (study lane; the card sends ▶️ Continue): a complete, exam-level solution that justifies every step. Each job gets:
+  - the question with its original page(s);
+  - the course material ranked by the question's text;
+  - the nearest example exercises with their solutions, so the solution has their format and level of detail.
+  - Each solution is saved as it lands; after a failure, Try again continues from the first unsolved question.
+- Then the solutions are printed to an A4 PDF: the assignment's name, and per question its statement (shaded) and its solution.
+  - The page is built on the server (react-markdown, with KaTeX as MathML, so no fonts or CSS ship; math stays left-to-right inside Hebrew text).
+  - It is printed with Shalav's own Chromium, the one Moodle import uses; the first time it downloads once, and the card shows the percentage.
+  - The PDF is kept with the homework (`.shalav/homework/<id>.pdf`), so downloading it again is instant.
+- The card, on the board: the questions with ✓ as they're solved, "Solving question k of n…", then the PDF step, then **Download solutions** (the same Save as dialog as M57).
+- Tests: solutions page (MathML, direction, escaped title), server round trip (2 solve jobs with the question and its page, then ready; the downloaded file holds the name, questions, solutions and math; printing stubbed), e2e (choice, progress, browser-download step, ready, download) in he/en, light/dark.

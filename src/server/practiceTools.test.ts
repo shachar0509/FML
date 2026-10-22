@@ -22,6 +22,8 @@ import { createServer } from "./server";
 // M57: the Save as dialog picks this path ("" = cancelled)
 const saveTo = vi.hoisted(() => ({ path: "" }));
 vi.mock("./native", async (orig) => ({ ...(await orig<typeof import("./native")>()), saveDialog: async () => saveTo.path || null }));
+// M58: printing needs Shalav's Chromium; here the HTML itself is the "PDF"
+vi.mock("./pdf", async (orig) => ({ ...(await orig<typeof import("./pdf")>()), htmlToPdf: async (html: string) => Buffer.from(`%PDF ${html}`) }));
 
 const unit = (n: number) => ({ title: "u", summary: "s", stages: Array.from({ length: n }, () => ({ title: "t", kind: "concept", summary: "s", prerequisites: [] })) });
 const details = (req: { messages: { content: unknown }[] }) =>
@@ -122,11 +124,13 @@ it("practice card: scope, generated exercise through the bridge, MCQ, open answe
   // ----- M57: homework with the tutor -----
   const upload = async (name: string) => sc<{ files: { sha256: string; mediaType: string }[] }>(await call("attachment_upload", { number: n, name, mime: "image/png", base64: createCanvas(60, 80 + name.length).toBuffer("image/png").toString("base64") })).files;
   const pages = [...(await upload("p1.png")), ...(await upload("p22.png"))];
+  let ahead = ""; // a submit's answer may already carry the op's next job
   async function job(input: object) {
-    const t = text(await call("shalav_next_job"));
+    const t = ahead || text(await call("shalav_next_job"));
     const id = Number(/# Shalav job #(\d+)/.exec(t)?.[1]);
     expect(id).toBeGreaterThan(0);
-    await call("shalav_submit_job", { jobId: id, input });
+    const r = text(await call("shalav_submit_job", { jobId: id, input }));
+    ahead = r.includes("# Shalav job #") ? r : "";
     return t;
   }
   const hs = sc<PracticeData>(await call("homework_start", { courseNumber: n, kind: "homework", files: pages }));
@@ -164,4 +168,20 @@ it("practice card: scope, generated exercise through the bridge, MCQ, open answe
   await job({ name: "q", questions: [{ label: "1", statementMd: "Only", pages: [1] }, { label: "2", statementMd: "dropped", pages: [1] }] });
   expect(sc<PracticeData>(await call("practice_state", { courseNumber: n })).hw).toMatchObject({ questions: [{ label: "1" }], exercise: { statementMd: "Only", loop: true } });
   expect(sc<PracticeData>(await call("homework_end", { courseNumber: n })).hw).toBeNull();
+
+  // ----- M58: the AI solves the homework -----
+  await call("homework_start", { courseNumber: n, kind: "homework", files: pages });
+  await job({ name: "HW 4", questions: [{ label: "Q1", statementMd: "Show A", pages: [1] }, { label: "Q2", statementMd: "Show B", pages: [2] }] });
+  const ai = sc<PracticeData>(await call("homework_how", { courseNumber: n, how: "ai" })).hw;
+  expect(ai).toMatchObject({ how: "ai", solving: { step: "solve", done: 0, total: 2 }, ready: false, exercise: null });
+  for (const [k, sol] of [["Show A", "Solution $a$"], ["Show B", "Solution B"]]) {
+    const t = await job({ solutionMd: sol });
+    expect(t).toContain(`<exercise>${k}</exercise>`);
+    expect(t).toContain("image"); // the question's page
+  }
+  await vi.waitFor(async () => expect(sc<PracticeData>(await call("practice_state", { courseNumber: n })).hw).toMatchObject({ solving: null, ready: true, questions: [{ accepted: true }, { accepted: true }] }));
+  saveTo.path = join(d, "ai.pdf");
+  await call("homework_download", { courseNumber: n });
+  const printed = (await readFile(saveTo.path)).toString();
+  for (const x of ["HW 4", "Q2", "Show B", "Solution B", "<math"]) expect(printed).toContain(x);
 });

@@ -8,7 +8,7 @@ import type { HomeworkData, PracticeData } from "@/cards/types";
 import { loadCtx } from "@/core/domain/practice/exercises";
 import { Practice } from "@/core/domain/practice/engine";
 import { completedIds, type Scope } from "@/core/domain/practice/select";
-import { acceptedPages, asExercise, endHomework, loadHomework, newHomework, saveHomework, splitHomework, type Homework } from "@/core/domain/practice/homework";
+import { acceptedPages, asExercise, endHomework, loadHomework, newHomework, saveHomework, solutionsPdf, solveHomework, splitHomework, type Homework } from "@/core/domain/practice/homework";
 import { ExerciseRun, perfect } from "@/core/domain/practice/run";
 import { fs } from "@/core/lib/fs/fs";
 import { loadImageB64 } from "@/core/lib/attachments";
@@ -17,7 +17,7 @@ import { useSettings } from "@/stores/settings";
 import type { BridgeGateway } from "./bridge";
 import type { registerExerciseTools } from "./exerciseTools";
 import { saveDialog } from "./native";
-import { imagesToPdf } from "./pdf";
+import { htmlToPdf, imagesToPdf, solutionsHtml } from "./pdf";
 import { CARDS_URI } from "./resources";
 
 const appOnly = { ui: { resourceUri: CARDS_URI, visibility: ["app" as const] } };
@@ -47,6 +47,7 @@ export function registerPracticeTools(server: McpServer, bridge: BridgeGateway, 
   const reading = new Set<string>(); // courses whose uploaded pages the host model is reading
   const hwError = new Map<string, string>();
   const hwRuns = new Map<string, ExerciseRun>();
+  const solving = new Map<string, { step: "solve" | "pdf"; install: number | null }>(); // M58: courses whose homework the AI is solving
 
   async function hwData(n: string): Promise<HomeworkData | null> {
     const hw = await loadHomework(n);
@@ -70,9 +71,12 @@ export function registerPracticeTools(server: McpServer, bridge: BridgeGateway, 
       }
       exercise = await exercises.adopt(key, n, run, "homework");
     }
+    const s = solving.get(n);
     return {
       kind: hw.kind, how: hw.how, name: hw.name, splitting: reading.has(n), current: i, exercise, error: hwError.get(n) ?? null,
-      questions: hw.questions.map((q) => ({ label: q.label, accepted: !!q.accepted })),
+      questions: hw.questions.map((q) => ({ label: q.label, accepted: hw.how === "ai" ? !!q.solutionMd : !!q.accepted })),
+      solving: s ? { ...s, done: hw.questions.filter((q) => q.solutionMd).length, total: hw.questions.length } : null,
+      ready: hw.how === "ai" && !s && (await fs().exists(solutionsPdf(n, hw.id))),
     };
   }
 
@@ -173,11 +177,32 @@ export function registerPracticeTools(server: McpServer, bridge: BridgeGateway, 
     done.catch(() => undefined);
     return state(n, "Reading started. Call shalav_next_job now.");
   });
-  app("homework_how", "solve with the tutor (the solving loop).", { how: z.enum(["tutor"]) }, async ({ courseNumber: n, how }: { courseNumber: string; how: "tutor" }) => {
+  app("homework_how", "solve with the tutor (the solving loop), or let the AI solve it (AI jobs, then a PDF).", { how: z.enum(["tutor", "ai"]) }, async ({ courseNumber: n, how }: { courseNumber: string; how: "tutor" | "ai" }) => {
     const hw = await loadHomework(n);
     if (!hw) return fail("No homework.");
     await saveHomework(n, { ...hw, how });
-    return state(n);
+    if (how === "tutor") return state(n);
+    if (solving.has(n)) return state(n, "Already solving.");
+    const s = { step: "solve" as "solve" | "pdf", install: null as number | null };
+    solving.set(n, s);
+    hwError.delete(n);
+    const { done } = bridge.run("solve the homework", async () => {
+      try {
+        await solveHomework(env(n), n, hw.id);
+        const h = await loadHomework(n);
+        if (h?.id !== hw.id) return;
+        s.step = "pdf";
+        const he = useSettings.getState().settings.language === "he";
+        const html = solutionsHtml(h.name || (he ? "שיעורי בית" : "Homework"), h.questions.map((q) => ({ label: q.label, statementMd: q.statementMd, solutionMd: q.solutionMd ?? "" })), he, he ? "פתרון" : "Solution");
+        await fs().writeBytes(solutionsPdf(n, h.id), await htmlToPdf(html, (pct) => (s.install = pct)));
+      } catch (e) {
+        hwError.set(n, e instanceof Error ? e.message : String(e));
+      } finally {
+        solving.delete(n);
+      }
+    }, () => [{ type: "text", text: "The solutions are done; the card prints them as a PDF for the student to download. Do not repeat them in the chat." }]);
+    done.catch(() => undefined);
+    return state(n, "Solving started. Call shalav_next_job now.");
   });
   app("homework_open", "show another question.", { index: z.number().int().min(0) }, async ({ courseNumber: n, index }: { courseNumber: string; index: number }) => {
     const hw = await loadHomework(n);
@@ -187,11 +212,12 @@ export function registerPracticeTools(server: McpServer, bridge: BridgeGateway, 
   });
   app("homework_download", "save the solutions so far as a PDF where the student picks (Save as dialog).", {}, async ({ courseNumber: n }: { courseNumber: string }) => {
     const hw = await loadHomework(n);
-    const pages = hw ? acceptedPages(hw) : [];
-    if (!hw || !pages.length) return fail("No solved question yet.");
+    if (hw?.how === "ai") {
+      if (!(await fs().exists(solutionsPdf(n, hw.id)))) return fail("The solutions are not ready yet.");
+    } else if (!hw || !acceptedPages(hw).length) return fail("No solved question yet.");
     const dir = coursePaths(useSettings.getState().settings.dataRoot, n).attachments;
-    const pdf = await imagesToPdf(await Promise.all(pages.map((sha) => fs().readBytes(`${dir}/${sha}.jpg`))), hw.name || "solution");
-    const path = await saveDialog("solution.pdf");
+    const pdf = hw.how === "ai" ? await fs().readBytes(solutionsPdf(n, hw.id)) : await imagesToPdf(await Promise.all(acceptedPages(hw).map((sha) => fs().readBytes(`${dir}/${sha}.jpg`))), hw.name || "solution");
+    const path = await saveDialog(hw.how === "ai" ? "solutions.pdf" : "solution.pdf");
     if (!path) return state(n, "cancelled");
     await writeFile(path, pdf);
     return state(n, `saved to ${path}`, { saved: path });

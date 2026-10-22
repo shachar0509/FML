@@ -1,13 +1,15 @@
 import * as z from "zod";
-import { splitPrompt } from "@/core/claude/prompts/practice";
-import { submitHomework } from "@/core/claude/practiceTools";
+import { solvePrompt, splitPrompt } from "@/core/claude/prompts/practice";
+import { submitHomework, submitSolution } from "@/core/claude/practiceTools";
 import { callStructured } from "@/core/claude/structured";
 import type { Block } from "@/core/claude/types";
 import { readJsonFile, writeJsonAtomic } from "@/core/lib/fs/atomicWrite";
 import { fs } from "@/core/lib/fs/fs";
 import { newId } from "@/core/lib/ids";
 import { nowIso } from "@/core/lib/time";
-import { paths, type Ex } from "./exercises";
+import { isCustom } from "@/core/universities";
+import { digest, examples } from "./assist";
+import { figureImages, loadCtx, paths, type Ex } from "./exercises";
 import { imageBlocks, langName, type Attachment, type Env } from "./grade";
 import { emptyRun, type RunState } from "./run";
 
@@ -65,3 +67,31 @@ export async function splitHomework(env: Env, n: string, hw: Homework): Promise<
 
 /** The accepted solution pages, in question order. */
 export const acceptedPages = (hw: Homework) => hw.questions.flatMap((q) => q.accepted ?? []);
+
+/** M58 "Let the AI solve it": one job per unsolved question, each saved as it lands (a failure resumes where it stopped). */
+export async function solveHomework(env: Env, n: string, id: string) {
+  for (;;) {
+    const hw = await loadHomework(n);
+    const i = hw?.id === id ? hw.questions.findIndex((q) => !q.solutionMd) : -1;
+    if (!hw || i < 0) return;
+    const ctx = await loadCtx(n);
+    const ex = asExercise(n, hw, i);
+    const figs = await figureImages(n, ex);
+    const content: Block[] = [
+      { type: "text", text: `<exercise>${ex.statementMd}</exercise>${figs.length ? "\nThe question's original page(s):" : ""}` },
+      ...figs.map((f): Block => ({ type: "image", source: { type: "base64", media_type: f.mediaType, data: f.base64 } })),
+    ];
+    const { value } = await callStructured(env.gw, submitSolution, {
+      task: "grading", courseNumber: n, system: solvePrompt(langName(), "", "", await digest(env, ctx, ex), isCustom(ctx.course), await examples(ctx, ex)),
+      messages: [{ role: "user", content }], signal: env.signal,
+    });
+    const now = await loadHomework(n);
+    const q = now?.id === id ? now.questions[i] : null;
+    if (!now || !q) return;
+    q.solutionMd = value.solutionMd;
+    await saveHomework(n, now);
+  }
+}
+
+/** Where the AI's solutions PDF is kept once printed. */
+export const solutionsPdf = (n: string, id: string) => `${paths(n).homework}/${id}.pdf`;

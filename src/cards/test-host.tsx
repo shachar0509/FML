@@ -97,12 +97,18 @@ const hwReply = (name: string, args?: Record<string, unknown>): PracticeData | u
   if (name === "homework_start") hw = { kind: args?.kind as HomeworkData["kind"], how: args?.kind === "single" ? "tutor" : null, name: "", splitting: true, questions: [], current: 0, exercise: null, error: null };
   else if (name === "practice_state" && hw?.splitting) hw = { ...hw, splitting: false, name: L("תרגיל בית 3", "Homework 3"), questions: (hw.kind === "single" ? [0] : [0, 1, 2]).map((i) => ({ label: L(`שאלה ${i + 1}`, `Question ${i + 1}`), accepted: false })) };
   else if (name === "practice_state" && hw && lx.perfect) hw = { ...hw, questions: hw.questions.map((q, i) => (i === hw?.current ? { ...q, accepted: true } : q)) };
-  else if (name === "homework_how" && hw) hw = { ...hw, how: "tutor" };
+  else if (name === "homework_how" && hw) hw = { ...hw, how: args?.how as "tutor" | "ai", solving: args?.how === "ai" ? { step: "solve", done: 0, total: hw.questions.length, install: null } : null, ready: false };
+  else if (name === "practice_state" && hw?.solving) {
+    // M58: one more solution per poll, then the PDF (the browser download first), then ready
+    const s = hw.solving;
+    const next = s.step === "solve" && s.done + 1 < s.total ? { ...s, done: s.done + 1 } : s.step === "solve" ? { ...s, done: s.total, step: "pdf" as const, install: 40 } : null;
+    hw = { ...hw, solving: next, ready: !next, questions: hw.questions.map((q, i) => ({ ...q, accepted: i < (next?.done ?? s.total) })) };
+  }
   else if (name === "homework_open" && hw) hw = { ...hw, current: args?.index as number };
   else if (name === "homework_end") hw = null;
   else if (name !== "homework_download" && name !== "practice_state") return undefined;
-  if (name === "homework_how" || name === "homework_open" || (name === "practice_state" && hw?.how === "tutor" && !hw.exercise)) lx = hwQuestion(hw?.current ?? 0);
-  if (hw) hw = { ...hw, exercise: hw.how === "tutor" && hw.questions.length ? lx : null, saved: name === "homework_download" ? "/Users/me/Documents/solution.pdf" : null };
+  if ((name === "homework_how" && hw?.how === "tutor") || name === "homework_open" || (name === "practice_state" && hw?.how === "tutor" && !hw.exercise)) lx = hwQuestion(hw?.current ?? 0);
+  if (hw) hw = { ...hw, exercise: hw.how === "tutor" && hw.questions.length ? lx : null, saved: name === "homework_download" ? `/Users/me/Documents/${hw.how === "ai" ? "solutions" : "solution"}.pdf` : null };
   return { ...practiceBase, hw };
 };
 const practiceReply: Record<string, PracticeData> = { practice_start_request: mcqItem, practice_next_request: mcqItem, practice_answer_mcq: mcqDone, practice_end: practiceSummary };

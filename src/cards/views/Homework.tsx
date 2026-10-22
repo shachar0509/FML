@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, Download, GraduationCap } from "lucide-react";
+import { Check, Download, GraduationCap, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import type { Go, HomeworkData, PracticeData } from "../types";
@@ -47,9 +47,10 @@ export function Homework({
   };
   const refresh = () => void call("practice_state");
 
-  // The questions are read by Claude in the chat; follow it until they land.
+  // The questions are read (and, M58, solved) by Claude in the chat; follow it until they land.
+  const waiting = !!hw?.splitting || !!hw?.solving;
   useEffect(() => {
-    if (!hw?.splitting) return;
+    if (!waiting) return;
     const h = setInterval(
       () =>
         void callTool("practice_state", { courseNumber: number }).then(
@@ -58,7 +59,7 @@ export function Homework({
       2500,
     );
     return () => clearInterval(h);
-  }, [hw?.splitting, number, callTool, set]);
+  }, [waiting, number, callTool, set]);
 
   const k = hw?.kind ?? kind;
   const title = t(`homework.title.${k}`);
@@ -144,6 +145,19 @@ export function Homework({
               </span>
               <span className="text-sm text-(--board-muted)">{t("homework.tutorText")}</span>
             </button>
+            <button
+              className={`${chalkChoice} flex flex-col items-start gap-1.5 p-4 text-start disabled:opacity-60`}
+              disabled={busy}
+              onClick={async () =>
+                !(await call("homework_how", { how: "ai" })).isError && void go()
+              }
+            >
+              <span className="flex items-center gap-2 text-[17px] font-semibold">
+                <Sparkles className="size-5" aria-hidden />
+                {t("homework.ai")}
+              </span>
+              <span className="text-sm text-(--board-muted)">{t("homework.aiText")}</span>
+            </button>
           </div>
         </Board>
         <Button variant="ghost" className="self-start" onClick={() => void end()}>
@@ -151,6 +165,79 @@ export function Homework({
         </Button>
       </section>
     );
+
+  // M58: the AI solves every question, then the solutions are printed as a PDF to download
+  if (hw.how === "ai") {
+    const s = hw.solving;
+    return (
+      <section className="flex flex-col gap-4" aria-label={hw.name || title}>
+        <Board
+          title={hw.name || title}
+          badge={t("homework.solvedOf", { done: s?.done ?? accepted, total: hw.questions.length })}
+        >
+          <ul className="flex flex-col gap-1.5">
+            {hw.questions.map((q, i) => (
+              <li key={i} className="flex items-center gap-2 text-[15px]">
+                {q.accepted ? (
+                  <Check
+                    className="size-4 shrink-0 text-(--board-ink)"
+                    aria-label={t("homework.written")}
+                  />
+                ) : (
+                  <span
+                    className="size-4 shrink-0 rounded-full border-2 border-(--board-fg)/30"
+                    aria-hidden
+                  />
+                )}
+                {q.label}
+              </li>
+            ))}
+          </ul>
+          {s && (
+            <Waiting
+              go={go}
+              label={
+                s.step === "solve"
+                  ? t("homework.solving", { n: Math.min(s.done + 1, s.total), of: s.total })
+                  : s.install !== null && s.install < 100
+                    ? t("homework.installing", { pct: s.install })
+                    : t("homework.printing")
+              }
+            />
+          )}
+          {!s && hw.error && <p role="alert">{t("homework.solveFailed")}</p>}
+        </Board>
+        <div className="flex flex-wrap items-center gap-2">
+          {!s && hw.error && (
+            <Button
+              variant="outline"
+              onClick={async () =>
+                !(await call("homework_how", { how: "ai" })).isError && void go()
+              }
+            >
+              {t("homework.again")}
+            </Button>
+          )}
+          <Button variant="ghost" onClick={() => void end()}>
+            {t("homework.end")}
+          </Button>
+          <Button
+            className="ms-auto h-11 px-6 text-[15px]"
+            disabled={busy || !hw.ready}
+            onClick={() => void call("homework_download")}
+          >
+            <Download className="size-4" aria-hidden />
+            {t("homework.downloadAi")}
+          </Button>
+        </div>
+        {hw.saved && (
+          <p className="text-sm text-muted" role="status" dir="auto">
+            {t("homework.saved", { path: hw.saved })}
+          </p>
+        )}
+      </section>
+    );
+  }
 
   return (
     <section className="flex flex-col gap-4" aria-label={hw.name || title}>

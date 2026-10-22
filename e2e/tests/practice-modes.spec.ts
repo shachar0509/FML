@@ -65,3 +65,29 @@ for (const lang of LANGS)
     await axe(page);
     expect(errors).toEqual([]);
   });
+
+for (const lang of LANGS)
+  for (const theme of THEMES)
+    test(`homework solved by the AI (${lang}/${theme})`, async ({ page }) => {
+      const errors = pageErrors(page);
+      const he = lang === "he";
+      await page.goto(host(`view=practice&lang=${lang}&theme=${theme}`));
+      await page.getByRole("button", { name: he ? /פתרון שיעורי בית/ : /Solve homework/ }).click();
+      await page.locator("input[type=file]").setInputFiles(png);
+      await page.getByRole("button", { name: he ? "קריאת השאלות" : "Read it" }).click();
+      await page.getByRole("button", { name: he ? /פתרון על ידי ה-AI/ : /Let the AI solve it/ }).click({ timeout: 6000 });
+      expect((await said(page)).at(-1)).toBe(he ? "▶️ המשך" : "▶️ Continue");
+      const download = page.getByRole("button", { name: he ? "הורדת הפתרונות" : "Download solutions" });
+      await expect(download).toBeDisabled(); // until the PDF is ready
+      await expect(page.getByText(he ? /פותרים את שאלה/ : /Solving question/)).toBeVisible();
+      await axe(page);
+      await page.screenshot({ path: `e2e/tests_output/practice-modes/ai-solving-${lang}-${theme}.png` });
+      await expect(page.getByText(he ? /מכינים את מדפסת ה-PDF/ : /Getting the PDF printer ready/)).toBeVisible({ timeout: 10000 });
+      await expect(download).toBeEnabled({ timeout: 6000 });
+      await expect(page.getByLabel(he ? "נפתרה" : "solved")).toHaveCount(3);
+      await download.click();
+      await expect(page.getByText("/Users/me/Documents/solutions.pdf")).toBeVisible();
+      await axe(page);
+      await page.screenshot({ path: `e2e/tests_output/practice-modes/ai-ready-${lang}-${theme}.png` });
+      expect(errors).toEqual([]);
+    });

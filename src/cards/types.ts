@@ -132,6 +132,10 @@ export type HomeworkData = {
   error: string | null;
   /** where the last download was saved */
   saved?: string | null;
+  /** M58 "Let the AI solve it": solutions written so far, then the PDF (`install` = % of the one-time browser download) */
+  solving?: { step: "solve" | "pdf"; done: number; total: number; install: number | null } | null;
+  /** the AI's solutions PDF is ready to download */
+  ready?: boolean;
 };
 export type PracticeData = Base & {
   view: "practice";

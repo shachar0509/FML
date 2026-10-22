@@ -640,6 +640,15 @@
     "newQuestion": "New question",
     "download": "Download solutions ({{n}})",
     "saved": "Saved to {{path}}",
-    "end": "Leave"
+    "end": "Leave",
+    "ai": "Let the AI solve it",
+    "aiText": "Full, detailed solutions of every question, written like the course's example solutions, in one PDF.",
+    "solvedOf": "{{done}}/{{total}} solved",
+    "written": "solved",
+    "solving": "Solving question {{n}} of {{of}}…",
+    "installing": "Getting the PDF printer ready (once, {{pct}}%)…",
+    "printing": "Preparing the PDF…",
+    "solveFailed": "Something went wrong while solving. Try again; solved questions are kept.",
+    "downloadAi": "Download solutions"
   }
 }
