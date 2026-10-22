@@ -122,6 +122,15 @@ describe("M73 conventions applied", () => {
     expect(grade.score).toBe(80);
   });
 
+  it("the eval's path: a typed answer to a question with no stage (homework) sees every convention and writes no events", async () => {
+    const before = (await events()).length;
+    await gradeAttempt(env, await loadCtx(N), { ...ex, stageIds: [], requiredStageIds: [] }, [], { hintsUsed: 0, solutionRevealed: false, context: "homework", answerText: "my answer" });
+    expect(msg.submit_grade).toContain("The student's typed answer:");
+    expect(msg.submit_grade).not.toContain("solution pages");
+    expect(sys.submit_grade).toContain("Only in stage 2");
+    expect((await events()).length).toBe(before);
+  });
+
   it("a written solution follows the conventions whose use case occurs; homework gets every convention", async () => {
     await getSolution(env, await loadCtx(N), { ...ex, referenceSolutionMd: null, ref: { source: "index", id: "e2" } }, "practice");
     expect(sys.submit_solution).toContain("Cite the statute and section");

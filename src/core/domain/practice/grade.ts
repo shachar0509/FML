@@ -96,7 +96,7 @@ export async function gradeAttempt(env: Env, ctx: Ctx, ex: Ex, files: Attachment
   });
   const figs = (await figureImages(n, ex)).flatMap((f): Block[] => [{ type: "image", source: { type: "base64", media_type: f.mediaType, data: f.base64 } }]);
   const content: Block[] = [
-    { type: "text", text: figs.length ? "Figures of the exercise, then the student's solution pages:" : "The student's solution pages:" },
+    { type: "text", text: !files.length && o.answerText ? "The student's typed answer:" : figs.length ? "Figures of the exercise, then the student's solution pages:" : "The student's solution pages:" },
     ...figs, ...(await imageBlocks(env, files)),
     ...(o.answerText ? [{ type: "text" as const, text: `<student_answer>${o.answerText}</student_answer>` }] : []),
   ];

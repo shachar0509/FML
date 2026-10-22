@@ -47,9 +47,9 @@ export async function settleDisputes(env: Env, ctx: Ctx, stageIds: string[], ds:
   const none: Settled = { deduct: 0, finalWrong: false, notes: [] };
   if (!ds.length) return none;
   const docs = await docsOf(ctx.course.courseNumber);
-  let chars = 0;
   const parts = ds.map((d, i) => {
-    const pages = pagesForDispute(docs, d, stageIds).filter((p) => (chars += p.text.length) <= CHARS);
+    let chars = 0; // an equal share per doubt, so a long first page never leaves the others without any
+    const pages = pagesForDispute(docs, d, stageIds).filter((p, k) => (chars += p.text.length) <= CHARS / ds.length || !k);
     return { d, pages, text: `Doubt ${i + 1}: the answer says "${d.claim}"; the grader believes "${d.believed}".\n${pages.map((p) => `<page source="${p.head}">${p.text}</page>`).join("\n") || "(no matching page)"}` };
   });
   if (!parts.some((p) => p.pages.length)) return none;

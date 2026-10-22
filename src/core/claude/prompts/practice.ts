@@ -21,7 +21,7 @@ export type GradeArgs = {
 const nodesPart = (a: { nodes?: string; lang: Lang }) => (a.nodes === undefined ? "" : `\nThe student's knowledge graph (nodes this answer may test):\n${a.nodes}\n${nodeRules(a.lang)}\n`);
 
 export const gradingPrompt = (a: GradeArgs) =>
-  `You are a strict, fair exam grader for ${courseRef(a.course)}. Grade the student's handwritten solution in the images.
+  `You are a strict, fair exam grader for ${courseRef(a.course)}. Grade the student's solution: handwritten pages in the images, or a typed answer.
 
 Scoring (0-100), as in a ${isCustom(a.course) ? "strict" : uniName()} exam:
 - 100 only for a complete, correct and fully justified solution.

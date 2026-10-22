@@ -158,7 +158,7 @@ for (const name of FIXTURES) {
           const ctx = await loadCtx(n);
           const ex: Ex = { ref: { source: "index", id: `${e.key}-${i + 1}` }, statementMd: row.question, referenceSolutionMd: null, gradingNotes: "", requiredStageIds: [], stageIds: [], difficulty: 3, edgeCaseFocus: [], figures: [] };
           const { list } = conventionsFor(ctx, ex.stageIds);
-          const { grade } = await gradeAttempt({ gw, loadImage: async () => "" }, ctx, ex, [], { hintsUsed: 0, solutionRevealed: false, context: "practice", answerText: row.answer });
+          const { grade } = await gradeAttempt({ gw, loadImage: async () => "" }, ctx, ex, [], { hintsUsed: 0, solutionRevealed: false, context: "homework", answerText: row.answer });
           const ids = new Set(convs.map((c) => c.id));
           const per = grade.conventions.filter((r) => ids.has(list[r.n - 1]?.id ?? ""));
           const on = per.filter((r) => r.triggered);
