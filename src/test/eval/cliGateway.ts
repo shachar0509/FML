@@ -11,7 +11,7 @@ import type { Block, ClaudeGateway, ClaudeRequest, ClaudeResponse, Message, Tool
  * Isolated: an empty temp cwd, --safe-mode (no CLAUDE.md, skills, hooks), --strict-mcp-config (no MCP servers), no tools.
  * `EVAL_CACHE=<dir>` replays identical requests from disk (cheap tuning: unchanged scans cost nothing); never for stability runs.
  */
-const MAX_PROCS = 4;
+const MAX_PROCS = Number(process.env.EVAL_PROCS ?? 4); // per process: parallel fixtures each run their own
 
 const blockText = (b: Block): string => {
   if (b.type === "text") return (b as { text: string }).text;
