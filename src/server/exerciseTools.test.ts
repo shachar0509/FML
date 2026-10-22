@@ -11,6 +11,7 @@ import { FakeClaudeGateway, toolCall } from "@/core/claude/fake";
 import { setClaude } from "@/core/claude/runtime";
 import { createCourse } from "@/core/domain/courses/courses";
 import { EventSchema } from "@/core/domain/dataSchemas";
+import { loadConv } from "@/core/domain/history/history";
 import { readJsonlDir } from "@/core/lib/fs/jsonl";
 import { coursePaths } from "@/core/lib/fs/paths";
 import { useSettings } from "@/stores/settings";
@@ -98,6 +99,9 @@ it("exercise card: hints 1-3, upload, grade through the bridge, solution reveal,
   const ev = await events();
   expect(ev.filter((e) => e.type === "attempt_graded")).toMatchObject([{ verdict: "partially_correct", score: 70, hintsUsed: 3, context: "learn", attachmentHashes: [up.files[0]?.sha256] }]);
   expect(ev.filter((e) => e.type === "mistake_tag_defined")).toHaveLength(1);
+  // the grade is saved in the lesson's conversation
+  const lesson = sc<{ items: { id: string }[] }>(await call("history_list", { number: n, kind: "lesson" })).items[0];
+  expect((await loadConv(n, lesson?.id ?? ""))?.entries.find((e) => e.kind === "grade")).toMatchObject({ who: "tutor", text: expect.stringMatching(/^Graded 70 \(partially_correct\)/) });
 
   // solution: the model-written solution is cached; reveal is an event
   await call("exercise_solution_request", { runId });

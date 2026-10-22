@@ -253,6 +253,10 @@ Plan: `~/.claude/plans/when-a-job-is-flickering-hellman.md` (approved; read it f
 - Eval: the eval-only judge is replaced by the real grader (`gradeAttempt` + new `answerText`, framed as a typed answer; context homework, so no events), one grading course per registry with that run's scanned files, met ≥ 0.75. Not run yet (paid; ask first). **M73 is code-complete; it is done only when every eval row passes.**
 - Tests: `practice/apply.test.ts` (prompt lists C1 teacher / C2, not another stage's; typed answer; fact check reads the course's solution and never the web file; right → no change; wrong → −10 and final answer flipped with the note; conflict → note; no page → no call; only the triggered verdict is evidence, a same-label newNode is dropped; Show solution and homework get the conventions), conventions.test (prefilter, render, evidence), learnTools.test ([STATUS] C1 with control; triggered → evidence 0.5; not triggered → none).
 
+## Known-limits cleanup (2026-10-23)
+- A graded lesson exercise is saved in the lesson's `.chat_history` conversation (entry kind `grade`: score, verdict, summary) through `exercises.onGraded`, set by the learn tools. Test: `exerciseTools.test.ts`.
+- 200 unused v1 i18n keys deleted from `he.json` / `en.json` (onboarding, API key, sync, usage, Ask, old screens). Found by searching `src` + `e2e` for each key; dynamic `prefix.${x}` keys kept.
+
 **Next: finish the conventions feature, in THIS order** (the user's order, 2026-10-23). One commit per step, update this file after each, stop after each. **Ask the user before every paid run** (real model via `CliGateway`; give a cost estimate; always use `EVAL_CACHE` so scans replay). Run command: `FIXTURE=<names> EVAL_DIR=<scratchpad>/eval EVAL_CACHE=<scratchpad>/evalcache pnpm exec vitest run -c vitest.eval.config.ts src/test/eval/conventions.eval.ts`.
 1. **Free: scan fix.** The `counting/random` "logged inconsistent" failure (M72 eval): the occurrence part of `exercisesPrompt` (`src/core/claude/prompts/index.ts`) must always record the form of every computed final result (rounded / exact / units), so reconcile can compare the practices. Unit test with the fake gateway.
 2. **Free: exact relevance for the conflict pages** (user's open choice; ask first if they want it). In `practice/facts.ts`, a course page counts only if its BM25 score for the doubt is ≥ the best score of the pieces the grader was given (`ex.referenceSolutionMd`, the example solutions in `o.examples`, `expectedPoints` in gradeCheck), ranked in the same `rank()` call; no given piece → threshold 0. Update DECISIONS.md "M73" (it now says "approximated").
@@ -280,9 +284,7 @@ Pending user review: the M70 screenshots `e2e/tests_output/course/card-files-tea
 
 **Known limits / not done**
 - Jobs, active lesson state and exercise runs are in memory (lost on server restart; saved lessons/practice resume via `.chat_history`).
-- Graded lesson exercises are not logged in `.chat_history` (M60).
 - Exercise ↔ solution link only within ~5 pages (6-page scan batches); a separate solutions file isn't linked.
 - Content generated before a language change stays in the old language until Translate or a rebuild.
 - `.mcpb` unsigned, icon a placeholder, release workflow never run, Windows untested (trash, paths, Save as dialog).
 - Non-Technion course id formats and Moodle URLs unverified; HUJI/Reichman/Braude Moodle address is pasted by the student.
-- Unused v1 i18n keys remain in `he.json` / `en.json`.

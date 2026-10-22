@@ -29,6 +29,8 @@ type R = { id: string; run: ExerciseRun; n: string; context: Context; busy: "gra
 /** Exercise card (plan v2 §6.4): Grade / Hint / Show solution run the v1 pipeline as bridge ops; state lives in memory (lost on a restart). */
 export function registerExerciseTools(server: McpServer, bridge: BridgeGateway) {
   const runs = new Map<string, R>();
+  /** A graded lesson exercise goes to the lesson's saved conversation (set by the learn tools). */
+  let graded: (text: string) => void = () => undefined;
   // Raw BM25 pages instead of a lesson-brief job: one host round trip less per hint (DECISIONS.md, as in M7).
   // Without a stage (homework, M57) the pages are ranked over all materials by the exercise text.
   const digest = async (ctx: Ctx, stageId: string | null, query = "") => {
@@ -92,6 +94,7 @@ export function registerExerciseTools(server: McpServer, bridge: BridgeGateway) 
       if (x.run.error) return `Grading failed: ${x.run.error}. Tell the student; they can press Grade again.`;
       if (!g || !readable(g)) return "The solution was not readable. The card asks the student for a clearer photo; wait for their next message.";
       const res = JSON.stringify({ ...g, hintsUsed: x.run.state.hints.length, solutionRevealed: !!x.run.state.solutionMd });
+      if (x.context === "learn") graded(`Graded ${g.score} (${g.verdict}). ${g.summaryMd}`);
       return `Graded; the Grade card is shown. Result: ${res}\n${x.context === "learn" ? "Continue the lesson like a TA checking homework: do not repeat the score, go through each wrong or unjustified step (what is wrong, why, the corrected step), call update_assessment, then ask them to fix it and submit again or give a similar exercise." : ""}`;
     });
     return out(`Grading started. ${wait}`, data(runId));
@@ -160,5 +163,5 @@ export function registerExerciseTools(server: McpServer, bridge: BridgeGateway) 
     },
   );
 
-  return { open, adopt, digest };
+  return { open, adopt, digest, onGraded: (f: (text: string) => void) => void (graded = f) };
 }

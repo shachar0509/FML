@@ -487,6 +487,8 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     return out("ok", { slides: c.entries.filter((e) => e.kind === "step" && e.card).map((e) => ({ ...e.card, language, theme })) });
   });
 
+  exercises.onGraded((t) => void log({ who: "tutor", kind: "grade", text: t }));
+
   return {
     reexplain: () => void (reexplain = true),
     /** M60: a student action from a card (Continue, Explain differently, a question, an answer) goes to the open lesson's conversation. */

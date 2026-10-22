@@ -1,76 +1,19 @@
 {
   "nav": {
-    "home": "Home",
-    "course": "Course {{number}}",
     "learn": "Learn",
-    "practice": "Practice",
-    "settings": "Settings",
-    "sync": "Sync status",
-    "ask": "Ask"
+    "practice": "Practice"
   },
   "screens": {
-    "onboarding": "Welcome",
     "home": "My courses",
-    "courseHome": "Course {{number}}",
-    "learn": "Stage {{stageId}}",
-    "practice": "Practice",
-    "settings": "Settings",
-    "comingSoon": "Coming soon"
+    "settings": "Settings"
   },
   "settings": {
     "tabs": {
-      "general": "General",
-      "claude": "Claude",
-      "learning": "Learning",
-      "sync": "Sync",
-      "usage": "Usage",
-      "about": "About"
+      "learning": "Learning"
     },
     "restoreDefaults": "Restore defaults",
-    "default": "Default: {{v}}",
-    "on": "On",
-    "off": "Off",
     "general": {
-      "language": "Language",
-      "theme": "Theme",
-      "system": "Follow system",
-      "light": "Light",
-      "dark": "Dark",
-      "dataFolder": "Data folder",
-      "change": "Change",
-      "open": "Open in file manager"
-    },
-    "claude": {
-      "apiKey": "API key",
-      "noKey": "No key. AI features are off until you add one.",
-      "check": "Check",
-      "keyOk": "The key works.",
-      "replace": "Replace",
-      "remove": "Remove",
-      "removed": "Key removed. AI features are off.",
-      "newKey": "New API key",
-      "save": "Check and save",
-      "cancel": "Cancel",
-      "models": "Models per task",
-      "recommended": "(recommended)",
-      "changed": "Changed",
-      "reset": "Reset to default",
-      "gradingTitle": "Grading quality",
-      "thinking": "Think carefully before grading",
-      "budget": "Thinking budget: {{n}}",
-      "webLookup": "Search reliable websites when my materials don't cover something",
-      "restoreAll": "Restore all defaults",
-      "tasks": {
-        "tutor": "Teaching",
-        "grading": "Checking solutions",
-        "generation": "Creating exercises",
-        "hint": "Hints",
-        "plan": "Building study plans",
-        "index": "Scanning your files",
-        "summary": "Summarizing long lessons",
-        "retrieval": "Looking up course materials",
-        "ask": "Quick questions"
-      }
+      "language": "Language"
     },
     "learning": {
       "intro": "When a stage counts as learned.",
@@ -79,74 +22,14 @@
       "masteryThreshold": "Mastery threshold",
       "requireAllObjectives": "Require all objectives",
       "hintsBeforeSolution": "Hints before the full solution"
-    },
-    "sync": {
-      "unavailable": "Sync is not available in this build",
-      "status": "Status",
-      "account": "Google account",
-      "notConnected": "Not connected",
-      "lastSync": "Last successful sync",
-      "connect": "Connect Google Drive",
-      "disconnect": "Disconnect",
-      "now": "Sync now",
-      "conflicts": "Recent conflict copies",
-      "show": "Show in folder",
-      "limitScope": "Only files created by this app are synced. Files added through the Google Drive website are not seen.",
-      "limitLessons": "If the same lesson stage is open on two computers at once, messages are interleaved by timestamp."
-    },
-    "usage": {
-      "month": "This month",
-      "tokens": "{{n}} tokens",
-      "cost": "Estimated cost: {{usd}}",
-      "noPricing": "Cost estimate isn't available yet; showing tokens only.",
-      "perTask": "By task",
-      "perCourse": "By course",
-      "task": "Task",
-      "course": "Course",
-      "input": "Input",
-      "output": "Output",
-      "cached": "Cached",
-      "noCourse": "No course",
-      "empty": "No usage yet this month.",
-      "cap": "Monthly spending limit (USD)",
-      "capHint": "Leave empty for no limit."
-    },
-    "about": {
-      "version": "Version {{v}}",
-      "check": "Check for updates",
-      "autoCheck": "Check for updates automatically",
-      "upToDate": "You're up to date.",
-      "available": "Version {{v}} is available.",
-      "install": "Install and restart",
-      "unavailable": "Updates are only available in the installed app.",
-      "github": "GitHub repository",
-      "logs": "Open logs folder"
     }
-  },
-  "ask": {
-    "button": "Quick question",
-    "title": "Quick question",
-    "placeholder": "Ask anything small. It won't be added to your lesson.",
-    "new": "New question",
-    "ex1": "What does this notation mean?",
-    "ex2": "Remind me what … is",
-    "ex3": "What's the English term for this?"
-  },
-  "toast": {
-    "close": "Close"
-  },
-  "common": {
-    "close": "Close"
   },
   "course": {
     "invalidNumber": "A course number has 8 digits (e.g. 01040195)",
     "manualEntry": "Your university has no online catalog in Shalav yet. Enter the course details from the syllabus.",
     "notFound": "We couldn't find this course in the catalog. You can enter the details manually.",
     "catalogLabel": "Catalog description",
-    "afterAdd": "After you add the course you can add its files (or import them from Moodle), then build the study plan.",
-    "back": "Back to courses",
-    "checking": "Checking the number…",
-    "exists": "This course was already added."
+    "afterAdd": "After you add the course you can add its files (or import them from Moodle), then build the study plan."
   },
   "plan": {
     "building": "Building the study plan… you can keep using Shalav meanwhile.",
@@ -188,12 +71,6 @@
   "stage": {
     "mastered": "You've mastered this stage!"
   },
-  "model": {
-    "warnTitle": "Change the model?",
-    "warnBody": "Changing from the default may reduce the app's accuracy, especially when checking solutions and creating exercises.",
-    "warnConfirm": "Change anyway",
-    "warnCancel": "Cancel"
-  },
   "file": {
     "unsupported": "This file type isn't supported. Use PDF, images (JPG, PNG, WEBP, HEIC), TXT or MD.",
     "tooLarge": "The file is too large (over 200 MB).",
@@ -232,62 +109,7 @@
     "offline": "No internet connection. We'll continue when you're back online."
   },
   "api": {
-    "invalidKey": "The API key is invalid or was revoked. Please enter a new key.",
-    "noCredit": "Your Anthropic credit balance is empty. Add credit in the Console.",
-    "busy": "Claude is busy right now. Retrying…",
     "failed": "Something went wrong with this request."
-  },
-  "usage": {
-    "capTitle": "You've reached your monthly spending limit",
-    "capBody": "Continue anyway to keep using AI features this session, or stop.",
-    "continue": "Continue anyway",
-    "stop": "Stop",
-    "warn80": "You've used 80% of your monthly limit."
-  },
-  "sync": {
-    "conflict": "Two versions of a file were found. We kept both.",
-    "off": "Sync is off",
-    "synced": "Synced · {{when}}",
-    "syncing_one": "Syncing 1 file…",
-    "syncing_other": "Syncing {{count}} files…",
-    "offline": "Offline · changes will sync later",
-    "error": "Sync failed. Click to retry",
-    "reconnect": "Sign in to Google again to resume sync"
-  },
-  "quick": {
-    "gotIt": "Got it, continue",
-    "watch": "Watch out for",
-    "watchCount": "{{count}} times",
-    "watchLast": "last seen",
-    "again": "Explain it differently",
-    "example": "Another example",
-    "exercise": "Give me an exercise",
-    "summary": "Summarize what we covered"
-  },
-  "onboarding": {
-    "step": "Step {{n}} of {{total}}",
-    "welcomeText": "Shalav helps you study university courses: a study plan, explanations and practice, with Claude as your private tutor.",
-    "start": "Start",
-    "next": "Next",
-    "back": "Back",
-    "connectTitle": "Connect Claude",
-    "connectText": "Shalav uses your own Claude account; you pay Anthropic only for what you use.",
-    "s1": "Create an account in the Anthropic Console",
-    "s2": "Add credit under Billing and set a monthly spend limit",
-    "s3": "Create an API key",
-    "s4": "Paste it here",
-    "openConsole": "Open Anthropic Console",
-    "keyLabel": "API key",
-    "check": "Check key",
-    "keyOk": "Key works",
-    "whereTitle": "Where to save",
-    "whereText": "Your courses, materials and progress will be saved here.",
-    "change": "Change",
-    "syncTitle": "Sync between computers (optional)",
-    "syncText": "Sync through Google Drive to study from another computer.",
-    "connectDrive": "Connect Google Drive",
-    "skip": "Skip for now",
-    "finish": "Finish"
   },
   "university": {
     "label": "University",
@@ -305,7 +127,6 @@
     "syncing": "Downloading your course files…",
     "done": "Imported {{added}} new, {{duplicate}} already here, {{skipped}} skipped (from {{course}}).",
     "forget": "Forget my Moodle login",
-    "failed": "The import failed.",
     "err": {
       "install": "Could not download the browser for Moodle. Check your internet connection and try again.",
       "closed": "The login window was closed before the login finished. Try again.",
@@ -323,13 +144,6 @@
     "empty": "Add your first course to start",
     "credits_one": "{{count}} credit",
     "credits_other": "{{count}} credits",
-    "lastActivity": "Last activity: {{when}}",
-    "continue": "Continue learning",
-    "menu": "Menu",
-    "openFolder": "Open course folder",
-    "delete": "Delete course",
-    "deleteTitle": "Delete this course?",
-    "deleteBody": "The folder will be moved to the trash. To confirm, type the course number ({{number}}).",
     "cancel": "Cancel",
     "search": "Search",
     "searching": "Searching…",
@@ -348,18 +162,10 @@
     "open": "Open"
   },
   "courseHome": {
-    "missing": "Course not found.",
     "stagesOf": "{{k}} of {{n}} stages",
-    "practiceLocked": "Practice will open soon",
     "plan": "Study plan",
-    "objectives": "Objectives",
-    "prereqs": "Prerequisites",
-    "continue": "Continue",
     "watch": "Watch out for",
-    "watchCount": "{{count}} times",
-    "watchLast": "last seen",
-    "again": "Learn again",
-    "new": "New"
+    "watchCount": "{{count}} times"
   },
   "files": {
     "materials": "Study materials",
@@ -386,12 +192,9 @@
     "menu": "Options for {{name}}",
     "delete": "Delete",
     "rescanned": "{{name}} will be scanned again on the next plan update.",
-    "retry": "Retry",
     "remove": "Remove",
     "filter": "Study files",
-    "chooser": "What are these files?",
     "rejected": "{{name}}: {{error}}",
-    "largeConfirm": "{{name}} has {{pages}} pages. Scanning will use about {{tokens}} input tokens. Continue?",
     "importing": "Importing files…",
     "removeTitle": "Delete file",
     "removeAsk": "Are you sure you want to delete {{name}} from {{folder}}?",
@@ -414,30 +217,15 @@
     "copy": "Copy",
     "copied": "Copied",
     "figureFailed": "The figure could not be drawn",
-    "showSource": "Show source",
-    "zoom": "Click to enlarge",
-    "close": "Close"
+    "showSource": "Show source"
   },
   "learn": {
-    "back": "Back to course",
     "objectives": "Stage objectives",
     "mastery": "Mastery",
-    "advance": "Advance to next stage",
     "nextStage": "Next stage",
-    "keep": "Keep practicing here",
     "completed": "Stage completed",
     "again": "Learn this stage again",
-    "locked": "This stage is still locked. Finish the earlier stages first.",
-    "notFound": "Stage not found.",
     "loadFailed": "We couldn’t load the lesson.",
-    "retry": "Retry",
-    "stop": "Stop",
-    "send": "Send",
-    "placeholder": "Write a message…",
-    "attach": "Attach image",
-    "remove": "Remove",
-    "recap": "Recap",
-    "checking": "Checking your course materials…",
     "sendAnswer": "Send answer",
     "answerPlaceholder": "Write your answer here…",
     "yourAnswer": "Your answer",
@@ -446,19 +234,12 @@
     "correct": "Correct",
     "wrong": "Not quite",
     "exercise": "Exercise",
-    "skip": "Skip",
-    "skipped": "Skipped",
-    "upload": "Upload solution",
-    "hint": "Hint",
-    "soon": "available in the next update",
-    "interjected": "Moved on without answering",
     "completeStage": "Complete stage",
     "completeAnyway": "Complete anyway",
     "loading": "Loading…"
   },
   "practice": {
     "locked": "Complete your first stage to unlock practice",
-    "cta": "Review what you've learned",
     "chooseTitle": "What do you want to practice?",
     "scope": {
       "all": "Everything I've learned",
@@ -481,7 +262,6 @@
     "score": "Score {{n}}",
     "noItems": "We couldn't find a question for this scope yet. Try another scope.",
     "retry": "Retry",
-    "back": "Back to course",
     "again": "Practice again",
     "correctAnswer": "Correct",
     "wrongAnswer": "Not quite",
@@ -538,19 +318,15 @@
     }
   },
   "exercise": {
-    "minutes": "about {{n}} min",
     "difficulty": "Difficulty {{n}}/5",
     "upload": "Upload solution",
     "submit": "Submit for grading",
     "grading": "Grading…",
     "hintN": "Hint {{n}}/3",
-    "hintBody": "Attach what you've written so far (optional)",
-    "getHint": "Get hint",
     "hints": "Hints",
     "showSolution": "Show full solution",
     "solution": "Full solution",
     "drop": "Solve it in your notebook (paper or tablet), then upload a photo or PDF of the whole solution",
-    "continue": "Continue",
     "figure": "Figure {{n}}",
     "failed": "Something went wrong. Try again.",
     "retry": "Try again"
@@ -562,7 +338,6 @@
   "mcp": {
     "pin": "Keep this card on screen",
     "unpin": "Back into the chat",
-    "back": "Courses",
     "waiting": "Waiting for Claude to work on it…",
     "nudgeBtn": "Nudge Claude",
     "settings": {
@@ -570,8 +345,7 @@
       "dataRoot": "Data folder",
       "dataHint": "Change it in the extension settings in Claude Desktop.",
       "conflicts": "Sync conflict copies found. Shalav ignores them; delete them after checking nothing is missing:",
-      "none": "No sync conflicts.",
-      "say": "⚙️ Open Shalav settings"
+      "none": "No sync conflicts."
     },
     "go": "▶️ Continue",
     "build": "▶️ Building the plan",
