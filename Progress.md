@@ -754,3 +754,8 @@ Edge cases found with the sample slides, and fixed in the renderer:
 - Bug: the step said "Scanning file 32 of 32" while only the first file was scanning. `indexPending` counted every queue event without page progress as "done", and that includes the `pending` event each file sends when it's queued.
 - Now `indexPending` tracks each of the build's files by its latest queue status and reports `{ scanned, scanning, notScanned, total }` (materials and exercises together; a removed file drops out of the total). The checklist shows them with the file lists' dots and wording: נסרק בהצלחה / בסריקה / לא נסרק / סה״כ.
 - Tests: fileTools (mid-scan `course_status` = 0/1/0 of 1) and an e2e scan-step check with a screenshot.
+
+## M45: the settings language switches at once
+- Before, the card took its language from the last server result, so pressing עברית/English only took effect on the next card.
+- Settings now applies the language (text, `dir`, `lang`) on click, before the save returns. If the save fails, it goes back to the saved language.
+- e2e: from each language, press the other one: the heading, `dir` and the pressed button switch at once.

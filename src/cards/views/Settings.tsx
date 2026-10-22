@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Input } from "@/core/components/ui/input";
+import { applyLanguage } from "@/core/lib/dom";
 import { UNIVERSITIES } from "@/core/universities";
 import type { SettingsData } from "../types";
 import { h2, panel } from "../ui";
@@ -40,8 +41,13 @@ export function Settings({
   const { t, i18n } = useTranslation();
   const [d, setD] = useState(data);
   const save = async (patch: { language?: "he" | "en"; learning?: L }) => {
+    if (patch.language) {
+      applyLanguage(patch.language); // switch at once, not when the save returns
+      setD((x) => ({ ...x, language: patch.language ?? x.language }));
+    }
     const r = await callTool("settings_update", patch);
     if (r.structuredContent) setD(r.structuredContent as SettingsData);
+    else if (patch.language) applyLanguage(d.language); // not saved: back to the saved language
   };
   const set = (patch: Partial<L>) => void save({ learning: { ...d.learning, ...patch } });
   return (

@@ -16,3 +16,16 @@ for (const lang of LANGS)
       await page.screenshot({ path: `e2e/tests_output/settings/card-settings-${lang}-${theme}.png` });
       expect(errors).toEqual([]);
     });
+
+for (const lang of LANGS)
+  test(`settings: the language switches at once (${lang})`, async ({ page }) => {
+    const errors = pageErrors(page);
+    await page.goto(host(`lang=${lang}`));
+    await page.getByRole("button", { name: lang === "he" ? "הגדרות" : "Settings" }).click();
+    const other = lang === "he" ? "en" : "he";
+    await page.getByRole("button", { name: other === "en" ? "English" : "עברית" }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(other === "en" ? "Settings" : "הגדרות");
+    await expect(page.locator("html")).toHaveAttribute("dir", other === "en" ? "ltr" : "rtl");
+    await expect(page.getByRole("button", { name: other === "en" ? "English" : "עברית" })).toHaveAttribute("aria-pressed", "true");
+    expect(errors).toEqual([]);
+  });
