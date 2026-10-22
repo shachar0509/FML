@@ -1,0 +1,118 @@
+{
+  "lang": "en",
+  "plan": {
+    "course": "Physics Lab",
+    "stages": [
+      {
+        "title": "Basic lab calculations",
+        "concepts": [
+          "Average speed",
+          "Ohm's law",
+          "Density",
+          "Pendulum period",
+          "Power and energy"
+        ]
+      }
+    ]
+  },
+  "files": [
+    {
+      "path": "lab-calculations-a.md",
+      "role": "exercises"
+    },
+    {
+      "path": "lab-calculations-b.md",
+      "role": "exercises"
+    },
+    {
+      "path": "teacher/remark-exact.md",
+      "role": "teacher"
+    }
+  ],
+  "runs": [
+    {
+      "name": "solutions only",
+      "files": [
+        "lab-calculations-a.md",
+        "lab-calculations-b.md"
+      ]
+    },
+    {
+      "name": "with the lecturer's remark",
+      "files": [
+        "lab-calculations-a.md",
+        "lab-calculations-b.md",
+        "teacher/remark-exact.md"
+      ]
+    }
+  ],
+  "expect": [
+    {
+      "key": "teacher-exact",
+      "source": "teacher",
+      "run": "with the lecturer's remark",
+      "match": "exact",
+      "rows": [
+        {
+          "question": "A cart of mass 8.4 kg is pushed with a measured force of 3.5 N. Find its acceleration.",
+          "answer": "$a = F/m = 3.5/8.4 = 5/12\\ \\text{m/s}^2$.",
+          "triggered": true,
+          "met": true,
+          "note": "measured data, no estimate asked: exact value given"
+        },
+        {
+          "question": "A cart of mass 8.4 kg is pushed with a measured force of 3.5 N. Find its acceleration.",
+          "answer": "$a = F/m = 3.5/8.4 = 0.42\\ \\text{m/s}^2$.",
+          "triggered": true,
+          "met": false,
+          "note": "same question: a rounded decimal is not the exact value"
+        },
+        {
+          "question": "Compute $\\sqrt{50}$.",
+          "answer": "$\\sqrt{50} = \\sqrt{25\\cdot 2} = 5\\sqrt2$.",
+          "triggered": true,
+          "met": true,
+          "note": "exact value"
+        },
+        {
+          "question": "A wire of length 2.40 m has resistance 0.37 ohm. Find the resistance per metre.",
+          "answer": "$37/240\\ \\Omega/\\text{m}$.",
+          "triggered": true,
+          "met": true,
+          "note": "exact fraction"
+        },
+        {
+          "question": "Estimate the period of a pendulum whose length was measured as 0.80 m.",
+          "answer": "$T \\approx 2\\pi\\sqrt{0.80/9.81} \\approx 1.8\\ \\text{s}$.",
+          "triggered": false,
+          "met": null,
+          "note": "the question asks to estimate"
+        },
+        {
+          "question": "Estimate $\\sqrt{50}$ without a calculator.",
+          "answer": "$\\sqrt{50} \\approx 7.07$ since $7^2 = 49$.",
+          "triggered": false,
+          "met": null,
+          "note": "the question asks to estimate"
+        }
+      ]
+    }
+  ],
+  "forbid": [
+    {
+      "key": "round-2dp",
+      "match": "round|2 decimal|two decimal|decimal places",
+      "why": "the solutions round half the time and not the other half with nothing to explain it; neither practice may become a convention in either run (in the remark run the teacher's exact rule is the only convention)",
+      "source": "solutions"
+    }
+  ],
+  "inconsistent": [
+    {
+      "key": "rounding",
+      "run": "solutions only",
+      "why": "random variation: same kind of question (measured data, compute a value), sometimes 2 decimals, sometimes unrounded",
+      "match": "round|decimal"
+    }
+  ],
+  "notes": "Counts, one use case (measured data, compute a value), 2 files. Rounded to 2 decimals (4): A P1 (2.35/1.6 -> 1.47 m/s), A P3 (2.70 g/cm3), B P1 (10.29 W), B P2 (2.43 m/s2). Unrounded (4): A P2 (14.6875 ohm), A P4 (27.8/15 -> 1.8533333 s), B P3 (8.2222222 g/L), B P4 (4.08375 J). Units are present in all 8. Decorrelated on purpose: each file has 2 of each; each side has 2 terminating and 2 non-terminating quotients (so 'keep a decimal that terminates' explains nothing); mechanics vs electrical quantities split 2/2 within each side; same instructors, same wording, no 'estimate' or 'exactly'. Expected without the remark: no convention for rounding; the variation is logged inconsistent (neither side has the 'one in four' tolerance). With the 1-line lecturer remark: ONE teacher convention 'give the exact value unless the question asks to estimate', trigger built from the remark itself (not from the solutions). Rows are run against the learned registry in the remark run only. MATCHING: case-insensitive regex over the learned rule text."
+}

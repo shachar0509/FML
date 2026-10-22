@@ -1,0 +1,286 @@
+{
+  "lang": "en",
+  "plan": {
+    "course": "Applied Mathematics",
+    "stages": [
+      {
+        "title": "Algebra and trigonometry",
+        "concepts": [
+          "Quadratic equations",
+          "Trigonometric identities",
+          "Logarithms"
+        ]
+      },
+      {
+        "title": "Applications with measured data",
+        "concepts": [
+          "Speed",
+          "Ohm's law",
+          "Density",
+          "Pendulum period"
+        ]
+      }
+    ]
+  },
+  "files": [
+    {
+      "path": "applied-math-solutions-a.md",
+      "role": "exercises"
+    },
+    {
+      "path": "applied-math-solutions-b.md",
+      "role": "exercises"
+    },
+    {
+      "path": "teacher/rubric-exact.md",
+      "role": "teacher"
+    }
+  ],
+  "runs": [
+    {
+      "name": "solutions only",
+      "files": [
+        "applied-math-solutions-a.md",
+        "applied-math-solutions-b.md"
+      ]
+    },
+    {
+      "name": "with the teacher rubric",
+      "files": [
+        "applied-math-solutions-a.md",
+        "applied-math-solutions-b.md",
+        "teacher/rubric-exact.md"
+      ]
+    }
+  ],
+  "expect": [
+    {
+      "key": "exact-form",
+      "source": "solutions",
+      "run": "solutions only",
+      "match": "^(?![\\s\\S]*(round\\w* (to|off)|(two|2) decimal))[\\s\\S]*(exact|closed[- ]form|unrounded)",
+      "rows": [
+        {
+          "question": "Solve $3x^2 - 2x - 4 = 0$ over the reals.",
+          "answer": "$\\Delta = 4 + 48 = 52$, so $x = \\frac{2 \\pm 2\\sqrt{13}}{6} = \\frac{1 \\pm \\sqrt{13}}{3}$.",
+          "triggered": true,
+          "met": true,
+          "note": "symbolic data, exact form given"
+        },
+        {
+          "question": "Evaluate $\\sin\\frac{\\pi}{12}$.",
+          "answer": "$\\sin 15^\\circ = \\sin(45^\\circ - 30^\\circ) \\approx 0.26$.",
+          "triggered": true,
+          "met": false,
+          "note": "symbolic data; the answer is a decimal instead of $\\frac{\\sqrt6-\\sqrt2}{4}$"
+        },
+        {
+          "question": "A 100 m race is run in 12 s. Find the average speed exactly.",
+          "answer": "$\\bar v = 100/12 = 25/3$ m/s.",
+          "triggered": true,
+          "met": true,
+          "note": "measured-looking data, but the question says 'exactly'"
+        },
+        {
+          "question": "Find the sum of the infinite series $\\sum_{k=0}^\\infty (2/5)^k$.",
+          "answer": "$\\frac{1}{1 - 2/5} = \\frac53$.",
+          "triggered": true,
+          "met": true,
+          "note": "symbolic data, exact form"
+        },
+        {
+          "question": "A runner is timed at 12.84 s over 100 m. What is the average speed?",
+          "answer": "$\\bar v = 100/12.84 = 7.79$ m/s.",
+          "triggered": false,
+          "met": null,
+          "note": "measured data, units and 2 decimals"
+        },
+        {
+          "question": "A sample of mass 18.6 g occupies a volume of 7.3 cm$^3$ (both measured). Find its density.",
+          "answer": "$\\rho = 18.6/7.3 = 2.5$ g/cm$^3$.",
+          "triggered": false,
+          "met": null,
+          "note": "measured data; units present but one decimal instead of 2.55"
+        },
+        {
+          "question": "A 250 g mass hangs from a spring and stretches it by 3.4 cm (both measured). Find the spring constant, using $g = 9.81$ m/s$^2$.",
+          "answer": "$k = mg/x = 0.250\\cdot 9.81/0.034 = 72.13$ N/m.",
+          "triggered": false,
+          "met": null,
+          "note": "measured data, units and 2 decimals"
+        },
+        {
+          "question": "Estimate the larger root of $x^2 - 5x + 1 = 0$ to two decimal places.",
+          "answer": "$x = (5 + \\sqrt{21})/2 \\approx 4.79$.",
+          "triggered": false,
+          "met": null,
+          "note": "near miss: symbolic data but the question asks for an estimate; the solutions show this case (B Q5), so the exact-form trigger excludes it"
+        }
+      ]
+    },
+    {
+      "key": "decimals-units",
+      "source": "solutions",
+      "run": "solutions only",
+      "match": "^(?![\\s\\S]*((leave|keep|give|write|state|express)\\w*[^.;]{0,25}exact|ax[ie]s|asymptot))[\\s\\S]*((two|2) decimal|decimal places|hundredth|\\bunits?\\b)",
+      "rows": [
+        {
+          "question": "Solve $3x^2 - 2x - 4 = 0$ over the reals.",
+          "answer": "$\\Delta = 4 + 48 = 52$, so $x = \\frac{2 \\pm 2\\sqrt{13}}{6} = \\frac{1 \\pm \\sqrt{13}}{3}$.",
+          "triggered": false,
+          "met": null,
+          "note": "symbolic data, exact form given"
+        },
+        {
+          "question": "Evaluate $\\sin\\frac{\\pi}{12}$.",
+          "answer": "$\\sin 15^\\circ = \\sin(45^\\circ - 30^\\circ) \\approx 0.26$.",
+          "triggered": false,
+          "met": null,
+          "note": "symbolic data; the answer is a decimal instead of $\\frac{\\sqrt6-\\sqrt2}{4}$"
+        },
+        {
+          "question": "A 100 m race is run in 12 s. Find the average speed exactly.",
+          "answer": "$\\bar v = 100/12 = 25/3$ m/s.",
+          "triggered": false,
+          "met": null,
+          "note": "measured-looking data, but the question says 'exactly'"
+        },
+        {
+          "question": "Find the sum of the infinite series $\\sum_{k=0}^\\infty (2/5)^k$.",
+          "answer": "$\\frac{1}{1 - 2/5} = \\frac53$.",
+          "triggered": false,
+          "met": null,
+          "note": "symbolic data, exact form"
+        },
+        {
+          "question": "A runner is timed at 12.84 s over 100 m. What is the average speed?",
+          "answer": "$\\bar v = 100/12.84 = 7.79$ m/s.",
+          "triggered": true,
+          "met": true,
+          "note": "measured data, units and 2 decimals"
+        },
+        {
+          "question": "A sample of mass 18.6 g occupies a volume of 7.3 cm$^3$ (both measured). Find its density.",
+          "answer": "$\\rho = 18.6/7.3 = 2.5$ g/cm$^3$.",
+          "triggered": true,
+          "met": false,
+          "note": "measured data; units present but one decimal instead of 2.55"
+        },
+        {
+          "question": "A 250 g mass hangs from a spring and stretches it by 3.4 cm (both measured). Find the spring constant, using $g = 9.81$ m/s$^2$.",
+          "answer": "$k = mg/x = 0.250\\cdot 9.81/0.034 = 72.13$ N/m.",
+          "triggered": true,
+          "met": true,
+          "note": "measured data, units and 2 decimals"
+        },
+        {
+          "question": "Estimate the larger root of $x^2 - 5x + 1 = 0$ to two decimal places.",
+          "answer": "$x = (5 + \\sqrt{21})/2 \\approx 4.79$.",
+          "triggered": true,
+          "met": true,
+          "note": "near miss: symbolic data but the question asks for an estimate, as in B Q5, which the solutions answer to 2 decimals"
+        }
+      ]
+    },
+    {
+      "key": "teacher-exact",
+      "source": "teacher",
+      "run": "with the teacher rubric",
+      "match": "^(?![\\s\\S]*(round\\w* (to|off)|(two|2) decimal))[\\s\\S]*(exact|closed[- ]form|unrounded)",
+      "rows": [
+        {
+          "question": "Solve $3x^2 - 2x - 4 = 0$ over the reals.",
+          "answer": "$\\Delta = 4 + 48 = 52$, so $x = \\frac{2 \\pm 2\\sqrt{13}}{6} = \\frac{1 \\pm \\sqrt{13}}{3}$.",
+          "triggered": true,
+          "met": true,
+          "note": "symbolic data, exact form given; teacher exact rule and solutions exact rule agree"
+        },
+        {
+          "question": "Evaluate $\\sin\\frac{\\pi}{12}$.",
+          "answer": "$\\sin 15^\\circ = \\sin(45^\\circ - 30^\\circ) \\approx 0.26$.",
+          "triggered": true,
+          "met": false,
+          "note": "symbolic data; the answer is a decimal instead of $\\frac{\\sqrt6-\\sqrt2}{4}$; teacher exact rule and solutions exact rule agree"
+        },
+        {
+          "question": "A 100 m race is run in 12 s. Find the average speed exactly.",
+          "answer": "$\\bar v = 100/12 = 25/3$ m/s.",
+          "triggered": true,
+          "met": true,
+          "note": "measured-looking data, but the question says 'exactly'; teacher exact rule and solutions exact rule agree"
+        },
+        {
+          "question": "Find the sum of the infinite series $\\sum_{k=0}^\\infty (2/5)^k$.",
+          "answer": "$\\frac{1}{1 - 2/5} = \\frac53$.",
+          "triggered": true,
+          "met": true,
+          "note": "symbolic data, exact form; teacher exact rule and solutions exact rule agree"
+        },
+        {
+          "question": "A runner is timed at 12.84 s over 100 m. What is the average speed?",
+          "answer": "$\\bar v = 100/12.84 = 7.79$ m/s.",
+          "triggered": true,
+          "met": false,
+          "winner": "teacher-exact",
+          "note": "both the teacher's exact form and the solutions' 2 decimals trigger: the teacher's wins, so the decimal answer is deducted"
+        },
+        {
+          "question": "A runner is timed at 12.84 s over 100 m. What is the average speed?",
+          "answer": "$\\bar v = 100/12.84 = 2500/321$ m/s.",
+          "triggered": true,
+          "met": true,
+          "winner": "teacher-exact",
+          "note": "same question, exact form given: teacher's rule met"
+        },
+        {
+          "question": "Estimate the larger root of $x^2 - 5x + 1 = 0$ to two decimal places.",
+          "answer": "$x = (5 + \\sqrt{21})/2 \\approx 4.79$.",
+          "triggered": false,
+          "met": null,
+          "note": "the rubric's exception: the question asks to estimate"
+        }
+      ]
+    },
+    {
+      "key": "decimals-units",
+      "source": "solutions",
+      "run": "with the teacher rubric",
+      "match": "^(?![\\s\\S]*((leave|keep|give|write|state|express)\\w*[^.;]{0,25}exact|ax[ie]s|asymptot))[\\s\\S]*((two|2) decimal|decimal places|hundredth|\\bunits?\\b)",
+      "rows": [
+        {
+          "question": "A runner is timed at 12.84 s over 100 m. What is the average speed?",
+          "answer": "$\\bar v = 100/12.84 = 7.79$ m/s.",
+          "triggered": true,
+          "met": true,
+          "note": "measured data, units and 2 decimals; both triggers hold, the teacher's exact-form rule wins, the solutions rule is not applied",
+          "winner": "teacher-exact"
+        },
+        {
+          "question": "A 250 g mass hangs from a spring and stretches it by 3.4 cm (both measured). Find the spring constant, using $g = 9.81$ m/s$^2$.",
+          "answer": "$k = mg/x = 0.250\\cdot 9.81/0.034 = 72.13$ N/m.",
+          "triggered": true,
+          "met": true,
+          "note": "measured data, units and 2 decimals; both triggers hold, the teacher's exact-form rule wins, the solutions rule is not applied",
+          "winner": "teacher-exact"
+        },
+        {
+          "question": "Estimate the larger root of $x^2 - 5x + 1 = 0$ to two decimal places.",
+          "answer": "$x = (5 + \\sqrt{21})/2 \\approx 4.79$.",
+          "triggered": true,
+          "met": true,
+          "note": "only the solutions' decimals rule applies: the teacher's exception for estimates"
+        },
+        {
+          "question": "Solve $3x^2 - 2x - 4 = 0$ over the reals.",
+          "answer": "$\\Delta = 4 + 48 = 52$, so $x = \\frac{2 \\pm 2\\sqrt{13}}{6} = \\frac{1 \\pm \\sqrt{13}}{3}$.",
+          "triggered": false,
+          "met": null,
+          "note": "symbolic data: not a decimals case"
+        }
+      ]
+    }
+  ],
+  "forbid": [],
+  "notes": "Counts. exact-form (4 solutions, 2 files): A Q1 (x^2-5x+1=0, symbolic), A Q3 (arc length, 'exactly'), B Q1 (tan pi/12, symbolic), B Q3 (3^x=7, 'exactly'). decimals-units (5 solutions, 2 files): A Q2 (cart 2.35 m, 1.8 s -> 1.31 m/s), A Q4 (4.7 V, 0.32 A -> 14.69 ohm), B Q2 (27.3 g, 10.1 cm3 -> 2.70 g/cm3), B Q4 (20 oscillations, 36.4 s -> 1.82 s), B Q5 (symbolic data, 'estimate to two decimal places' -> 1.30, no units: the context that the question asks to estimate). Expected: TWO conventions in the 'solutions only' run, each trigger built around the difference (symbolic data or 'exactly' vs measured numbers). Every row is triggered for exactly one of the two conventions. In the rubric run: the rubric demands exact form for every final answer except when the question asks to estimate/approximate (the exception is needed so that the solutions' decimals rule is not simply contradicted everywhere; it is written into the rubric on purpose). Expected: both solutions conventions stay, split by use case; the teacher convention 'teacher-exact' is added; where both the teacher's exact form and the solutions' decimals trigger (measured data, no estimate asked) only the teacher's applies (`winner`: 'teacher-exact'); where only the solutions' rule triggers (question asks to estimate) it applies. Row field `winner` = the key that must be the only one applied on that row. The estimate near-miss row (symbolic data, question asks to estimate) is backed by B Q5, so in the solutions-only run the learned decimals trigger is 'measured data, or the question asks to estimate', and the exact-form trigger excludes estimates. MATCHING: as in the law fixture, each 'match' is a case-insensitive regex, but here over the learned RULE text only (matchOn: 'rule'), not rule + useCase: the triggers and notWhen of the paired conventions name each other's context ('measured data, not symbolic'), so matching the useCase would make the keys collide. The exact/decimals regexes use a negative lookahead so a rule demanding one form is never taken for the other.",
+  "matchOn": "rule"
+}

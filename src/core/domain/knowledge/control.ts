@@ -1,6 +1,6 @@
 import type { CourseJson, Event } from "@/core/domain/dataSchemas";
 import { isCustom } from "@/core/universities";
-import { type Graph, nodesOfStages } from "./graph";
+import { type Graph, type GraphNode, nodesOfStages } from "./graph";
 
 /**
  * The gentle layer (M61): how much the student *controls* each graph node, from Shalav's own event log.
@@ -9,6 +9,8 @@ import { type Graph, nodesOfStages } from "./graph";
  * Forgetting comes from the engine (FSRS retention), applied on top.
  */
 type Evidence = { s: number; w: number };
+/** M72: a convention the scan or the teacher's notes learned; only answers tagged with it are its evidence (never a stage-wide spread) */
+const learned = (n: GraphNode) => n.kind === "convention" && (n.origin === "index" || n.origin === "teacher");
 
 /** Half-life in answers: the last 12 answers on a node weigh as much as everything before them. */
 const HALF = 12;
@@ -28,7 +30,7 @@ export function evidenceByNode(g: Graph, events: Event[]): Map<string, Evidence[
     l.push({ s: Math.max(0, Math.min(1, s)), w });
     out.set(id, l);
   };
-  const spread = (stageIds: string[], s: number, w: number) => nodesOfStages(g, stageIds).forEach((n) => add(n.id, s, w));
+  const spread = (stageIds: string[], s: number, w: number) => nodesOfStages(g, stageIds).filter((n) => !learned(n)).forEach((n) => add(n.id, s, w));
   for (const e of events) {
     if (e.type === "check_answered") {
       if (e.nodes?.length) e.nodes.forEach((n) => add(n.id, n.score, 1));
@@ -66,17 +68,21 @@ export type Knowledge = {
   control: Map<string, number>;
   /** node → answers seen */
   seen: Map<string, number>;
+  /** M72: index/teacher convention nodes with no answer yet: scanning never lowers stars, so they count for nothing until the first answer */
+  dormant: Set<string>;
 };
 export function knowledgeOf(g: Graph, events: Event[], prior: number): Knowledge {
   const ev = evidenceByNode(g, events);
   const c = new Map<string, number>();
   const seen = new Map<string, number>();
+  const dormant = new Set<string>();
   for (const n of g.nodes) {
     const l = ev.get(n.id) ?? [];
     c.set(n.id, control(l, prior));
     seen.set(n.id, l.length);
+    if (learned(n) && !l.length) dormant.add(n.id);
   }
-  return { control: c, seen };
+  return { control: c, seen, dormant };
 }
 
 /** Control after forgetting: the engine's FSRS retention (1 when unknown, e.g. no engine). */
@@ -87,6 +93,7 @@ export function rawStars(g: Graph, k: Knowledge, retention?: Map<string, number>
   let num = 0;
   let den = 0;
   for (const n of g.nodes) {
+    if (k.dormant.has(n.id)) continue;
     const w = weight(n.id);
     num += w * effective(k, n.id, retention);
     den += w;
@@ -109,6 +116,6 @@ export const questionStars = (d: number, m: number) => Math.min(5, Math.max(1, M
 export const targetDifficulty = (m: number, stretch: boolean) => Math.min(5, Math.max(1, Math.round((stretch ? 4 : 3) - 2 * (0.5 - m))));
 /** Mean effective control of some nodes (the prior when none are known). */
 export const meanControl = (k: Knowledge, ids: string[], prior: number, retention?: Map<string, number>) => {
-  const known = ids.filter((id) => k.control.has(id));
+  const known = ids.filter((id) => k.control.has(id) && !k.dormant.has(id));
   return known.length ? known.reduce((a, id) => a + effective(k, id, retention), 0) / known.length : prior;
 };

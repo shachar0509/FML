@@ -1,0 +1,311 @@
+{
+  "lang": "en",
+  "notes": "Fictional jurisdiction. Main run = the 3 solution files + teacher/rubric-section.md; the expect rows and forbid checks run against the main-run registry. Because the rubric (role teacher) demands citing the section of every statute relied on, 'cite-section' is expected with source 'teacher' in the main run (the teacher convention supersedes the same practice learned from solutions); in the lifecycle runs, which have no rubric, the same practice is a solutions convention. 'conclusion-first' (lifecycle only) comes from teacher/remark-conclusion-first.md. MATCHING: every 'match' is a case-insensitive regex over the learned rule text (rule + useCase). A key may match several learned conventions; the key passes if exactly the conventions it matches, taken together, give the expected outcome on every row (a merged 'IRAC with the conclusion last' convention matches both conclusion-last and irac-structure, and that is fine). When a 'source' is given next to a regex, only conventions with that source are matched (this keeps 'do not add a closing section' in the teacher's conclusion-first rule from being taken for conclusion-last). STATUS VOCABULARY (lifecycle): 'active' = active, any source; 'active-teacher' = active with source teacher; 'retired' = present with status retired; 'absent' = no convention matches; 'not-active' = absent, retired, or present only as a solutions practice whose resolution says the teacher's rule wins wherever its trigger holds (never active unrestricted over the teacher's use case).",
+  "plan": {
+    "course": "Torts and Contracts",
+    "stages": [
+      {
+        "title": "Negligence",
+        "concepts": [
+          "negligence",
+          "duty of care",
+          "reasonable person",
+          "causation"
+        ]
+      },
+      {
+        "title": "Statutory and strict liability",
+        "concepts": [
+          "statutory duty",
+          "keeper of animals",
+          "nuisance",
+          "contributory fault"
+        ]
+      },
+      {
+        "title": "Economic loss and negligent statements",
+        "concepts": [
+          "pure economic loss",
+          "negligent misstatement",
+          "special relationship"
+        ]
+      },
+      {
+        "title": "Contract formation",
+        "concepts": [
+          "offer and acceptance",
+          "consideration",
+          "formation by conduct"
+        ]
+      },
+      {
+        "title": "Sale of goods and damages",
+        "concepts": [
+          "conformity of goods",
+          "notice of defect",
+          "cancellation",
+          "damages",
+          "mitigation"
+        ]
+      }
+    ]
+  },
+  "files": [
+    {
+      "path": "torts-solutions-2023.md",
+      "role": "exercises"
+    },
+    {
+      "path": "torts-solutions-2024.md",
+      "role": "exercises"
+    },
+    {
+      "path": "contracts-solutions-2024.md",
+      "role": "exercises"
+    },
+    {
+      "path": "teacher/rubric-section.md",
+      "role": "teacher"
+    }
+  ],
+  "expect": [
+    {
+      "key": "cite-section",
+      "source": "teacher",
+      "match": "statut.{0,60}section|section.{0,60}statut|section numbers?|cites? the section",
+      "notes": "Occurrences where the answer RELIES on a statute and cites the section: torts-2023 Q1 (CWO ss.35,36), torts-2023 Q2 (CWO s.63, Workplace Safety Ordinance s.9), torts-2024 Q1 (CWO s.41), torts-2024 Q2 (CWO ss.35,68), torts-2024 Q4 (CWO s.44), contracts-2024 Q2 (Sale of Goods Law ss.11,15,28) = 6 occurrences in 3 files. Absences (statute named in passing, answer rests on case law or general principle, no section): torts-2023 Q3, torts-2024 Q3, contracts-2024 Q3 = 3 in 3 files; they must end up in notWhen, not counted as slips (3 unexplained absences in 9 would exceed 1 in 4). No statute at all: contracts-2024 Q1 (definition, precedent). In the main run the rubric also states the rule (teacher source; its own exemption matches the rows: a statute mentioned in passing or an answer that does not depend on a statute carries no deduction). alsoCheckRowsAt: run the same rows against the 'solutions only' lifecycle registry too, since that is the only place where the trigger is learned purely by refinement by absences (plan: 'Refinement by absences').",
+      "rows": [
+        {
+          "question": "A cyclist runs into a pedestrian who stepped off the kerb while looking at her phone. The pedestrian is injured. Advise whether the cyclist is liable in negligence under the Civil Wrongs Ordinance [New Version].",
+          "answer": "The cyclist was riding fast on a crowded pavement, which a reasonable person would not do, so he was negligent under the Civil Wrongs Ordinance [New Version]. The pedestrian was foreseeably affected, so a duty existed. His speed caused the collision and her injury. The pedestrian was also careless in looking at her phone, so her damages should be reduced. The cyclist is liable for most of the damage.",
+          "triggered": true,
+          "met": false,
+          "note": "bases liability on a named ordinance, never gives a section number"
+        },
+        {
+          "question": "A landlord leaves a staircase unlit and a tenant falls and breaks an ankle. Advise whether the landlord is liable in negligence.",
+          "answer": "The issue is whether the landlord was negligent. Under section 35 of the Civil Wrongs Ordinance [New Version], negligence is conduct that a reasonable person would not engage in, and section 36 extends the duty to those foreseeably affected. A tenant using the stairs is plainly foreseeable. Leaving the stairs unlit is what a reasonable landlord would not do, and the darkness caused the fall. The landlord is liable.",
+          "triggered": true,
+          "met": true,
+          "note": "relies on the ordinance and cites sections 35 and 36"
+        },
+        {
+          "question": "Define 'consideration' and explain whether a promise to make a gift is enforceable.",
+          "answer": "Consideration is the price for which a promise is bought: something of value that the promisee gives or promises in return for the promise, whether a benefit to the promisor or a detriment to the promisee. It marks the difference between a bargain and a gift. A promise to make a gift is given for nothing in return, so it lacks consideration, and the promisee cannot enforce it as a contract if the promisor changes his mind before the gift is made. Once the gift has been handed over, however, it is complete and cannot be reclaimed for lack of consideration.",
+          "triggered": false,
+          "met": null,
+          "note": "definition question; the answer relies on no statute, so there is nothing to cite. The rule must not fire merely because it is a law course"
+        },
+        {
+          "question": "A solicitor's carelessly drafted letter causes a business to lose a prospective customer. The business sues the solicitor, who was not its adviser. Discuss whether a duty of care exists.",
+          "answer": "The business suffered pure economic loss, which the courts are reluctant to compensate. In the ruling in Shalom v. Peretz the court held that a duty arises only where the defendant assumed responsibility to the plaintiff or knew the plaintiff would rely on the letter. The solicitor was not the business's adviser and did not know of its reliance, so no duty exists. The claim fails.",
+          "triggered": false,
+          "met": null,
+          "note": "rests on a precedent only (learned notWhen: precedent-only answers cite nothing)"
+        },
+        {
+          "question": "A buyer emailed an appliance shop asking whether a particular washing machine was in stock and at what price. The shop replied with the price and a delivery date, and the buyer paid online. The machine was delivered late and the buyer claims the shop is in breach. The shop says no contract was formed until delivery. Discuss whether and when a contract was formed.",
+          "answer": "The Sale of Goods Law, 1968 will matter later, when the consequences of the late delivery are considered, but the question asked here is whether a contract was formed at all, and that is a matter of offer and acceptance. The buyer's email asked about stock and price without committing to buy, so it was an inquiry. The shop's reply stated the machine, the price and a delivery date and was an offer. The buyer accepted it by paying, which was conduct showing assent. A contract was therefore formed on payment, on the shop's terms including the delivery date, and the shop's argument that nothing was agreed until delivery fails.",
+          "triggered": false,
+          "met": null,
+          "note": "only mentions a statute as background, does not rely on it (learned notWhen from the absences); its lack of a section is not a slip"
+        },
+        {
+          "question": "A shop sold a customer a kettle that overheated on the first use. The customer wrote to the shop eight months later. Does the customer still have the right to cancel the sale?",
+          "answer": "The customer relies on the Sale of Goods Law, 1968. Under section 11 the goods must conform to the contract and a kettle that overheats is not fit for ordinary use. Under section 15 the buyer must notify the seller within a reasonable time after discovering the defect, and eight months after the first use is not reasonable. The right to cancel under section 28 is therefore lost.",
+          "triggered": true,
+          "met": true,
+          "note": "relies on a statute and cites sections 11, 15 and 28"
+        }
+      ],
+      "alsoCheckRowsAt": [
+        "solutions only"
+      ]
+    },
+    {
+      "key": "conclusion-last",
+      "source": "solutions",
+      "match": "conclusion.{0,60}(last|end|final|clos)|(last|end|final|clos).{0,60}conclusion|issue.{0,40}rule.{0,40}application.{0,40}conclusion",
+      "notes": "Occurrences, all answers end with a 'Conclusion' heading as the last section: torts-2023 Q1, Q2, Q3; torts-2024 Q1, Q2, Q3, Q4; contracts-2024 Q1, Q2, Q3 = 10 answers in 3 files. Learned trigger is expected to be 'a full multi-part analytical answer' (problem or definition essay). The use case is wide, so the true/false row below is a judgement call: this fixture decides it is not triggered because every source answer is a multi-section essay of at least a page.",
+      "rows": [
+        {
+          "question": "A tenant's pipe bursts and floods the flat below. The downstairs tenant sues in negligence. Advise.",
+          "answer": "Issue: was the upstairs tenant negligent in the way he maintained the pipe? Rule: negligence is a failure to take the care a reasonable person would take. Application: he had noticed a damp patch a month earlier and did nothing, which a reasonable person would not do, and the flood followed from that. Conclusion: the upstairs tenant is liable for the damage to the flat below.",
+          "triggered": true,
+          "met": true,
+          "note": "the conclusion is the last paragraph, under its own heading"
+        },
+        {
+          "question": "A farmer's cattle break through a fence and trample a neighbour's crop. Discuss the farmer's liability.",
+          "answer": "Issue: whether the farmer is liable for the damage done by his cattle. Rule: the keeper of animals is liable where he knew they were likely to cause harm. Application: the fence had been broken for weeks and the farmer had been told about it by the neighbour, so he knew. The cattle trampled the crop as a direct result. The farmer cannot argue that the neighbour contributed, since the crop was on the neighbour's own land.",
+          "triggered": true,
+          "met": false,
+          "note": "stops after the application; there is no concluding paragraph at the end"
+        },
+        {
+          "question": "A buyer and a seller exchange emails about a used car, and the buyer later says no contract was formed. Discuss.",
+          "answer": "In my view the contract was formed, because the seller's reply of 3 May was an offer and the buyer's message 'agreed, I will collect Friday' was an unqualified acceptance. Issue: was there an offer, and was it accepted? Rule: an offer is a sufficiently definite proposal showing an intention to be bound, and acceptance must match it. Application: the reply stated a price, the car and a collection date, and the buyer's words matched it.",
+          "triggered": true,
+          "met": false,
+          "note": "the conclusion is stated first and no concluding paragraph closes the answer; the rule is about the conclusion being last"
+        },
+        {
+          "question": "True or false: a promise to pay for work that has already been done is always supported by consideration. Justify your answer in one or two sentences.",
+          "answer": "False. A promise made after the work was completed, and not requested in advance, is not given in exchange for the work, so it is generally not supported by consideration.",
+          "triggered": false,
+          "met": null,
+          "note": "a one-sentence justification is not a multi-part analytical answer; the solutions' habit applies to full essays and problem questions only"
+        },
+        {
+          "question": "A contractor leaves a trench unfenced next to a footpath and a pedestrian falls in at night. Discuss the contractor's liability and the pedestrian's recovery.",
+          "answer": "Issue: whether the contractor breached a duty of care. Rule: a duty is owed to those foreseeably affected, and the standard is the reasonable contractor. Application: pedestrians on the footpath are obviously foreseeable, and a reasonable contractor would have fenced and lit the trench. The fall and the injuries followed. Conclusion: the contractor is liable, and the pedestrian recovers in full unless she walked carelessly.",
+          "triggered": true,
+          "met": true,
+          "note": "ends with the conclusion"
+        }
+      ]
+    },
+    {
+      "key": "irac-structure",
+      "source": "solutions",
+      "match": "issue.{0,40}rule.{0,40}application|\\birac\\b",
+      "notes": "All 10 solutions use the headings Issue, Rule, Application, Conclusion in that order. Optional expectation: if the learned registry has no separate convention and the structure is folded into 'conclusion-last', the eval author may drop this entry.",
+      "rows": [
+        {
+          "question": "A builder uses cheaper cement than agreed in a contract to renovate a kitchen. The owner discovers cracks after a year. Discuss the owner's remedies.",
+          "answer": "Issue: whether the builder breached the contract and what the owner may claim. Rule: a builder must use the materials agreed, and the owner may claim the cost of putting the work right. Application: the cheaper cement caused the cracks, so the breach is clear, and repair is the measure of damages. Conclusion: the owner may recover the cost of repair.",
+          "triggered": true,
+          "met": true,
+          "note": "all four parts in order"
+        },
+        {
+          "question": "A passenger on a bus is injured when the driver brakes sharply to avoid a child who runs into the road. Is the bus company liable?",
+          "answer": "The bus company is not liable. The driver braked sharply to avoid a child, which is what a reasonable driver would do. The passenger's injury was an unfortunate result of a proper decision.",
+          "triggered": true,
+          "met": false,
+          "note": "problem question answered by a bare result with no stated issue, rule or application"
+        },
+        {
+          "question": "True or false: acceptance of an offer must be communicated to the offeror. Justify in one sentence.",
+          "answer": "True. Acceptance generally takes effect only once it is communicated to the offeror, subject to exceptions such as acceptance by performance.",
+          "triggered": false,
+          "met": null,
+          "note": "short true/false justification, not a structured essay"
+        },
+        {
+          "question": "A seller delivers goods that are different in kind from those ordered. Discuss the buyer's rights and the effect of delay in complaining.",
+          "answer": "Issue: whether the goods conform and what follows if the buyer waited. Rule: goods must match the description in the contract and the buyer must give notice of the defect within a reasonable time. Application: the goods were of a different kind, so the seller is in breach, and a two-day wait before notifying is plainly reasonable. Conclusion: the buyer may reject the goods and recover the price.",
+          "triggered": true,
+          "met": true,
+          "note": "all four parts in order"
+        }
+      ]
+    }
+  ],
+  "forbid": [
+    {
+      "key": "one-line-summary",
+      "match": "summary.{0,60}(before|first|open|start|top|beginning)|(open|start|begin|precede).{0,60}summary|one-line summary",
+      "why": "habit of one TA in one file (torts-solutions-2024.md, 4 answers); a file-specific habit, not a course convention",
+      "scope": "main run and every lifecycle step"
+    },
+    {
+      "key": "bold-therefore-ending",
+      "match": "\\bbold|therefore, the claim",
+      "why": "seen in only 2 answers (torts-2024 Q4, contracts-2024 Q2); below the 3-occurrence threshold",
+      "scope": "main run and every lifecycle step"
+    },
+    {
+      "key": "student-text",
+      "match": "\\bstudent",
+      "why": "no learned rule, example, or lesson brief may mention a student; note: these files contain no student text, so any hit is an extraction error (if a legitimate rule says 'students' in a generic sense, the eval author should narrow this regex to quotations of answers)",
+      "scope": "main run and every lifecycle step"
+    }
+  ],
+  "lifecycleMatch": {
+    "cite-section": {
+      "match": "statut.{0,60}section|section.{0,60}statut|section numbers?|cites? the section"
+    },
+    "conclusion-last": {
+      "match": "conclusion.{0,60}(last|end|final|clos)|(last|end|final|clos).{0,60}conclusion|issue.{0,40}rule.{0,40}application.{0,40}conclusion",
+      "source": "solutions"
+    },
+    "conclusion-first": {
+      "match": "conclusion.{0,60}(first|open|begin|start|outset|top)|(first|open|begin|start|outset|top).{0,60}conclusion",
+      "source": "teacher"
+    }
+  },
+  "lifecycle": [
+    {
+      "step": "solutions only",
+      "files": [
+        {
+          "path": "torts-solutions-2023.md",
+          "role": "exercises"
+        },
+        {
+          "path": "torts-solutions-2024.md",
+          "role": "exercises"
+        },
+        {
+          "path": "contracts-solutions-2024.md",
+          "role": "exercises"
+        }
+      ],
+      "expect": {
+        "cite-section": "active",
+        "conclusion-last": "active",
+        "conclusion-first": "absent"
+      },
+      "notes": "No teacher files here, so cite-section is a solutions convention (6 relying answers in 3 files)."
+    },
+    {
+      "step": "delete the solution files",
+      "remove": [
+        "torts-solutions-2023.md",
+        "torts-solutions-2024.md",
+        "contracts-solutions-2024.md"
+      ],
+      "expect": {
+        "cite-section": "active",
+        "conclusion-last": "active",
+        "conclusion-first": "absent"
+      },
+      "notes": "Conventions are kept when their source files are deleted (the course keeps what it learned)."
+    },
+    {
+      "step": "add the remark",
+      "add": [
+        {
+          "path": "teacher/remark-conclusion-first.md",
+          "role": "teacher"
+        }
+      ],
+      "expect": {
+        "cite-section": "active",
+        "conclusion-last": "retired",
+        "conclusion-first": "active-teacher"
+      },
+      "notes": "All of conclusion-last's source files are gone (step 2) and the lecturer's remark contradicts it in the same use case (problem-question answers: both triggers hold for one answer, and 'conclusion in the opening paragraph, no closing section' is incompatible with 'conclusion as the last section'), so it is retired and replaced by a teacher convention. The remark says nothing about citations, so cite-section stays. The remark exempts definition questions, so conclusion-first's trigger should be limited to problem questions. irac-structure is not asserted here: if a separate IRAC convention exists and puts the conclusion last, it may be retired or kept with a teacher-wins resolution; both are valid under the rules."
+    },
+    {
+      "step": "solutions contradicting the teacher",
+      "add": [
+        {
+          "path": "contra/solutions-conclusion-last-2025.md",
+          "role": "exercises"
+        },
+        {
+          "path": "contra/solutions-conclusion-last-2025b.md",
+          "role": "exercises"
+        }
+      ],
+      "expect": {
+        "cite-section": "active",
+        "conclusion-first": "active-teacher",
+        "conclusion-last": "not-active"
+      },
+      "notes": "The new example solutions (4 problem answers in 2 files: Set A Q1-Q3, Set B Q1) put the conclusion last again, which alone would qualify (>=3 occurrences, 2 files). But the use case is covered by an active teacher convention: solutions can never retire it (the retire rule needs X's sources gone and, for a teacher X, a newer teacher Y), and conclusion-last must not come back active over the teacher's use case. See STATUS VOCABULARY for 'not-active'. The old retired conclusion-last may stay retired."
+    }
+  ]
+}

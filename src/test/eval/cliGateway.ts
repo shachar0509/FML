@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
-import { mkdtempSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Block, ClaudeGateway, ClaudeRequest, ClaudeResponse, Message, ToolDef } from "@/core/claude/types";
@@ -8,6 +9,7 @@ import type { Block, ClaudeGateway, ClaudeRequest, ClaudeResponse, Message, Tool
  * Semantic eval only (never in `pnpm test`): sends each request to the local Claude Code CLI on the user's own login,
  * `claude -p` with the forced tool's schema as --json-schema, so the real prompts run on a real model with no key in any file.
  * Isolated: an empty temp cwd, --safe-mode (no CLAUDE.md, skills, hooks), --strict-mcp-config (no MCP servers), no tools.
+ * `EVAL_CACHE=<dir>` replays identical requests from disk (cheap tuning: unchanged scans cost nothing); never for stability runs.
  */
 const MAX_PROCS = 4;
 
@@ -17,6 +19,18 @@ const blockText = (b: Block): string => {
   if (b.type === "tool_result") return `[tool result${(b as { is_error?: boolean }).is_error ? " (error)" : ""}: ${(b as { content: string }).content}]`;
   if (b.type === "image") throw new Error("CliGateway: image blocks are not supported; write eval fixtures as text");
   return "";
+};
+/** the CLI's strict JSON Schema check has no tuples (`prefixItems`, e.g. a bbox): an array of the first item's type, same length */
+const strict = (s: unknown): unknown => {
+  if (Array.isArray(s)) return s.map(strict);
+  if (!s || typeof s !== "object") return s;
+  const o = Object.fromEntries(Object.entries(s).map(([k, v]) => [k, strict(v)]));
+  if (Array.isArray(o.prefixItems)) {
+    o.items = o.prefixItems[0];
+    o.minItems = o.maxItems = o.prefixItems.length;
+    delete o.prefixItems;
+  }
+  return o;
 };
 const transcript = (ms: Message[]) =>
   ms.length === 1 && ms[0]?.role === "user"
@@ -45,9 +59,12 @@ export class CliGateway implements ClaudeGateway {
     const forced = req.toolChoice?.type === "tool" ? req.toolChoice.name : undefined;
     const tool = req.tools?.find((t): t is ToolDef => "input_schema" in t && (!forced || t.name === forced));
     const args = ["-p", "--safe-mode", "--strict-mcp-config", "--no-session-persistence", "--output-format", "json", "--tools", "", "--system-prompt", req.system];
-    if (tool) args.push("--json-schema", JSON.stringify(tool.input_schema));
+    if (tool) args.push("--json-schema", JSON.stringify(strict(tool.input_schema)));
     this.calls++;
-    return new Promise((resolve, reject) => {
+    const input = transcript(req.messages);
+    const cache = process.env.EVAL_CACHE && join(process.env.EVAL_CACHE, `${createHash("sha256").update(JSON.stringify([args, input])).digest("hex")}.json`);
+    if (cache && existsSync(cache)) return Promise.resolve(JSON.parse(readFileSync(cache, "utf8")) as ClaudeResponse);
+    return new Promise<ClaudeResponse>((resolve, reject) => {
       const p = spawn("claude", args, { cwd: this.cwd, stdio: ["pipe", "pipe", "pipe"] });
       let out = "";
       let err = "";
@@ -71,7 +88,13 @@ export class CliGateway implements ClaudeGateway {
           reject(new Error(`claude -p (exit ${code}): ${e instanceof Error ? e.message : e}\n${err.slice(0, 500)}`));
         }
       });
-      p.stdin.end(transcript(req.messages));
+      p.stdin.end(input);
+    }).then((r) => {
+      if (cache) {
+        mkdirSync(process.env.EVAL_CACHE as string, { recursive: true });
+        writeFileSync(cache, JSON.stringify(r));
+      }
+      return r;
     });
   }
 }

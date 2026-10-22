@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/client";
 import { InMemoryTransport } from "@modelcontextprotocol/server";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import type { CourseData, LookupResult } from "@/cards/types";
 import { CourseJsonSchema, PlanJsonSchema } from "@/core/domain/dataSchemas";
 import { validatePlan } from "@/core/domain/plan/plan";
@@ -13,6 +13,12 @@ import { coursePaths } from "@/core/lib/fs/paths";
 import { useSettings } from "@/stores/settings";
 import { initNode } from "./platform";
 import { createServer } from "./server";
+
+const probe = vi.hoisted(() => ({ calls: 0, fail: false }));
+vi.mock("@/core/domain/ingest/reconcile", async (orig) => {
+  const m = await orig<typeof import("@/core/domain/ingest/reconcile")>();
+  return { ...m, reconcileConventions: (...a: Parameters<typeof m.reconcileConventions>) => (probe.calls++, probe.fail ? Promise.reject(new Error("boom")) : m.reconcileConventions(...a)) };
+});
 
 const entry = { courseNumber: "01040195", nameHe: "חשבון אינפיניטסימלי 1", credits: 5.5, faculty: "מתמטיקה", syllabusHe: "קדם: ...", prerequisitesRaw: "", semester: "202402" };
 const unit = (n: number) => ({ title: "u", summary: "s", stages: Array.from({ length: n }, (_, i) => ({ title: `t${i}`, kind: "concept", summary: "s", prerequisites: [] })) });
@@ -73,6 +79,7 @@ it("looks up, creates a course through the bridge with fake jobs, shows the cour
   expect(most).toBeGreaterThan(1); // the unit details came several per call
   expect(final).toContain("the card shows the plan");
   expect(sc<{ state: string }>(await call("course_status", { number: "01040195" })).state).toBe("done");
+  expect(probe.calls).toBe(1); // M72: reconcile runs even when no file was newly indexed
 
   const root = useSettings.getState().settings.dataRoot;
   const plan = await readJsonFile(coursePaths(root, "01040195").planJson, PlanJsonSchema);
@@ -114,6 +121,9 @@ it("builds at once: one chat works through both, each job belongs to its own cou
   const call = (name: string, args: Record<string, unknown> = {}) => client.callTool({ name, arguments: args });
   const text = (r: { content?: unknown }) => JSON.stringify(r.content);
   await call("shalav_choose_university", { university: "technion" });
+  probe.fail = true; // a reconcile error must not fail the builds
+  vi.spyOn(console, "error").mockImplementation(() => undefined);
+  const before = probe.calls;
   const courses = ["01040195", "01040196", "01040197"]; // three: the index queue runs two courses at a time
 
   for (const n of courses) {
@@ -170,6 +180,8 @@ it("builds at once: one chat works through both, each job belongs to its own cou
     expect(sc<{ materials: { status: string }[] }>(await call("files_list", { number: n })).materials.map((f) => f.status)).toEqual(["indexed"]);
     expect(seen[n]).toBeGreaterThanOrEqual(4); // outline, two units, the notes
   }
+  expect(probe.calls - before).toBe(3);
+  probe.fail = false;
 }, 60_000);
 
 it("creates a custom course: no university in it, no Moodle, shown as custom", async () => {

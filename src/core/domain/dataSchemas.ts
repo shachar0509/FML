@@ -111,6 +111,8 @@ export const EventSchema = z.discriminatedUnion("type", [
   z.object({ ...base, type: z.literal("mistake_tag_defined"), tag: z.string(), labelHe: z.string(), labelEn: z.string(), description: z.string() }),
   // The tutor/grader grows the student's knowledge graph: a node the plan does not have (a skill, a course convention, a misconception…)
   z.object({ ...base, type: z.literal("node_added"), nodeId: z.string(), kind: NodeKindSchema, label: z.string().max(80), why: z.string().max(300), stageIds: z.array(stageId), requires: z.array(z.string()), origin: z.enum(["tutor", "grader", "index", "teacher"]), refId: z.string() }),
+  // M72: a course convention the reconcile retired (its files are gone and a repeating convention contradicts it); graphOf drops the node, its answers stay in the log
+  z.object({ ...base, type: z.literal("node_retired"), nodeId: z.string(), why: z.string().max(300) }),
   z.object({ ...base, type: z.literal("node_linked"), from: z.string(), to: z.string(), rel: z.enum(["requires", "misconception_of"]) }),
   // The tutor's own observation of a node (e.g. "cited the section numbers this time"), 0..1
   z.object({ ...base, type: z.literal("node_observed"), nodeId: z.string(), score: z.number().min(0).max(1), why: z.string().max(300), context: evidenceContext, refId: z.string().optional() }),
@@ -279,3 +281,55 @@ export const GeneratedFileSchema = z.object({
   schema: z.literal(1), items: z.array(GeneratedExerciseSchema), solutions: z.record(z.string(), z.string()).default({}),
 });
 export type GeneratedFile = z.infer<typeof GeneratedFileSchema>;
+
+/**
+ * M72: a course convention (`.shalav/conventions.json`), defined by its use case: WHEN it applies, never by a question category.
+ * Learned by the reconcile build step from example-solution occurrences (FileIndex.patterns) and teacher items; mirrored as a graph node (id).
+ */
+export const ConventionSchema = z.object({
+  /** the graph node id: nodeId(stage | null, "convention", the first rule text); stays when the wording is refined */
+  id: z.string(),
+  /** ≤160 chars, the student's language: what the answer must do */
+  rule: z.string(),
+  source: z.enum(["teacher", "solutions"]),
+  useCase: z.object({
+    /** ≤240: the situation in words ("the answer bases a claim on a statute") */
+    trigger: z.string(),
+    /** what the trigger is checked against: what the question demands, what the answer does, or either */
+    on: z.enum(["question", "answer", "both"]),
+    /** explicit non-cases learned from the sources (absences explained by a context difference) */
+    notWhen: z.array(z.string()),
+    /** ≤4 short cases from the sources: where it applied, and where it clearly did not */
+    examples: z.array(z.object({ quote: z.string(), applies: z.boolean() })),
+    /** ≤200: the observable check that it was met */
+    verify: z.string(),
+    /** a similar use case with another convention, and the context that tells them apart */
+    distinguishes: z.array(z.object({ from: z.string(), difference: z.string() })).default([]),
+    level: z.enum(["whole", "part", "any"]),
+    /** [] = the whole course */
+    stageIds: z.array(stageId),
+    /** a coarse prefilter only (keeps prompts short); never decides applicability */
+    hints: z.object({ answerForms: z.array(AnswerFormSchema), questionTypes: z.array(IndexedExerciseSchema.shape.type) }),
+  }),
+  /** refs = occurrence ids (`<sha8>-o<n>`) or teacher item ids (`<sha8>-t<n>`) of that file */
+  sources: z.array(z.object({ sha: z.string(), fileName: z.string(), kind: z.enum(["solution", "graded", "rubric", "remark"]), refs: z.array(z.string()), quote: z.string() })),
+  status: z.enum(["active", "retired"]),
+  /** split by use case: which trigger selects which rule; the teacher's wins where both still trigger */
+  conflicts: z.array(z.object({ with: z.string(), resolution: z.string() })),
+  addedAt: ts,
+  updatedAt: ts,
+  retiredAt: ts.optional(),
+  /** the id of the convention that contradicted it */
+  retiredBy: z.string().optional(),
+});
+export type Convention = z.infer<typeof ConventionSchema>;
+export const ConventionsFileSchema = z.object({
+  schema: z.literal(1),
+  conventions: z.array(ConventionSchema),
+  /** incremental reconcile: use-case key → hash of its inputs at the last reconcile (unchanged → not sent again) */
+  hashes: z.record(z.string(), z.string()).default({}),
+  /** similar use cases whose practices vary with no context to explain them (no convention), kept for the build log and the eval */
+  inconsistent: z.array(z.object({ useCase: z.string(), practices: z.array(z.string()), refs: z.array(z.string()), at: ts })).default([]),
+  updatedAt: ts,
+});
+export type ConventionsFile = z.infer<typeof ConventionsFileSchema>;

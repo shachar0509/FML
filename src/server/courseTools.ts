@@ -8,6 +8,7 @@ import { addCourse, buildPlan, courseExists, loadCourse, type ManualEntry } from
 import { newStageIds, refinePlan } from "@/core/domain/plan/refine";
 import { removeFromPlan } from "@/core/domain/plan/remove";
 import { gatherWeb } from "@/core/domain/ingest/web";
+import { reconcileConventions } from "@/core/domain/ingest/reconcile";
 import type { CourseJson } from "@/core/domain/dataSchemas";
 import { quickSummary, shownLevel, watchList, type KnowledgeService } from "./knowledge/knowledge";
 import { localize, translateCourse } from "@/core/domain/plan/translate";
@@ -62,15 +63,24 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, fi
           }
           const indexed = await files.indexPending(n, (files) => (b.progress = { step: "index", files: files.total ? files : undefined }));
           if (signal.aborted) throw new Error(STOPPED); // cancelled while reading the files: not "done"
-          let added = 0;
-          // Serial by design: refine starts only after every file of this course is read (indexPending waits for them), and one build per course runs at a time.
+          // Refine starts only after every file of this course is read (indexPending waits for them), and one build per course runs at a time.
+          // M72: conventions reconcile alongside it (both only read the fresh indexes); not gated on `indexed`, a build after deletions must still prune.
           const c = await loadCourse(n);
-          if (indexed && c?.plan && had) {
-            b.progress = { step: "cover" };
-            added = newStageIds(had, await refinePlan({ gw: claude(), course: c.course, lang: look().language })).size;
-          }
+          // allSettled: a failed refine must not release the course while reconcile still writes (a second build would run a second reconcile)
+          const [refined, rec] = await Promise.allSettled([
+            (async () => {
+              if (!(indexed && c?.plan && had)) return 0;
+              b.progress = { step: "cover" };
+              return newStageIds(had, await refinePlan({ gw: claude(), course: c.course, lang: look().language })).size;
+            })(),
+            c?.plan
+              ? reconcileConventions({ gw: claude(), n, plan: c.plan, lang: look().language }).catch((e) => (console.error(`conventions of ${n}:`, e), null)) // a reconcile failure never fails the build
+              : null,
+          ]);
+          if (refined.status === "rejected") throw refined.reason;
+          const added = refined.value, learned = rec.status === "fulfilled" ? rec.value : null;
           b.state = "done";
-          return { fresh, indexed, added };
+          return { fresh, indexed, added, learned: learned?.added ?? 0, retired: learned?.retired ?? 0 };
         } catch (e) {
           b.state = "failed";
           b.error = e instanceof Error ? e.message : String(e);
@@ -79,7 +89,7 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, fi
           files.release(n);
         }
       },
-      (r) => [{ type: "text", text: `The study plan for ${n} is ${r.fresh ? "built" : "updated"}${r.indexed ? ` from ${r.indexed} course file(s)` : ""}${r.added ? `; ${r.added} stage(s) were added so every topic in the files is covered` : r.indexed ? "; it already covered every topic in the files" : ""}. Tell the student in one sentence; the card shows the plan.` }],
+      (r) => [{ type: "text", text: `The study plan for ${n} is ${r.fresh ? "built" : "updated"}${r.indexed ? ` from ${r.indexed} course file(s)` : ""}${r.added ? `; ${r.added} stage(s) were added so every topic in the files is covered` : r.indexed ? "; it already covered every topic in the files" : ""}${r.learned || r.retired ? `; ${r.learned} course convention(s) learned, ${r.retired} retired` : ""}. Tell the student in one sentence; the card shows the plan.` }],
       "build",
       `build:${n}`,
     ).done.catch(() => undefined); // errors are reported to the model by the bridge and to the card by status

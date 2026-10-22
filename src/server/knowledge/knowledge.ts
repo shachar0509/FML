@@ -142,12 +142,13 @@ export function createKnowledge(engineFor: ((course: string) => Engine) | null) 
           const id = byName.get(name);
           if (id && typeof st.retention_estimate === "number") retention.set(id, st.retention_estimate);
         }
-        focus = byName.get(String(olm.focus_concept ?? "")) ?? null;
-        const mis = (await e.call("get_misconceptions", { domain_id: m.domainId })).misconceptions as { concept: string; misconception_type: string; last_error_detail?: string; count: number; status: string }[] | undefined;
         const label = new Map(g.nodes.map((x) => [x.id, x.label]));
+        const f = byName.get(String(olm.focus_concept ?? ""));
+        focus = f && label.has(f) ? f : null; // the engine never forgets a node: a retired convention is not in the graph
+        const mis = (await e.call("get_misconceptions", { domain_id: m.domainId })).misconceptions as { concept: string; misconception_type: string; last_error_detail?: string; count: number; status: string }[] | undefined;
         misconceptions = (mis ?? []).filter((x) => x.status === "active").flatMap((x) => {
           const id = byName.get(x.concept);
-          return id ? [{ id, label: label.get(id) ?? x.concept, type: x.misconception_type, detail: x.last_error_detail ?? "", count: x.count }] : [];
+          return id && label.has(id) ? [{ id, label: label.get(id) ?? x.concept, type: x.misconception_type, detail: x.last_error_detail ?? "", count: x.count }] : [];
         });
         engine = true;
       } catch (err) {
@@ -158,7 +159,7 @@ export function createKnowledge(engineFor: ((course: string) => Engine) | null) 
     const rel = relevanceOf(ctx.plan, g);
     const raw = rawStars(g, k, retention, rel);
     const stars = shownStars(m.stars, raw);
-    const exam = g.nodes.filter((x) => rel(x.id) >= 0.7);
+    const exam = g.nodes.filter((x) => rel(x.id) >= 0.7 && !k.dormant.has(x.id));
     const examReady = exam.length ? exam.filter((x) => effective(k, x.id, retention) >= 0.9).length / exam.length : 0;
     await writeJsonAtomic(mapPath(n), { ...m, stars }); // also keeps what reached the engine before a failure (no answer is sent twice)
     return { graph: g, k, prior, retention, stars, raw, examReady, focus, misconceptions, engine };
@@ -199,7 +200,7 @@ export function digest(s: Summary, o: { custom: boolean; stageIds: string[]; tar
   const pct = (id: string) => `${Math.round(effective(s.k, id, s.retention) * 100)}%`;
   const weakest = s.graph.nodes
     .filter((n) => !n.stageIds.length || n.stageIds.some((x) => want.has(x)))
-    .filter((n) => effective(s.k, n.id, s.retention) < 0.9)
+    .filter((n) => !s.k.dormant.has(n.id) && effective(s.k, n.id, s.retention) < 0.9)
     .sort((a, b) => effective(s.k, a.id, s.retention) - effective(s.k, b.id, s.retention))
     .slice(0, 5);
   const items = (a: string[]) => (a.length ? a.join("; ") : "none");
