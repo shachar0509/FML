@@ -12,7 +12,7 @@ import { useSettings } from "@/stores/settings";
 import { initNode } from "../platform";
 import { EnginePool, type Engine } from "./engine";
 import { engineAsset } from "./install";
-import { createKnowledge, digest, hotStages, interactions, shownLevel } from "./knowledge";
+import { createKnowledge, digest, hotStages, interactions, shownLevel, watchList } from "./knowledge";
 
 const stage = (id: string, order: number, x: Partial<PlanJson["stages"][number]> = {}) => ({
   id, unitId: "U01", order, title: `t${id}`, summary: "s", kind: "concept" as const, objectives: [], newConcepts: [], theorems: [], techniques: [], prerequisites: [], edgeCases: [], examRelevance: "core" as const, estimatedMinutes: 30, ...x,
@@ -95,6 +95,10 @@ describe("knowledge service", () => {
     expect(d).toContain("Suggested focus: גבול");
     expect(d).toContain("difficulty 3/5");
     expect(d).not.toContain("טור"); // S002 is not learned
+    // M67: the course card watches the engine's active misconceptions, labelled like the course's mistake tags
+    const tag = { tag: "sign-flip", labelHe: "היפוך סימן", labelEn: "Sign flip", description: "", count: 5, weight: 5, lastSeenAt: "t", stageIds: ["S002"], resolved: false, recentExamples: [] };
+    expect(watchList(s, [tag], "he")).toEqual([{ label: "היפוך סימן", count: 2, stageIds: ["S001"] }]);
+    expect(watchList(s, [], "en")).toEqual([{ label: "sign-flip", count: 2, stageIds: ["S001"] }]);
 
     // the tutor adds a skill: it reaches the engine as a new concept; the old answer is not sent again
     await appendEvent(N, { type: "node_added", nodeId: nodeId(null, "skill", "Cites the section"), kind: "skill", label: "Cites the section", why: "w", stageIds: [], requires: [], origin: "grader", refId: "a" });
@@ -108,6 +112,7 @@ describe("knowledge service", () => {
     k.invalidate(N);
     const off = await k.summary(N);
     expect(off.engine).toBe(false);
+    expect(watchList(off, [], "en")).toBeNull(); // the card keeps the progress mistakes
     expect(off.stars).toBeGreaterThanOrEqual(0);
     k.dispose();
   });

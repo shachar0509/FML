@@ -9,7 +9,7 @@ import { newStageIds, refinePlan } from "@/core/domain/plan/refine";
 import { removeFromPlan } from "@/core/domain/plan/remove";
 import { gatherWeb } from "@/core/domain/ingest/web";
 import type { CourseJson } from "@/core/domain/dataSchemas";
-import { quickSummary, shownLevel, type KnowledgeService } from "./knowledge/knowledge";
+import { quickSummary, shownLevel, watchList, type KnowledgeService } from "./knowledge/knowledge";
 import { localize, translateCourse } from "@/core/domain/plan/translate";
 import { claude, setClaude } from "@/core/claude/runtime";
 import { useSettings } from "@/stores/settings";
@@ -30,7 +30,7 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, fi
   /** M65: the stars the student sees (null without a plan or when the knowledge is slow) */
   const level = async (n: string, course: CourseJson, hasPlan: boolean) => {
     const sum = hasPlan ? await quickSummary(knowledge, n, 3000) : null;
-    return sum && { stars: shownLevel(sum, course), examReady: isCustom(course) ? null : Math.round(sum.examReady * 100) };
+    return { sum, kn: sum && { stars: shownLevel(sum, course), examReady: isCustom(course) ? null : Math.round(sum.examReady * 100) } };
   };
   const catalog = () => source ?? nodeCatalog();
   setClaude(bridge); // domain code (createCourse/buildPlan) talks to the host model through the bridge
@@ -190,7 +190,8 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, fi
       });
       const byId = new Map(stages.map((s) => [s.id, s]));
       const b = status(number);
-      const kn = await level(number, course, !!plan);
+      const { sum, kn } = await level(number, course, !!plan);
+      const mistakes = progress?.mistakes.filter((m) => !m.resolved) ?? [];
       const data: CourseData = {
         view: "course",
         language,
@@ -205,7 +206,8 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, fi
         current: progress?.currentStageId ?? null,
         hasPlan: !!plan,
         build: b.state === "running" || b.state === "failed" ? b : null,
-        watch: (progress?.mistakes ?? []).filter((m) => !m.resolved).slice(0, 5).map((m) => ({ label: language === "he" ? m.labelHe : m.labelEn, count: m.count, stageIds: m.stageIds })),
+        // M67: the engine's active misconceptions when it runs (a mistake fixed by later answers drops off)
+        watch: (sum && watchList(sum, mistakes, language)) ?? mistakes.slice(0, 5).map((m) => ({ label: language === "he" ? m.labelHe : m.labelEn, count: m.count, stageIds: m.stageIds })),
         units: (plan?.units ?? []).map((u) => ({ id: u.id, title: tr(u.title), stages: u.stageIds.flatMap((id) => byId.get(id) ?? []) })),
         translate: { missing, running: translating.has(number) },
         // M65: web materials at the student's level now (self-rated until the graph says more)
@@ -258,7 +260,7 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, fi
     gathering.add(number);
     bridge.run(
       `Finding study materials online for "${c.course.nameHe}"`,
-      async (signal) => gatherWeb(claude(), c.course, look().language, count, signal, Math.round((await level(number, c.course, !!c.plan))?.stars ?? c.course.level ?? 1)).finally(() => gathering.delete(number)),
+      async (signal) => gatherWeb(claude(), c.course, look().language, count, signal, Math.round((await level(number, c.course, !!c.plan)).kn?.stars ?? c.course.level ?? 1)).finally(() => gathering.delete(number)),
       ({ saved, skipped }) => [{ type: "text", text: `${saved.length} of ${count} requested file(s) were added to the course: ${saved.join(", ") || "none"}${skipped ? ` (${skipped} found document(s) were already in the course and were not added)` : ""}. Tell the student in one short sentence that they are in the course files and that Build plan (or Update plan) reads them.` }],
       "study",
       `web:${number}`,

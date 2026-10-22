@@ -1,11 +1,11 @@
 import { join } from "node:path";
 import * as z from "zod";
-import type { CourseJson, Event, PlanJson } from "@/core/domain/dataSchemas";
+import type { CourseJson, Event, PlanJson, ProgressJson } from "@/core/domain/dataSchemas";
 import { isCustom } from "@/core/universities";
 import { priorOf, knowledgeOf, rawStars, shownStars, effective, type Knowledge } from "@/core/domain/knowledge/control";
 import { engineNames, graphOf, nodesOfStages, type Graph } from "@/core/domain/knowledge/graph";
 import { loadCtx } from "@/core/domain/practice/exercises";
-import { mapEvents } from "@/core/domain/progress/reduce";
+import { mapEvents, normalizeTag } from "@/core/domain/progress/reduce";
 import { onEvent } from "@/core/domain/progress/store";
 import { readJsonFile, writeJsonAtomic } from "@/core/lib/fs/atomicWrite";
 import { coursePaths } from "@/core/lib/fs/paths";
@@ -220,3 +220,22 @@ export const quickSummary = (k: KnowledgeService | undefined, n: string, ms = 50
   k ? Promise.race([k.summary(n).catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), ms).unref?.())]) : Promise.resolve(null);
 /** M65: the stars a student sees; a custom course starts at its self-rated level and only goes up from there (gentle). */
 export const shownLevel = (s: Summary, course: Pick<CourseJson, "type" | "level">) => (isCustom(course) ? Math.max(course.level ?? 1, s.stars) : s.stars);
+
+/**
+ * M67: what to watch out for, from the engine's active misconceptions (resolved ones drop off as the student gets them right),
+ * one row per mistake tag with its stages. Null when the engine is off or sees none: the card keeps the progress mistakes.
+ */
+export function watchList(s: Summary, mistakes: ProgressJson["mistakes"], lang: string): { label: string; count: number; stageIds: string[] }[] | null {
+  if (!s.engine || !s.misconceptions.length) return null;
+  const stagesOf = new Map(s.graph.nodes.map((n) => [n.id, n.stageIds]));
+  const rows = new Map<string, { label: string; count: number; stageIds: Set<string> }>();
+  for (const m of s.misconceptions) {
+    const tag = normalizeTag(m.type);
+    const known = mistakes.find((x) => x.tag === tag);
+    const r = rows.get(tag) ?? { label: known ? (lang === "he" ? known.labelHe : known.labelEn) : m.type, count: 0, stageIds: new Set<string>() };
+    r.count += m.count;
+    for (const id of stagesOf.get(m.id) ?? []) r.stageIds.add(id);
+    rows.set(tag, r);
+  }
+  return [...rows.values()].sort((a, b) => b.count - a.count).slice(0, 5).map((r) => ({ ...r, stageIds: [...r.stageIds] }));
+}

@@ -206,7 +206,11 @@ Plan: `~/.claude/plans/when-a-job-is-flickering-hellman.md` (approved; read it f
 - One-off diff against pre-M63 `5ba733e` (a worktree running the same test): 0 status changes, 0 mastery drops, 11 of 36 stages higher (max +0.10); reduce 7 ms → 11 ms.
 - Rerun on real data once it exists: the same diff with the real `plan.json` and events.
 
-**Next (not started):** mistake summaries in the UI from the engine's misconceptions; `assign_exercise` default difficulty = the target (engine `difficulty_target` as tie-break); generator node tags. Follow-ups: retention in question stars, conventions from example solutions at indexing.
+## M67: the course card's "watch out" list from the engine
+- `watchList(summary, progress mistakes, lang)` (knowledge.ts): the engine's active misconceptions, one row per mistake tag (its course label when known), counts summed, the stages of their nodes, top 5. Null when the engine is off or sees none: the card keeps the progress mistakes (unresolved). The practice summary and the tutor's [STATUS] mistakes are unchanged (the tutor's digest already lists the engine's misconceptions).
+- Test: knowledge (labels from the course tags, engine off → null).
+
+**Next (not started):** `assign_exercise` default difficulty = the target (engine `difficulty_target` as tie-break); generator node tags. Follow-ups: retention in question stars, conventions from example solutions at indexing.
 
 ---
 
