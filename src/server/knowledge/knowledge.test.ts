@@ -12,7 +12,7 @@ import { useSettings } from "@/stores/settings";
 import { initNode } from "../platform";
 import { EnginePool, type Engine } from "./engine";
 import { engineAsset } from "./install";
-import { createKnowledge, digest, hotStages, interactions } from "./knowledge";
+import { createKnowledge, digest, hotStages, interactions, shownLevel } from "./knowledge";
 
 const stage = (id: string, order: number, x: Partial<PlanJson["stages"][number]> = {}) => ({
   id, unitId: "U01", order, title: `t${id}`, summary: "s", kind: "concept" as const, objectives: [], newConcepts: [], theorems: [], techniques: [], prerequisites: [], edgeCases: [], examRelevance: "core" as const, estimatedMinutes: 30, ...x,
@@ -56,6 +56,7 @@ describe("knowledge service", () => {
     const s0 = await k.summary(N);
     expect(s0.engine).toBe(false);
     expect(s0.stars).toBe(1); // level 2 → prior 0.25 → 1.25★ shown as 1
+    expect(shownLevel(s0, course)).toBe(2); // M65: the student sees their self-rated level until the graph says more
     for (let i = 0; i < 12; i++) await answer(seq, 1);
     k.invalidate(N);
     expect((await k.summary(N)).k.control.get(seq)).toBeGreaterThan(0.8);

@@ -6,7 +6,8 @@ import type { ExerciseData } from "@/cards/types";
 import { pagesFor } from "@/core/domain/retrieval/retrieve";
 import { saveAnswerFile, loadImageB64 } from "@/core/lib/attachments";
 import { canReveal, ExerciseRun, emptyRun, perfect } from "@/core/domain/practice/run";
-import { figureImages, type Ctx, type Ex } from "@/core/domain/practice/exercises";
+import { figureImages, loadCtx, type Ctx, type Ex } from "@/core/domain/practice/exercises";
+import { starsFor } from "@/core/domain/practice/select";
 import type { Attachment, Context } from "@/core/domain/practice/grade";
 import { newId } from "@/core/lib/ids";
 import { useSettings } from "@/stores/settings";
@@ -23,7 +24,7 @@ const text = (t: string): Content[] => [{ type: "text", text: t }];
 const readable = (g: { verdict: string; legibility: string } | null) => !!g && g.verdict !== "unreadable" && g.legibility !== "illegible";
 const toAtt = (f: z.infer<typeof files>): Attachment[] => f.map((x) => ({ type: "image_ref", ...x }));
 
-type R = { id: string; run: ExerciseRun; n: string; context: Context; busy: "grade" | "hint" | "solution" | "clue" | null; figures: string[] };
+type R = { id: string; run: ExerciseRun; n: string; context: Context; busy: "grade" | "hint" | "solution" | "clue" | null; figures: string[]; stars?: number };
 
 /** Exercise card (plan v2 §6.4): Grade / Hint / Show solution run the v1 pipeline as bridge ops; state lives in memory (lost on a restart). */
 export function registerExerciseTools(server: McpServer, bridge: BridgeGateway) {
@@ -47,22 +48,23 @@ export function registerExerciseTools(server: McpServer, bridge: BridgeGateway) 
     const { state: s, ex } = x.run;
     const { language, theme } = useSettings.getState().settings;
     return {
-      view: "exercise", language, theme, number: x.n, runId, difficulty: ex.difficulty, statementMd: ex.statementMd, figures: x.figures,
+      view: "exercise", language, theme, number: x.n, runId, difficulty: ex.difficulty, stars: x.stars, statementMd: ex.statementMd, figures: x.figures,
       hints: s.hints.map(({ level, hintMd }) => ({ level, hintMd })), solutionMd: s.solutionMd, grade: s.grade, canReveal: canReveal(s), busy: x.busy, error: x.run.error,
       loop: x.run.loop, clues: s.clues ?? [], clueOpen: !!s.clueOpen, perfect: perfect(s.grade),
     };
   }
 
   /** Register a run (idempotent per runId) and return its card data. */
-  async function adopt(runId: string, n: string, run: ExerciseRun, context: Context): Promise<ExerciseData> {
-    if (runs.get(runId)?.run !== run) runs.set(runId, { id: runId, run, n, context, busy: null, figures: (await figureImages(n, run.ex)).map((f) => `data:${f.mediaType};base64,${f.base64}`) });
+  /** `stars` (M65): frozen by the caller when the exercise was served */
+  async function adopt(runId: string, n: string, run: ExerciseRun, context: Context, stars?: number): Promise<ExerciseData> {
+    if (runs.get(runId)?.run !== run) runs.set(runId, { id: runId, run, n, context, busy: null, stars, figures: (await figureImages(n, run.ex)).map((f) => `data:${f.mediaType};base64,${f.base64}`) });
     return data(runId);
   }
 
   /** Called by assign_exercise (Learn). Practice owns its run and uses adopt(). */
   async function open(n: string, ex: Ex, context: Context, loop = false): Promise<ExerciseData> {
     const run = new ExerciseRun(n, ex, context, { gw: bridge, loadImage: loadImageB64(n), digest }, emptyRun(), async () => undefined, loop);
-    return adopt(newId(), n, run, context);
+    return adopt(newId(), n, run, context, context === "homework" ? undefined : starsFor(await loadCtx(n), ex.difficulty, ex.stageIds));
   }
 
   const get = (runId: string) => runs.get(runId);

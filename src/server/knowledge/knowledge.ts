@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import * as z from "zod";
-import type { Event, PlanJson } from "@/core/domain/dataSchemas";
+import type { CourseJson, Event, PlanJson } from "@/core/domain/dataSchemas";
+import { isCustom } from "@/core/universities";
 import { priorOf, knowledgeOf, rawStars, shownStars, effective, type Knowledge } from "@/core/domain/knowledge/control";
 import { engineNames, graphOf, nodesOfStages, type Graph } from "@/core/domain/knowledge/graph";
 import { loadCtx } from "@/core/domain/practice/exercises";
@@ -192,7 +193,7 @@ export function hotStages(s: Summary): string[] {
 const dueNodes = (s: Summary) => [...s.retention].filter(([id, r]) => r < 0.7 && (s.k.control.get(id) ?? 0) >= 0.6).map(([id]) => id);
 
 /** M64: the tutor's view of the student's graph: level, weakest nodes of what is learned, misconceptions, reviews due, the target. */
-export function digest(s: Summary, o: { custom: boolean; stageIds: string[]; target: number }): string {
+export function digest(s: Summary, o: { custom: boolean; stageIds: string[]; target: number; /** the stars the student sees (shownLevel) */ stars?: number }): string {
   const want = new Set(o.stageIds);
   const label = new Map(s.graph.nodes.map((n) => [n.id, n.label]));
   const pct = (id: string) => `${Math.round(effective(s.k, id, s.retention) * 100)}%`;
@@ -204,7 +205,7 @@ export function digest(s: Summary, o: { custom: boolean; stageIds: string[]; tar
   const items = (a: string[]) => (a.length ? a.join("; ") : "none");
   return [
     o.custom
-      ? `- Level: the student is now at ${s.stars}★ of 5 in this course (from their self-rated level up). Goal: 5★.`
+      ? `- Level: the student is now at ${o.stars ?? s.stars}★ of 5 in this course (from their self-rated level up). Goal: 5★.`
       : `- Level: ${s.stars}★ of 5 of the whole course; exam-ready ${Math.round(s.examReady * 100)}% (core/common nodes at ≥ 90%). Goal: 100%.`,
     `- Weakest nodes of what was learned: ${items(weakest.map((n) => `${n.label} (${pct(n.id)})`))}`,
     `- Active misconceptions: ${items(s.misconceptions.slice(0, 4).map((m) => `${m.label}: ${m.type}${m.detail ? ` — ${m.detail}` : ""} (×${m.count})`))}`,
@@ -213,3 +214,9 @@ export function digest(s: Summary, o: { custom: boolean; stageIds: string[]; tar
     `- Target: questions about 3★ hard for this student (assign_exercise difficulty ${o.target}/5); one step harder after a success streak. Bring every node to full proficiency (100/100 exam answers); one or two misses are not a reason to step down.`,
   ].join("\n");
 }
+
+/** The summary if it comes within `ms` (a slow or failing engine never holds a card or a lesson up). */
+export const quickSummary = (k: KnowledgeService | undefined, n: string, ms = 5000): Promise<Summary | null> =>
+  k ? Promise.race([k.summary(n).catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), ms).unref?.())]) : Promise.resolve(null);
+/** M65: the stars a student sees; a custom course starts at its self-rated level and only goes up from there (gentle). */
+export const shownLevel = (s: Summary, course: Pick<CourseJson, "type" | "level">) => (isCustom(course) ? Math.max(course.level ?? 1, s.stars) : s.stars);

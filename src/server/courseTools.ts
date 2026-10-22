@@ -8,6 +8,8 @@ import { addCourse, buildPlan, courseExists, loadCourse, type ManualEntry } from
 import { newStageIds, refinePlan } from "@/core/domain/plan/refine";
 import { removeFromPlan } from "@/core/domain/plan/remove";
 import { gatherWeb } from "@/core/domain/ingest/web";
+import type { CourseJson } from "@/core/domain/dataSchemas";
+import { quickSummary, shownLevel, type KnowledgeService } from "./knowledge/knowledge";
 import { localize, translateCourse } from "@/core/domain/plan/translate";
 import { claude, setClaude } from "@/core/claude/runtime";
 import { useSettings } from "@/stores/settings";
@@ -24,7 +26,12 @@ const out = (text: string, structuredContent: object) => ({ content: [{ type: "t
 
 /** Courses and plan (plan v2 §6.2): lookup, create/retry as bridge operations, status polling, Course Home data. */
 type Files = { indexPending: (n: string, on: (c: FileCounts) => void) => Promise<number>; claim: (n: string) => Promise<void>; release: (n: string) => void };
-export function registerCourseTools(server: McpServer, bridge: BridgeGateway, files: Files, source?: CatalogSource) {
+export function registerCourseTools(server: McpServer, bridge: BridgeGateway, files: Files, source?: CatalogSource, knowledge?: KnowledgeService) {
+  /** M65: the stars the student sees (null without a plan or when the knowledge is slow) */
+  const level = async (n: string, course: CourseJson, hasPlan: boolean) => {
+    const sum = hasPlan ? await quickSummary(knowledge, n, 3000) : null;
+    return sum && { stars: shownLevel(sum, course), examReady: isCustom(course) ? null : Math.round(sum.examReady * 100) };
+  };
   const catalog = () => source ?? nodeCatalog();
   setClaude(bridge); // domain code (createCourse/buildPlan) talks to the host model through the bridge
   const builds = new Map<string, Build>();
@@ -183,6 +190,7 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, fi
       });
       const byId = new Map(stages.map((s) => [s.id, s]));
       const b = status(number);
+      const kn = await level(number, course, !!plan);
       const data: CourseData = {
         view: "course",
         language,
@@ -200,7 +208,9 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, fi
         watch: (progress?.mistakes ?? []).filter((m) => !m.resolved).slice(0, 5).map((m) => ({ label: language === "he" ? m.labelHe : m.labelEn, count: m.count, stageIds: m.stageIds })),
         units: (plan?.units ?? []).map((u) => ({ id: u.id, title: tr(u.title), stages: u.stageIds.flatMap((id) => byId.get(id) ?? []) })),
         translate: { missing, running: translating.has(number) },
-        web: isCustom(course) ? { running: gathering.has(number), level: course.level ?? 1 } : null,
+        // M65: web materials at the student's level now (self-rated until the graph says more)
+        web: isCustom(course) ? { running: gathering.has(number), level: Math.round(kn?.stars ?? course.level ?? 1) } : null,
+        knowledge: kn,
       };
       const cur = data.current && byId.get(data.current);
       const text = `${course.courseNumber} — ${course.nameHe}\n${plan ? `${data.stagesDone}/${data.stagesTotal} stages done${cur ? `; next: ${cur.id} · ${cur.title}` : ""}` : "No study plan yet: the student adds course files, then presses Build plan."}\nOptions: 1) learn the next stage (shalav_start_lesson); 2) practice (shalav_practice); 3) add course files (files_list); 4) build or update the plan from the files (plan_build_request).`;
@@ -248,7 +258,7 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, fi
     gathering.add(number);
     bridge.run(
       `Finding study materials online for "${c.course.nameHe}"`,
-      (signal) => gatherWeb(claude(), c.course, look().language, count, signal).finally(() => gathering.delete(number)),
+      async (signal) => gatherWeb(claude(), c.course, look().language, count, signal, Math.round((await level(number, c.course, !!c.plan))?.stars ?? c.course.level ?? 1)).finally(() => gathering.delete(number)),
       ({ saved, skipped }) => [{ type: "text", text: `${saved.length} of ${count} requested file(s) were added to the course: ${saved.join(", ") || "none"}${skipped ? ` (${skipped} found document(s) were already in the course and were not added)` : ""}. Tell the student in one short sentence that they are in the course files and that Build plan (or Update plan) reads them.` }],
       "study",
       `web:${number}`,

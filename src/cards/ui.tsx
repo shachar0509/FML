@@ -1,4 +1,5 @@
 /** Shared card building blocks (one visual language for every view). */
+import { Star, StarHalf } from "lucide-react";
 export const panel = "rounded-card border border-border bg-card shadow-card";
 export const h2 = "text-base font-semibold";
 
@@ -112,4 +113,18 @@ export const Board = ({
     )}
     {children}
   </article>
+);
+
+/** M65: 0-5 stars in half steps, read-only (the custom-course level picker is the interactive one). `label` is the spoken text. */
+export const Stars = ({ value, label, size = "size-4" }: { value: number; label: string; size?: string }) => (
+  <span role="img" aria-label={label} title={label} className="inline-flex items-center gap-0.5 align-middle">
+    {[1, 2, 3, 4, 5].map((n) => (
+      <span key={n} className="relative inline-flex">
+        <Star className={`${size} ${n <= value ? "fill-warning text-warning" : "text-current opacity-35"}`} aria-hidden />
+        {n > value && n - 0.5 <= value && (
+          <StarHalf className={`${size} absolute inset-0 fill-warning text-warning rtl:-scale-x-100`} aria-hidden />
+        )}
+      </span>
+    ))}
+  </span>
 );

@@ -19,7 +19,7 @@ import { coursePaths } from "@/core/lib/fs/paths";
 import { useSettings } from "@/stores/settings";
 import type { BridgeGateway } from "./bridge";
 import type { registerExerciseTools } from "./exerciseTools";
-import { hotStages, type KnowledgeService } from "./knowledge/knowledge";
+import { hotStages, quickSummary, type KnowledgeService } from "./knowledge/knowledge";
 import { saveDialog } from "./native";
 import { htmlToPdf, imagesToPdf, solutionsHtml } from "./pdf";
 import { CARDS_URI } from "./resources";
@@ -49,7 +49,7 @@ export function registerPracticeTools(server: McpServer, bridge: BridgeGateway, 
   async function session(n: string): Promise<Practice> {
     let p = sessions.get(n);
     if (!p) {
-      p = new Practice(n, { gw: bridge, loadImage: loadImageB64(n), digest: exercises.digest }, async () => (knowledge ? hotStages(await knowledge.summary(n)) : []));
+      p = new Practice(n, { gw: bridge, loadImage: loadImageB64(n), digest: exercises.digest }, async () => ((s) => (s ? hotStages(s) : []))(await quickSummary(knowledge, n, 3000))); // a slow engine never stalls practice
       p.prefetchOn = false; // ponytail: no prefetch; a parked job nobody fetches would stall, add if the host ever fetches jobs on its own
       await p.open();
       sessions.set(n, p);
@@ -124,12 +124,12 @@ export function registerPracticeTools(server: McpServer, bridge: BridgeGateway, 
     await p.binding;
     let item: PracticeData["item"] = null;
     const cur = st?.current;
-    if (cur?.kind === "E" && p.run && p.exercise) item = { kind: "E", exercise: await exercises.adopt(`practice-${n}-${st?.sid}-${st?.index}`, n, p.run, "practice") };
+    if (cur?.kind === "E" && p.run && p.exercise) item = { kind: "E", exercise: await exercises.adopt(`practice-${n}-${st?.sid}-${st?.index}`, n, p.run, "practice", cur.stars) };
     else if (cur?.kind === "M") {
       const a = cur.selected !== null;
-      item = { kind: "M", questionMd: cur.check.questionMd, options: cur.check.options ?? [], selected: cur.selected, correctIndex: a ? (cur.check.correctIndex ?? null) : null, explanationMd: a ? cur.check.explanationMd : null };
+      item = { kind: "M", stars: cur.stars, questionMd: cur.check.questionMd, options: cur.check.options ?? [], selected: cur.selected, correctIndex: a ? (cur.check.correctIndex ?? null) : null, explanationMd: a ? cur.check.explanationMd : null };
     } else if (cur?.kind === "O") {
-      item = { kind: "O", questionMd: cur.check.questionMd, answer: cur.answer, result: cur.result && { correct: cur.result.correct, score: cur.result.score, feedbackMd: cur.result.feedbackMd } };
+      item = { kind: "O", stars: cur.stars, questionMd: cur.check.questionMd, answer: cur.answer, result: cur.result && { correct: cur.result.correct, score: cur.result.score, feedbackMd: cur.result.feedbackMd } };
     }
     return {
       view: "practice", language, theme, number: n,

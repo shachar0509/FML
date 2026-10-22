@@ -29,6 +29,9 @@ for (const lang of LANGS)
       await page.locator("ul button").first().click();
       await expect(page.getByRole("heading", { level: 1 })).toContainText(lang === "he" ? "חשבון" : "Infinitesimal");
       await expect(page.getByText(lang === "he" ? "שכחו את תנאי ההתכנסות" : "Forgot the convergence condition")).toBeVisible();
+      // M65: the student's stars and exam readiness
+      await expect(page.getByRole("img", { name: lang === "he" ? "2.5 מתוך 5 כוכבים" : "2.5 of 5 stars" })).toBeVisible();
+      await expect(page.getByText(lang === "he" ? "מוכנות למבחן 40%" : "Exam-ready 40%")).toBeVisible();
       // every unit starts collapsed, the current one too; Learn / Practice are on the course's row in My courses
       await expect(page.locator("[aria-expanded=true]")).toHaveCount(0);
       await expect(page.getByRole("button", { name: lang === "he" ? /^לימוד/ : /^Learn/ })).toHaveCount(0);

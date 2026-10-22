@@ -194,7 +194,14 @@ Plan: `~/.claude/plans/when-a-job-is-flickering-hellman.md` (approved; read it f
 - Tutor: [STATUS] (now async) ends with "The student's knowledge now" (`digest()` in `knowledge.ts`): ★ level (custom) or ★ + exam-ready % (academic), 5 weakest nodes of what was learned, misconceptions, reviews due, engine focus, target difficulty for assign_exercise, the 100/100 + gentle rule. Waits ≤ 5 s for the engine summary, else no digest.
 - Tests: select (`upto`, hot), practice (Customized generates only exercises), knowledge (hotStages, digest), learnTools ([STATUS] digest), e2e practice-modes (custom: 2 modes, disabled unit, start).
 
-**Next (not started):** M65 stars UI (shared `Stars` in ui.tsx; question stars frozen at serve on Exercise/MCQ/Open; course card student stars + exam-ready), web gathering at current+next level, i18n, e2e (relevant specs), then screenshot review.
+## M65: stars in the cards + web gathering at the student's level
+- `starsFor(ctx, d, stageIds, nodeIds?)` (select.ts) = `questionStars(d, control of what it tests)`; quick questions use `CHECK_DIFFICULTY` (MCQ 2, open 3). Frozen when served: practice `Item.stars` (persisted in PState; `produce()` wraps `make()`), lesson MCQ/Open card data (saved with the lesson, so resume keeps them), lesson exercises in the run record (`exercises.open`/`adopt(…, stars)`).
+- Cards: read-only `Stars` in `ui.tsx` (half stars, `role="img"`, RTL-mirrored half); Exercise badge (replaces "Difficulty n/5" when stars exist), lesson MCQ/Open, practice M/O badges; course card "Your level ★" + academic "Exam-ready n%" (`CourseData.knowledge`). i18n `stars.*`.
+- `shownLevel(summary, course)`: a custom course shows max(self-rated level, graph stars) (also in the tutor digest). `quickSummary(k, n, ms)` caps waits (course card 3 s, lesson 5 s).
+- `gatherWeb(…, level)`: half the documents at the student's level now, half one level up (top level: perfect it); the course card's web level is the same number.
+- Tests: select (starsFor), practice (frozen MCQ stars), learnTools (MCQ card stars), knowledge (shownLevel floor), web (current/next prompt), courseTools (card knowledge), e2e exercise/course/lesson star labels.
+
+**Next (not started):** open plan items: the M63 replay acceptance check (old vs new code on a recorded history and a read-only copy of the real data root, incl. `knowledgeOf` speed); mistake summaries in the UI from the engine's misconceptions; `assign_exercise` default difficulty = the target (engine `difficulty_target` as tie-break). Follow-ups: node tags from the generator/indexer (per-exercise nodes instead of whole stages), retention in question stars, conventions from example solutions at indexing.
 
 ---
 

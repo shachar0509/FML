@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Event, IndexedExercise, PlanJson, ProgressJson } from "@/core/domain/dataSchemas";
-import { completedIds, eligible, focusStage, itemKind, pick, requiredSet, skill, targetDifficulty, uptoStages } from "./select";
+import { completedIds, eligible, focusStage, itemKind, pick, requiredSet, skill, starsFor, targetDifficulty, uptoStages } from "./select";
 
 const st = (id: string, order: number, prerequisites: string[] = []) => ({ id, unitId: "U01", order, prerequisites, title: id, newConcepts: [], theorems: [], techniques: [], edgeCases: [] }) as unknown as PlanJson["stages"][number];
 const plan = { units: [{ id: "U01", stageIds: ["S001", "S002", "S003"] }], stages: [st("S001", 1), st("S002", 2, ["S001"]), st("S003", 3, ["S002"])] } as unknown as PlanJson;
@@ -63,6 +63,14 @@ describe("practice select", () => {
     expect(focusStage({ plan: two, progress, scope: { kind: "upto", unitId: "U02" } })).toBe("S002"); // S003 is not learned
     expect(focusStage({ plan: two, progress, scope: { kind: "all" }, hot: ["S001"] })).toBe("S001");
   });
+});
+
+it("M65: question stars: the question's difficulty against the student's control of what it tests", () => {
+  const c = { plan, progress, events: [] as Event[] };
+  expect(starsFor(c, 3, ["S001"])).toBe(4); // control 0.1: a 3/5 question is hard for this student
+  const good = Array.from({ length: 12 }, (_, i) => ({ type: "check_answered", stageId: "S001", checkId: `k${i}`, kind: "open", context: "practice", correct: true, score: 100, mistakeTags: [], ts: now }) as unknown as Event);
+  expect(starsFor({ ...c, events: good }, 3, ["S001"])).toBe(2); // they control S001: easy for them
+  expect(starsFor({ ...c, course: { type: "customCourse", level: 5 } }, 3, ["S002"])).toBe(2); // a self-rated expert
 });
 
 it("M56: the more advanced the student, the more of the items are exercises", () => {

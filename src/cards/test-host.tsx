@@ -28,7 +28,7 @@ const home: HomeData = {
 const st = (id: string, title: string, status: CourseData["units"][number]["stages"][number]["status"], mastery: number) => ({ id, title, summary: L(`תקציר: ${title}`, `${title} summary`), status, mastery });
 const course: CourseData = {
   view: "course", language: lang, theme: "system", number: "01040195", name: home.courses[0]?.name ?? "Calculus", credits: 5.5, pct: 17, stagesDone: 1, stagesTotal: 3,
-  current: "S002", hasPlan: true, build: null, custom: false, web: null, translate: { missing: q.get("tr") ? 12 : 0, running: false },
+  current: "S002", hasPlan: true, build: null, custom: false, web: null, knowledge: { stars: 2.5, examReady: 40 }, translate: { missing: q.get("tr") ? 12 : 0, running: false },
   watch: [{ label: lang === "he" ? "שכחו את תנאי ההתכנסות" : "Forgot the convergence condition", count: 3, stageIds: ["S002"] }],
   units: [{ id: "U01", title: lang === "he" ? "סדרות" : "Sequences", stages: [st("S001", L("הגדרה", "Definition"), "completed", 90), st("S002", L("גבולות", "Limits"), "in_progress", 40), st("S003", L("כלל הסנדוויץ'", "Squeeze"), "locked", 0)] },
     // ?del=1: a second unit, so a whole unit can be deleted
@@ -58,10 +58,10 @@ const lesson: LessonData = {
   objectives: [{ text: L("לנסח את הגדרת $\\varepsilon$-$N$", "State the $\\varepsilon$-$N$ definition"), covered: true }, { text: L("להוכיח גבול לפי ההגדרה", "Prove a limit from the definition"), covered: false }],
   criteria: { met: false, missing: [L("לפתור עוד 2 תרגילים בציון 85 לפחות", "Solve 2 more exercises with score ≥ 85")] },
 };
-const mcq: McqData = { ...base, view: "mcq", checkId: "c1", questionMd: L("מה נכון לגבי $a_n = 1/n$?", "Which holds for $a_n = 1/n$?"), options: ["$a_n \\to 0$", "$a_n \\to 1$", L("מתבדרת", "diverges"), L("$a_n \\to 0$ רק אם $n$ זוגי", "$a_n \\to 0$ only for even $n$")] };
-const open: OpenData = { ...base, view: "open", checkId: "c2", number: "01040195", questionMd: L("הסבירו למה $\\lim 1/n = 0$.", "Explain why $\\lim 1/n = 0$.") };
+const mcq: McqData = { ...base, view: "mcq", checkId: "c1", stars: 2, questionMd: L("מה נכון לגבי $a_n = 1/n$?", "Which holds for $a_n = 1/n$?"), options: ["$a_n \\to 0$", "$a_n \\to 1$", L("מתבדרת", "diverges"), L("$a_n \\to 0$ רק אם $n$ זוגי", "$a_n \\to 0$ only for even $n$")] };
+const open: OpenData = { ...base, view: "open", checkId: "c2", stars: 4, number: "01040195", questionMd: L("הסבירו למה $\\lim 1/n = 0$.", "Explain why $\\lim 1/n = 0$.") };
 const exercise: ExerciseData = {
-  ...base, view: "exercise", number: "01040195", runId: "r1", difficulty: 3, statementMd: L("הוכיחו ש-$\\lim 1/n = 0$.", "Prove that $\\lim 1/n = 0$."), figures: [], hints: [], solutionMd: null, grade: null, canReveal: false, busy: null, error: null,
+  ...base, view: "exercise", number: "01040195", runId: "r1", difficulty: 3, stars: 3, statementMd: L("הוכיחו ש-$\\lim 1/n = 0$.", "Prove that $\\lim 1/n = 0$."), figures: [], hints: [], solutionMd: null, grade: null, canReveal: false, busy: null, error: null,
 };
 const graded: ExerciseData = {
   ...exercise, canReveal: true,
@@ -112,7 +112,7 @@ const testReply = (name: string, args?: Record<string, unknown>): PracticeData |
   if (name === "practice_end") return { ...practiceSummary, test: cur };
   return cur.active ? { ...practiceBase, mode: "item", test: cur, item: { kind: "E", exercise: { ...lx, runId: `t${tpNext}`, grade: null, clues: [], clueOpen: false } } } : { ...practiceBase, test: cur };
 };
-const mcqItem: PracticeData = { ...practiceBase, mode: "item", item: { kind: "M", questionMd: L("האם $a_n=1/n$ מתכנסת?", "Does $a_n=1/n$ converge?"), options: lang === "he" ? ["כן, ל-0", "לא", "כן, ל-1", "רק עבור $n$ זוגי"] : ["Yes, to 0", "No", "Yes, to 1", "Only for even n"], selected: null, correctIndex: null, explanationMd: null } };
+const mcqItem: PracticeData = { ...practiceBase, mode: "item", item: { kind: "M", stars: 2, questionMd: L("האם $a_n=1/n$ מתכנסת?", "Does $a_n=1/n$ converge?"), options: lang === "he" ? ["כן, ל-0", "לא", "כן, ל-1", "רק עבור $n$ זוגי"] : ["Yes, to 0", "No", "Yes, to 1", "Only for even n"], selected: null, correctIndex: null, explanationMd: null } };
 const mcqDone: PracticeData = { ...mcqItem, counters: { answered: 1, correct: 0, avg: 0 }, item: { ...(mcqItem.item as Extract<PracticeData["item"], { kind: "M" }>), selected: 1, correctIndex: 0, explanationMd: L("כי $1/n \\to 0$.", "Since $1/n \\to 0$.") } };
 const practiceSummary: PracticeData = { ...practiceBase, mode: "summary", summary: { items: 1, avgScore: 0, newMistakes: [L("טעות סימן", "Sign slip")], weakStages: [{ id: "S001", title: L("סדרות", "Sequences") }] } };
 // M57 homework: read (splitting, then 3 questions on the next poll), solved with the loop; a perfect answer is accepted
@@ -210,7 +210,7 @@ const noPlan: CourseData = { ...course, hasPlan: false, pct: 0, stagesDone: 0, s
 const CUSTOM = "Cm1abc";
 const gone = new Set<string>(); // stages deleted with plan_remove
 const prune = (c: CourseData): CourseData => ({ ...c, units: c.units.map((u) => ({ ...u, stages: u.stages.filter((x) => !gone.has(x.id)) })).filter((u) => u.stages.length) });
-const customize = (c: CourseData, n: unknown): CourseData => (n === CUSTOM ? { ...c, custom: true, web: { running: tools.includes("course_web_request"), level: 2 }, number: CUSTOM, name: L("תורת המוזיקה לגיטרה", "Music theory for guitar"), credits: 0 } : c);
+const customize = (c: CourseData, n: unknown): CourseData => (n === CUSTOM ? { ...c, custom: true, web: { running: tools.includes("course_web_request"), level: 2 }, knowledge: { stars: 2, examReady: null }, number: CUSTOM, name: L("תורת המוזיקה לגיטרה", "Music theory for guitar"), credits: 0 } : c);
 (window as unknown as { __said: string[]; __reqs: unknown[] }).__said = said;
 (window as unknown as { __reqs: unknown[] }).__reqs = reqs;
 const tools: string[] = []; // every tool the card called, by name

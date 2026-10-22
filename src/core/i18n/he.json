@@ -725,5 +725,11 @@
     "next": "הבא",
     "backToCheckpoint": "חזרה למקום שעצרתי",
     "slideOf": "שקף {{n}} מתוך {{of}}"
+  },
+  "stars": {
+    "question": "רמת קושי {{n}} מתוך 5 עבורך",
+    "student": "{{n}} מתוך 5 כוכבים",
+    "yourLevel": "הרמה שלך",
+    "examReady": "מוכנות למבחן {{n}}%"
   }
 }

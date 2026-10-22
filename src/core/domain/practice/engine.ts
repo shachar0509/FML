@@ -12,14 +12,16 @@ import { allExercises, fromExercise, loadCtx, paths, type Ctx, type Ex } from ".
 import { chooseFocus, generateChecks, generateExercise } from "./generate";
 import { gradeCheck, type Attachment, type Env } from "./grade";
 import { emptyRun, ExerciseRun, perfect, type RunState } from "./run";
-import { completedIds, itemKind, pick, requiredSet, skill, type Scope } from "./select";
+import { CHECK_DIFFICULTY, completedIds, itemKind, pick, requiredSet, skill, starsFor, type Scope } from "./select";
 import { after, burn, examPool, loadStore, pickTest, saveStore, scopeOf, type Chain, type Note } from "./test";
 
 export type Check = CheckItem & { id: string };
-export type Item =
+/** `stars` (M65): how hard the item is for this student, frozen when it was produced */
+export type Item = (
   | { kind: "E"; ref: ExerciseRef; run: RunState }
   | { kind: "M"; check: Check; selected: number | null }
-  | { kind: "O"; check: Check; answer: string | null; result: CheckGrade | null };
+  | { kind: "O"; check: Check; answer: string | null; result: CheckGrade | null }
+) & { stars?: number };
 export type Result = { kind: "E" | "M" | "O"; score: number; correct: boolean; stageIds: string[]; tags: string[] };
 export type PState = {
   sid: string; scope: Scope; startedAt: string; endedAt: string | null; index: number; served: string[];
@@ -144,6 +146,14 @@ export class Practice {
   }
 
   private async produce(): Promise<{ item: Item; served?: string } | null> {
+    const made = await this.make();
+    if (!made) return null;
+    const it = made.item;
+    const ex = it.kind === "E" ? (await allExercises(this.courseNumber)).find((x) => x.id === it.ref.id) : null;
+    const [d, stages] = it.kind === "E" ? [ex?.difficulty ?? 3, ex ? fromExercise(ex).stageIds : []] : [CHECK_DIFFICULTY[it.check.kind], it.check.stageIds];
+    return { ...made, item: { ...it, stars: starsFor(this.ctx, d, stages) } };
+  }
+  private async make(): Promise<{ item: Item; served?: string } | null> {
     const st = this.state as PState;
     this.ctx = await loadCtx(this.courseNumber);
     const ctx = this.ctx;

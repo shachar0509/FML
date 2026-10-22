@@ -5,6 +5,7 @@ import { Button } from "@/core/components/ui/button";
 import { Markdown } from "@/core/render/Markdown";
 import type { Go, Host, McqData, OpenData } from "../types";
 import { AnswerFiles, type FileRef } from "./AnswerFiles";
+import { Stars } from "../ui";
 
 type Tool = (
   name: string,
@@ -30,7 +31,8 @@ export function Mcq({ data, callTool, go }: { data: McqData; callTool: Tool; go:
   }
   return (
     <section className="flex flex-col gap-3" aria-label={t("learn.exercise")}>
-      <div className="board-surface board mb-3 px-5 py-5 text-lg font-medium sm:px-7">
+      <div className="board-surface board mb-3 flex flex-col gap-2 px-5 py-5 text-lg font-medium sm:px-7">
+        {!!data.stars && <Stars value={data.stars} label={t("stars.question", { n: data.stars })} />}
         <Markdown>{data.questionMd}</Markdown>
       </div>
       <ul className="flex flex-col gap-2">
@@ -88,7 +90,8 @@ export function OpenQ({ data, go, callTool }: { data: OpenData; go: Go; callTool
   );
   return (
     <section className="flex flex-col gap-3" aria-label={t("learn.exercise")}>
-      <div className="board-surface board mb-3 px-5 py-5 text-lg font-medium sm:px-7">
+      <div className="board-surface board mb-3 flex flex-col gap-2 px-5 py-5 text-lg font-medium sm:px-7">
+        {!!data.stars && <Stars value={data.stars} label={t("stars.question", { n: data.stars })} />}
         <Markdown>{data.questionMd}</Markdown>
       </div>
       {sent ? (

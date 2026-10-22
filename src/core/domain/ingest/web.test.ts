@@ -49,4 +49,10 @@ it("asks for full, elaborated solutions, not summaries (the student learns to wr
   await expect(gatherWeb(gw, course, "he", 3)).rejects.toThrow("stop");
   expect(ask).toMatch(/Solutions are never summarized/);
   expect(ask).toMatch(/Every step is shown and justified/);
+  // M65: at the student's level now and the next one
+  expect(ask).toMatch(/Current level: 1\/5/);
+  await expect(gatherWeb(gw, { ...course, type: "customCourse", level: 1 }, "he", 3, undefined, 2.5)).rejects.toThrow("stop");
+  expect(ask).toMatch(/Current level: 3\/5[^]*other half one level up, 4\/5/);
+  await expect(gatherWeb(gw, course, "he", 3, undefined, 5)).rejects.toThrow("stop");
+  expect(ask).toMatch(/Current level: 5\/5[^]*top level/);
 });

@@ -716,5 +716,11 @@
     "next": "Next",
     "backToCheckpoint": "Back to where I stopped",
     "slideOf": "Slide {{n}} of {{of}}"
+  },
+  "stars": {
+    "question": "Difficulty {{n}} of 5 for you",
+    "student": "{{n}} of 5 stars",
+    "yourLevel": "Your level",
+    "examReady": "Exam-ready {{n}}%"
   }
 }

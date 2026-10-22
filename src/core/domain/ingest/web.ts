@@ -83,8 +83,10 @@ const ROUNDS = 3; // the first answer plus two asks for what was missing or dupl
  * Like the Moodle import, nothing already in the course folders is added again (same name, same text, or only sources
  * already used); missing ones are asked for again. They land as .md files, so the card lists them at once (not scanned until the next Build / Update plan).
  */
-export async function gatherWeb(gw: ClaudeGateway, course: CourseJson, lang: "he" | "en", count: number, signal?: AbortSignal) {
-  const level = course.level ?? 1;
+/** `level` (M65): the student's level now (1-5; their knowledge graph, never below the self-rated level). */
+export async function gatherWeb(gw: ClaudeGateway, course: CourseJson, lang: "he" | "en", count: number, signal?: AbortSignal, level = course.level ?? 1) {
+  level = Math.min(5, Math.max(1, Math.round(level)));
+  const next = Math.min(5, level + 1);
   const p = coursePaths(useSettings.getState().settings.dataRoot, course.courseNumber);
   const have = await existing([p.materials, p.exercises]);
   const plan = await readJsonFile(p.planJson, PlanJsonSchema);
@@ -94,7 +96,7 @@ export async function gatherWeb(gw: ClaudeGateway, course: CourseJson, lang: "he
   const ask = `Find exactly ${count} new document(s) on the web for the self-study course "${course.nameHe}": study texts (role "material") and, for about a third of them, exercise sets with full worked solutions at the end (role "exercises").
 What the student wants to learn:
 ${course.syllabusHe}
-${course.goal ? `What the student wants to achieve: ${course.goal}\n` : ""}Current level: ${level}/5 (the student ${LEVELS[level - 1]}). Pick materials that start from this level: nothing the student already knows, nothing too advanced yet.
+${course.goal ? `What the student wants to achieve: ${course.goal}\n` : ""}Current level: ${level}/5 (the student ${LEVELS[level - 1]}). ${next > level ? `About half of the documents at this level, the other half one level up, ${next}/5 (the student ${LEVELS[next - 1]}), so the student keeps growing toward full proficiency` : "Materials at this top level, to perfect it"}: nothing the student already knows, nothing too advanced yet.
 ${units.length ? `
 The course has a study plan. Spread the documents over its units as follows, so every unit ends up with a fair share of material (a unit with little material gets more):
 ${units.map((u) => `- ${u.id} ${u.title} (${u.have} scanned pages/exercises now): ${u.docs} document(s), about: ${u.stages.map((id) => byId.get(id)?.title).filter(Boolean).slice(0, 12).join("; ")}`).join("\n")}

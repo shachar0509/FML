@@ -39,6 +39,8 @@ export type CourseData = Base & {
   translate: { missing: number; running: boolean };
   /** M54: custom courses only (null for academic): materials from the web at the student's level, and whether a search runs. */
   web: { running: boolean; level: number } | null;
+  /** M65: the student's stars (0-5, half steps; a custom course never shows below its self-rated level) and, for academic courses, the exam-ready share (0-100) */
+  knowledge: { stars: number; examReady: number | null } | null;
 };
 /** A plan build's files by scan state, materials and exercises together. */
 export type FileCounts = { scanned: number; scanning: number; notScanned: number; total: number };
@@ -83,8 +85,8 @@ export type LessonData = Base & {
   next: { id: string; title: string } | null;
 };
 /** Question cards of present_mcq / ask_open_question; the answer key stays on the server. */
-export type McqData = Base & { view: "mcq"; checkId: string; questionMd: string; options: string[] };
-export type OpenData = Base & { view: "open"; checkId: string; number: string; questionMd: string };
+export type McqData = Base & { view: "mcq"; checkId: string; questionMd: string; options: string[]; /** M65: how hard this question is for the student (1-5 ★), frozen when served */ stars?: number };
+export type OpenData = Base & { view: "open"; checkId: string; number: string; questionMd: string; /** M65: how hard this question is for the student (1-5 ★), frozen when served */ stars?: number };
 /** A drawing the tutor shows in the chat (show_figure). */
 export type FigureData = Base & { view: "figure"; kind: "plot" | "geometry" | "svg"; source: string; captionMd: string };
 /** One small lesson step (teach_step). */
@@ -95,6 +97,7 @@ export type ExerciseData = Base & {
   number: string;
   runId: string;
   difficulty: number;
+  /** M65: how hard this question is for the student (1-5 ★), frozen when served */ stars?: number;
   statementMd: string;
   /** data: URIs of the figure crops */
   figures: string[];
@@ -122,8 +125,8 @@ export type SettingsData = Base & {
 /** Practice card (shalav_practice / app-only practice_*). */
 export type PracticeItem =
   | { kind: "E"; exercise: ExerciseData }
-  | { kind: "M"; questionMd: string; options: string[]; selected: number | null; correctIndex: number | null; explanationMd: string | null }
-  | { kind: "O"; questionMd: string; answer: string | null; result: { correct: boolean; score: number; feedbackMd: string } | null };
+  | { kind: "M"; stars?: number; questionMd: string; options: string[]; selected: number | null; correctIndex: number | null; explanationMd: string | null }
+  | { kind: "O"; stars?: number; questionMd: string; answer: string | null; result: { correct: boolean; score: number; feedbackMd: string } | null };
 /** M57: the homework (or single question) in Practice. */
 export type HomeworkData = {
   kind: "single" | "homework";

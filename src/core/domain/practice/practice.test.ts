@@ -107,6 +107,7 @@ describe("Practice", () => {
     await settle();
     await pr.advance(); // item 2 = M (from the batch): S001 completed with no answers is level ~2.3, the E-M-O cycle
     expect(pr.state!.current?.kind).toBe("M");
+    expect(pr.state!.current?.stars).toBe(3); // M65: frozen when served (a 2/5 MCQ, control 0.1)
     await pr.answerMcq(2);
     expect(pr.counters).toMatchObject({ answered: 1, correct: 1 });
     const s = await pr.end();

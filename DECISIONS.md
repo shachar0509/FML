@@ -168,3 +168,9 @@
 - Customized practice (custom courses) always generates a new exercise, as asked ("a loop of generated exercises"); an existing course exercise is served only when generation fails, so the loop never stops for one bad job. Normal practice keeps the full mix.
 - The engine's focus/misconceptions/reviews only add a bonus to the focus stage (+0.5); they never pick outside the scope, and practice works the same without the engine.
 - The tutor's digest waits at most 5 s for the engine; a slow engine drops the digest for that [STATUS] instead of stalling the lesson.
+
+## M65 — Stars
+- A custom course never shows below its self-rated level (max(level, graph stars)): the graph prior maps level 2 to ~1.25★ over the whole course, and showing a 2★ student "1★" on day one would read as a downgrade. Gentle: it only goes up from the self-rating. Academic courses show the graph stars as they are, plus exam-ready %.
+- Question stars use control from the event log, not the engine's retention: they must be computed synchronously when a question is served, and forgetting already shows in the course stars and the tutor's reviews.
+- Quick questions have no difficulty of their own: MCQ counts as 2/5, an open question as 3/5.
+- A lesson exercise reopened from a saved lesson gets its stars again (its run is rebuilt); MCQ/Open cards keep the saved ones.

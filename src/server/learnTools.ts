@@ -27,8 +27,8 @@ import { nowIso } from "@/core/lib/time";
 import { useSettings } from "@/stores/settings";
 import type { BridgeGateway } from "./bridge";
 import { registerExerciseTools } from "./exerciseTools";
-import { digest, type KnowledgeService } from "./knowledge/knowledge";
-import { completedIds, targetDifficulty } from "@/core/domain/practice/select";
+import { digest, quickSummary, shownLevel, type KnowledgeService } from "./knowledge/knowledge";
+import { CHECK_DIFFICULTY, completedIds, starsFor, targetDifficulty } from "@/core/domain/practice/select";
 import { CARDS_URI } from "./resources";
 
 const appOnly = { ui: { resourceUri: CARDS_URI, visibility: ["app" as const] } };
@@ -98,10 +98,10 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
 
   /** M64: the engine's view for [STATUS]; a slow or failing engine never holds the lesson up (then no digest). */
   async function knowledgeDigest(s: S, stageId: string) {
-    const sum = knowledge && (await Promise.race([knowledge.summary(s.course.courseNumber).catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), 5000))]));
+    const sum = await quickSummary(knowledge, s.course.courseNumber);
     if (!sum) return undefined;
     const stageIds = [...completedIds(s.progress), stageId];
-    return digest(sum, { custom: s.course.type === "customCourse", stageIds, target: targetDifficulty({ plan: s.plan, progress: s.progress, events: s.events, course: s.course }, [stageId]) });
+    return digest(sum, { custom: s.course.type === "customCourse", stars: shownLevel(sum, s.course), stageIds, target: targetDifficulty({ plan: s.plan, progress: s.progress, events: s.events, course: s.course }, [stageId]) });
   }
 
   async function status(s: S, stageId: string) {
@@ -241,7 +241,8 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     const ids = active?.nodes ?? [];
     checks.set(checkId, { kind: "mcq", n: c.n, stageId: c.stageId, correctIndex: i.correctIndex, explanationMd: i.explanationMd, nodes: i.nodes.flatMap((x) => ids[x - 1] ?? []) });
     const { language, theme } = sets();
-    const data: McqData = { view: "mcq", language, theme, checkId, questionMd: i.questionMd, options: i.options };
+    const nodes = checks.get(checkId)?.nodes ?? [];
+    const data: McqData = { view: "mcq", language, theme, checkId, questionMd: i.questionMd, options: i.options, stars: starsFor(c.s, CHECK_DIFFICULTY.mcq, [c.stageId], nodes) };
     await log({ who: "tutor", kind: "mcq", text: `${i.questionMd}\nOptions: ${i.options.map((o, k) => `(${k + 1}) ${o}`).join(" ")}`, card: data, extra: { checkId, correctIndex: i.correctIndex, explanationMd: i.explanationMd } });
     return out(`Question shown (check id ${checkId}). Never reveal the answer. The student's choice arrives as their next message.`, data);
   });
@@ -252,7 +253,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     const checkId = newId();
     checks.set(checkId, { kind: "open", n: c.n, stageId: c.stageId });
     const { language, theme } = sets();
-    const data: OpenData = { view: "open", language, theme, checkId, number: c.s.course.courseNumber, questionMd: i.questionMd };
+    const data: OpenData = { view: "open", language, theme, checkId, number: c.s.course.courseNumber, questionMd: i.questionMd, stars: starsFor(c.s, CHECK_DIFFICULTY.open, [c.stageId]) };
     await log({ who: "tutor", kind: "open", text: i.questionMd, card: data, extra: { checkId } });
     return out(`Question shown (check id ${checkId}). The student's answer arrives as their next message, typed or as page images of a solution written on paper (read those as the answer); evaluate it, then call record_check_result with checkToolUseId "${checkId}".`, data);
   });

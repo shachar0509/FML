@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
-import { Bar, Ring, h2, panel } from "../ui";
+import { Bar, Ring, Stars, h2, panel } from "../ui";
 import type { CourseData, FilesData, Stage, Go } from "../types";
 import { Checklist } from "./Checklist";
 import { Files } from "./Files";
@@ -156,6 +156,13 @@ export function Course({
               </p>
               <Bar pct={data.pct} tone="bg-(--board-ink)" track="bg-(--board-muted)/30" />
             </div>
+          )}
+          {data.knowledge && (
+            <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-(--board-muted)">
+              {t("stars.yourLevel")}
+              <Stars value={data.knowledge.stars} label={t("stars.student", { n: data.knowledge.stars })} />
+              {data.knowledge.examReady !== null && <span>· {t("stars.examReady", { n: data.knowledge.examReady })}</span>}
+            </p>
           )}
         </div>
       </header>

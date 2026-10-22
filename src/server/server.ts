@@ -96,7 +96,7 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
 
   const moodle = registerMoodleTools(server, moodleMake);
   const files = registerFileTools(server, { moodle });
-  const builds = registerCourseTools(server, bridge, files, catalog);
+  const builds = registerCourseTools(server, bridge, files, catalog, knowledge);
   const exercises = registerExerciseTools(server, bridge);
   const learn = registerLearnTools(server, bridge, exercises, knowledge);
   registerHistoryTools(server, registerPracticeTools(server, bridge, exercises, knowledge).forget);

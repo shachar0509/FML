@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Markdown } from "@/core/render/Markdown";
 import { GradeCard, readable } from "./GradeCard";
-import { Board, h2, inkBox, panel } from "../ui";
+import { Board, Stars, h2, inkBox, panel } from "../ui";
 import type { ExerciseData, Go } from "../types";
 import { AnswerFiles, type FileRef } from "./AnswerFiles";
 
@@ -80,7 +80,7 @@ export function Exercise({
     <section className="flex flex-col gap-4" aria-label={t("learn.exercise")}>
       <Board
         title={title ?? t("learn.exercise")}
-        badge={d.difficulty > 0 && t("exercise.difficulty", { n: d.difficulty })}
+        badge={d.stars ? <Stars value={d.stars} label={t("stars.question", { n: d.stars })} /> : d.difficulty > 0 && t("exercise.difficulty", { n: d.difficulty })}
       >
         <div className="lesson-text">
           <Markdown>{d.statementMd}</Markdown>

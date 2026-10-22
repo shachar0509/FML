@@ -25,6 +25,7 @@ for (const lang of LANGS)
     test(`mcq card (${lang}/${theme})`, async ({ page }) => {
       const errors = pageErrors(page);
       await page.goto(url("mcq"));
+      await expect(page.getByRole("img", { name: lang === "he" ? "רמת קושי 2 מתוך 5 עבורך" : "Difficulty 2 of 5 for you" })).toBeVisible(); // M65
       // an option that starts with a formula still reads in the card language
       expect(await page.locator("ul li").nth(3).locator("p").evaluate((e) => getComputedStyle(e).direction)).toBe(lang === "he" ? "rtl" : "ltr");
       await page.getByRole("button", { name: /diverges|מתבדרת/ }).click();

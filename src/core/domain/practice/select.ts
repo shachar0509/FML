@@ -1,6 +1,6 @@
 // Practice selection, spec 7.2-7.5. Pure.
 import type { CourseJson, Event, GeneratedExercise, IndexedExercise, PlanJson, ProgressJson } from "@/core/domain/dataSchemas";
-import { knowledgeOf, meanControl, priorOf, targetDifficulty as aimAt, type Knowledge } from "@/core/domain/knowledge/control";
+import { knowledgeOf, meanControl, priorOf, questionStars, targetDifficulty as aimAt, type Knowledge } from "@/core/domain/knowledge/control";
 import { graphOf, nodesOfStages, type Graph } from "@/core/domain/knowledge/graph";
 import { mapEvents } from "@/core/domain/progress/reduce";
 
@@ -106,6 +106,14 @@ export function targetDifficulty(c: Ctx, stageIds: string[], lv = levelOf(c)): n
     .filter((e): e is Attempt => e.type === "attempt_graded" && e.verdict !== "unreadable" && e.stageIds.some((s) => want.has(s)))
     .slice(-3);
   return Math.max(2, aimAt(controlOf(lv, stageIds), last.length === 3 && last.every((a) => a.score >= 85)));
+}
+
+/** M65: intrinsic difficulty of the quick questions (they carry none) */
+export const CHECK_DIFFICULTY = { mcq: 2, open: 3 } as const;
+/** M65: how hard a question is for this student (1-5 ★): its difficulty against their control of what it tests. The caller freezes it when served. */
+export function starsFor(c: Ctx, d: number, stageIds: string[], nodeIds: string[] = [], lv = levelOf(c)): number {
+  const ids = nodeIds.length ? nodeIds : nodesOfStages(lv.g, stageIds).map((n) => n.id);
+  return questionStars(d, meanControl(lv.k, ids, lv.prior));
 }
 
 export function scoreExercise(e: Ex, c: Ctx & { previous?: Ex | null; target?: number; level?: Level }): number {

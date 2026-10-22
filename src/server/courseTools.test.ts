@@ -83,6 +83,7 @@ it("looks up, creates a course through the bridge with fake jobs, shows the cour
   const c = sc<CourseData>(await call("shalav_course", { number: "01040195" }));
   expect(c).toMatchObject({ view: "course", hasPlan: true, build: null, stagesTotal: 70, current: "S001" });
   expect(c.units.map((u) => u.stages.length)).toEqual([35, 35]);
+  expect(c.knowledge).toEqual({ stars: expect.any(Number), examReady: 0 }); // M65: nothing answered yet
   expect(sc<LookupResult>(await call("course_lookup", { number: "01040195" })).status).toBe("exists");
   expect((await call("course_create_request", { number: "01040195" })).isError).toBe(true);
   expect((await call("shalav_course", { number: "99999999" })).isError).toBe(true);

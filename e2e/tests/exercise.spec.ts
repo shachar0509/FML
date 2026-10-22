@@ -6,6 +6,7 @@ for (const lang of LANGS)
     test(`exercise card (${lang}/${theme})`, async ({ page }) => {
       const errors = pageErrors(page);
       await page.goto(host(`view=exercise&lang=${lang}&theme=${theme}`));
+      await expect(page.getByRole("img", { name: lang === "he" ? "רמת קושי 3 מתוך 5 עבורך" : "Difficulty 3 of 5 for you" })).toBeVisible(); // M65
       await expect(page.locator(".katex").first()).toBeVisible();
       const grade = page.getByRole("button", { name: lang === "he" ? "שליחה לבדיקה" : "Submit for grading" });
       await expect(grade).toBeDisabled();

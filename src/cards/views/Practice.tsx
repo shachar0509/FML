@@ -8,7 +8,7 @@ import { NewOrOlder, SavedList } from "./History";
 import { Exercise } from "./Exercise";
 import { Homework } from "./Homework";
 import { TestChooser } from "./TestPractice";
-import { Board, Skeleton, chalkChoice, inkBox } from "../ui";
+import { Board, Skeleton, Stars, chalkChoice, inkBox } from "../ui";
 
 type Tool = (
   name: string,
@@ -321,7 +321,7 @@ export function Practice({
             />
           )}
           {d.item?.kind === "M" && (
-            <Board title={t("practice.question")}>
+            <Board title={t("practice.question")} badge={!!d.item.stars && <Stars value={d.item.stars} label={t("stars.question", { n: d.item.stars })} />}>
               <div className="text-lg">
                 <Markdown>{d.item.questionMd}</Markdown>
               </div>
@@ -369,7 +369,7 @@ export function Practice({
           )}
           {d.item?.kind === "O" && (
             <div className="flex flex-col gap-2">
-              <Board title={t("practice.question")}>
+              <Board title={t("practice.question")} badge={!!d.item.stars && <Stars value={d.item.stars} label={t("stars.question", { n: d.item.stars })} />}>
                 <div className="text-lg">
                   <Markdown>{d.item.questionMd}</Markdown>
                 </div>
