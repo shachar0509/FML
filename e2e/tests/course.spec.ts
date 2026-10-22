@@ -136,6 +136,44 @@ for (const lang of LANGS)
     });
 
 for (const lang of LANGS)
+  test(`course files: 10 per page, sorted, filtered by scan state (${lang})`, async ({ page }) => {
+    const errors = pageErrors(page);
+    await page.goto(host(`lang=${lang}&files=many`)); // 23 materials: 11 Hebrew names, 12 English
+    await page.locator("ul button").first().click();
+    await page.getByRole("button", { name: lang === "he" ? /חומרי לימוד/ : /Study materials/ }).click();
+    const names = () => page.locator("span[dir=auto]").allTextContents();
+    const mats = await names(); // the exercises list stays collapsed
+    expect(mats).toHaveLength(10);
+    // the settings language first, then alphabetical with numbers in order
+    if (lang === "he") expect(mats.slice(0, 3)).toEqual(["הרצאה 0.pdf", "הרצאה 2.pdf", "הרצאה 4.pdf"]);
+    else expect(mats.slice(0, 4)).toEqual(["lecture1.pdf", "lecture2.pdf", "notes 1.pdf", "notes 3.pdf"]);
+    const pager = page.getByRole("navigation", { name: lang === "he" ? "דפדוף בחומרי לימוד" : "Pages of Study materials" });
+    await expect(pager).toContainText(lang === "he" ? "1–10 מתוך 23" : "1–10 of 23");
+    await expect(pager.getByRole("button", { name: lang === "he" ? "10 הקודמים" : "Previous 10" })).toBeDisabled();
+    await pager.getByRole("button", { name: lang === "he" ? "10 הבאים" : "Next 10" }).click();
+    await expect(pager).toContainText(lang === "he" ? "11–20 מתוך 23" : "11–20 of 23");
+    await page.waitForTimeout(400); // card fade-in
+    await axe(page);
+    await page.getByRole("region", { name: lang === "he" ? "קבצי לימוד" : "Study files" }).screenshot({ path: `e2e/tests_output/course/card-files-pager-${lang}.png` });
+    // a state filters the list (from the first page); again, or Total, clears it
+    const scanning = page.getByRole("button", { name: lang === "he" ? /^בסריקה/ : /^Scanning/ }).first();
+    await scanning.click();
+    await expect(scanning).toHaveAttribute("aria-pressed", "true");
+    await expect(pager).toBeHidden(); // 7 files fit one page
+    expect(await names()).toHaveLength(7);
+    await expect(page.getByText("lecture1.pdf")).toBeHidden(); // scanned, filtered out
+    await page.getByRole("region", { name: lang === "he" ? "קבצי לימוד" : "Study files" }).screenshot({ path: `e2e/tests_output/course/card-files-filtered-${lang}.png` });
+    await scanning.click();
+    await expect(scanning).toHaveAttribute("aria-pressed", "false");
+    await expect(pager).toContainText(lang === "he" ? "1–10 מתוך 23" : "1–10 of 23");
+    await page.getByRole("button", { name: lang === "he" ? /^לא נסרק/ : /^Not scanned/ }).first().click();
+    await expect(page.getByText("lecture2.pdf")).toBeVisible(); // waiting
+    await page.getByRole("button", { name: lang === "he" ? /^סה״כ/ : /^Total/ }).first().click();
+    await expect(pager).toContainText(lang === "he" ? "1–10 מתוך 23" : "1–10 of 23");
+    expect(errors).toEqual([]);
+  });
+
+for (const lang of LANGS)
   test(`course: Update plan joins a build running in another chat (${lang})`, async ({ page }) => {
     const errors = pageErrors(page);
     await page.goto(host(`lang=${lang}&joined=1`));

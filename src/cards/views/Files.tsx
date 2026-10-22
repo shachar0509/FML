@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, ExternalLink, FileText, FolderOpen, Loader2, MoreHorizontal, ScanLine, Trash2, Upload } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, FileText, FolderOpen, Loader2, MoreHorizontal, ScanLine, Trash2, Upload } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Input } from "@/core/components/ui/input";
@@ -69,11 +69,20 @@ function Importing({ done, total, label }: { done: number; total: number; label?
 }
 
 /** A section's files by scan state: scanned, scanning, not scanned (waiting or failed). */
-const groups = (rows: FileRow[]) => [
-  { key: "scanned", n: rows.filter((f) => f.status === "indexed").length, stroke: "stroke-success", dot: "bg-success" },
-  { key: "scanning", n: rows.filter((f) => f.status === "indexing").length, stroke: "stroke-warning", dot: "bg-warning" },
-  { key: "notScanned", n: rows.filter((f) => f.status === "pending" || f.status === "failed").length, stroke: "stroke-danger", dot: "bg-danger" },
+const STATES = [
+  { key: "scanned", has: (f: FileRow) => f.status === "indexed", stroke: "stroke-success", dot: "bg-success" },
+  { key: "scanning", has: (f: FileRow) => f.status === "indexing", stroke: "stroke-warning", dot: "bg-warning" },
+  { key: "notScanned", has: (f: FileRow) => f.status === "pending" || f.status === "failed", stroke: "stroke-danger", dot: "bg-danger" },
 ];
+const groups = (rows: FileRow[]) => STATES.map((s) => ({ ...s, n: rows.filter(s.has).length }));
+const PAGE = 10;
+
+/** Alphabetical, names in the settings language first (Hebrew names first in Hebrew, the rest first in English). */
+const sortNames = (rows: FileRow[], lang: string) => {
+  const rank = (f: FileRow) => (/^[^\p{L}]*\p{Script=Hebrew}/u.test(f.name) === lang.startsWith("he") ? 0 : 1);
+  const c = new Intl.Collator(lang, { numeric: true, sensitivity: "base" });
+  return [...rows].sort((a, b) => rank(a) - rank(b) || c.compare(a.name, b.name));
+};
 
 /** The section's files as a ring split by scan state (exact shares via pathLength), the scanned percentage inside. */
 function Ring({ rows }: { rows: FileRow[] }) {
@@ -114,19 +123,29 @@ function Ring({ rows }: { rows: FileRow[] }) {
   );
 }
 
-/** Counts per scan state under a section's title, matching the ring's colors. */
-function Legend({ rows }: { rows: FileRow[] }) {
+/** Counts per scan state under a section's title, matching the ring's colors. A state filters the list; again or Total clears it. */
+function Legend({ rows, filter, onFilter }: { rows: FileRow[]; filter?: string; onFilter: (key?: string) => void }) {
   const { t } = useTranslation();
   const items = [...groups(rows), { key: "total", n: rows.length, dot: "bg-muted" }];
   return (
-    <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
-      {items.map(({ key, n, dot }) => (
-        <li key={key} className="flex items-center gap-1.5">
-          <span className={`size-2 shrink-0 rounded-full ${dot}`} aria-hidden />
-          {t(`files.state.${key}`)}
-          <span className="font-medium text-fg tabular-nums">{t("files.count", { count: n })}</span>
-        </li>
-      ))}
+    <ul className="flex flex-wrap gap-1 text-xs text-muted">
+      {items.map(({ key, n, dot }) => {
+        const on = key === "total" ? !filter : filter === key;
+        return (
+          <li key={key}>
+            <button
+              className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 hover:bg-border/50 focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-default disabled:opacity-60 disabled:hover:bg-transparent ${on ? "bg-border/60 text-fg" : ""}`}
+              aria-pressed={on}
+              disabled={!n && !on}
+              onClick={() => onFilter(key === "total" || on ? undefined : key)}
+            >
+              <span className={`size-2 shrink-0 rounded-full ${dot}`} aria-hidden />
+              {t(`files.state.${key}`)}
+              <span className="font-medium text-fg tabular-nums">{t("files.count", { count: n })}</span>
+            </button>
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -220,8 +239,10 @@ export function Files({
   /** called with every fresh file list (the course card enables Update plan only when something is left to read) */
   onFiles?: (d: FilesData) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [d, setD] = useState<FilesData | null>(null);
+  const [filter, setFilter] = useState<Partial<Record<Role, string>>>({}); // a scan state picked in the legend
+  const [page, setPage] = useState<Partial<Record<Role, number>>>({});
   const [msg, setMsg] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null); // a plain notice (not an error)
   const [busy, setBusy] = useState(false);
@@ -307,7 +328,14 @@ export function Files({
   }
 
   if (!d) return null;
-  const zone = (role: Role, title: string, add: string, rows: FileRow[]) => (
+  const zone = (role: Role, title: string, add: string, rows: FileRow[]) => {
+    const state = STATES.find((s) => s.key === filter[role]);
+    const shown = sortNames(state ? rows.filter(state.has) : rows, i18n.language);
+    const pages = Math.max(1, Math.ceil(shown.length / PAGE));
+    const p = Math.min(page[role] ?? 0, pages - 1); // a page left empty by a delete or a filter shows the last one
+    const [Prev, Next] = i18n.dir() === "rtl" ? [ChevronRight, ChevronLeft] : [ChevronLeft, ChevronRight];
+    const go = (n: number) => setPage((x) => ({ ...x, [role]: n }));
+    return (
     <div
       className={`${panel} flex flex-col gap-2 p-4`}
       onDragOver={(e) => e.preventDefault()}
@@ -334,14 +362,24 @@ export function Files({
           </button>
         </h3>
       )}
-      {rows.length > 0 && <Legend rows={rows} />}
+      {rows.length > 0 && (
+        <Legend
+          rows={rows}
+          filter={filter[role]}
+          onFilter={(key) => {
+            setFilter((x) => ({ ...x, [role]: key }));
+            go(0);
+            if (key) setOpen((x) => ({ ...x, [role]: true })); // show what the filter picked
+          }}
+        />
+      )}
       {rows.length === 0 && (
         <p className="rounded-lg border border-dashed border-border p-3 text-center text-sm text-muted">
           {t("files.dropHint")}
         </p>
       )}
       {open[role] &&
-        rows.map((f) => (
+        shown.slice(p * PAGE, (p + 1) * PAGE).map((f) => (
           <div
             key={f.sha}
             className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-2 text-sm first-of-type:border-t-0 first-of-type:pt-0"
@@ -396,6 +434,19 @@ export function Files({
             )}
           </div>
         ))}
+      {open[role] && pages > 1 && (
+        <nav className="flex items-center justify-center gap-2 border-t border-border pt-2 text-xs text-muted" aria-label={t("files.pager", { title })}>
+          <Button variant="outline" size="sm" aria-label={t("files.prev")} disabled={p === 0} onClick={() => go(p - 1)}>
+            <Prev className="size-4" aria-hidden />
+          </Button>
+          <span className="tabular-nums" aria-live="polite">
+            {t("files.range", { from: p * PAGE + 1, to: Math.min((p + 1) * PAGE, shown.length), total: shown.length })}
+          </span>
+          <Button variant="outline" size="sm" aria-label={t("files.next")} disabled={p === pages - 1} onClick={() => go(p + 1)}>
+            <Next className="size-4" aria-hidden />
+          </Button>
+        </nav>
+      )}
       <div className="mt-1 flex flex-wrap items-center gap-3">
         <label className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-sm font-medium shadow-sm hover:bg-border/50 has-focus-visible:outline-2 has-focus-visible:outline-primary">
           <Upload className="size-4" aria-hidden />
@@ -421,7 +472,8 @@ export function Files({
         </button>
       </div>
     </div>
-  );
+    );
+  };
   return (
     <section className="flex flex-col gap-3" aria-label={t("files.filter")}>
       <h2 className={h2}>{t("files.filter")}</h2>

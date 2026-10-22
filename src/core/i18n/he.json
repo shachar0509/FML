@@ -389,7 +389,11 @@
     },
     "count_one": "קובץ אחד",
     "count_two": "{{count}} קבצים",
-    "count_other": "{{count}} קבצים"
+    "count_other": "{{count}} קבצים",
+    "pager": "דפדוף ב{{title}}",
+    "prev": "10 הקודמים",
+    "next": "10 הבאים",
+    "range": "{{from}}–{{to}} מתוך {{total}}"
   },
   "render": {
     "copy": "העתק",

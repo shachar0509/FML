@@ -384,7 +384,11 @@
       "total": "Total"
     },
     "count_one": "{{count}} file",
-    "count_other": "{{count}} files"
+    "count_other": "{{count}} files",
+    "pager": "Pages of {{title}}",
+    "prev": "Previous 10",
+    "next": "Next 10",
+    "range": "{{from}}–{{to}} of {{total}}"
   },
   "render": {
     "copy": "Copy",
