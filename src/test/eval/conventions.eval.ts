@@ -3,17 +3,16 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
-import { z } from "zod";
-import { callStructured } from "@/core/claude/structured";
-import { defineTool } from "@/core/claude/tools";
 import { EXERCISES_DIR, TEACHER_DIR } from "@/constants";
 import { type Convention, type ConventionsFile, ConventionsFileSchema, type FileIndex, type PlanJson } from "@/core/domain/dataSchemas";
-import { readFileIndex, writeFileIndex } from "@/core/domain/ingest/indexStore";
+import { listFileIndexes, readFileIndex, writeFileIndex } from "@/core/domain/ingest/indexStore";
 import { createIndexQueue } from "@/core/domain/ingest/queue";
 import { reconcileConventions } from "@/core/domain/ingest/reconcile";
 import type { PageSource } from "@/core/domain/ingest/types";
 import { setDeviceId } from "@/core/lib/device";
-import { readJsonFile } from "@/core/lib/fs/atomicWrite";
+import { loadCtx, type Ex } from "@/core/domain/practice/exercises";
+import { conventionsFor, gradeAttempt } from "@/core/domain/practice/grade";
+import { readJsonFile, writeJsonAtomic } from "@/core/lib/fs/atomicWrite";
 import { fs, setFs } from "@/core/lib/fs/fs";
 import { coursePaths } from "@/core/lib/fs/paths";
 import { useSettings } from "@/stores/settings";
@@ -22,9 +21,11 @@ import { CliGateway } from "./cliGateway";
 
 /**
  * M72 semantic eval (real model, CONVENTIONS_PLAN Verification A): each fixture's files are scanned through the real queue,
- * reconciled into a registry, and every case row is judged against the learned conventions. `FIXTURE=law,programming` runs only those.
- * The judge is eval-only (M73 replaces it with the real grader): it sees one convention's rule and use case, never its conflicts,
- * so teacher superiority (`winner`) is checked on the registry instead: the losing convention must name the winner in `conflicts`.
+ * reconciled into a registry, and every case row is graded by the REAL grader (M73: gradeAttempt with the row's answer as text) in a
+ * course that holds that run's registry and scanned files, so the conflict check reads the course's own files too.
+ * A key's outcome: triggered = any convention it matches was judged triggered; met = every triggered one scored ≥ MET.
+ * Teacher superiority (`winner`) is also checked on the registry: the losing convention must name the winner in `conflicts`.
+ * `FIXTURE=law,programming` runs only those.
  */
 type Role = "exercises" | "teacher";
 type Row = { question: string; answer: string; triggered: boolean; met: boolean | null; winner?: string; note?: string };
@@ -41,19 +42,8 @@ const ALL = ["counting/absences", "counting/spread", "counting/random", "countin
 const FIXTURES = ALL.filter((f) => !process.env.FIXTURE || process.env.FIXTURE.split(",").includes(f));
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 
-const judgeTool = defineTool(
-  "submit_judgement",
-  "Submit, for every numbered case, whether the convention applies and whether the answer meets it.",
-  z.object({ rows: z.array(z.object({ n: z.number(), triggered: z.boolean(), met: z.boolean().nullable(), why: z.string() })) }),
-);
-const judgeSystem = `You grade answers against ONE course convention. Judge every numbered case on its own.
-triggered: the convention's situation holds for this case (check the trigger against what it names: the question, the answer, or either; a case matching a "not when" line is not triggered; a "level: whole" convention applies only to a whole multi-part answer, "part" to each part).
-met: null when not triggered; otherwise whether the answer does what the rule says (use the "verify" line).
-The course may be set in a fictional or foreign jurisdiction or use its own notation: never check names, section numbers or facts against your own outside knowledge; take them as correct unless the case itself shows them wrong. Call the tool once with every case.`;
-const judgeMessage = (c: Convention, rows: Row[]) =>
-  [`Rule: ${c.rule}`, `Trigger (checked on ${c.useCase.on}): ${c.useCase.trigger}`, `Not when: ${c.useCase.notWhen.join(" | ") || "-"}`, `Verify: ${c.useCase.verify}`, `Level: ${c.useCase.level}`, "",
-    ...rows.map((r, i) => `Case ${i + 1}\nQuestion: ${r.question}\nAnswer: ${r.answer}`)].join("\n");
-
+/** a partial score counts as met from here (the grader gives 0..1) */
+const MET = 0.75;
 const gw = new CliGateway();
 setFs(memFs());
 setDeviceId("eval");
@@ -125,17 +115,22 @@ for (const name of FIXTURES) {
       const newCourse = () => `09${String(ALL.indexOf(name)).padStart(2, "0")}00${String(++seq).padStart(2, "0")}`;
 
       const registries = new Map<string, ConventionsFile>();
+      const scanned = new Map<string, FileIndex[]>(); // the files each registry was learned from, for grading in a copy of that course
+      const keep = async (where: string, n: string) => {
+        registries.set(where, await reconcile(n));
+        scanned.set(where, structuredClone(await listFileIndexes(n)));
+      };
       for (const run of cases.runs ?? [{ name: MAIN, files: cases.files.map((f) => f.path) }]) {
         const n = newCourse();
         await addFiles(n, run.files);
-        registries.set(run.name, await reconcile(n));
+        await keep(run.name, n);
       }
       if (cases.lifecycle) {
         const n = newCourse();
         for (const s of cases.lifecycle) {
           for (const path of s.remove ?? []) await fs().remove(coursePaths("/r", n).indexFile(sha(text(path))));
           await addFiles(n, [...(s.files ?? []), ...(s.add ?? [])].map((f) => f.path));
-          registries.set(s.step, await reconcile(n));
+          await keep(s.step, n);
         }
       }
 
@@ -145,20 +140,35 @@ for (const name of FIXTURES) {
         reg.conventions.filter((c) => (!status || c.status === status) && (!source || c.source === source) && new RegExp(re, "i").test(subject(c)));
 
       const verdicts: unknown[] = [];
+      // one grading course per registry: its conventions and scanned files, as after that build
+      useSettings.setState((st) => ({ settings: { ...st.settings, language: cases.lang } }));
+      const courses = new Map<string, string>();
+      for (const [where, reg] of registries) {
+        const n = newCourse();
+        const p = coursePaths("/r", n);
+        await writeJsonAtomic(p.courseJson, { schema: 1, courseNumber: n, nameHe: cases.plan.course, credits: 3, faculty: "f", syllabusHe: "", prerequisitesRaw: "", catalogSemester: null, courseKind: "mixed", planVersion: 1, createdAt: "t", updatedAt: "t" });
+        await writeJsonAtomic(p.planJson, plan(n));
+        await writeJsonAtomic(p.conventions, reg);
+        for (const r of scanned.get(where) ?? []) await writeFileIndex(n, r);
+        courses.set(where, n);
+      }
       const judge = async (where: string, e: Expect, convs: Convention[]) => {
-        const got = await Promise.all(convs.map(async (c) => {
-          const v = await callStructured(gw, judgeTool, { task: "index", system: judgeSystem, messages: [{ role: "user", content: judgeMessage(c, e.rows) }] });
-          return new Map(v.value.rows.map((r) => [r.n, r]));
-        }));
-        e.rows.forEach((row, i) => {
-          const per = got.map((m) => m.get(i + 1));
-          const on = per.filter((r) => r?.triggered);
+        const n = courses.get(where) as string;
+        await Promise.all(e.rows.map(async (row, i) => {
+          const ctx = await loadCtx(n);
+          const ex: Ex = { ref: { source: "index", id: `${e.key}-${i + 1}` }, statementMd: row.question, referenceSolutionMd: null, gradingNotes: "", requiredStageIds: [], stageIds: [], difficulty: 3, edgeCaseFocus: [], figures: [] };
+          const { list } = conventionsFor(ctx, ex.stageIds);
+          const { grade } = await gradeAttempt({ gw, loadImage: async () => "" }, ctx, ex, [], { hintsUsed: 0, solutionRevealed: false, context: "practice", answerText: row.answer });
+          const ids = new Set(convs.map((c) => c.id));
+          const per = grade.conventions.filter((r) => ids.has(list[r.n - 1]?.id ?? ""));
+          const on = per.filter((r) => r.triggered);
           const triggered = on.length > 0;
-          const met = triggered ? on.every((r) => r?.met === true) : null;
+          const met = triggered ? on.every((r) => (r.met ?? 0) >= MET) : null;
           const ok = triggered === row.triggered && (!row.triggered || met === row.met);
-          verdicts.push({ where, key: e.key, row: i + 1, ok, expected: { triggered: row.triggered, met: row.met }, got: { triggered, met }, why: per.map((r) => r?.why), note: row.note });
+          verdicts.push({ where, key: e.key, row: i + 1, ok, expected: { triggered: row.triggered, met: row.met }, got: { triggered, met }, why: per.map((r) => `${r.why} (${r.met})`), score: grade.score, disputed: grade.disputed, note: row.note });
           if (!ok) fail(`${where} ${e.key} row ${i + 1}: expected ${row.triggered}/${row.met}, got ${triggered}/${met} (${row.note ?? ""})`);
-        });
+          if (!list.some((c) => ids.has(c.id))) fail(`${where} ${e.key} row ${i + 1}: no matched convention offered to the grader`);
+        }));
       };
 
       const jobs: Promise<void>[] = [];

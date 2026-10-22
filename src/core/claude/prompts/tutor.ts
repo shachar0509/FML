@@ -81,7 +81,8 @@ ${a.mcp ? "1. One idea per teach_step, as the lesson flow below says. Break the 
 7. Never reveal the answer to a pending question. Never declare the stage complete; the app decides and will tell you.
 8. Call update_assessment after every graded exercise, after every 3 checks, and before suggesting to move on. Use its "missing" list to choose what to do next.
 9. After evaluating an open answer, call record_check_result. After a wrong MCQ answer that reveals a specific misconception, call record_check_result for it too. Reuse an existing mistake tag when it fits.${a.mcp ? `
-9b. The [STATUS] block numbers the student's knowledge-graph nodes. Give present_mcq the numbers of the nodes it tests (nodes), and record_check_result a score per tested node (nodeResults). When the student's answers keep missing something the course's example answers and materials always include (e.g. citing the statute and section number, stating units, checking a theorem's conditions), add it as a node (update_knowledge_graph, or newNodes in record_check_result), then keep checking it until it is mastered. The aim is full proficiency: answers worth 100/100 in the real exam.` : ""}
+9b. The [STATUS] block numbers the student's knowledge-graph nodes. Give present_mcq the numbers of the nodes it tests (nodes), and record_check_result a score per tested node (nodeResults). When the student's answers keep missing something the course's example answers and materials always include (e.g. citing the statute and section number, stating units, checking a theorem's conditions), add it as a node (update_knowledge_graph, or newNodes in record_check_result), then keep checking it until it is mastered. The aim is full proficiency: answers worth 100/100 in the real exam.
+9c. [STATUS] may list the course's conventions (C1…): how answers are written in this course, learned from its example solutions and the teacher's notes. Each applies only when its trigger holds. Teach each with its use case ("whenever you rely on a statute, …"), and make your worked examples, answers to questions and reference solutions follow every convention whose use case occurs in them, and none whose use case does not. In record_check_result give conventions: for every listed C, whether its trigger holds in this question and answer (triggered, why) and, if so, how well it is met; one that does not hold changes nothing. Never mark a course fact (a name, section number, definition, notation) wrong only from your own knowledge: the course may differ; check consult_materials first.` : ""}
 ${a.mcp ? RULE10_MCP : RULE10}
 ${a.mcp ? `\n${FLOW_MCP}\n` : ""}
 Grounding:
@@ -128,6 +129,8 @@ ${tags}`;
 export type StatusArgs = {
   /** M62: the lesson's knowledge-graph nodes, numbered, with the student's control */
   nodes?: string;
+  /** M73: the stage's course conventions, numbered C1…, with the student's control */
+  conventions?: string;
   /** M64: the knowledge digest (level, weakest nodes, misconceptions, reviews due, the target) */
   digest?: string;
   completed: number;
@@ -151,5 +154,5 @@ export const statusBlock = (a: StatusArgs): string => `[STATUS]
 - Prerequisites completed without full mastery (treat as weak, re-check briefly when used): ${list(a.overriddenPrereqs)}
 - Recurring mistakes to watch for and address when relevant:
 ${a.mistakes.length ? a.mistakes.map((m) => `  ${m}`).join("\n") : "  none"}
-- Minutes since last activity: ${a.idleMinutes}${a.nodes ? `\n- The student's knowledge graph for this lesson (use these numbers in nodes / nodeResults / update_knowledge_graph):\n${a.nodes}` : ""}${a.digest ? `\n- The student's knowledge now:\n${a.digest.replace(/^/gm, "  ")}` : ""}
+- Minutes since last activity: ${a.idleMinutes}${a.conventions ? `\n- Course conventions of this stage (C numbers for conventions in record_check_result; the teacher's first and the teacher's wins):\n${a.conventions.replace(/^/gm, "  ")}` : ""}${a.nodes ? `\n- The student's knowledge graph for this lesson (use these numbers in nodes / nodeResults / update_knowledge_graph):\n${a.nodes}` : ""}${a.digest ? `\n- The student's knowledge now:\n${a.digest.replace(/^/gm, "  ")}` : ""}
 [/STATUS]`;

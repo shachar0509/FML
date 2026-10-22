@@ -69,7 +69,7 @@ const graded: ExerciseData = {
   grade: {
     legibility: "clear", illegibleParts: [], verdict: "partially_correct", score: 70, finalAnswerCorrect: false, summaryMd: L("התחלה טובה, חסרה הבחירה של $N$.", "Good start, the choice of $N$ is missing."),
     steps: [{ label: L("הכנה", "Setup"), status: "correct", commentMd: L("תקין.", "Fine.") }, { label: L("בחירת N", "Choose N"), status: "missing", commentMd: L("לא נבחר $N$.", "No $N$ given.") }],
-    missingForFullCredit: [L("N מפורש", "explicit N")], mistakes: [], edgeCasesMissed: [], correctedKeyStepMd: L("ניקח $N > 1/\\varepsilon$.", "Take $N > 1/\\varepsilon$."), usesMaterialBeyondCompleted: [], stageIds: ["S002"], nodeResults: [], newNodes: [],
+    missingForFullCredit: [L("N מפורש", "explicit N")], mistakes: [], edgeCasesMissed: [], correctedKeyStepMd: L("ניקח $N > 1/\\varepsilon$.", "Take $N > 1/\\varepsilon$."), usesMaterialBeyondCompleted: [], stageIds: ["S002"], nodeResults: [], newNodes: [], conventions: [], disputed: [],
   },
 };
 // ?loop=1: the M56 solving loop (clue, I didn't understand, Thank you, then a perfect grade)

@@ -220,6 +220,7 @@ The host answers several jobs at once: the bridge parks jobs, and the instructio
 - **M71** Teacher-notes analysis (`indexTeacher`, `submit_teacher_notes`); graded-work evidence (context `"teacher"`, weight 2, once per sha); mistakes.
 - **M72** Registry + reconcile build step (map → merge → map in parallel, incremental, alongside `refinePlan`) + server rules (per-use-case counting, refinement by absences, separability, removal, teacher superiority) + `node_retired` + the stars exclusion.
 - **M73** `applicable()` and its injection into grading, checks, solve, clues/hints, generation/verification and the tutor.
+  - Added by the user (2026-10-23): **course facts are the course's.** A grader never deducts for a name, section number, date, definition or notation only from its own knowledge; it lists the doubt with search phrasings (synonyms, both languages), Shalav searches every scanned course file (word search + the exercise's stage pages; never web files), and one small check reads only those pages: wrong → deducted; right / not said → nothing; files disagree → teacher, then a clearly newer file, else no deduction and a note. No embeddings.
 - **M74** Course card list + i18n + e2e (course, files specs), then screenshot review.
 - The semantic eval (Verification A) is built alongside: the `CliGateway` and fixtures in M70–M71, run and tuned at the end of M72 and M73.
 

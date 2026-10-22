@@ -1,4 +1,4 @@
-import type { z } from "zod";
+import { z } from "zod";
 import type { submitUseCaseConventions } from "@/core/claude/tools";
 import type { Convention, ConventionsFile, FileIndex, TeacherItem } from "@/core/domain/dataSchemas";
 import { nodeId } from "./graph";
@@ -96,4 +96,51 @@ export function conventionId(rule: string, stageIds: string[], trigger: string, 
 export const ordered = (cs: Convention[]) => {
   const on = cs.filter((x) => x.status === "active");
   return [...on.filter((x) => x.source === "teacher"), ...on.filter((x) => x.source !== "teacher")];
+};
+
+/**
+ * M73: the conventions one answer may meet. Only a prefilter (stage, part/whole, then the coarse hints when the list is long):
+ * whether a trigger holds is decided by the model per question and answer, never here.
+ */
+export const MAX_APPLY = 12;
+/** No stageIds (homework, a question outside the plan): every convention may apply. */
+export function candidatesFor(cs: Convention[], o: { stageIds: string[]; level?: "whole" | "part"; forms?: string[]; types?: string[] }): Convention[] {
+  const st = new Set(o.stageIds);
+  const fit = ordered(cs).filter((x) => (!st.size || !x.useCase.stageIds.length || x.useCase.stageIds.some((s) => st.has(s))) && !(o.level === "part" && x.useCase.level === "whole"));
+  if (fit.length <= MAX_APPLY) return fit;
+  const h = (x: Convention) => (x.useCase.hints.answerForms.some((f) => o.forms?.includes(f)) || x.useCase.hints.questionTypes.some((t) => o.types?.includes(t)) ? 1 : 0);
+  return fit.map((x, i) => ({ x, i, k: h(x) })).sort((a, b) => b.k - a.k || a.i - b.i).slice(0, MAX_APPLY).sort((a, b) => a.i - b.i).map((a) => a.x); // teacher order kept
+}
+
+/** Numbered for the prompts ("C1"); `control` = the student's control of each convention node (tutor). */
+export function conventionsText(list: Convention[], control?: Map<string, number>): string {
+  const byId = new Map(list.map((x, i) => [x.id, i + 1]));
+  return list.map((x, i) => {
+    const u = x.useCase;
+    const yes = u.examples.find((e) => e.applies), no = u.examples.find((e) => !e.applies);
+    return [
+      `C${i + 1}. [${x.source === "teacher" ? "teacher" : "example solutions"}] ${x.rule}${control ? ` — control ${Math.round((control.get(x.id) ?? 0) * 100)}%` : ""}`,
+      `   applies when (checked on the ${u.on === "both" ? "question or the answer" : u.on}): ${u.trigger}`,
+      u.notWhen.length ? `   not when: ${u.notWhen.join("; ")}` : "",
+      u.level !== "any" ? `   level: ${u.level === "whole" ? "a whole multi-part answer only" : "each part on its own"}` : "",
+      yes ? `   applied: "${yes.quote}"` : "", no ? `   did not apply: "${no.quote}"` : "",
+      `   met when: ${u.verify}`,
+      ...x.conflicts.flatMap((c) => (byId.has(c.with) ? [`   vs C${byId.get(c.with)}: ${c.resolution}`] : [])),
+    ].filter(Boolean).join("\n");
+  }).join("\n");
+}
+
+/** A grader's verdicts → evidence on the convention nodes: only triggered ones with a score; not triggered = nothing recorded. */
+export const conventionScores = (list: Convention[], rs: { n: number; triggered: boolean; met?: number | null }[]) =>
+  rs.flatMap((r) => (r.triggered && r.met != null && list[r.n - 1] ? [{ id: (list[r.n - 1] as Convention).id, score: r.met }] : []));
+
+/** Evidence for one answer: the M62 node scores without any registry convention (only the verdicts may touch those), then the verdicts. */
+export function withConventions(nodes: { id: string; score: number }[], all: Convention[], list: Convention[], rs: { n: number; triggered: boolean; met?: number | null }[]) {
+  const reg = new Set(all.map((x) => x.id));
+  return [...nodes.filter((x) => !reg.has(x.id)), ...conventionScores(list, rs)];
+}
+
+/** Added to every grading result (graders and the tutor's record_check_result). Default keeps older results and stubs valid. */
+export const conventionFields = {
+  conventions: z.array(z.object({ n: z.number().int().min(1), triggered: z.boolean(), why: z.string(), met: z.number().min(0).max(1).nullable().default(null) })).max(MAX_APPLY).default([]),
 };

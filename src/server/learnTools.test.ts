@@ -11,6 +11,8 @@ import { FakeClaudeGateway, toolCall } from "@/core/claude/fake";
 import { setClaude } from "@/core/claude/runtime";
 import { createCourse } from "@/core/domain/courses/courses";
 import { EventSchema } from "@/core/domain/dataSchemas";
+import { appendEvent } from "@/core/domain/progress/store";
+import { writeJsonAtomic } from "@/core/lib/fs/atomicWrite";
 import { readJsonlDir } from "@/core/lib/fs/jsonl";
 import { coursePaths } from "@/core/lib/fs/paths";
 import { useSettings } from "@/stores/settings";
@@ -144,6 +146,19 @@ it("runs a lesson: start, questions, events, status, completion, reopen + recap"
   const before = await skillControl();
   await call("update_knowledge_graph", { observe: [{ n: 2, score: 1, why: "cited section 12 this time" }] });
   expect(await skillControl()).toBeGreaterThan(before); // later answers raise it
+
+  // M73: [STATUS] lists the stage's conventions (C numbers); record_check_result's verdict is evidence only when triggered
+  const cite = { id: "G/convention/cite", rule: "Cite the statute and section", source: "teacher", status: "active", sources: [], conflicts: [], addedAt: "t", updatedAt: "t",
+    useCase: { trigger: "the answer relies on a statute", on: "answer", notWhen: [], examples: [], verify: "a section follows every statute", distinguishes: [], level: "any", stageIds: [], hints: { answerForms: [], questionTypes: [] } } };
+  await writeJsonAtomic(coursePaths(useSettings.getState().settings.dataRoot, n).conventions, { schema: 1, conventions: [cite], updatedAt: "t" });
+  await appendEvent(n, { type: "node_added", nodeId: cite.id, kind: "convention", label: cite.rule, why: "w", stageIds: [], requires: [], origin: "teacher", refId: "" });
+  expect(text(await call("shalav_lesson_status"))).toMatch(/Course conventions of this stage[^]*C1\. \[teacher\] Cite the statute and section — control \d+%[^]*applies when[^]*the answer relies on a statute/);
+  const cq = sc<{ checkId: string }>(await call("ask_open_question", { stageId: "S001", questionMd: "liable?", expectedPoints: ["x"], allowAttachment: false })).checkId;
+  await call("record_check_result", { checkToolUseId: cq, correct: true, score: 80, mistakes: [], conventions: [{ n: 1, triggered: true, why: "relies on the ordinance", met: 0.5 }] });
+  expect((await events()).find((e) => e.type === "check_answered" && e.checkId === cq)).toMatchObject({ nodes: [{ id: cite.id, score: 0.5 }] });
+  const nq = sc<{ checkId: string }>(await call("ask_open_question", { stageId: "S001", questionMd: "define?", expectedPoints: ["x"], allowAttachment: false })).checkId;
+  await call("record_check_result", { checkToolUseId: nq, correct: true, score: 100, mistakes: [], conventions: [{ n: 1, triggered: false, why: "no statute", met: null }] });
+  expect((await events()).find((e) => e.type === "check_answered" && e.checkId === nq)).not.toHaveProperty("nodes");
 
   // assessment -> criteria + status
   const as = await call("update_assessment", { stageId: "S001", mastery: 0.6, coveredObjectives: [0], gaps: ["limits"], reviewTopics: [], readyToAdvance: false, rationale: "halfway" });

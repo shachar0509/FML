@@ -1,6 +1,7 @@
 import { courseRef, isCustom, uniName } from "@/core/universities";
 // Spec 10.5-10.8 (placeholders filled by the caller).
 import { nodeRules } from "@/core/domain/knowledge/tag";
+import { conventionClueRules, conventionFollowRules, conventionGradeRules, conventionVerifyRules, DISPUTE_RULES } from "./conventions";
 import { EXAM_CONVENTIONS, languageRules, type Lang } from "./shared";
 
 type Head = { courseNumber: string; nameHe: string; type?: "academic" | "customCourse" };
@@ -14,6 +15,8 @@ export type GradeArgs = {
   examples?: string; digest?: string;
   /** M62: the student's knowledge-graph nodes this answer may test, numbered */
   nodes?: string;
+  /** M73: the course conventions this answer may meet, numbered (conventionsText) */
+  conventions?: string;
 };
 const nodesPart = (a: { nodes?: string; lang: Lang }) => (a.nodes === undefined ? "" : `\nThe student's knowledge graph (nodes this answer may test):\n${a.nodes}\n${nodeRules(a.lang)}\n`);
 
@@ -32,7 +35,9 @@ The score weighs the reasoning, the explanations and the course's conventions (n
 Report the steps in the student's order with a status for each. missingForFullCredit lists concrete additions that would earn full marks. correctedKeyStepMd shows the first wrong or missing step done correctly. Mistakes use kebab-case tags; reuse an existing tag when it fits. Write all feedback in ${a.lang}.
 
 ${languageRules(a.lang)}
-${EXAM_CONVENTIONS}
+${EXAM_CONVENTIONS}${conventionGradeRules(a.conventions ?? "")}
+correctedKeyStepMd follows the conventions that apply to that step.
+${DISPUTE_RULES}
 
 Exercise:
 <exercise>${a.statement}</exercise>
@@ -52,10 +57,11 @@ ${DATA}
 
 You must finish by calling submit_grade exactly once.`;
 
-export const checkGradingPrompt = (a: Pick<GradeArgs, "course" | "lang" | "mistakeTags" | "boundary" | "nodes"> & { question: string; expectedPoints: string[] }) =>
+export const checkGradingPrompt = (a: Pick<GradeArgs, "course" | "lang" | "mistakeTags" | "boundary" | "nodes" | "conventions"> & { question: string; expectedPoints: string[] }) =>
   `You are a strict, fair exam grader for ${courseRef(a.course)}. Grade the student's short answer (typed and/or in the images) to the question below.
 Score 0-100 by how many of the expected key points are present and correct; correct = true only if the answer is essentially right. Mistakes use kebab-case tags; reuse an existing tag when it fits. Write feedback in ${a.lang}.
-${languageRules(a.lang)}
+${languageRules(a.lang)}${conventionGradeRules(a.conventions ?? "")}
+${DISPUTE_RULES}
 Question: <exercise>${a.question}</exercise>
 Expected key points:
 ${a.expectedPoints.map((p) => `- ${p}`).join("\n")}
@@ -65,11 +71,11 @@ ${nodesPart(a)}${a.boundary}
 ${DATA}
 You must finish by calling submit_check_grade exactly once.`;
 
-export const solvePrompt = (lang: Lang, requiredStages: string, boundary: string, digest: string, custom = false, examples = "") =>
+export const solvePrompt = (lang: Lang, requiredStages: string, boundary: string, digest: string, custom = false, examples = "", conventions = "") =>
   `Write a complete, exam-level reference solution in ${lang} for the exercise below, as ${custom ? "the course staff" : `a ${uniName()} course staff member`} would publish it. Justify every step. ${requiredStages ? `Use only results from these stages: ${requiredStages}.` : "Use only what the course material below teaches."}
 ${boundary}
 Follow the notation and conventions of this course material digest:
-<materials>${digest}</materials>${examples ? `\nFormat and detail it like these example solutions of the course:\n${examples}` : ""}
+<materials>${digest}</materials>${examples ? `\nFormat and detail it like these example solutions of the course:\n${examples}` : ""}${conventionFollowRules(conventions)}
 Call submit_solution with { "solutionMd": string }.`;
 
 export type GenArgs = {
@@ -77,6 +83,8 @@ export type GenArgs = {
   styleRefs: string; digest: string; boundary: string; mistakes: string; issues?: string[];
   /** M69: the stages' graph nodes, numbered, with the student's control */
   nodes?: string;
+  /** M73: the course conventions the exercise's solution may meet, numbered, with the student's control */
+  conventions?: string;
 };
 export const generationPrompt = (a: GenArgs) =>
   `Create one new ${a.type} exercise for ${courseRef(a.course)} at difficulty ${a.difficulty} (1-5 scale: ${DIFFICULTY_SCALE}).
@@ -91,21 +99,21 @@ ${a.boundary}
 The exercise and its reference solution must need nothing beyond the allowed knowledge and these required stages.
 The student repeatedly makes these mistakes; design the exercise so that they matter:
 ${a.mistakes || "(none recorded)"}${a.nodes ? `\nKnowledge graph nodes of these stages (number, kind, label, the student's control):\n${a.nodes}\nAim at the student's weakest nodes; in nodes give the numbers of the listed nodes it tests.` : ""}
-Include at least one edge case or boundary condition.${a.difficulty >= 4 ? " Write it as a real exam question of this course: exam wording and length, usually in several parts (a, b, c)." : ""} Provide a complete exam-level reference solution and grading notes. Write in ${a.lang}.${a.issues?.length ? `\nA previous attempt was rejected for these issues; avoid them:\n${a.issues.map((i) => `- ${i}`).join("\n")}` : ""} Call submit_generated_exercise.`;
+${a.conventions ? `${conventionFollowRules(a.conventions, "reference solution")}\nYou may build the exercise so that the use case of a convention the student controls weakly occurs in it.\n` : ""}Include at least one edge case or boundary condition.${a.difficulty >= 4 ? " Write it as a real exam question of this course: exam wording and length, usually in several parts (a, b, c)." : ""} Provide a complete exam-level reference solution and grading notes. Write in ${a.lang}.${a.issues?.length ? `\nA previous attempt was rejected for these issues; avoid them:\n${a.issues.map((i) => `- ${i}`).join("\n")}` : ""} Call submit_generated_exercise.`;
 
-export const verificationPrompt = (requiredStages: string, boundary: string) =>
+export const verificationPrompt = (requiredStages: string, boundary: string, conventions = "") =>
   `Verify this exercise. Solve it independently first, without looking at the reference solution, using only these stages: ${requiredStages}. Then compare with the reference solution. Report whether it is well posed and solvable, whether your answer matches, any stage outside the list that is required (including anything listed as not learned yet below), and every issue.
-${boundary}
+${boundary}${conventionVerifyRules(conventions)}
 Call submit_verification.`;
 
-export const checksPrompt = (a: Pick<GenArgs, "lang" | "requiredStages" | "focusJson" | "boundary" | "digest" | "mistakes" | "nodes">) =>
+export const checksPrompt = (a: Pick<GenArgs, "lang" | "requiredStages" | "focusJson" | "boundary" | "digest" | "mistakes" | "nodes" | "conventions">) =>
   `Create 4 questions in ${a.lang}: 2 MCQ and 2 open, covering different stages of ${a.requiredStages} where possible, focused on: ${a.focusJson}. Use only allowed knowledge:
 ${a.boundary}
-Base them on this course material digest: <materials>${a.digest}</materials> MCQ: exactly 4 options, exactly one correct, distractors built from realistic misconceptions, preferring these recorded student mistakes: ${a.mistakes || "(none recorded)"}. Open: a question answerable in a few sentences, with the expected key points.${a.nodes ? `\nKnowledge graph nodes of these stages (number, kind, label, the student's control):\n${a.nodes}\nAim at the student's weakest nodes; for each question give in nodes the numbers of the listed nodes it tests.` : ""} Call submit_practice_check.`;
+Base them on this course material digest: <materials>${a.digest}</materials> MCQ: exactly 4 options, exactly one correct, distractors built from realistic misconceptions, preferring these recorded student mistakes: ${a.mistakes || "(none recorded)"}. Open: a question answerable in a few sentences, with the expected key points.${a.nodes ? `\nKnowledge graph nodes of these stages (number, kind, label, the student's control):\n${a.nodes}\nAim at the student's weakest nodes; for each question give in nodes the numbers of the listed nodes it tests.` : ""}${conventionFollowRules(a.conventions ?? "", "expected answers and explanations")} Call submit_practice_check.`;
 
 export const hintPrompt = (a: {
   lang: Lang; level: number; statement: string; reference: string | null; previous: string[];
-  boundary: string; requiredStages: string; digest: string;
+  boundary: string; requiredStages: string; digest: string; conventions?: string;
 }) =>
   `The student is solving the exercise below and asked for hint level ${a.level} of 3.
 Level 1: one guiding question toward the right idea. Level 2: name the definition, theorem or technique to use and how it applies at the student's current point. Level 3: show the next step explicitly.
@@ -115,16 +123,17 @@ Reference solution (do not reveal): ${a.reference ?? "none"}
 Previous hints: ${a.previous.length ? a.previous.map((h, i) => `(${i + 1}) ${h}`).join(" ") : "none"}
 ${a.boundary}
 Use only the allowed knowledge above and the exercise's required stages: ${a.requiredStages}. Follow the notation of this course material digest: <materials>${a.digest}</materials>
+${conventionClueRules(a.conventions ?? "")}
 ${DATA}
 Write in ${a.lang}. Call submit_hint.`;
 
-type ClueArgs = { lang: Lang; statement: string; reference: string | null; previous: string[]; boundary: string; requiredStages: string; digest: string; examples: string };
+type ClueArgs = { lang: Lang; statement: string; reference: string | null; previous: string[]; boundary: string; requiredStages: string; digest: string; examples: string; conventions?: string };
 const clueBase = (a: ClueArgs) => `Exercise: <exercise>${a.statement}</exercise>
 Reference solution (never reveal it): ${a.reference ?? "none; solve it yourself first"}
 ${a.boundary}
 ${a.requiredStages ? `Use only the allowed knowledge above and the exercise's required stages: ${a.requiredStages}.` : "Use only what the course material below teaches."} Follow the notation and methods of the course material and its example exercises:
 <materials>${a.digest}</materials>
-${a.examples ? `Example exercises with solutions:\n${a.examples}\n` : ""}${DATA}
+${a.examples ? `Example exercises with solutions:\n${a.examples}\n` : ""}${conventionClueRules(a.conventions ?? "")}${a.conventions ? "\n" : ""}${DATA}
 Write in ${a.lang}.`;
 
 /** M56: the solving loop's "Get a clue": a mistake check first, then one small clue. */

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { conventionFields } from "@/core/domain/knowledge/conventions";
 import { newNodeSchema, nodeFields } from "@/core/domain/knowledge/tag";
 import { defineTool } from "./tools";
 
@@ -33,6 +34,8 @@ export const recordCheckResult = defineTool(
     score: z.number().min(0).max(100),
     mistakes: z.array(z.object({ tag: z.string(), labelHe: z.string(), labelEn: z.string(), description: z.string() })),
     ...nodeFields,
+    /** M73: per [STATUS] convention C<n>: does its trigger hold in this question and answer, and was it met */
+    ...conventionFields,
   }),
 );
 /** M62: the tutor grows the student's graph: a skill, course convention or misconception it found; links; observations. */

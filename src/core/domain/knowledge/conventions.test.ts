@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Convention, Event, FileIndex, PlanJson } from "@/core/domain/dataSchemas";
-import { type Candidates, type Draft, candidatesOf, conventionId, judgeUseCase, ordered, pruneSources, separable, shouldRetire } from "./conventions";
+import { type Candidates, type Draft, candidatesFor, candidatesOf, conventionId, conventionsText, judgeUseCase, ordered, pruneSources, separable, shouldRetire, withConventions } from "./conventions";
 import { knowledgeOf, meanControl, rawStars } from "./control";
 import { graphOf, nodeId } from "./graph";
 import { mapEvents, reduceProgress } from "@/core/domain/progress/reduce";
@@ -176,5 +176,39 @@ describe("graph and stars", () => {
     const obs = ev({ type: "node_observed", nodeId: nodeId("S001", "concept", "cS001"), score: 1, why: "w", context: "practice" });
     const m = (evs: Event[]) => reduceProgress(plan, evs, "2026-01-02T00:00:00Z").stages.S001?.mastery;
     expect(m([obs, a])).toBe(m([obs]));
+  });
+});
+
+describe("M73 candidatesFor / conventionsText / withConventions", () => {
+  const c = (id: string, o: Partial<Convention> = {}, u: Partial<Convention["useCase"]> = {}): Convention => ({
+    id, rule: `rule ${id}`, source: "solutions", status: "active", sources: [], conflicts: [], addedAt: "t", updatedAt: "t", ...o,
+    useCase: { trigger: `when ${id}`, on: "answer", notWhen: [], examples: [], verify: `check ${id}`, distinguishes: [], level: "any", stageIds: [], hints: { answerForms: [], questionTypes: [] }, ...u },
+  });
+  it("stage and part/whole narrow the list, the teacher's come first, retired never; no stages = all", () => {
+    const cs = [c("a", {}, { stageIds: ["S002"] }), c("w", {}, { level: "whole" }), c("t", { source: "teacher" }), c("r", { status: "retired" })];
+    expect(candidatesFor(cs, { stageIds: ["S001"] }).map((x) => x.id)).toEqual(["t", "w"]);
+    expect(candidatesFor(cs, { stageIds: ["S001"], level: "part" }).map((x) => x.id)).toEqual(["t"]);
+    expect(candidatesFor(cs, { stageIds: [] }).map((x) => x.id)).toEqual(["t", "a", "w"]);
+  });
+  it("a long list keeps the ones whose hints fit, in their order", () => {
+    const cs = Array.from({ length: 14 }, (_, i) => c(`x${i}`, {}, i === 13 ? { hints: { answerForms: ["graph"], questionTypes: [] } } : {}));
+    const got = candidatesFor(cs, { stageIds: ["S001"], forms: ["graph"] }).map((x) => x.id);
+    expect(got).toHaveLength(12);
+    expect(got.at(-1)).toBe("x13");
+    expect(got).not.toContain("x11");
+  });
+  it("renders the use case and the resolution against a listed convention", () => {
+    const t = c("t", { source: "teacher", conflicts: [{ with: "s", resolution: "exact unless asked to estimate" }] }, { notWhen: ["asked to estimate"], examples: [{ quote: "q1", applies: true }, { quote: "q2", applies: false }] });
+    const txt = conventionsText([t, c("s")]);
+    expect(txt).toContain("C1. [teacher] rule t");
+    expect(txt).toContain("not when: asked to estimate");
+    expect(txt).toContain('applied: "q1"');
+    expect(txt).toContain('did not apply: "q2"');
+    expect(txt).toContain("vs C2: exact unless asked to estimate");
+  });
+  it("only triggered verdicts are evidence, and a plain node score on a registry convention is dropped", () => {
+    const list = [c("a"), c("b")];
+    expect(withConventions([{ id: "a", score: 1 }, { id: "n", score: 0.5 }], list, list, [{ n: 1, triggered: false, met: null }, { n: 2, triggered: true, met: 0 }, { n: 9, triggered: true, met: 1 }]))
+      .toEqual([{ id: "n", score: 0.5 }, { id: "b", score: 0 }]);
   });
 });
