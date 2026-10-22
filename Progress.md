@@ -861,3 +861,13 @@ Edge cases found with the sample slides, and fixed in the renderer:
   - The file name comes from its title: path characters are removed and a repeated title gets " (2)".
   - The file list (M50 polling) shows the files at once as not scanned; the next Build / Update plan reads them.
 - Tests: server round trip (academic refused, state with the level, job prompt with the level and goal and no university, three files saved and listed pending, no overwrite on a repeated title), e2e (panel text with the level, button sends Continue and shows the waiting row, no panel on academic courses).
+
+## M53 fix: deleted stages leave no traces; custom baseline in the knowledge boundary
+- A delete also removes the stage from the file indexes:
+  - A page tagged only with it is uncovered, so Update plan may bring the topic back.
+  - An example exercise that needed it can be offered once its other stages are done. Before this it was never offered, because practice waits for every required stage.
+  - If the deleted stage was the exercise's main stage, the main stage becomes its first remaining required one.
+  - Records get the new plan version.
+- A deleted prerequisite hands down its own prerequisites (delete S002: S003 waits for S001), so stages don't unlock out of order.
+- Knowledge boundary (tutor, grading, practice): a custom course's baseline is what a learner at the student's level knows, not 5-unit high-school maths and prerequisite courses.
+- Test: the index tags and the inherited prerequisite after a delete.
