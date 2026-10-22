@@ -28,7 +28,7 @@ const home: HomeData = {
 const st = (id: string, title: string, status: CourseData["units"][number]["stages"][number]["status"], mastery: number) => ({ id, title, summary: L(`תקציר: ${title}`, `${title} summary`), status, mastery });
 const course: CourseData = {
   view: "course", language: lang, theme: "system", number: "01040195", name: home.courses[0]?.name ?? "Calculus", credits: 5.5, pct: 17, stagesDone: 1, stagesTotal: 3,
-  current: "S002", hasPlan: true, build: null, canPractice: true, custom: false, translate: { missing: q.get("tr") ? 12 : 0, running: false },
+  current: "S002", hasPlan: true, build: null, canPractice: true, custom: false, web: null, translate: { missing: q.get("tr") ? 12 : 0, running: false },
   watch: [{ label: lang === "he" ? "שכחו את תנאי ההתכנסות" : "Forgot the convergence condition", count: 3, stageIds: ["S002"] }],
   units: [{ id: "U01", title: lang === "he" ? "סדרות" : "Sequences", stages: [st("S001", L("הגדרה", "Definition"), "completed", 90), st("S002", L("גבולות", "Limits"), "in_progress", 40), st("S003", L("כלל הסנדוויץ'", "Squeeze"), "locked", 0)] },
     // ?del=1: a second unit, so a whole unit can be deleted
@@ -126,7 +126,7 @@ const noPlan: CourseData = { ...course, hasPlan: false, pct: 0, stagesDone: 0, s
 const CUSTOM = "Cm1abc";
 const gone = new Set<string>(); // stages deleted with plan_remove
 const prune = (c: CourseData): CourseData => ({ ...c, units: c.units.map((u) => ({ ...u, stages: u.stages.filter((x) => !gone.has(x.id)) })).filter((u) => u.stages.length) });
-const customize = (c: CourseData, n: unknown): CourseData => (n === CUSTOM ? { ...c, custom: true, number: CUSTOM, name: L("תורת המוזיקה לגיטרה", "Music theory for guitar"), credits: 0 } : c);
+const customize = (c: CourseData, n: unknown): CourseData => (n === CUSTOM ? { ...c, custom: true, web: { running: tools.includes("course_web_request"), level: 2 }, number: CUSTOM, name: L("תורת המוזיקה לגיטרה", "Music theory for guitar"), credits: 0 } : c);
 (window as unknown as { __said: string[]; __reqs: unknown[] }).__said = said;
 (window as unknown as { __reqs: unknown[] }).__reqs = reqs;
 const tools: string[] = []; // every tool the card called, by name

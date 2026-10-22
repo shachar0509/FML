@@ -6,6 +6,7 @@ import {
   Circle,
   Contrast,
   Dumbbell,
+  Globe,
   Languages,
   Lock,
   Sparkles,
@@ -56,14 +57,15 @@ export function Course({
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState<Record<string, boolean>>({});
-  // a translation is running: show the texts as they arrive
+  // a translation or a web search is running: show the texts as they arrive, and when it ends
   const translating = data.translate.running;
+  const searching = !!data.web?.running;
   useEffect(() => {
-    if (!translating) return;
+    if (!translating && !searching) return;
     const h = setInterval(reload, 3000);
     return () => clearInterval(h);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [translating]);
+  }, [translating, searching]);
   const [sel, setSel] = useState<string | null>(null);
   const [del, setDel] = useState<{ unitId?: string; stageId?: string; name: string; count: number } | null>(null); // M53: asking before a delete
   const remove = (d: NonNullable<typeof del>) => {
@@ -323,6 +325,43 @@ export function Course({
             );
           })}
         </section>
+      )}
+      {data.web && !running && (
+        <div className={`${panel} flex flex-col gap-3 p-4`}>
+          {searching ? (
+            <Waiting go={go} label={t("web.running")} />
+          ) : (
+            <>
+              <div className="flex items-start gap-3">
+                <span
+                  className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"
+                  aria-hidden
+                >
+                  <Globe className="size-5" />
+                </span>
+                <div className="flex flex-col gap-1">
+                  <p className="font-medium">{t("web.title")}</p>
+                  <p className="text-sm text-muted">
+                    {t("web.body", { level: data.web.level, plan: t(data.hasPlan ? "plan.update" : "plan.build") })}
+                  </p>
+                </div>
+              </div>
+              <Button
+                className="self-start"
+                variant="outline"
+                onClick={() =>
+                  void callTool("course_web_request", { number: data.number }).then(() => {
+                    reload();
+                    return go();
+                  })
+                }
+              >
+                <Globe className="size-4" aria-hidden />
+                {t("web.button")}
+              </Button>
+            </>
+          )}
+        </div>
       )}
       <Files
         number={data.number}

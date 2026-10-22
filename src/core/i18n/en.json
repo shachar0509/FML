@@ -576,5 +576,11 @@
       "5": "Advanced"
     },
     "create": "Create course"
+  },
+  "web": {
+    "title": "Materials from the internet",
+    "body": "Claude searches the web for study texts and practice exercises that match your level ({{level}}/5) and adds them to your course files. Then press {{plan}} to fit the plan to them.",
+    "button": "Find materials online",
+    "running": "Searching the web for materials…"
   }
 }

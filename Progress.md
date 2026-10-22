@@ -847,3 +847,17 @@ Edge cases found with the sample slides, and fixed in the renderer:
   - Refuses to empty the plan. The server tool `plan_remove` (card-only) refuses during a build.
 - Update plan no longer enforces the minimum stage count (the student may have deleted below it; refine only adds).
 - Tests: domain (renumbering, prerequisites, archive, progress, unit delete, refusals), server round trip (stage then unit, last unit refused), e2e (warning texts academic vs custom, Keep, unit and stage delete).
+
+## M54: materials from the internet (custom courses)
+- A custom course card has a "Materials from the internet" panel (hidden during a build).
+  - It explains that Claude searches the web for study texts and practice exercises that match the student's level (N/5) and adds them to the course files, then Build plan / Update plan fits the plan to them.
+  - Its button is "Find materials online". Academic courses have no panel.
+- `course_web_request` (card-only) starts a study-lane job (the card sends "▶️ Continue"); the card shows the waiting row and refreshes every 3 s until it ends.
+- The job (`submit_web_materials`) asks the host model to:
+  - use web search (open courses, official docs, textbooks, reputable educational sites; no forums);
+  - return 3-6 study texts and 1-3 exercise sets with worked solutions, matched to the description, the goal and the level, in the settings language;
+  - write in its own words, ending with the source URLs.
+- Each document is saved as a `.md` file in Study materials or Sample exercises.
+  - The file name comes from its title: path characters are removed and a repeated title gets " (2)".
+  - The file list (M50 polling) shows the files at once as not scanned; the next Build / Update plan reads them.
+- Tests: server round trip (academic refused, state with the level, job prompt with the level and goal and no university, three files saved and listed pending, no overwrite on a repeated title), e2e (panel text with the level, button sends Continue and shows the waiting row, no panel on academic courses).

@@ -196,4 +196,26 @@ it("creates a custom course: no university in it, no Moodle, shown as custom", a
   expect(sc<{ moodle: unknown }>(await call("files_list", { number: "01040195" })).moodle).not.toBeNull();
   const course = await readJsonFile(coursePaths(useSettings.getState().settings.dataRoot, n).courseJson, CourseJsonSchema);
   expect(course).toMatchObject({ type: "customCourse", nameHe: "Guitar", syllabusHe: "Scales and chords", goal: "Improvise", level: 2, credits: 0 });
+
+  // M54: materials from the web, at the student's level; they show in the files, not scanned until Build plan
+  expect((await call("course_web_request", { number: "01040195" })).isError).toBe(true); // academic courses have no web search
+  expect(sc<CourseData>(await call("shalav_course", { number: "01040195" })).web).toBeNull();
+  expect((await call("course_web_request", { number: n })).isError).toBeFalsy();
+  expect(sc<CourseData>(await call("shalav_course", { number: n })).web).toEqual({ running: true, level: 2 });
+  const job = JSON.stringify((await call("shalav_next_job")).content).replaceAll("\\n", "\n");
+  expect(job).toContain("submit_web_materials");
+  expect(job).toContain("Current level: 2/5 (the student knows a little)");
+  expect(job).toContain("Improvise");
+  expect(job).not.toContain("Technion");
+  const items = [
+    { role: "material", title: "Scales: the basics", markdown: "# Scales\n\nA scale is ...\n\nSources: https://example.org/scales" },
+    { role: "material", title: "Scales: the basics", markdown: "# Scales again" }, // same title: a second file, not an overwrite
+    { role: "exercises", title: "Chords / practice", markdown: "1. Build a C major chord.\n\nSolutions: C-E-G" },
+  ];
+  const done = await call("shalav_submit_job", { jobId: Number(/job #(\d+)/.exec(job)?.[1]), input: { items } });
+  expect(JSON.stringify(done.content)).toContain("3 file(s) were added");
+  expect(sc<CourseData>(await call("shalav_course", { number: n })).web?.running).toBe(false);
+  const f = sc<{ materials: { name: string; status: string }[]; exercises: { name: string; status: string }[] }>(await call("files_list", { number: n }));
+  expect(f.materials.map((x) => [x.name, x.status]).sort()).toEqual([["Scales the basics (2).md", "pending"], ["Scales the basics.md", "pending"]]);
+  expect(f.exercises.map((x) => x.name)).toEqual(["Chords practice.md"]);
 });

@@ -34,3 +34,27 @@ for (const lang of LANGS)
     expect(await said(page)).toEqual([]);
     expect(errors).toEqual([]);
   });
+
+for (const lang of LANGS)
+  test(`custom course: find materials online at the student's level (${lang})`, async ({ page }) => {
+    const errors = pageErrors(page);
+    await page.goto(host(`lang=${lang}&theme=light&custom=1`));
+    await page.locator("ul > li").filter({ hasText: lang === "he" ? "תורת המוזיקה" : "Music theory" }).getByRole("button").click();
+    await expect(page.getByText(lang === "he" ? "חומרים מהאינטרנט" : "Materials from the internet")).toBeVisible();
+    await expect(page.getByText(lang === "he" ? /לרמה שלכם \(2\/5\)/ : /match your level \(2\/5\)/)).toBeVisible();
+    await page.waitForTimeout(400); // the plan's fade-in
+    await axe(page);
+    await page.screenshot({ path: `e2e/tests_output/custom/card-custom-web-${lang}.png`, fullPage: true });
+    await page.getByRole("button", { name: lang === "he" ? "חיפוש חומרים ברשת" : "Find materials online" }).click();
+    expect(await toolsCalled(page)).toContain("course_web_request");
+    await expect(page.getByText(lang === "he" ? "מחפש חומרים ברשת…" : "Searching the web for materials…")).toBeVisible();
+    expect(await said(page)).toEqual([lang === "he" ? "▶️ המשך" : "▶️ Continue"]); // the study lane picks the job up
+    expect(errors).toEqual([]);
+  });
+
+test("an academic course has no web materials panel", async ({ page }) => {
+  await page.goto(host("lang=en&theme=light"));
+  await page.locator("ul button").first().click();
+  await expect(page.getByText("Forgot the convergence condition")).toBeVisible();
+  await expect(page.getByText("Materials from the internet")).toHaveCount(0);
+});

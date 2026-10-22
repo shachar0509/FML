@@ -7,6 +7,7 @@ import { type CatalogSource } from "@/core/domain/catalog/catalog";
 import { addCourse, buildPlan, courseExists, loadCourse, type ManualEntry } from "@/core/domain/courses/courses";
 import { newStageIds, refinePlan } from "@/core/domain/plan/refine";
 import { removeFromPlan } from "@/core/domain/plan/remove";
+import { gatherWeb } from "@/core/domain/ingest/web";
 import { localize, translateCourse } from "@/core/domain/plan/translate";
 import { claude, setClaude } from "@/core/claude/runtime";
 import { useSettings } from "@/stores/settings";
@@ -28,6 +29,7 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, fi
   setClaude(bridge); // domain code (createCourse/buildPlan) talks to the host model through the bridge
   const builds = new Map<string, Build>();
   const translating = new Set<string>(); // courses whose plan is being translated to the settings language
+  const gathering = new Set<string>(); // custom courses whose materials are being gathered from the web
   const look = () => useSettings.getState().settings;
 
   /**
@@ -197,6 +199,7 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, fi
         watch: (progress?.mistakes ?? []).filter((m) => !m.resolved).slice(0, 5).map((m) => ({ label: language === "he" ? m.labelHe : m.labelEn, count: m.count, stageIds: m.stageIds })),
         units: (plan?.units ?? []).map((u) => ({ id: u.id, title: tr(u.title), stages: u.stageIds.flatMap((id) => byId.get(id) ?? []) })),
         translate: { missing, running: translating.has(number) },
+        web: isCustom(course) ? { running: gathering.has(number), level: course.level ?? 1 } : null,
       };
       const cur = data.current && byId.get(data.current);
       const text = `${course.courseNumber} — ${course.nameHe}\n${plan ? `${data.stagesDone}/${data.stagesTotal} stages done${cur ? `; next: ${cur.id} · ${cur.title}` : ""}` : "No study plan yet: the student adds course files, then presses Build plan."}\nOptions: 1) learn the next stage (shalav_start_lesson); 2) practice (shalav_practice); 3) add course files (files_list); 4) build or update the plan from the files (plan_build_request).`;
@@ -232,6 +235,20 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, fi
       (k) => [{ type: "text", text: `${k} text(s) of the ${number} plan were translated; the card shows them. Say nothing more than one short sentence.` }],
     ).done.catch(() => undefined);
     return out("Translating.", { ok: true });
+  });
+
+  // M54: "Find materials online" on a custom course card. Study lane: the card sends "▶️ Continue"; the files appear in the card as they are saved.
+  registerAppTool(server, "course_web_request", { title: "Find materials online", description: "Card-only: gather study materials and exercises from the web for a custom course, at the student's level.", inputSchema: numIn, _meta: appOnly }, async ({ number }) => {
+    const c = await loadCourse(number);
+    if (!c || !isCustom(c.course)) return { ...out(`No custom course ${number}.`, { error: "missing" }), isError: true };
+    if (gathering.has(number)) return out("Already gathering.", { ok: true });
+    gathering.add(number);
+    bridge.run(
+      `Finding study materials online for "${c.course.nameHe}"`,
+      (signal) => gatherWeb(claude(), c.course, look().language, signal).finally(() => gathering.delete(number)),
+      (names) => [{ type: "text", text: `${names.length} file(s) were added to the course: ${names.join(", ")}. Tell the student in one short sentence that they are in the course files and that Build plan (or Update plan) reads them.` }],
+    ).done.catch(() => undefined);
+    return out("Gathering.", { ok: true });
   });
 
   return { building: (n: string) => builds.get(n)?.state === "running" };

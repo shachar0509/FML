@@ -31,6 +31,8 @@ export type CourseData = Base & {
   units: { id: string; title: string; stages: Stage[] }[];
   /** M48: texts of the plan and name not yet in the settings language (0 = all shown in it), and whether a translation runs. */
   translate: { missing: number; running: boolean };
+  /** M54: custom courses only (null for academic): materials from the web at the student's level, and whether a search runs. */
+  web: { running: boolean; level: number } | null;
 };
 /** A plan build's files by scan state, materials and exercises together. */
 export type FileCounts = { scanned: number; scanning: number; notScanned: number; total: number };
