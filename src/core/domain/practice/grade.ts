@@ -34,6 +34,8 @@ const stageLine = (ctx: Ctx, id: string) => {
 export const stageList = (ctx: Ctx, ids: string[]) => ids.map((i) => stageLine(ctx, i)).join("\n");
 export const boundaryFor = (ctx: Ctx, currentStageId: string | null = null) =>
   buildKnowledgeBoundary({ course: ctx.course, plan: ctx.plan, progress: ctx.progress, currentStageId });
+/** The boundary for one exercise: none for homework (no stages) or a test-practice question (M59). */
+export const boundaryOf = (ctx: Ctx, ex: Ex) => (ex.stageIds.length && !ex.open ? boundaryFor(ctx) : "");
 
 /** 7.6 item 3: tags touching the exercise's stages + the 20 heaviest overall. */
 export function mistakeTagList(ctx: Ctx, stageIds: string[]): string {
@@ -73,7 +75,7 @@ export async function gradeAttempt(env: Env, ctx: Ctx, ex: Ex, files: Attachment
   const system = gradingPrompt({
     course: ctx.course, lang: langName(), statement: ex.statementMd, reference: ex.referenceSolutionMd, gradingNotes: ex.gradingNotes,
     requiredStages: stageList(ctx, ex.requiredStageIds), completedTitles: done.map((s) => `${s.id} ${s.title}`).join("\n") || "(none)",
-    mistakeTags: mistakeTagList(ctx, ex.requiredStageIds), boundary: ex.stageIds.length ? boundaryFor(ctx) : "", examples: o.examples, digest: o.digest,
+    mistakeTags: mistakeTagList(ctx, ex.requiredStageIds), boundary: boundaryOf(ctx, ex), examples: o.examples, digest: o.digest,
   });
   const figs = (await figureImages(n, ex)).flatMap((f): Block[] => [{ type: "image", source: { type: "base64", media_type: f.mediaType, data: f.base64 } }]);
   const content: Block[] = [

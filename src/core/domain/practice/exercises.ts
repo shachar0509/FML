@@ -36,6 +36,8 @@ export type Ex = {
   difficulty: number;
   edgeCaseFocus: string[];
   figures: { page?: number; file: string }[];
+  /** M59: a test-practice question; exams cover the whole course, so no Shalav-progress boundary */
+  open?: boolean;
 };
 
 const emptyGen: GeneratedFile = { schema: 1, items: [], solutions: {} };

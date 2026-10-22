@@ -16,6 +16,7 @@ import { registerMoodleTools } from "./moodleTools";
 import { registerFileTools } from "./fileTools";
 import { registerExerciseTools } from "./exerciseTools";
 import { registerLearnTools } from "./learnTools";
+import { registerHistoryTools } from "./historyTools";
 import { registerPracticeTools } from "./practiceTools";
 import { registerSettingsTools } from "./settingsTools";
 import { INSTRUCTIONS } from "./instructions";
@@ -65,6 +66,9 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
             credits: course.credits,
             pct: t && t.stagesTotal ? Math.round((100 * t.stagesCompleted) / t.stagesTotal) : 0,
             stage: stage ? `${stage.id} · ${tr(stage.title)}` : null,
+            // the Learn / Practice buttons on the row
+            current: stage ? { id: stage.id, title: tr(stage.title) } : null,
+            hasPlan: !!plan,
             building: builds.building(course.courseNumber),
             custom: isCustom(course),
           };
@@ -92,7 +96,7 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
   const builds = registerCourseTools(server, bridge, files, catalog);
   const exercises = registerExerciseTools(server, bridge);
   const learn = registerLearnTools(server, bridge, exercises);
-  registerPracticeTools(server, bridge, exercises);
+  registerHistoryTools(server, registerPracticeTools(server, bridge, exercises).forget);
   registerSettingsTools(server);
 
   // Card requests (M15): the card posts only "▶️ Continue" in the chat; what it wants waits here for shalav_next_job.
@@ -110,11 +114,21 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
         // a written answer, or photos / a PDF of one solved on paper (attachment_upload of that course), or both
         z.object({ kind: z.literal("answer"), text: z.string().max(4000), number: z.string().regex(COURSE_ID_RE).optional(), files: z.array(z.string().regex(/^[0-9a-f]{64}$/)).max(12).optional() }),
         z.object({ kind: z.literal("step"), action: z.enum(["next", "again", "question"]), text: z.string().max(4000).optional() }),
+        // M60: continue a saved lesson
+        z.object({ kind: z.literal("resume"), number: z.string().regex(COURSE_ID_RE), id: z.string().max(64) }),
+        // the card moved to another screen: requests made on the old one (e.g. a lesson step) are void
+        z.object({ kind: z.literal("clear") }),
       ]),
       _meta: { ui: { resourceUri: CARDS_URI, visibility: ["app"] } },
     },
     async (r) => {
+      if (r.kind === "clear") {
+        inbox.length = 0;
+        return { content: [{ type: "text" as const, text: "ok" }], structuredContent: { ok: true } };
+      }
       if (r.kind === "step" && r.action === "again") learn.reexplain();
+      if (r.kind === "step") void learn.note(r.action === "next" ? "Pressed Continue." : r.action === "again" ? "Pressed Explain differently." : `Asked: ${r.text ?? ""}`);
+      if (r.kind === "answer") void learn.note(`Answered: ${r.text.trim() || "(handwritten pages)"}`);
       // Only the newest click counts: an older one that was never fetched belongs to a card already gone, and serving it
       // later made every answer lag a few steps behind.
       if (r.kind === "answer" && !r.text.trim() && !(r.number && r.files?.length)) return { content: [{ type: "text" as const, text: "An answer needs text or files." }], isError: true };
@@ -129,8 +143,25 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
               : r.action === "again"
                 ? "The student did not understand the last lesson step and pressed Explain differently. Call teach_step now for the SAME step, rewritten: same topic, simpler words, a different example or a figure. Do not ask a question, do not quiz, do not move on to the next idea."
                 : `The student asked about the lesson step on screen (the step card stays open):\n<question>\n${r.text ?? ""}\n</question>\nAnswer with answer_question: short and direct, about this step and the course material (consult_materials if the step does not cover it). Do not call teach_step and do not move on; then end your message and wait.`
-            : `The student wants to ${r.kind === "learn" ? "learn" : "learn again"} ${r.stageId} · ${r.title}. Call shalav_start_lesson with stageId ${r.stageId} and teach it.`,
+            : r.kind === "resume"
+              ? `The student wants to continue a saved lesson. Call shalav_start_lesson with courseNumber ${r.number} and resume "${r.id}", and continue from where it stopped.`
+              : `The student wants to ${r.kind === "learn" ? "learn" : "learn again"} ${r.stageId} · ${r.title}. Call shalav_start_lesson with stageId ${r.stageId} and teach it.`,
       });
+      return { content: [{ type: "text" as const, text: "ok" }], structuredContent: { ok: true } };
+    },
+  );
+  // The spinner's Cancel: stops the AI work the card started (keys: build:/translate:/web:/practice:/hw: + course, exercise: + run).
+  registerAppTool(
+    server,
+    "shalav_cancel",
+    {
+      title: "Cancel",
+      description: "Card-only: stop the AI work a card started.",
+      inputSchema: z.object({ key: z.string().max(80) }),
+      _meta: { ui: { resourceUri: CARDS_URI, visibility: ["app"] } },
+    },
+    async ({ key }) => {
+      bridge.cancelKey(key);
       return { content: [{ type: "text" as const, text: "ok" }], structuredContent: { ok: true } };
     },
   );
@@ -157,8 +188,8 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
       description: "Fetch what the student asked for in a Shalav card, or the next pending Shalav AI job (instructions and the answer format). \"▶️ המשך\" / \"▶️ Continue\" → call it with no arguments. \"▶️ בניית תוכנית\" / \"▶️ Building the plan\" → call it with build: true (plan build jobs only).",
       inputSchema: z.object({ build: z.boolean().optional() }),
     },
-    async ({ build }) => {
-      if (build) return { content: await bridge.nextWait("build") };
+    async ({ build }, { mcpReq: { signal } }) => {
+      if (build) return { content: await bridge.nextWait("build", signal) };
       // Card requests first, then study jobs; build jobs belong to the chat that pressed Build (another chat may be building meanwhile).
       const req = bridge.pending("study") ? undefined : inbox.shift();
       if (req) {
@@ -167,7 +198,7 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
         const images = im && load ? await Promise.all(im.shas.map(async (sha) => ({ type: "image" as const, mimeType: "image/jpeg", data: await load(sha, "image/jpeg") }))) : [];
         return { content: [{ type: "text" as const, text: `Student request from the card:\n${req.text}${bridge.pending("study") || inbox.length ? "\n\nAfterwards call shalav_next_job again: more is pending." : ""}` }, ...images] };
       }
-      const c = await bridge.nextWait("study");
+      const c = await bridge.nextWait("study", signal);
       return { content: inbox.length && !bridge.pending("study") ? [...c, { type: "text" as const, text: "Then call shalav_next_job again: the student asked for something in a card." }] : c };
     },
   );
@@ -178,9 +209,9 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
       description: "Answer a Shalav job. Pass `input` (matching the job's schema) or `text`. Returns the next job or the final result.",
       inputSchema: z.object({ jobId: z.number(), input: z.record(z.string(), z.unknown()).optional(), text: z.string().optional() }),
     },
-    async (a) => {
+    async (a, { mcpReq: { signal } }) => {
       const study = bridge.jobLane(a.jobId) === "study"; // a building chat is not handed card requests
-      const r = await bridge.submit(a);
+      const r = await bridge.submit(a, signal);
       return study && inbox.length && !bridge.pending("study") ? { ...r, content: [...r.content, { type: "text" as const, text: "Then call shalav_next_job again: the student asked for something in a card." }] } : r;
     },
   );
@@ -190,7 +221,7 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
       messages: [{ role: "user", content: { type: "text", text } }],
     }));
   prompt("shalav_my_courses", "Shalav: my courses", "Show me my courses in Shalav (the Shalav home card).");
-  prompt("shalav_continue_learning", "Shalav: continue learning", "Let's continue my lesson in Shalav where I stopped.");
+  prompt("shalav_continue_learning", "Shalav: continue learning", 'Let\'s continue my lesson in Shalav where I stopped (shalav_start_lesson with resume "latest").');
 
   return server;
 }

@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  BookOpen,
   Check,
   ChevronDown,
   Circle,
   Contrast,
-  Dumbbell,
   Globe,
   Languages,
   Lock,
@@ -47,13 +45,11 @@ export function Course({
   callTool,
   go,
   reload,
-  practice,
 }: {
   data: CourseData;
   callTool: Tool;
   go: Go;
   reload: () => void;
-  practice: () => void;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState<Record<string, boolean>>({});
@@ -61,6 +57,7 @@ export function Course({
   const translating = data.translate.running;
   const searching = !!data.web?.running;
   const [webCount, setWebCount] = useState(3); // M55: how many new files to find
+  const stop = (kind: string) => () => void callTool("shalav_cancel", { key: `${kind}:${data.number}` });
   useEffect(() => {
     if (!translating && !searching) return;
     const h = setInterval(reload, 3000);
@@ -116,7 +113,6 @@ export function Course({
   );
   const upToDate = data.hasPlan && unread === 0;
   const live = useBuild(running ? data.number : null, callTool, reload);
-  const cur = data.units.flatMap((u) => u.stages).find((s) => s.id === data.current);
 
   const [joined, setJoined] = useState(false); // another chat is building: it continues with this course
   async function build() {
@@ -167,7 +163,7 @@ export function Course({
       {data.translate.missing > 0 && !running && (
         <div className={`${panel} flex flex-wrap items-center justify-between gap-3 p-4`}>
           {translating ? (
-            <Waiting go={go} label={t("translate.running")} />
+            <Waiting go={go} label={t("translate.running")} cancel={stop("translate")} />
           ) : (
             <>
               <p className="text-sm text-muted">{t("translate.note", { count: data.translate.missing })}</p>
@@ -189,7 +185,7 @@ export function Course({
       )}
       {running && data.build && (
         <div className={`${panel} p-4`}>
-          <Checklist go={go} b={live ?? data.build} />
+          <Checklist go={go} b={live ?? data.build} cancel={stop("build")} />
           <p className="mt-3 text-sm text-muted">{t(joined ? "plan.joined" : "plan.studyMeanwhile")}</p>
         </div>
       )}
@@ -204,24 +200,6 @@ export function Course({
         <div className={`${panel} flex flex-col gap-3 p-4`}>
           <p className="font-medium">{t("plan.firstTitle")}</p>
           <p className="text-sm text-muted">{t("plan.firstBody")}</p>
-        </div>
-      )}
-
-      {data.hasPlan && (
-        <div className="flex flex-wrap gap-2">
-          <Button
-            className="h-11 px-6 text-[15px]"
-            disabled={!cur}
-            onClick={() => cur && void go({ kind: "learn", stageId: cur.id, title: cur.title })}
-          >
-            <BookOpen className="size-4" aria-hidden />
-            {t("nav.learn")}
-            {cur ? ` — ${cur.id}` : ""}
-          </Button>
-          <Button variant="outline" onClick={practice}>
-            <Dumbbell className="size-4" aria-hidden />
-            {t("nav.practice")}
-          </Button>
         </div>
       )}
 
@@ -260,7 +238,7 @@ export function Course({
           <h2 className={h2}>{t("courseHome.plan")}</h2>
           {data.units.map((u) => {
             const expanded =
-              open[u.id] ?? (!!data.current && u.stages.some((s) => s.id === data.current));
+              open[u.id] ?? false; // all collapsed until opened
             const done = u.stages.filter(
               (s) => s.status === "completed" || s.status === "completed_override",
             ).length;
@@ -330,7 +308,7 @@ export function Course({
       {data.web && !running && (
         <div className={`${panel} flex flex-col gap-3 p-4`}>
           {searching ? (
-            <Waiting go={go} label={t("web.running")} />
+            <Waiting go={go} label={t("web.running")} cancel={stop("web")} />
           ) : (
             <>
               <div className="flex items-start gap-3">

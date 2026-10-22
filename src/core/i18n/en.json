@@ -344,7 +344,8 @@
     "addAcademicHint": "A university course, by its number",
     "addCustom": "Create custom course",
     "addCustomHint": "Any subject you want to learn",
-    "customCourse": "Custom course"
+    "customCourse": "Custom course",
+    "open": "Open"
   },
   "courseHome": {
     "missing": "Course not found.",
@@ -498,7 +499,33 @@
       "single": "Single question",
       "singleText": "Upload one question and solve it together with the tutor.",
       "normal": "Normal practice",
-      "normalText": "Practice what you've learned in Shalav, at your level."
+      "normalText": "Practice what you've learned in Shalav, at your level.",
+      "test": "Test practice",
+      "testText": "Only questions from past exams in your course files, each one once. Get one wrong and you get similar ones until it is perfect."
+    },
+    "test": {
+      "title": "Test practice",
+      "found": "{{n}} past exam questions found, {{left}} not served yet.",
+      "none": "No past exams found in the course files. Add exams (for example \"Moed A 2023\", \"midterm\", \"quiz\") to the folders and scan them.",
+      "scope": {
+        "course": "The whole course",
+        "units": "Main subjects (midterm / quiz)",
+        "notes": "Quiz material from the course"
+      },
+      "pickUnits": "Subjects the test covers",
+      "drop": "Photos or a PDF of the quiz material the course published",
+      "readNotes": "Read the material",
+      "reading": "Reading the quiz material…",
+      "covers": "The quiz covers:",
+      "weak": "Needs more practice:",
+      "left": "Exam questions left: {{n}}",
+      "note": {
+        "stern": "Not good enough. On the exam that costs you points. You don't move on until you get this concept right: here is a similar question.",
+        "weak": "Two more tries and still not there. Noted: \"{{concept}}\" needs more practice. Moving on to another subject for now.",
+        "learned": "Four perfect in a row: \"{{concept}}\" is under control now."
+      },
+      "generateFailed": "Could not write a new question like this one. Try again.",
+      "upload": "Upload the material"
     }
   },
   "exercise": {
@@ -518,6 +545,10 @@
     "figure": "Figure {{n}}",
     "failed": "Something went wrong. Try again.",
     "retry": "Try again"
+  },
+  "job": {
+    "stopped": "Stopped — Claude stopped working on it. Try again.",
+    "cancel": "Cancel"
   },
   "mcp": {
     "pin": "Keep this card on screen",
@@ -648,7 +679,36 @@
     "solving": "Solving question {{n}} of {{of}}…",
     "installing": "Getting the PDF printer ready (once, {{pct}}%)…",
     "printing": "Preparing the PDF…",
+    "paused": "Solving stopped. Continue from where it stopped; solved questions are kept.",
+    "resume": "Continue solving",
     "solveFailed": "Something went wrong while solving. Try again; solved questions are kept.",
-    "downloadAi": "Download solutions"
+    "downloadAi": "Download solutions",
+    "upload": {
+      "homework": "Upload homework",
+      "single": "Upload question"
+    }
+  },
+  "history": {
+    "lesson": "Lesson",
+    "newLesson": "Start new lesson",
+    "olderLesson": "Load older lesson",
+    "newPractice": "Start new practice",
+    "olderPractice": "Load older practice",
+    "open": "Open",
+    "delete": "Delete",
+    "select": "Select",
+    "selectAll": "Select all",
+    "deleteSelected": "Delete selected ({{n}})",
+    "confirm_one": "Delete this saved session? This can't be undone.",
+    "confirm_other": "Delete {{count}} saved sessions? This can't be undone.",
+    "empty": "No saved sessions here.",
+    "lastAction": "Last action",
+    "all": "All",
+    "filter": "Filter by type",
+    "earlier": "Earlier slides ({{n}})",
+    "prev": "Previous",
+    "next": "Next",
+    "backToCheckpoint": "Back to where I stopped",
+    "slideOf": "Slide {{n}} of {{of}}"
   }
 }

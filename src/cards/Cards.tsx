@@ -11,6 +11,7 @@ import { Home } from "./views/Home";
 import { Lesson } from "./views/Lesson";
 import { Settings } from "./views/Settings";
 import { Step } from "./views/Step";
+import { SlideBrowser } from "./views/History";
 import { Practice } from "./views/Practice";
 import { Mcq, OpenQ } from "./views/Question";
 import type { CardData, Host } from "./types";
@@ -39,6 +40,18 @@ export function Cards({ host }: { host: Host }) {
     ctx.theme === "light" || ctx.theme === "dark" ? ctx.theme : (data?.theme ?? "system");
   useEffect(() => applyLanguage(language), [language]);
   useEffect(() => applyTheme(theme), [theme]);
+  // The host renders a card from its stored result (e.g. when the student comes back to the chat): show the live state.
+  useEffect(() => {
+    if (data?.view !== "home" && data?.view !== "course") return;
+    void callTool(data.view === "home" ? "shalav_home" : "shalav_course", data.view === "course" ? { number: data.number } : undefined)
+      .then((r) => {
+        const v = r.structuredContent as CardData | undefined;
+        // only while the student is still on that first screen
+        if (v && "view" in v) setNavState((n) => (n && n.on === data && n.h.length > 1 ? n : { on: data, h: [v] }));
+      })
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
   // The language was switched in Settings (card-side, at once): fetch Home or the course again for its texts in that language.
   useEffect(() => {
     const l = i18n.language;
@@ -68,9 +81,15 @@ export function Cards({ host }: { host: Host }) {
       </p>
     );
 
-  const go = async (name: string, args?: Record<string, unknown>, replace = false) => {
+  // Leaving a screen voids the requests made on it (e.g. a lesson step), or the next "▶️ Continue" serves them.
+  const leave = () => void callTool("shalav_request", { kind: "clear" }).catch(() => undefined);
+  const show = async (name: string, args?: Record<string, unknown>, replace = false) => {
     const r = (await callTool(name, args)).structuredContent as CardData | undefined;
     if (r && "view" in r) push(r, replace);
+  };
+  const go = async (name: string, args?: Record<string, unknown>, replace = false) => {
+    leave();
+    await show(name, args, replace);
   };
   const home = () => void go("shalav_home");
   const open = (n: string, replace = false) => void go("shalav_course", { number: n }, replace);
@@ -81,7 +100,7 @@ export function Cards({ host }: { host: Host }) {
       : "number" in shown && shown.view !== "course"
         ? () => open(shown.number, true)
         : () => void go("shalav_home", undefined, true);
-  const back = h.length > 1 ? () => setNavState({ on: data, h: h.slice(0, -1) }) : up;
+  const back = h.length > 1 ? () => (leave(), setNavState({ on: data, h: h.slice(0, -1) })) : up;
 
   const view = () => {
     if (!shown || !data)
@@ -103,8 +122,7 @@ export function Cards({ host }: { host: Host }) {
           data={shown}
           callTool={callTool}
           go={ask}
-          reload={() => open(shown.number, true)}
-          practice={() => void go("shalav_practice", { courseNumber: shown.number })}
+          reload={() => void show("shalav_course", { number: shown.number }, true)}
         />
       );
     if (shown.view === "practice")
@@ -124,6 +142,9 @@ export function Cards({ host }: { host: Host }) {
         }
         custom={() => setNav({ view: "custom", language: data.language, theme: data.theme })}
         open={open}
+        callTool={callTool}
+        go={ask}
+        practice={(n) => void go("shalav_practice", { courseNumber: n })}
         settings={() => void go("shalav_settings")}
         choose={(id) => void go("shalav_choose_university", { university: id })}
       />
@@ -168,7 +189,15 @@ export function Cards({ host }: { host: Host }) {
           </button>
         )}
       </header>
-      <main className="flex grow flex-col px-4 pb-4">{view()}</main>
+      <main className="flex grow flex-col px-4 pb-4">
+        {shown && "history" in shown && shown.history ? (
+          <SlideBrowser history={shown.history} callTool={callTool} slide={(s) => <Step data={s} go={ask} callTool={callTool} readOnly />}>
+            {view()}
+          </SlideBrowser>
+        ) : (
+          view()
+        )}
+      </main>
       {!!asked && (
         <div
           aria-live="polite"

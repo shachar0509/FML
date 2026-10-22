@@ -15,7 +15,7 @@ export const submitWebMaterials = defineTool(
   "Submit the study texts and exercise sets for the course, each as one Markdown document.",
   z.object({
     items: z.array(z.object({
-      role: z.enum(["material", "exercises"]).describe("material = a study text; exercises = an exercise set with solutions"),
+      role: z.enum(["material", "exercises"]).describe("material = a study text; exercises = an exercise set with a full, fully elaborated solution to every exercise"),
       title: z.string().describe("short title, used as the file name"),
       markdown: z.string().describe("the whole document, ending with its source URLs"),
     })),
@@ -105,7 +105,8 @@ Sources already used (find other ones):
 ${list(have.used)}
 
 Use web search. Prefer open university courses and lecture notes, official documentation, textbooks and reputable educational sites; never forums or unsourced blogs.
-Each document stands on its own: write it in your own words (summarize and explain; do not copy pages), keep formulas, code and examples exact, and end it with its source URLs. Each title is distinct. Write in ${lang === "he" ? "Hebrew" : "English"}.
+Each document stands on its own: write it in your own words (do not copy pages), keep formulas, code and examples exact, and end it with its source URLs. Study texts may summarize and explain.
+Solutions are never summarized: write every solution in full, as the model answer a student should hand in for full credit. Every step is shown and justified (the definition, theorem or rule it uses), with the intermediate calculations and the final answer stated clearly; never skip a step, never write just the result or "similarly". The student learns to write complete answers from them. Each title is distinct. Write in ${lang === "he" ? "Hebrew" : "English"}.
 Call submit_web_materials with the documents.`;
 
   let messages: Message[] = [{ role: "user", content: ask }];

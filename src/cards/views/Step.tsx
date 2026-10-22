@@ -7,7 +7,8 @@ import type { Go, Host, StepData } from "../types";
 import { FigureCard } from "./FigureCard";
 
 /** One small lesson step on a notebook page; the student moves on, asks for another explanation, or asks a question. */
-export function Step({ data, go, callTool }: { data: StepData; go: Go; callTool: Host["callTool"] }) {
+/** `readOnly`: an earlier slide of a saved lesson (M60), without the buttons. */
+export function Step({ data, go, callTool, readOnly }: { data: StepData; go: Go; callTool: Host["callTool"]; readOnly?: boolean }) {
   const { t } = useTranslation();
   const [asking, setAsking] = useState(false);
   const [q, setQ] = useState("");
@@ -74,7 +75,7 @@ export function Step({ data, go, callTool }: { data: StepData; go: Go; callTool:
           </ol>
         </div>
       )}
-      {answer ? (
+      {readOnly ? null : answer ? (
         <div role="dialog" aria-label={t("step.answer")} className="flex flex-col gap-3 rounded-card border border-primary/40 bg-card p-5 shadow-card">
           <div className="flex items-start gap-3">
             <p className="grow text-sm text-muted" dir="auto">

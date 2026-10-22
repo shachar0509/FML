@@ -14,6 +14,7 @@ import { createCourse } from "@/core/domain/courses/courses";
 import { EventSchema } from "@/core/domain/dataSchemas";
 import { appendEvent } from "@/core/domain/progress/store";
 import { readJsonlDir } from "@/core/lib/fs/jsonl";
+import { writeJsonAtomic } from "@/core/lib/fs/atomicWrite";
 import { coursePaths } from "@/core/lib/fs/paths";
 import { useSettings } from "@/stores/settings";
 import { initNode } from "./platform";
@@ -185,4 +186,104 @@ it("practice card: scope, generated exercise through the bridge, MCQ, open answe
   await call("homework_download", { courseNumber: n });
   const printed = (await readFile(saveTo.path)).toString();
   for (const x of ["HW 4", "Q2", "Show B", "Solution B", "<math"]) expect(printed).toContain(x);
+
+  // ----- M59: test practice -----
+  const cp = coursePaths(useSettings.getState().settings.dataRoot, n);
+  const q = (id: string, label: string, stage: string, statementMd: string, sol: string | null = null) => ({
+    id, label, pages: [1], statementMd, figureCrops: [], referenceSolutionMd: sol, requiredStageIds: [stage], primaryStageId: stage, difficulty: 4, type: "proof", estimatedMinutes: 20, edgeCaseFocus: [], gist: "g",
+  });
+  const exam = (sha: string, fileName: string, exercises: object[]) => writeJsonAtomic(cp.indexFile(sha), {
+    schema: 1, sha256: sha, fileName, relPath: `x/${fileName}`, role: "exercises", mediaType: "application/pdf", pageCount: 2, addedAt: "2026-01-01T00:00:00Z",
+    status: "indexed", error: null, indexedAt: "2026-01-01T00:00:00Z", indexModel: null, planVersion: 1, materialPages: [], exercises,
+  });
+  await exam("e1", "Spring2020MoedA.pdf", [q("m1", "1", "S001", "Exam Q1"), q("m2", "2", "S001", "Exam Q2"), q("m3", "3", "S002", "Exam Q3")]);
+  await exam("e2", "Spring2020MoedA_sol.pdf", [q("s1", "שאלה 1", "S001", "Exam Q1", "Sol 1")]);
+  await exam("e3", "HW2.pdf", [q("h1", "1", "S001", "Homework Q")]);
+  expect(sc<PracticeData>(await call("practice_state", { courseNumber: n })).test).toMatchObject({ exams: 3, left: 3, active: false });
+  const bad = { ...g, verdict: "partially_correct", score: 50, finalAnswerCorrect: false };
+  const testItem = async () => {
+    const st = sc<PracticeData>(await call("practice_state", { courseNumber: n }));
+    return { st, ex: (st.item as { exercise: ExerciseData }).exercise };
+  };
+  const miss = async (ex: ExerciseData) => {
+    await call("exercise_grade_request", { runId: ex.runId, files: sol });
+    const gj = await job(bad);
+    expect(gj).not.toContain("KNOWLEDGE BOUNDARY"); // exams cover the whole course
+  };
+  ahead = "";
+  await call("practice_start_request", { courseNumber: n, scope: { kind: "test", stageIds: ["S001"] } });
+  let cur = await testItem();
+  expect(cur.st.test).toMatchObject({ active: true, left: 1, note: null });
+  const first = cur.ex.statementMd;
+  expect(["Exam Q1", "Exam Q2"]).toContain(first);
+  const burned = () => readFile(join(cp.shalav, "test-practice.json"), "utf8").then((x) => JSON.parse(x) as { burned: { file: string; question: string }[]; concepts: Record<string, { status: string | null; streak: number }> });
+  expect((await burned()).burned).toEqual([expect.objectContaining({ file: first === "Exam Q1" ? "Spring2020MoedA_sol.pdf" : "Spring2020MoedA.pdf" })]); // the twin with the solution
+  // a miss: the stern note and the other S001 exam question
+  await miss(cur.ex);
+  await call("practice_next_request", { courseNumber: n });
+  cur = await testItem();
+  expect(cur.st.test).toMatchObject({ note: "stern", left: 0, noteStage: { id: "S001" } });
+  expect(cur.ex.statementMd).toBe(first === "Exam Q1" ? "Exam Q2" : "Exam Q1");
+  // a second miss, no S001 exam question left: a new one like the missed question, verified
+  await miss(cur.ex);
+  const gen = await call("practice_next_request", { courseNumber: n });
+  const genJobs: string[] = [];
+  let gt = text(await call("shalav_next_job"));
+  for (let i = 0; i < 4 && /# Shalav job #(\d+)/.test(gt); i++) {
+    genJobs.push(gt);
+    gt = text(await call("shalav_submit_job", { jobId: Number(/# Shalav job #(\d+)/.exec(gt)?.[1]), input: answers[/\(tool (\w+)\)/.exec(gt)?.[1] as string] as object }));
+  }
+  expect(sc<PracticeData>(gen).loading).toBe(true);
+  expect(genJobs[0]).toContain("same concept");
+  expect(genJobs[0]).toContain(first);
+  expect(genJobs[1]).toContain("submit_verification");
+  cur = await testItem();
+  expect(cur.st.test).toMatchObject({ note: "stern" });
+  expect(cur.ex.statementMd).toBe("Prove P");
+  // the third miss ends the follow-ups: the concept is noted as weak
+  await miss(cur.ex);
+  const after3 = await call("practice_next_request", { courseNumber: n });
+  if (sc<PracticeData>(after3).loading) await work(after3);
+  cur = await testItem();
+  expect(cur.st.test).toMatchObject({ note: "weak", weak: [{ id: "S001" }] });
+  const store = await burned();
+  expect(store.burned).toHaveLength(2);
+  expect(store.concepts.S001?.status).toBe("weak");
+  // the last answer counts when the session ends (once)
+  await call("exercise_grade_request", { runId: cur.ex.runId, files: sol });
+  await job({ ...g, finalAnswerCorrect: true });
+  await call("practice_end", { courseNumber: n });
+  expect((await burned()).concepts.S001).toMatchObject({ status: "weak", streak: 1 });
+  // quiz notes: the host model picks the stages
+  ahead = "";
+  await call("test_scope_request", { courseNumber: n, files: [pages[0]] });
+  const nj = await job({ stageIds: ["S002", "S999"] });
+  expect(nj).toContain("submit_test_scope");
+  expect(nj).toContain("image");
+  expect(sc<PracticeData>(await call("practice_state", { courseNumber: n })).test.notes).toEqual([{ id: "S002", title: expect.any(String) }]);
+
+  // ----- M60: every practice session is saved and listed by type; an ended one continues -----
+  const list = async () => sc<{ items: { id: string; type: string; title: string }[] }>(await call("history_list", { number: n, kind: "practice" })).items;
+  const saved = await list();
+  expect(saved.map((x) => x.type).sort()).toEqual(["homework", "homework", "normal", "single", "test"]);
+  expect(saved.find((x) => x.type === "homework")).toMatchObject({ title: "HW 4" }); // the newest first
+  const normal = saved.find((x) => x.type === "normal")?.id as string;
+  const res = await call("practice_resume", { courseNumber: n, id: normal });
+  if (sc<PracticeData>(res).loading) await work(res);
+  const back = sc<PracticeData>(await call("practice_state", { courseNumber: n }));
+  expect(back).toMatchObject({ mode: "item", hw: null, item: { kind: "O", answer: "my answer" } }); // where it ended
+  expect((await list())[0]?.id).toBe(normal);
+  // a homework comes back with its questions
+  const hw3 = saved.filter((x) => x.type === "homework")[1]?.id as string;
+  expect(sc<PracticeData>(await call("practice_resume", { courseNumber: n, id: hw3 })).hw).toMatchObject({ name: "HW 3", questions: [{ label: "Q1", accepted: true }, {}, {}] });
+  // deleting the running ones ends them
+  await call("history_delete", { number: n, kind: "practice", ids: [normal, hw3] });
+  expect(sc<PracticeData>(await call("practice_state", { courseNumber: n }))).toMatchObject({ hw: null, item: null });
+  expect(await list()).toHaveLength(3);
+  // ...and stay deleted after a restart (the device's session log still has the normal one running)
+  const [a3, b3] = InMemoryTransport.createLinkedPair();
+  const c3 = new Client({ name: "t3", version: "0" });
+  await Promise.all([createServer().connect(a3), c3.connect(b3)]);
+  expect(sc<PracticeData>(await c3.callTool({ name: "practice_state", arguments: { courseNumber: n } }))).toMatchObject({ item: null, hw: null });
+  expect(sc<{ items: unknown[] }>(await c3.callTool({ name: "history_list", arguments: { number: n, kind: "practice" } })).items).toHaveLength(3);
 });

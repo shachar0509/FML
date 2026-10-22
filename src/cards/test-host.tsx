@@ -4,7 +4,7 @@ import "@/core/i18n";
 import { createRoot } from "react-dom/client";
 import { Cards } from "./Cards";
 import { ADVANCED } from "./test-advanced";
-import type { CardData, CourseData, FileRow, FilesData, HomeData, Host, ExerciseData, HomeworkData, PracticeData, SettingsData, LessonData, LookupResult, McqData, OpenData, FigureData, StepData } from "./types";
+import type { SavedItem, CardData, CourseData, FileRow, FilesData, HomeData, Host, ExerciseData, HomeworkData, PracticeData, SettingsData, LessonData, LookupResult, McqData, OpenData, FigureData, StepData } from "./types";
 
 /** Playwright test host: a fake bridge instead of Claude Desktop. ?lang=&theme=&empty=1 ; sent messages land in window.__said. */
 const q = new URLSearchParams(location.search);
@@ -19,7 +19,7 @@ const home: HomeData = {
   courses: q.get("empty")
     ? []
     : [
-        { number: "01040195", name: lang === "he" ? "חשבון אינפיניטסימלי 1" : "Infinitesimal Calculus 1", credits: 5.5, pct: 35, stage: L("S12 · גבולות של סדרות", "S12 · Limits of sequences") },
+        { number: "01040195", name: lang === "he" ? "חשבון אינפיניטסימלי 1" : "Infinitesimal Calculus 1", credits: 5.5, pct: 35, stage: L("S12 · גבולות של סדרות", "S12 · Limits of sequences"), current: { id: "S012", title: L("גבולות של סדרות", "Limits of sequences") }, hasPlan: true },
         { number: "02340117", name: lang === "he" ? "מבוא למדעי המחשב" : "Intro to Computer Science", credits: 4, pct: 0, stage: null },
         // ?custom=1: also a custom course (no number or credits shown)
         ...(q.get("custom") ? [{ number: "Cm1abc", name: L("תורת המוזיקה לגיטרה", "Music theory for guitar"), credits: 0, pct: 10, stage: null, custom: true }] : []),
@@ -86,18 +86,44 @@ const loopReply = (name: string): ExerciseData | undefined => {
 const practiceBase: PracticeData = {
   ...base, view: "practice", number: "01040195", mode: "choose", units: [{ id: "U01", title: L("גבולות", "Limits") }], stages: [{ id: "S001", title: L("סדרות", "Sequences") }],
   counters: { answered: 0, correct: 0, avg: 0 }, item: null, loading: false, error: null, summary: null, hw: null,
+  test: {
+    exams: 12, left: 9, units: [{ id: "U01", title: L("גבולות", "Limits"), stageIds: ["S001"] }, { id: "U02", title: L("טורים", "Series"), stageIds: ["S002"] }],
+    weak: [{ id: "S002", title: L("טורים", "Series") }], active: false, note: null, noteStage: null, scoping: false, notes: null, error: null,
+  },
+};
+// M59 test practice: quiz notes read on the next poll; each Next serves a question with the next note (none, stern, stern, weak)
+let tp: PracticeData["test"] | null = null;
+let tpNext = 0;
+const tpNotes = [null, "stern", "stern", "weak"] as const;
+const testReply = (name: string, args?: Record<string, unknown>): PracticeData | undefined => {
+  const t = tp ?? practiceBase.test;
+  if (name === "test_scope_request") tp = { ...t, scoping: true };
+  else if (name === "practice_state" && t.scoping) tp = { ...t, scoping: false, notes: [{ id: "S001", title: L("סדרות", "Sequences") }] };
+  else if (name === "practice_start_request" && (args?.scope as { kind: string } | undefined)?.kind === "test") {
+    tpNext = 0;
+    tp = { ...t, active: true };
+  }
+  else if (name === "practice_next_request" && t.active) tp = { ...t, left: t.left - 1, note: tpNotes[++tpNext % 4] ?? null, noteStage: { id: "S002", title: L("טורים", "Series") } };
+  else if (name === "practice_end" && t.active) tp = { ...t, active: false, note: null };
+  else if (!(name === "practice_state" && tp)) return undefined;
+  const cur = tp as PracticeData["test"];
+  if (name === "practice_end") return { ...practiceSummary, test: cur };
+  return cur.active ? { ...practiceBase, mode: "item", test: cur, item: { kind: "E", exercise: { ...lx, runId: `t${tpNext}`, grade: null, clues: [], clueOpen: false } } } : { ...practiceBase, test: cur };
 };
 const mcqItem: PracticeData = { ...practiceBase, mode: "item", item: { kind: "M", questionMd: L("האם $a_n=1/n$ מתכנסת?", "Does $a_n=1/n$ converge?"), options: lang === "he" ? ["כן, ל-0", "לא", "כן, ל-1", "רק עבור $n$ זוגי"] : ["Yes, to 0", "No", "Yes, to 1", "Only for even n"], selected: null, correctIndex: null, explanationMd: null } };
 const mcqDone: PracticeData = { ...mcqItem, counters: { answered: 1, correct: 0, avg: 0 }, item: { ...(mcqItem.item as Extract<PracticeData["item"], { kind: "M" }>), selected: 1, correctIndex: 0, explanationMd: L("כי $1/n \\to 0$.", "Since $1/n \\to 0$.") } };
 const practiceSummary: PracticeData = { ...practiceBase, mode: "summary", summary: { items: 1, avgScore: 0, newMistakes: [L("טעות סימן", "Sign slip")], weakStages: [{ id: "S001", title: L("סדרות", "Sequences") }] } };
 // M57 homework: read (splitting, then 3 questions on the next poll), solved with the loop; a perfect answer is accepted
 let hw: HomeworkData | null = null;
+// ?hw=stopped: the card's stored result has no homework, but Shalav holds one the AI stopped solving after question 1 (e.g. Shalav restarted)
+if (q.get("hw") === "stopped")
+  hw = { kind: "homework", how: "ai", name: L("תרגיל בית 3", "Homework 3"), splitting: false, current: 0, exercise: null, error: null, solving: null, ready: false, questions: [0, 1, 2].map((i) => ({ label: L(`שאלה ${i + 1}`, `Question ${i + 1}`), accepted: i === 0 })) };
 const hwQuestion = (i: number): ExerciseData => ({ ...lx, runId: `hw${i}`, grade: null, perfect: false, clues: [], clueOpen: false, difficulty: 0, statementMd: [L("הוכיחו ש-$\\lim 1/n = 0$.", "Prove that $\\lim 1/n = 0$."), L("חשבו את $\\sum_{k=1}^n k$.", "Compute $\\sum_{k=1}^n k$."), L("הראו ש-$\\sqrt 2$ אי-רציונלי.", "Show that $\\sqrt 2$ is irrational.")][i] ?? "" });
 const hwReply = (name: string, args?: Record<string, unknown>): PracticeData | undefined => {
   if (name === "homework_start") hw = { kind: args?.kind as HomeworkData["kind"], how: args?.kind === "single" ? "tutor" : null, name: "", splitting: true, questions: [], current: 0, exercise: null, error: null };
   else if (name === "practice_state" && hw?.splitting) hw = { ...hw, splitting: false, name: L("תרגיל בית 3", "Homework 3"), questions: (hw.kind === "single" ? [0] : [0, 1, 2]).map((i) => ({ label: L(`שאלה ${i + 1}`, `Question ${i + 1}`), accepted: false })) };
   else if (name === "practice_state" && hw && lx.perfect) hw = { ...hw, questions: hw.questions.map((q, i) => (i === hw?.current ? { ...q, accepted: true } : q)) };
-  else if (name === "homework_how" && hw) hw = { ...hw, how: args?.how as "tutor" | "ai", solving: args?.how === "ai" ? { step: "solve", done: 0, total: hw.questions.length, install: null } : null, ready: false };
+  else if (name === "homework_how" && hw) hw = { ...hw, how: args?.how as "tutor" | "ai", solving: args?.how === "ai" ? { step: "solve", done: hw.questions.filter((q) => q.accepted).length, total: hw.questions.length, install: null } : null, ready: false };
   else if (name === "practice_state" && hw?.solving) {
     // M58: one more solution per poll, then the PDF (the browser download first), then ready
     const s = hw.solving;
@@ -111,7 +137,7 @@ const hwReply = (name: string, args?: Record<string, unknown>): PracticeData | u
   if (hw) hw = { ...hw, exercise: hw.how === "tutor" && hw.questions.length ? lx : null, saved: name === "homework_download" ? `/Users/me/Documents/${hw.how === "ai" ? "solutions" : "solution"}.pdf` : null };
   return { ...practiceBase, hw };
 };
-const practiceReply: Record<string, PracticeData> = { practice_start_request: mcqItem, practice_next_request: mcqItem, practice_answer_mcq: mcqDone, practice_end: practiceSummary };
+const practiceReply: Record<string, PracticeData> = { shalav_practice: practiceBase, practice_start_request: mcqItem, practice_next_request: mcqItem, practice_answer_mcq: mcqDone, practice_end: practiceSummary };
 const settings: SettingsData = { ...base, view: "settings", university: "technion", dataRoot: "/Users/me/Documents/Shalav", learning: { minExercises: 2, minExerciseScore: 85, masteryThreshold: 0.85, requireAllObjectives: true, hintsBeforeSolution: 3 }, conflicts: ["courses/01040195/.shalav/events/dev1 (1).jsonl"] };
 const figure: FigureData = { ...base, view: "figure", kind: "plot", source: JSON.stringify({ xDomain: [-2, 2], yDomain: [-1, 4], data: [{ fn: "x^2", label: "f" }] }), captionMd: "$f(x)=x^2$" };
 const step: StepData = {
@@ -146,8 +172,31 @@ $$
 > $$`,
   sideMd: `$\\N \\subset \\Z$\n\n${L("כל טבעי הוא גם שלם.", "Every natural number is an integer.")}`,
 };
+// M60 ?saved=1: saved lessons and practice sessions; ?resumed=1 (view=step): a resumed lesson with 3 earlier slides
+const ago = (h: number) => new Date(Date.UTC(2026, 9, 22, 12 - h)).toISOString();
+const saved: Record<string, SavedItem[]> = {
+  lesson: [
+    { id: "l1", type: "lesson", title: L("S002 · גבולות", "S002 · Limits"), updatedAt: ago(1), stageId: "S002" },
+    { id: "l2", type: "lesson", title: L("S001 · הגדרה", "S001 · Definition"), updatedAt: ago(30), stageId: "S001" },
+  ],
+  practice: [
+    { id: "p1", type: "test", title: L("כל הקורס", "The whole course"), updatedAt: ago(2) },
+    { id: "p2", type: "homework", title: L("תרגיל בית 3", "Homework 3"), updatedAt: ago(5) },
+    { id: "p3", type: "normal", title: L("נושאים חלשים", "Weak topics"), updatedAt: ago(26) },
+    { id: "p4", type: "homework", title: L("תרגיל בית 2", "Homework 2"), updatedAt: ago(50) },
+  ],
+};
+const historyReply = (name: string, args?: Record<string, unknown>): object | undefined => {
+  const k = args?.kind as string;
+  if (name === "history_list") return { items: q.get("saved") ? saved[k] : [] };
+  if (name === "history_delete") return { items: (saved[k] = (saved[k] ?? []).filter((i) => !(args?.ids as string[]).includes(i.id))) };
+  if (name === "practice_resume") return mcqItem;
+  if (name === "history_slides") return { slides: [1, 2, 3].map((i) => ({ ...step, sideMd: null, figure: null, titleMd: L(`שקף ${i}`, `Slide ${i}`), bodyMd: L(`תוכן השקף ${i}.`, `Content of slide ${i}.`) })) };
+  return undefined;
+};
 const sample = ADVANCED[q.get("sample") ?? ""];
-const initial: CardData = sample ? { ...step, sideMd: null, ...sample } : (({ lesson, mcq, open, figure, step, exercise: q.get("loop") ? lx : exercise, practice: practiceBase, settings } as Record<string, CardData>)[q.get("view") ?? ""] ?? home);
+const initial0: CardData = sample ? { ...step, sideMd: null, ...sample } : (({ lesson, mcq, open, figure, step, exercise: q.get("loop") ? lx : exercise, practice: practiceBase, settings } as Record<string, CardData>)[q.get("view") ?? ""] ?? home);
+const initial: CardData = q.get("resumed") ? { ...initial0, history: { number: "01040195", id: "l1", count: 3 } } as CardData : initial0;
 const said: string[] = [];
 let mode = "inline";
 const reqs: unknown[] = [];
@@ -167,9 +216,9 @@ const tools: string[] = []; // every tool the card called, by name
 const lastArgs: Record<string, unknown> = {}; // the last arguments of each tool, by name
 (window as unknown as { __args: Record<string, unknown> }).__args = lastArgs;
 const host: Host = {
-  callTool: async (name, args) => (tools.push(name), (lastArgs[name] = args), name === "shalav_request" && reqs.push(args), name === "course_create_request" && (created = true), name === "plan_build_request" && q.get("joined") && (building = true), name === "course_translate_request" && (translating = true), name === "plan_remove" && [args?.stageId, ...(course.units.find((u) => u.id === args?.unitId)?.stages.map((x) => x.id) ?? [])].forEach((id) => typeof id === "string" && gone.add(id)), {
+  callTool: async (name, args) => (tools.push(name), args?.kind !== "clear" && (lastArgs[name] = args), name === "shalav_request" && args?.kind !== "clear" && reqs.push(args), name === "course_create_request" && (created = true), name === "plan_build_request" && q.get("joined") && (building = true), name === "course_translate_request" && (translating = true), name === "plan_remove" && [args?.stageId, ...(course.units.find((u) => u.id === args?.unitId)?.stages.map((x) => x.id) ?? [])].forEach((id) => typeof id === "string" && gone.add(id)), {
     // ?stale=1: a newer card exists, so this one folds away
-    structuredContent: (name === "shalav_card" ? { latest: q.get("stale") && !args?.claim ? 2 : 1 } : undefined) ?? (q.get("loop") || hw ? loopReply(name) : undefined) ?? hwReply(name, args) ?? practiceReply[name] ?? (name === "shalav_settings" ? settings : name === "settings_update" ? { ...settings, ...(args?.language ? { language: args.language } : {}), learning: { ...settings.learning, minExercises: 3 } } : undefined) ?? (name === "course_lookup" ? found : name === "shalav_home" ? home : name === "shalav_course" ? prune(customize(created || tools.includes("course_custom_create") ? noPlan : building ? { ...course, build: { state: "running", step: "plan", pending: 0 } } : { ...course, translate: { ...course.translate, running: translating } }, args?.number)) : name === "course_create_request" ? { ok: true, number: "01040195" } : name === "course_custom_create" ? { ok: true, number: CUSTOM } : name === "files_list" ? ((f: FilesData) => (args?.number === CUSTOM ? { ...f, number: CUSTOM, moodle: null } : f))(building ? filesBuilding : q.get("files") === "outside" ? filesOutside() : files) : name === "lesson_state" ? lesson : name === "stage_complete" ? { ...lesson, status: "completed_override" } : name === "stage_reopen" ? lesson : name === "check_answer" ? { selectedIndex: 1, correct: false, correctIndex: 0, explanationMd: L("כי $1/n \\to 0$.", "Since $1/n \\to 0$.") } : name === "attachment_upload" ? { files: [{ sha256: "a".repeat(64), mediaType: "image/jpeg" }] } : name === "exercise_grade_request" || name === "exercise_state" ? graded : name === "plan_build_request" ? { ok: true, joined: !!q.get("joined") } : name === "moodle_import" ? { ok: true } : name === "course_status" ? (q.get("step") === "index" ? { state: "running", step: "index", files: { scanned: 10, scanning: 2, notScanned: 20, total: 32 }, pending: 1 } : { state: "running", step: "plan", unit: { k: 1, n: 4 }, pending: 1 }) : name === "step_answer" ? { answerMd: L("כי $0$ הוא איבר נייטרלי.", "Because $0$ is neutral.") } : { ok: true }),
+    structuredContent: (name === "shalav_card" ? { latest: q.get("stale") && !args?.claim ? 2 : 1 } : undefined) ?? (q.get("loop") || hw ? loopReply(name) : undefined) ?? historyReply(name, args) ?? testReply(name, args) ?? hwReply(name, args) ?? practiceReply[name] ?? (name === "shalav_settings" ? settings : name === "settings_update" ? { ...settings, ...(args?.language ? { language: args.language } : {}), learning: { ...settings.learning, minExercises: 3 } } : undefined) ?? (name === "course_lookup" ? found : name === "shalav_home" ? home : name === "shalav_course" ? prune(customize(created || tools.includes("course_custom_create") ? noPlan : building ? { ...course, build: { state: "running", step: "plan", pending: 0 } } : { ...course, translate: { ...course.translate, running: translating } }, args?.number)) : name === "course_create_request" ? { ok: true, number: "01040195" } : name === "course_custom_create" ? { ok: true, number: CUSTOM } : name === "files_list" ? ((f: FilesData) => (args?.number === CUSTOM ? { ...f, number: CUSTOM, moodle: null } : f))(building ? filesBuilding : q.get("files") === "outside" ? filesOutside() : files) : name === "lesson_state" ? lesson : name === "stage_complete" ? { ...lesson, status: "completed_override" } : name === "stage_reopen" ? lesson : name === "check_answer" ? { selectedIndex: 1, correct: false, correctIndex: 0, explanationMd: L("כי $1/n \\to 0$.", "Since $1/n \\to 0$.") } : name === "attachment_upload" ? { files: [{ sha256: "a".repeat(64), mediaType: "image/jpeg" }] } : name === "exercise_grade_request" ? graded : name === "exercise_state" ? (tools.includes("exercise_grade_request") ? graded : null) : name === "plan_build_request" ? { ok: true, joined: !!q.get("joined") } : name === "moodle_import" ? { ok: true } : name === "course_status" ? (q.get("step") === "index" ? { state: "running", step: "index", files: { scanned: 10, scanning: 2, notScanned: 20, total: 32 }, pending: 1 } : { state: "running", step: "plan", unit: { k: 1, n: 4 }, pending: 1 }) : name === "step_answer" ? { answerMd: L("כי $0$ הוא איבר נייטרלי.", "Because $0$ is neutral.") } : { ok: true }),
   }),
   say: async (t) => void said.push(t),
   context: () => ({ theme: q.get("theme") ?? undefined, availableDisplayModes: ["inline", "pip"], displayMode: mode }),

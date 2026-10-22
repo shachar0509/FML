@@ -46,6 +46,7 @@ export function Homework({
     return r;
   };
   const refresh = () => void call("practice_state");
+  const stop = () => void callTool("shalav_cancel", { key: `hw:${number}` });
 
   // The questions are read (and, M58, solved) by Claude in the chat; follow it until they land.
   const waiting = !!hw?.splitting || !!hw?.solving;
@@ -78,6 +79,7 @@ export function Homework({
           disabled={busy}
           onBusy={setUp}
           hint={t(`homework.drop.${k}`)}
+          button={t(`homework.upload.${k}`)}
         />
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="ghost" onClick={back}>
@@ -115,7 +117,7 @@ export function Homework({
           {hw.error || !hw.splitting ? (
             <p role="alert">{t("homework.failed")}</p>
           ) : (
-            <Waiting go={go} label={t("homework.reading")} />
+            <Waiting go={go} label={t("homework.reading")} cancel={stop} />
           )}
         </Board>
         {(hw.error || !hw.splitting) && (
@@ -196,6 +198,7 @@ export function Homework({
           {s && (
             <Waiting
               go={go}
+              cancel={stop}
               label={
                 s.step === "solve"
                   ? t("homework.solving", { n: Math.min(s.done + 1, s.total), of: s.total })
@@ -205,17 +208,20 @@ export function Homework({
               }
             />
           )}
-          {!s && hw.error && <p role="alert">{t("homework.solveFailed")}</p>}
+          {/* not solving and no PDF: it failed, was stopped, or Shalav restarted — it can go on from the first unsolved question */}
+          {!s && !hw.ready && (
+            <p role={hw.error ? "alert" : "status"}>{t(hw.error ? "homework.solveFailed" : "homework.paused")}</p>
+          )}
         </Board>
         <div className="flex flex-wrap items-center gap-2">
-          {!s && hw.error && (
+          {!s && !hw.ready && (
             <Button
               variant="outline"
               onClick={async () =>
                 !(await call("homework_how", { how: "ai" })).isError && void go()
               }
             >
-              {t("homework.again")}
+              {t("homework.resume")}
             </Button>
           )}
           <Button variant="ghost" onClick={() => void end()}>

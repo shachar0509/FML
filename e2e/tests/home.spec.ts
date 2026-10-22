@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { axe, box, host, LANGS, pageErrors, THEMES } from "./helpers";
+import { axe, box, host, LANGS, lastReq, pageErrors, THEMES } from "./helpers";
 
 for (const lang of LANGS)
   for (const theme of THEMES)
@@ -10,6 +10,11 @@ for (const lang of LANGS)
       await expect(page.locator("html")).toHaveClass(theme === "dark" ? /dark/ : /^(?!.*dark)/);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       await expect(page.getByText(lang === "he" ? "חשבון אינפיניטסימלי 1" : "Infinitesimal Calculus 1")).toBeVisible();
+      // Learn and Practice on the row of a course with a plan, not on one without
+      const row = page.locator("ul > li").first();
+      await expect(row.getByRole("button", { name: lang === "he" ? "לימוד — S012" : "Learn — S012" })).toBeVisible();
+      await expect(row.getByRole("button", { name: lang === "he" ? "תרגול" : "Practice" })).toBeVisible();
+      await expect(page.locator("ul > li").nth(1).getByRole("button", { name: lang === "he" ? /^לימוד/ : /^Learn/ })).toHaveCount(0);
       await page.waitForTimeout(400);
       await page.screenshot({ path: `e2e/tests_output/home/card-home-${lang}-${theme}.png` });
       await axe(page);
@@ -50,4 +55,18 @@ for (const lang of LANGS)
     await expect(mine).not.toContainText("Cm1abc");
     await axe(page);
     await page.screenshot({ path: `e2e/tests_output/home/card-home-layout-${lang}.png` });
+  });
+
+for (const lang of LANGS)
+  test(`course row: the box opens the course, Learn asks the chat, Practice opens practice (${lang})`, async ({ page }) => {
+    const he = lang === "he";
+    await page.goto(host(`lang=${lang}&theme=light`));
+    const row = page.locator("ul > li").first();
+    await row.getByRole("button", { name: he ? "לימוד — S012" : "Learn — S012" }).click();
+    expect(await lastReq(page)).toBe(JSON.stringify({ kind: "learn", stageId: "S012", title: he ? "גבולות של סדרות" : "Limits of sequences" }));
+    await row.getByRole("button", { name: he ? "תרגול" : "Practice" }).click();
+    await expect(page.getByText(he ? "איך רוצים לתרגל?" : "How do you want to practice?")).toBeVisible();
+    await page.goto(host(`lang=${lang}&theme=light`));
+    await page.getByText(he ? "חשבון אינפיניטסימלי 1" : "Infinitesimal Calculus 1").click();
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(he ? "חשבון" : "Infinitesimal");
   });

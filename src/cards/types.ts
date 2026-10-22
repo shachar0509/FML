@@ -6,9 +6,16 @@ export type HomeData = {
   theme: "system" | "light" | "dark";
   /** null until the student has chosen (the card then shows the picker). */
   university: "technion" | "huji" | "reichman" | "braude" | null;
-  courses: { number: string; name: string; credits: number; pct: number; stage: string | null; building?: boolean; /** M52: a custom course (no number or credits shown) */ custom?: boolean }[];
+  courses: { number: string; name: string; credits: number; pct: number; stage: string | null; building?: boolean; /** M52: a custom course (no number or credits shown) */ custom?: boolean; /** the stage Learn opens, and whether Practice can open */ current?: { id: string; title: string } | null; hasPlan?: boolean }[];
 };
-export type Base = { language: "he" | "en"; theme: "system" | "light" | "dark" };
+export type Base = {
+  language: "he" | "en";
+  theme: "system" | "light" | "dark";
+  /** M60: the card of a resumed lesson's checkpoint; its earlier slides can be browsed */
+  history?: { number: string; id: string; count: number };
+};
+/** M60: a saved lesson or practice session in the list */
+export type SavedItem = { id: string; type: "lesson" | "homework" | "single" | "test" | "normal"; title: string; updatedAt: string; stageId?: string };
 export type AddData = Base & { view: "add"; example: string };
 export type CustomData = Base & { view: "custom" };
 export type Stage = { id: string; title: string; summary: string; status: "locked" | "available" | "in_progress" | "completed" | "completed_override"; mastery: number };
@@ -149,6 +156,23 @@ export type PracticeData = Base & {
   loading: boolean;
   error: string | null;
   summary: { items: number; avgScore: number; newMistakes: string[]; weakStages: { id: string; title: string }[] } | null;
+  /** M59 Test practice: exam questions found / not yet served (in the session's scope), the plan's units, weak concepts, the note for the current question, the quiz-notes scope */
+  test: TestData;
+};
+export type TestData = {
+  exams: number;
+  left: number;
+  units: { id: string; title: string; stageIds: string[] }[];
+  weak: { id: string; title: string }[];
+  /** a session is running in test mode */
+  active: boolean;
+  note: "stern" | "weak" | "learned" | null;
+  noteStage: { id: string; title: string } | null;
+  /** the host model is reading the uploaded quiz notes */
+  scoping: boolean;
+  /** the stages the quiz notes cover, once read */
+  notes: { id: string; title: string }[] | null;
+  error: string | null;
 };
 export type CardData = HomeData | AddData | CustomData | CourseData | LessonData | McqData | OpenData | ExerciseData | FigureData | StepData | PracticeData | SettingsData;
 
@@ -159,7 +183,9 @@ export type Req =
   | { kind: "learn" | "relearn"; stageId: string; title: string }
   | { kind: "answer"; text: string; number?: string; files?: string[] }
   | { kind: "step"; action: "next" | "again" }
-  | { kind: "step"; action: "question"; text: string };
+  | { kind: "step"; action: "question"; text: string }
+  /** M60: continue a saved lesson */
+  | { kind: "resume"; number: string; id: string };
 export type Go = (req?: Req) => Promise<void>;
 
 export type Host = {

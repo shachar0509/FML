@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { existsSync } from "node:fs";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -137,4 +138,39 @@ it("runs a lesson: start, questions, events, status, completion, reopen + recap"
   expect(again).toContain("reopened");
   expect(again).toContain("Gaps: limits");
   expect(again).toContain("first objective");
+
+  // ----- M60: lessons are saved; a new server (Claude Desktop restarted) continues the newest one -----
+  const s2 = await call("shalav_start_lesson", { courseNumber: n, stageId: "S002" });
+  expect(text(s2)).not.toContain("LESSON SO FAR");
+  await call("teach_step", { titleMd: "Limits", bodyMd: "first slide" });
+  await call("shalav_request", { kind: "step", action: "next" });
+  await call("teach_step", { titleMd: "Epsilon", bodyMd: "second slide" });
+  const last = sc<McqData>(await call("present_mcq", { stageId: "S002", questionMd: "Which?", options: ["x", "y"], correctIndex: 1, explanationMd: "since y", conceptTags: [] }));
+  await call("check_answer", { checkId: last.checkId, selectedIndex: 1 }); // answered before leaving
+  const answered = (await events()).filter((e) => e.type === "check_answered").length;
+  const lessons = sc<{ items: { id: string; title: string; stageId: string }[] }>(await call("history_list", { number: n, kind: "lesson" })).items;
+  expect(lessons[0]).toMatchObject({ stageId: "S002", title: expect.stringMatching(/^S002 · /) });
+  expect(lessons.length).toBeGreaterThan(1); // the S001 lessons too
+  const root = useSettings.getState().settings.dataRoot;
+  expect(existsSync(join(root, ".chat_history", n, `${lessons[0]?.id}.json`))).toBe(true);
+
+  const [a2, b2] = InMemoryTransport.createLinkedPair();
+  const c2 = new Client({ name: "t2", version: "0" });
+  await Promise.all([createServer().connect(a2), c2.connect(b2)]);
+  const call2 = (name: string, args: Record<string, unknown> = {}) => c2.callTool({ name, arguments: args });
+  const back = await call2("shalav_start_lesson", { courseNumber: n, resume: "latest" });
+  expect(text(back)).toContain("THE LESSON SO FAR");
+  for (const x of ["Limits", "Epsilon", "Pressed Continue", "Which?"]) expect(text(back)).toContain(x);
+  expect(sc<McqData & { history: { id: string; count: number } }>(back)).toMatchObject({ view: "mcq", checkId: last.checkId, questionMd: "Which?", history: { id: lessons[0]?.id, count: 2 } });
+  // the key came back with it, and the answer given before leaving: not recorded again
+  expect(sc<{ correct: boolean; selectedIndex: number }>(await call2("check_answer", { checkId: last.checkId, selectedIndex: 0 }))).toMatchObject({ correct: true, selectedIndex: 1 });
+  expect((await events()).filter((e) => e.type === "check_answered")).toHaveLength(answered);
+  expect(sc<{ slides: { titleMd: string }[] }>(await call2("history_slides", { number: n, id: lessons[0]?.id })).slides.map((x) => x.titleMd)).toEqual(["Limits", "Epsilon"]);
+  // a card request to continue a chosen lesson
+  await call2("shalav_request", { kind: "resume", number: n, id: lessons[1]?.id });
+  expect(text(await call2("shalav_next_job"))).toContain(`resume \\"${lessons[1]?.id}\\"`);
+  expect((await call2("shalav_start_lesson", { courseNumber: n, resume: "nope" })).isError).toBe(true);
+  // delete
+  const left = sc<{ items: unknown[] }>(await call2("history_delete", { number: n, kind: "lesson", ids: [lessons[0]?.id] })).items;
+  expect(left).toHaveLength(lessons.length - 1);
 });

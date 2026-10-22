@@ -14,6 +14,8 @@ type Job = {
   /** Set when the answer must be a call of this tool; otherwise the answer is plain text. */
   tool?: ToolDef;
   state: "queued" | "shown" | "answered";
+  /** Created at (ms). */
+  at: number;
   resolve(r: ClaudeResponse): void;
   reject(e: unknown): void;
 };
@@ -25,6 +27,8 @@ type Op = {
   id: number;
   label: string;
   lane: Lane;
+  /** What the card cancels it by (e.g. "web:104031"). */
+  key?: string;
   ctl: AbortController;
   settled: boolean;
   lastJob?: number;
@@ -38,6 +42,14 @@ const WAIT_MS = 45_000;
 /** Jobs handed out per call: the model answers them with parallel shalav_submit_job calls in one turn. */
 const PER_CALL = 3;
 const IMAGE_BYTES = 1_500_000; // base64 chars of images per tool result, to stay well inside the host's result size
+/** No chat touched the lane for this long while an op waits on queued jobs: nobody will fetch them. */
+const IDLE_MS = 5 * 60_000;
+/** A shown job is being answered (that can take long); only a lane silent this long means the chat is gone. */
+const SHOWN_MS = 30 * 60_000;
+/** A shown job of a lane silent this long is handed out again (Nudge after the chat was stopped mid-answer). */
+const RESHOW_MS = 2 * 60_000;
+/** Error message of a stopped op; the cards translate it. */
+export const STOPPED = "job.stopped";
 
 export class BridgeGateway implements ClaudeGateway {
   private jobs = new Map<number, Job>();
@@ -52,13 +64,21 @@ export class BridgeGateway implements ClaudeGateway {
   private servedAt = 0;
   /** The answer schema of the lane's last shown job (not repeated right after). Per lane, not per op: a build chat interleaves courses. */
   private lastSchema: Partial<Record<Lane, { text: string; job: number }>> = {};
+  /** Last time an op started in the lane or a chat asked for / answered one of its jobs. */
+  private lastActive: Record<Lane, number> = { build: 0, study: 0 };
+
+  constructor() {
+    setInterval(() => this.sweep(), 30_000).unref?.();
+  }
 
   /** Run a domain operation; every send() made inside it belongs to it and can be cancelled together. */
-  run<T>(label: string, fn: (signal: AbortSignal) => Promise<T>, summary?: (r: T) => Content[], lane: Lane = "study"): { opId: number; done: Promise<T> } {
+  run<T>(label: string, fn: (signal: AbortSignal) => Promise<T>, summary?: (r: T) => Content[], lane: Lane = "study", key?: string): { opId: number; done: Promise<T> } {
+    this.lastActive[lane] = Date.now();
     const op: Op = {
       id: ++this.opSeq,
       label,
       lane,
+      key,
       ctl: new AbortController(),
       settled: false,
       summary: (summary as Op["summary"]) ?? (() => [{ type: "text", text: "Done." }]),
@@ -86,10 +106,35 @@ export class BridgeGateway implements ClaudeGateway {
     this.ops.get(opId)?.ctl.abort();
   }
 
+  /** The card's Cancel: every op of `key`, settled ones too (their prefetched jobs may still be queued). */
+  cancelKey(key: string): void {
+    for (const o of this.ops.values()) if (o.key === key) o.ctl.abort();
+  }
+
+  /** Ends ops nobody will serve, so their cards stop showing a spinner. Never one whose job a chat is answering. */
+  sweep(now = Date.now()): void {
+    for (const lane of ["build", "study"] as const) {
+      const idle = now - this.lastActive[lane];
+      const jobs = [...this.jobs.values()].filter((j) => this.laneOf(j) === lane);
+      const waited = [...this.ops.values()].some((o) => o.lane === lane && !o.settled);
+      const dead = jobs.some((j) => j.state === "shown") ? idle > SHOWN_MS : waited && idle > IDLE_MS;
+      if (!dead) continue;
+      for (const j of jobs) {
+        if (j.opId !== undefined) this.cancel(j.opId);
+        else {
+          this.jobs.delete(j.id);
+          j.reject(new ClaudeError("aborted", STOPPED));
+        }
+      }
+      this.changed();
+    }
+  }
+
   send(req: ClaudeRequest): Promise<ClaudeResponse> {
     const op = this.als.getStore();
     const signals = [req.signal, op?.ctl.signal].filter((s): s is AbortSignal => !!s);
-    if (signals.some((s) => s.aborted)) return Promise.reject(new ClaudeError("aborted", "aborted"));
+    const stopped = () => new ClaudeError("aborted", op?.ctl.signal.aborted ? STOPPED : "aborted");
+    if (signals.some((s) => s.aborted)) return Promise.reject(stopped());
 
     const tools = (req.tools ?? []).filter((t): t is ToolDef => "input_schema" in t); // server tools are dropped
     const tool = req.toolChoice?.type === "tool" ? tools.find((t) => t.name === (req.toolChoice as { name: string }).name) : tools.length === 1 ? tools[0] : undefined;
@@ -98,11 +143,11 @@ export class BridgeGateway implements ClaudeGateway {
     const parentJobId = isFix ? op?.lastJob : undefined;
 
     return new Promise<ClaudeResponse>((resolve, reject) => {
-      const job: Job = { id: ++this.seq, opId: op?.id, req, parentJobId, tool, state: "queued", resolve, reject };
+      const job: Job = { id: ++this.seq, opId: op?.id, req, parentJobId, tool, state: "queued", at: Date.now(), resolve, reject };
       const abort = () => {
         if (job.state === "answered") return;
         this.jobs.delete(job.id);
-        reject(new ClaudeError("aborted", "aborted"));
+        reject(stopped());
         this.changed();
       };
       for (const s of signals) s.addEventListener("abort", abort, { once: true });
@@ -130,10 +175,22 @@ export class BridgeGateway implements ClaudeGateway {
     return Date.now() - this.servedAt < 3 * 60_000 && [...this.ops.values()].some((o) => o.lane === "build" && !o.settled);
   }
 
+  /** Jobs of the lane a chat may take: queued ones, and shown ones of a lane silent for RESHOW_MS (their chat stopped). */
+  private servable(lane: Lane, reshow: boolean): Job[] {
+    return [...this.jobs.values()].filter((j) => (j.state === "queued" || (reshow && j.state === "shown")) && this.laneOf(j) === lane);
+  }
+
+  private touch(lane: Lane): boolean {
+    const now = Date.now();
+    const silent = now - this.lastActive[lane] > RESHOW_MS;
+    this.lastActive[lane] = now;
+    if (lane === "build") this.servedAt = now;
+    return silent;
+  }
+
   /** shalav_next_job */
-  next(lane: Lane = "study"): Content[] {
-    if (lane === "build") this.servedAt = Date.now();
-    const jobs = [...this.jobs.values()].filter((j) => j.state === "queued" && this.laneOf(j) === lane);
+  next(lane: Lane = "study", reshow = this.touch(lane)): Content[] {
+    const jobs = this.servable(lane, reshow);
     if (!jobs.length) {
       if (lane === "study") return [{ type: "text", text: "No Shalav job is pending." }];
       const running = [...this.ops.values()].some((o) => o.lane === "build" && !o.settled);
@@ -161,19 +218,26 @@ export class BridgeGateway implements ClaudeGateway {
   }
 
   /** shalav_next_job: like next(), but if an operation of the lane is still running (its first request not parked yet) wait for it, up to 20 s. */
-  async nextWait(lane: Lane = "study"): Promise<Content[]> {
+  async nextWait(lane: Lane = "study", signal?: AbortSignal): Promise<Content[]> {
+    const reshow = this.touch(lane);
     const deadline = Date.now() + 20_000;
-    while (this.pending(lane) === 0 && [...this.ops.values()].some((o) => o.lane === lane && !o.settled) && Date.now() < deadline) {
-      await new Promise<void>((resolve) => {
-        const t = setTimeout(resolve, deadline - Date.now());
-        this.listeners.add(() => (clearTimeout(t), resolve()));
-      });
+    // The host cancelled this call (Stop): the ops it waited for will not be served.
+    const off = onAbort(signal, () => [...this.ops.values()].filter((o) => o.lane === lane && !o.settled).forEach((o) => this.cancel(o.id)));
+    try {
+      while (this.servable(lane, reshow).length === 0 && [...this.ops.values()].some((o) => o.lane === lane && !o.settled) && Date.now() < deadline && !signal?.aborted) {
+        await new Promise<void>((resolve) => {
+          const t = setTimeout(resolve, deadline - Date.now());
+          this.listeners.add(() => (clearTimeout(t), resolve()));
+        });
+      }
+    } finally {
+      off();
     }
-    return this.next(lane);
+    return this.next(lane, reshow);
   }
 
   /** shalav_submit_job: resolve the parked promise, then wait for the next job / the final result / an error. */
-  async submit(a: { jobId: number; input?: unknown; text?: string }): Promise<{ content: Content[]; isError?: boolean }> {
+  async submit(a: { jobId: number; input?: unknown; text?: string }, signal?: AbortSignal): Promise<{ content: Content[]; isError?: boolean }> {
     const job = this.jobs.get(a.jobId);
     if (!job || job.state !== "shown") return err(`Job #${a.jobId} is not waiting for an answer.`);
     let block: Block;
@@ -192,8 +256,14 @@ export class BridgeGateway implements ClaudeGateway {
 
     const op = job.opId === undefined ? undefined : this.ops.get(job.opId);
     if (!op) return { content: [{ type: "text", text: "Answer received." }] };
-    if (op.lane === "build") this.servedAt = Date.now();
-    return this.wait(op);
+    this.touch(op.lane);
+    // The host cancelled this call while it waited for the op's next step: nobody will answer it.
+    const off = onAbort(signal, () => this.cancel(op.id));
+    try {
+      return await this.wait(op);
+    } finally {
+      off();
+    }
   }
 
   private async wait(op: Op): Promise<{ content: Content[]; isError?: boolean }> {
@@ -291,5 +361,12 @@ export class BridgeGateway implements ClaudeGateway {
     return out.filter((c) => c.type !== "text" || c.text);
   }
 }
+
+const onAbort = (s: AbortSignal | undefined, f: () => void): (() => void) => {
+  if (!s) return () => undefined;
+  if (s.aborted) return f(), () => undefined;
+  s.addEventListener("abort", f, { once: true });
+  return () => s.removeEventListener("abort", f);
+};
 
 const err = (message: string) => ({ content: [{ type: "text" as const, text: message }], isError: true });

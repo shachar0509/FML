@@ -6,7 +6,9 @@ export type Scope =
   | { kind: "all" }
   | { kind: "unit"; unitId: string }
   | { kind: "weak" }
-  | { kind: "stage"; stageId: string };
+  | { kind: "stage"; stageId: string }
+  /** M59 Test practice: past exam questions only; `stageIds` null = the whole course */
+  | { kind: "test"; stageIds: string[] | null };
 
 export const ITEM_CYCLE = ["E", "E", "M", "E", "O", "E", "E", "M", "E", "O"] as const;
 /** M56: the more advanced the student (level = skill, 2-5; a new student is 3.5), the more of the items are exercises. */

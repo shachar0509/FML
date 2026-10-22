@@ -44,6 +44,7 @@ export function AnswerFiles({
   disabled,
   onBusy,
   hint,
+  button,
 }: {
   number: string;
   callTool: Host["callTool"];
@@ -52,6 +53,8 @@ export function AnswerFiles({
   disabled?: boolean;
   onBusy?: (busy: boolean) => void;
   hint: string;
+  /** the upload button's text (default "Upload solution") */
+  button?: string;
 }) {
   const { t } = useTranslation();
   const pick = useRef<HTMLInputElement>(null);
@@ -136,7 +139,7 @@ export function AnswerFiles({
       />
       <Button variant="outline" className="self-start" disabled={disabled || up} onClick={() => pick.current?.click()}>
         <ImagePlus className="size-4" aria-hidden />
-        {up ? t("learn.uploading") : t("exercise.upload")}
+        {up ? t("learn.uploading") : (button ?? t("exercise.upload"))}
       </Button>
     </div>
   );

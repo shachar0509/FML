@@ -1,5 +1,6 @@
 import { Check, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/core/components/ui/button";
 import type { BuildStatus, FileCounts, Go } from "../types";
 import { Waiting } from "./Waiting";
 
@@ -21,7 +22,7 @@ function Counts({ c }: { c: FileCounts }) {
   );
 }
 /** Plan build checklist (v1 §4.3): spinner -> check. */
-export function Checklist({ b, go }: { b: BuildStatus; go: Go }) {
+export function Checklist({ b, go, cancel }: { b: BuildStatus; go: Go; cancel?: () => void }) {
   const { t } = useTranslation();
   const cur = STEPS.indexOf(b.step ?? "plan");
   return (
@@ -47,7 +48,15 @@ export function Checklist({ b, go }: { b: BuildStatus; go: Go }) {
           </li>
         ))}
       </ul>
-      {!!b.pending && <Waiting go={go} req={{ kind: "build" }} />}
+      {b.pending ? (
+        <Waiting go={go} req={{ kind: "build" }} cancel={cancel} />
+      ) : (
+        cancel && (
+          <Button variant="ghost" size="sm" className="mt-2" onClick={cancel}>
+            {t("job.cancel")}
+          </Button>
+        )
+      )}
     </div>
   );
 }

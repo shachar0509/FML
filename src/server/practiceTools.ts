@@ -4,12 +4,15 @@ import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import type { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod";
 import { writeFile } from "node:fs/promises";
-import type { HomeworkData, PracticeData } from "@/cards/types";
+import type { HomeworkData, PracticeData, TestData } from "@/cards/types";
 import { loadCtx } from "@/core/domain/practice/exercises";
 import { Practice } from "@/core/domain/practice/engine";
 import { completedIds, type Scope } from "@/core/domain/practice/select";
-import { acceptedPages, asExercise, endHomework, loadHomework, newHomework, saveHomework, solutionsPdf, solveHomework, splitHomework, type Homework } from "@/core/domain/practice/homework";
+import { loadConv } from "@/core/domain/history/history";
+import type { PState } from "@/core/domain/practice/engine";
+import { acceptedPages, asExercise, endHomework, loadHomework, newHomework, resumeHomework, saveHomework, solutionsPdf, solveHomework, splitHomework, type Homework } from "@/core/domain/practice/homework";
 import { ExerciseRun, perfect } from "@/core/domain/practice/run";
+import { examPool, inScope, loadStore, scopeFromNotes, scopeOf } from "@/core/domain/practice/test";
 import { fs } from "@/core/lib/fs/fs";
 import { loadImageB64 } from "@/core/lib/attachments";
 import { coursePaths } from "@/core/lib/fs/paths";
@@ -22,13 +25,23 @@ import { CARDS_URI } from "./resources";
 
 const appOnly = { ui: { resourceUri: CARDS_URI, visibility: ["app" as const] } };
 const num = z.string().regex(COURSE_ID_RE);
-const scopeSchema = z.union([z.object({ kind: z.enum(["all", "weak"]) }), z.object({ kind: z.literal("unit"), unitId: z.string() }), z.object({ kind: z.literal("stage"), stageId: z.string() })]);
+const scopeSchema = z.union([
+  z.object({ kind: z.enum(["all", "weak"]) }), z.object({ kind: z.literal("unit"), unitId: z.string() }), z.object({ kind: z.literal("stage"), stageId: z.string() }),
+  z.object({ kind: z.literal("test"), stageIds: z.array(z.string()).min(1).nullable() }),
+]);
 const out = (text: string, structuredContent?: object) => ({ content: [{ type: "text" as const, text }], ...(structuredContent ? { structuredContent: structuredContent as Record<string, unknown> } : {}) });
 const fail = (text: string) => ({ ...out(text), isError: true as const });
 const files = z.array(z.object({ sha256: z.string().regex(/^[0-9a-f]{64}$/), mediaType: z.enum(["image/jpeg", "image/png"]) })).min(1).max(12);
 
 /** Practice card (plan v2 §6.5): the v1 `Practice` engine, one session per course in memory (its state is also saved as v1 `ui` lines). */
 export function registerPracticeTools(server: McpServer, bridge: BridgeGateway, exercises: ReturnType<typeof registerExerciseTools>) {
+  /** M60: deleted saved sessions that are running end (the homework is kept under its id, as when left). */
+  async function forget(n: string, ids: string[]) {
+    const p = sessions.get(n);
+    if (p?.state?.cid && ids.includes(p.state.cid)) p.drop();
+    const hw = await loadHomework(n);
+    if (hw && ids.includes(hw.id)) await endHomework(n);
+  }
   const sessions = new Map<string, Practice>();
 
   async function session(n: string): Promise<Practice> {
@@ -80,6 +93,26 @@ export function registerPracticeTools(server: McpServer, bridge: BridgeGateway, 
     };
   }
 
+  // ----- M59: test practice -----
+  const scoping = new Set<string>();
+  const notes = new Map<string, string[]>(); // the stages the uploaded quiz notes cover
+  const testError = new Map<string, string>();
+
+  async function testData(n: string, p: Practice, tr: (s: string) => string, plan: Awaited<ReturnType<typeof loadCtx>>["plan"]): Promise<TestData> {
+    const [pool, store] = await Promise.all([examPool(n), loadStore(n)]);
+    const burned = new Set(store.burned.map((b) => b.key));
+    const sc = scopeOf(plan.stages, p.state?.scope.kind === "test" ? p.state.scope.stageIds : null);
+    const title = (id: string) => ({ id, title: tr(plan.stages.find((s) => s.id === id)?.title ?? id) });
+    const t = p.state?.test;
+    return {
+      exams: pool.length, left: pool.filter((x) => !burned.has(x.key) && inScope(x.ex, sc)).length,
+      units: plan.units.map((u) => ({ id: u.id, title: tr(u.title), stageIds: u.stageIds })),
+      weak: Object.entries(store.concepts).filter(([, c]) => c.status === "weak").map(([id]) => title(id)),
+      active: p.state?.scope.kind === "test", note: t?.note ?? null, noteStage: t?.note && t.noteStage ? title(t.noteStage) : null,
+      scoping: scoping.has(n), notes: notes.get(n)?.map(title) ?? null, error: testError.get(n) ?? null,
+    };
+  }
+
   async function data(n: string, p: Practice): Promise<PracticeData> {
     const { language, theme } = useSettings.getState().settings;
     const ctx = await loadCtx(n);
@@ -101,14 +134,14 @@ export function registerPracticeTools(server: McpServer, bridge: BridgeGateway, 
       mode: p.summary ? "summary" : st ? "item" : done.size ? "choose" : "locked",
       units: ctx.plan.units.filter((u) => u.stageIds.some((s) => done.has(s))).map((u) => ({ id: u.id, title: tr(u.title) })),
       stages: ctx.plan.stages.filter((s) => done.has(s.id)).map((s) => ({ id: s.id, title: tr(s.title) })),
-      counters: p.counters, item, loading: p.loading, error: p.error, summary: p.summary, hw: await hwData(n),
+      counters: p.counters, item, loading: p.loading, error: p.error, summary: p.summary, hw: await hwData(n), test: await testData(n, p, tr, ctx.plan),
     };
   }
 
   /** Run an engine action as a bridge op; if it needs Claude the card asks the chat to fetch the job. */
   async function act(n: string, label: string, fn: (p: Practice) => Promise<unknown>) {
     const p = await session(n);
-    const { done } = bridge.run(`practice ${label}`, () => fn(p), () => [{ type: "text", text: "Done. The card shows the result; do not repeat it, wait for the student." }]);
+    const { done } = bridge.run(`practice ${label}`, () => fn(p), () => [{ type: "text", text: "Done. The card shows the result; do not repeat it, wait for the student." }], "study", `practice:${n}`);
     done.catch(() => undefined);
     await Promise.race([done.catch(() => undefined), new Promise((r) => setTimeout(r, 100))]);
     return out(p.loading ? "Working. Call shalav_next_job now." : "ok", await data(n, p));
@@ -125,7 +158,7 @@ export function registerPracticeTools(server: McpServer, bridge: BridgeGateway, 
     "shalav_practice",
     {
       title: "Practice",
-      description: "Open the Practice card for a course (needs a plan): solve the student's homework or one question with the tutor (or have the AI solve the homework), or normal practice of completed stages. Optional scope (normal practice only): {kind:'all'|'weak'} or {kind:'unit',unitId} or {kind:'stage',stageId}; without it the card lets the student choose.",
+      description: "Open the Practice card for a course (needs a plan): solve the student's homework or one question with the tutor (or have the AI solve the homework), test practice (past exam questions only, each once, the whole course or a quiz's subjects), or normal practice of completed stages. Optional scope (normal practice only): {kind:'all'|'weak'} or {kind:'unit',unitId} or {kind:'stage',stageId}; without it the card lets the student choose.",
       inputSchema: z.object({ courseNumber: num, scope: scopeSchema.optional() }),
       _meta: { ui: { resourceUri: CARDS_URI } },
     },
@@ -173,7 +206,7 @@ export function registerPracticeTools(server: McpServer, bridge: BridgeGateway, 
       } finally {
         reading.delete(n);
       }
-    }, () => [{ type: "text", text: "Read. The card shows the questions; do not repeat them, wait for the student." }]);
+    }, () => [{ type: "text", text: "Read. The card shows the questions; do not repeat them, wait for the student." }], "study", `hw:${n}`);
     done.catch(() => undefined);
     return state(n, "Reading started. Call shalav_next_job now.");
   });
@@ -200,7 +233,7 @@ export function registerPracticeTools(server: McpServer, bridge: BridgeGateway, 
       } finally {
         solving.delete(n);
       }
-    }, () => [{ type: "text", text: "The solutions are done; the card prints them as a PDF for the student to download. Do not repeat them in the chat." }]);
+    }, () => [{ type: "text", text: "The solutions are done; the card prints them as a PDF for the student to download. Do not repeat them in the chat." }], "study", `hw:${n}`);
     done.catch(() => undefined);
     return state(n, "Solving started. Call shalav_next_job now.");
   });
@@ -227,9 +260,39 @@ export function registerPracticeTools(server: McpServer, bridge: BridgeGateway, 
     hwError.delete(n);
     return state(n);
   });
+  app("test_scope_request", "read the quiz material notes the student uploaded and choose the stages the quiz covers (an AI job).", { files }, async ({ courseNumber: n, files: f }: { courseNumber: string; files: z.infer<typeof files> }) => {
+    if (scoping.has(n)) return fail("Already reading the notes.");
+    scoping.add(n);
+    notes.delete(n);
+    testError.delete(n);
+    const { done } = bridge.run("read the quiz notes", async () => {
+      try {
+        notes.set(n, await scopeFromNotes(env(n), n, f.map((x) => ({ type: "image_ref" as const, ...x }))));
+      } catch (e) {
+        testError.set(n, e instanceof Error ? e.message : String(e));
+      } finally {
+        scoping.delete(n);
+      }
+    }, () => [{ type: "text", text: "Read. The card shows the quiz's subjects; do not repeat them, wait for the student." }], "study", `test:${n}`);
+    done.catch(() => undefined);
+    return state(n, "Reading started. Call shalav_next_job now.");
+  });
+  // ----- M60: saved sessions -----
+  app("practice_resume", "continue a saved practice session or homework.", { id: z.string().max(64) }, async ({ courseNumber: n, id }: { courseNumber: string; id: string }) => {
+    const c = await loadConv(n, id);
+    if (!c || c.kind !== "practice" || !c.state) return fail("No such saved session.");
+    hwError.delete(n);
+    if (c.type === "homework" || c.type === "single") {
+      await resumeHomework(n, c.state as Homework);
+      return state(n);
+    }
+    await endHomework(n); // the card shows a homework first
+    return act(n, "resume", (p) => p.resume(c.state as PState));
+  });
   app("practice_learn_again", "reopen a weak stage from the summary.", { stageId: z.string() }, async ({ courseNumber, stageId }: { courseNumber: string; stageId: string }) => {
     const p = await session(courseNumber);
     await p.relearn(stageId);
     return out("ok", await data(courseNumber, p));
   });
+  return { forget };
 }

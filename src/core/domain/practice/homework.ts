@@ -3,6 +3,7 @@ import { solvePrompt, splitPrompt } from "@/core/claude/prompts/practice";
 import { submitHomework, submitSolution } from "@/core/claude/practiceTools";
 import { callStructured } from "@/core/claude/structured";
 import type { Block } from "@/core/claude/types";
+import { saveState } from "@/core/domain/history/history";
 import { readJsonFile, writeJsonAtomic } from "@/core/lib/fs/atomicWrite";
 import { fs } from "@/core/lib/fs/fs";
 import { newId } from "@/core/lib/ids";
@@ -27,7 +28,15 @@ const file = (n: string) => `${paths(n).homework}/current.json`;
 const Any = z.custom<Homework>((v) => typeof v === "object" && v !== null);
 
 export const loadHomework = (n: string) => readJsonFile(file(n), Any);
-export const saveHomework = (n: string, hw: Homework) => writeJsonAtomic(file(n), hw);
+export async function saveHomework(n: string, hw: Homework) {
+  await writeJsonAtomic(file(n), hw);
+  await saveState(n, hw.id, { type: hw.kind, title: hw.name }, hw).catch(() => undefined); // M60: listed with the saved sessions
+}
+/** M60: continue a saved homework / question; the current one is kept. */
+export async function resumeHomework(n: string, hw: Homework) {
+  await endHomework(n);
+  await saveHomework(n, hw);
+}
 /** Ends the current one; it is kept under its id. */
 export async function endHomework(n: string) {
   const hw = await loadHomework(n);

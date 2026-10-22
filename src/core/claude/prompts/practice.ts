@@ -135,6 +135,15 @@ export const clarifyPrompt = (a: ClueArgs & { clue: string; tried: string[] }) =
 ${a.tried.length ? `Explanations already given: ${a.tried.map((h, i) => `(${i + 1}) ${h}`).join(" ")}\n` : ""}Explain the same clue again in other, simpler words (a smaller sub-step, an analogy, a tiny example). Do not go beyond the step the clue is about and do not reveal the solution. Set onTrack true.
 ${clueBase(a)} Call submit_clue.`;
 
+/** M59: which plan stages a quiz covers, from the quiz material notes the student uploaded. */
+export const testScopePrompt = (stages: string) =>
+  `The attached images are the notes the course gave about the material of an upcoming quiz or exam (topics, chapters, lectures, what is included or excluded).
+Choose the stages of the course plan below that the quiz covers. Include a stage only if its material is part of the quiz; leave out what the notes exclude.
+Plan stages:
+${stages}
+${DATA}
+Call submit_test_scope with their ids.`;
+
 /** M57: transcribe an uploaded homework (or one question) into separate questions. */
 export const splitPrompt = (lang: Lang, single: boolean) =>
   `The attached images are the pages of ${single ? "ONE question" : "a homework assignment"} the student uploaded, in order (page 1 first).

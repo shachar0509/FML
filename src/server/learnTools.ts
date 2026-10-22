@@ -13,6 +13,7 @@ import { buildRecap } from "@/core/domain/learn/recap";
 import { checkAdvanceCriteria } from "@/core/domain/progress/criteria";
 import { normalizeTag, reduceProgress } from "@/core/domain/progress/reduce";
 import { appendEvent } from "@/core/domain/progress/store";
+import { addEntry, checkpoint, createConv, listConvs, loadConv, transcript, type Entry } from "@/core/domain/history/history";
 import { resolveExercise, type Ex } from "@/core/domain/practice/exercises";
 import { materialsLang, pagesFor } from "@/core/domain/retrieval/retrieve";
 import { parseGeometry, parsePlot } from "@/core/render/figures/specs";
@@ -37,8 +38,19 @@ type Check = { kind: "mcq" | "open"; n: string; stageId: string; correctIndex?: 
 
 /** Learn (plan v2 §6.3): the host chat is the lesson; the tutor tools record the v1 events and return cards. */
 export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exercises: ReturnType<typeof registerExerciseTools>) {
-  /** The lesson the student is in; the tutor tools carry a stageId but no course number. */
-  let active: { n: string; stageId: string } | null = null;
+  /** The lesson the student is in; the tutor tools carry a stageId but no course number. `cid`: its saved conversation (M60), made on its first entry. */
+  let active: { n: string; stageId: string; cid: string | null; title: string } | null = null;
+  /** M60: every card and student action of the lesson goes to its saved conversation (a failed write never breaks the lesson). */
+  async function log(e: Omit<Entry, "at">) {
+    const a = active;
+    if (!a) return;
+    try {
+      if (!a.cid) a.cid = (await createConv(a.n, { kind: "lesson", type: "lesson", title: a.title, stageId: a.stageId })).id;
+      await addEntry(a.n, a.cid, e);
+    } catch {
+      /* best effort */
+    }
+  }
   const checks = new Map<string, Check>(); // lost on a server restart; check_answer then says so
 
   const sets = () => useSettings.getState().settings;
@@ -101,25 +113,46 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
   const REEXPLAIN = "The student pressed Explain differently: re-teach the same step first with teach_step (same topic, simpler words or another example or figure). Do not ask a question now.";
   const NO_LESSON = "No lesson is open. Call shalav_start_lesson first.";
 
+  /** The checkpoint card of a saved lesson, live again: an MCQ's key goes back to `checks`, an exercise gets a new run. */
+  async function resumed(n: string, c: NonNullable<Awaited<ReturnType<typeof loadConv>>>): Promise<object> {
+    const e = checkpoint(c);
+    const s = (await load(n)) as S;
+    const { language, theme } = sets();
+    const history = { number: n, id: c.id, count: c.entries.filter((x) => x.kind === "step").length };
+    if (!e?.card) return lessonData(s, c.stageId ?? "");
+    const x = (e.extra ?? {}) as { checkId?: string; correctIndex?: number; explanationMd?: string; ex?: Ex; loop?: boolean };
+    // an MCQ answered before leaving keeps its answer (check_answer then shows it, and records nothing again)
+    const chose = c.entries.findLast((y) => y.kind === "check" && (y.extra as { checkId?: string } | undefined)?.checkId === x.checkId)?.extra as { selectedIndex?: number } | undefined;
+    if (e.kind === "mcq" && x.checkId) checks.set(x.checkId, { kind: "mcq", n, stageId: c.stageId ?? "", correctIndex: x.correctIndex, explanationMd: x.explanationMd, selected: chose?.selectedIndex });
+    if (e.kind === "open" && x.checkId) checks.set(x.checkId, { kind: "open", n, stageId: c.stageId ?? "" });
+    if (e.kind === "exercise" && x.ex) return { ...(await exercises.open(n, x.ex, "learn", !!x.loop)), history };
+    return { ...e.card, language, theme, history };
+  }
+
   registerAppTool(
     server,
     "shalav_start_lesson",
     {
       title: "Start a lesson",
-      description: "Open the lesson card for a stage and get the tutor instructions. Use when the student wants to learn (or continue) a stage; stageId defaults to the course's current stage.",
-      inputSchema: z.object({ courseNumber: num, stageId: z.string().optional() }),
+      description: 'Open the lesson card for a stage and get the tutor instructions. Use when the student wants to learn a stage (a new lesson; stageId defaults to the course\'s current stage). Lessons are saved: to continue where the student stopped, pass resume: "latest" (or the id from a card request).',
+      inputSchema: z.object({
+        courseNumber: num, stageId: z.string().optional(),
+        resume: z.string().optional().describe('Continue a saved lesson where the student stopped: its id (from a card request), or "latest" for the course\'s newest lesson. Without it a new lesson starts.'),
+      }),
       _meta: withCard,
     },
-    async ({ courseNumber: n, stageId }) => {
+    async ({ courseNumber: n, stageId, resume }) => {
       const s = await load(n);
       if (!s) return fail(`No course ${n} with a study plan. Use shalav_home.`);
-      const id = stageId ?? s.progress.currentStageId ?? s.plan.stages[0]?.id;
+      const saved = resume ? await loadConv(n, resume === "latest" ? ((await listConvs(n, "lesson"))[0]?.id ?? "") : resume) : null;
+      if (resume && !saved) return fail(resume === "latest" ? "This course has no saved lesson. Start a new one (without resume)." : `No saved lesson ${resume}.`);
+      const id = saved?.stageId ?? stageId ?? s.progress.currentStageId ?? s.plan.stages[0]?.id;
       const stage = s.plan.stages.find((x) => x.id === id);
       if (!stage) return fail(`No stage ${stageId}.`);
       const st = s.progress.stages[stage.id]?.status;
       if (st === "locked") return fail(`Stage ${stage.id} is locked: finish its prerequisites (${stage.prerequisites.join(", ")}) first.`);
-      active = { n, stageId: stage.id };
-      if (st === "completed" || st === "completed_override")
+      active = { n, stageId: stage.id, cid: saved?.id ?? null, title: `${stage.id} · ${s.tr(stage.title)}` };
+      if (!saved && (st === "completed" || st === "completed_override"))
         return out(`Stage ${stage.id} — ${stage.title} is already completed. The card shows a review with "Learn this stage again"; do not teach unless the student reopens it.`, lessonData(s, stage.id));
       if (st === "available") {
         await appendEvent(n, { type: "stage_started", stageId: stage.id });
@@ -142,6 +175,15 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
         exercises, mistakeTags: s.progress.mistakes,
       });
       const recap = buildRecap(s.plan, s.events, stage.id);
+      if (saved) {
+        await log({ who: "student", kind: "request", text: "Came back to this lesson." });
+        return out([
+          system,
+          status(s, stage.id),
+          `THE LESSON SO FAR (saved; the student left and came back):\n${transcript(saved)}`,
+          "The student is back at the last checkpoint, shown in the card. Continue the lesson from exactly there: one short welcome-back sentence, then the next move (if the card is a question, wait for the answer). Do not re-teach what is above.",
+        ].join("\n\n"), await resumed(n, saved));
+      }
       const text = [
         system,
         status(s, stage.id),
@@ -173,6 +215,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     checks.set(checkId, { kind: "mcq", n: c.n, stageId: c.stageId, correctIndex: i.correctIndex, explanationMd: i.explanationMd });
     const { language, theme } = sets();
     const data: McqData = { view: "mcq", language, theme, checkId, questionMd: i.questionMd, options: i.options };
+    await log({ who: "tutor", kind: "mcq", text: `${i.questionMd}\nOptions: ${i.options.map((o, k) => `(${k + 1}) ${o}`).join(" ")}`, card: data, extra: { checkId, correctIndex: i.correctIndex, explanationMd: i.explanationMd } });
     return out(`Question shown (check id ${checkId}). Never reveal the answer. The student's choice arrives as their next message.`, data);
   });
   registerAppTool(server, askOpenQuestion.def.name, { title: "Open question", description: askOpenQuestion.def.description + hint, inputSchema: askOpenQuestion.schema, _meta: withCard }, async (i) => {
@@ -183,6 +226,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     checks.set(checkId, { kind: "open", n: c.n, stageId: c.stageId });
     const { language, theme } = sets();
     const data: OpenData = { view: "open", language, theme, checkId, number: c.s.course.courseNumber, questionMd: i.questionMd };
+    await log({ who: "tutor", kind: "open", text: i.questionMd, card: data, extra: { checkId } });
     return out(`Question shown (check id ${checkId}). The student's answer arrives as their next message, typed or as page images of a solution written on paper (read those as the answer); evaluate it, then call record_check_result with checkToolUseId "${checkId}".`, data);
   });
 
@@ -214,6 +258,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
       if (bad) return fail(`${bad} Fix it and call show_figure again.`);
       const { language, theme } = sets();
       const data: FigureData = { view: "figure", language, theme, kind, source, captionMd };
+      await log({ who: "tutor", kind: "figure", text: `(figure) ${captionMd}` });
       return out("Figure shown to the student. Refer to it and continue.", data);
     },
   );
@@ -236,6 +281,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
       reexplain = false;
       const { language, theme } = sets();
       const data: StepData = { view: "step", language, theme, titleMd, bodyMd, figure: f ?? null, sideMd: sideMd?.trim() || null, progress: progress && { n: Math.min(progress.n, progress.of), of: progress.of } };
+      await log({ who: "tutor", kind: "step", text: `${titleMd}\n${bodyMd}${sideMd ? `\n(side) ${sideMd}` : ""}`, card: data });
       return out("Step shown. End your message now (no more text) and wait: the student continues, asks for another explanation, or asks a question.", data);
     },
   );
@@ -252,6 +298,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     async ({ answerMd }) => {
       if (!active) return fail(NO_LESSON);
       answer = { answerMd, at: Date.now() };
+      await log({ who: "tutor", kind: "answer", text: answerMd });
       return out("The answer is shown over the step card. End your message now (no more text) and wait.");
     },
   );
@@ -271,7 +318,9 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     }
     if (!ex) return fail('Unknown exerciseId and no statementMd. Use an id from the exercise list, or source "new" with statementMd and referenceSolutionMd.');
     const kind = c.s.plan.stages.find((x) => x.id === ex.stageIds[0])?.kind;
-    const data = await exercises.open(c.n, ex, "learn", ex.difficulty >= 4 && kind !== "concept" && kind !== "definition"); // M56: hard exercises of advanced stages use the solving loop
+    const loop = ex.difficulty >= 4 && kind !== "concept" && kind !== "definition"; // M56: hard exercises of advanced stages use the solving loop
+    const data = await exercises.open(c.n, ex, "learn", loop);
+    await log({ who: "tutor", kind: "exercise", text: ex.statementMd, card: { ...data, figures: [] } as unknown as Record<string, unknown>, extra: { ex, loop } }); // reopened from `ex`: no need to keep the images
     return out("Exercise card shown. The student works on paper, uploads a photo and presses Grade; the graded result then comes back to you through the chat. Do not describe the solution.", data);
   });
 
@@ -286,6 +335,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
         k.selected = selectedIndex;
         const correct = selectedIndex === k.correctIndex;
         await appendEvent(k.n, { type: "check_answered", stageId: k.stageId, checkId, kind: "mcq", context: "learn", correct, score: correct ? 100 : 0, mistakeTags: [] });
+        await log({ who: "student", kind: "check", text: `Chose option ${selectedIndex + 1} (${correct ? "correct" : "wrong"}).`, extra: { checkId, selectedIndex } });
       }
       const correct = k.selected === k.correctIndex;
       return out(correct ? "correct" : "wrong", { selectedIndex: k.selected, correct, correctIndex: k.correctIndex, explanationMd: k.explanationMd });
@@ -314,6 +364,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     if (k?.kind === "mcq") for (const tag of tags) await appendEvent(c.n, { type: "mistake_observed", tag, stageIds: [c.stageId], refId: i.checkToolUseId, context: "learn" });
     else
       await appendEvent(c.n, { type: "check_answered", stageId: c.stageId, checkId: i.checkToolUseId, kind: "open", context: "learn", correct: i.correct, score: i.score, mistakeTags: tags });
+    await log({ who: "tutor", kind: "check", text: `Answer ${i.correct ? "correct" : "not correct"} (${i.score}).` });
     return out(JSON.stringify({ ok: true, mistakeTags: tags }));
   });
 
@@ -324,6 +375,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
       type: "assessment_updated", stageId: c.stageId, mastery: i.mastery, coveredObjectives: i.coveredObjectives,
       gaps: i.gaps, reviewTopics: i.reviewTopics, readyToAdvance: i.readyToAdvance, rationale: i.rationale,
     });
+    await log({ who: "tutor", kind: "assessment", text: `Mastery ${i.mastery}. ${i.rationale}` });
     const s = (await load(c.n)) as S;
     const k = criteria(s, c.stageId);
     // The fresh [STATUS] comes with the result: no shalav_lesson_status round trip after every assessment.
@@ -370,5 +422,16 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     return out("reopened", lessonData((await load(number)) as S, stageId));
   });
 
-  return { reexplain: () => void (reexplain = true) };
+  registerAppTool(server, "history_slides", { title: "Lesson slides", description: "Card-only: the slides of a saved lesson, for browsing back.", inputSchema: z.object({ number: num, id: z.string() }), _meta: appOnly }, async ({ number, id }) => {
+    const c = await loadConv(number, id);
+    if (!c) return fail("No such lesson.");
+    const { language, theme } = sets();
+    return out("ok", { slides: c.entries.filter((e) => e.kind === "step" && e.card).map((e) => ({ ...e.card, language, theme })) });
+  });
+
+  return {
+    reexplain: () => void (reexplain = true),
+    /** M60: a student action from a card (Continue, Explain differently, a question, an answer) goes to the open lesson's conversation. */
+    note: (text: string) => log({ who: "student", kind: "request", text }),
+  };
 }

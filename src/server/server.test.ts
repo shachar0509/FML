@@ -32,6 +32,11 @@ it("lists tools/prompts and calls shalav_home", async () => {
   await client.callTool({ name: "shalav_request", arguments: { kind: "step", action: "question", text: "why 0+0=0?" } });
   expect(JSON.stringify((await client.callTool({ name: "shalav_next_job", arguments: {} })).content)).toMatch(/asked about the lesson step on screen.*why 0\+0=0\?.*answer_question/);
   expect(JSON.stringify((await client.callTool({ name: "shalav_next_job", arguments: {} })).content)).toContain("No Shalav job");
+  // leaving the lesson in the card voids its pending step: the next "▶️ Continue" must not pull the chat back into it
+  await client.callTool({ name: "shalav_request", arguments: { kind: "step", action: "next" } });
+  await client.callTool({ name: "shalav_request", arguments: { kind: "clear" } });
+  expect(JSON.stringify((await client.callTool({ name: "shalav_next_job", arguments: {} })).content)).toContain("No Shalav job");
+  expect((await client.callTool({ name: "shalav_cancel", arguments: { key: "web:01040195" } })).isError).toBeFalsy();
   // an answer solved on paper: the uploaded photo reaches the model as an image next to the request
   const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==";
   const up = (await client.callTool({ name: "attachment_upload", arguments: { number: "01040195", name: "p.png", mime: "image/png", base64: PNG } })).structuredContent as { files: { sha256: string }[] };
@@ -76,4 +81,10 @@ it("lists tools/prompts and calls shalav_home", async () => {
   expect(await latest(older)).toBe(newer); // the older card mounted again: still older
   await num("shalav_home"); // the newest card's own call (Back): its result is not a new card
   expect(await latest()).toBe(newer);
+});
+
+it("tells the host that continuing a lesson resumes the saved one (M60)", async () => {
+  const { INSTRUCTIONS } = await import("./instructions");
+  expect(INSTRUCTIONS).toContain('resume: "latest"');
+  expect(INSTRUCTIONS).toMatch(/without resume a new lesson starts/);
 });

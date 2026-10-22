@@ -947,3 +947,45 @@ Edge cases found with the sample slides, and fixed in the renderer:
 ## M57/M58 fix: Practice opens without a completed stage; homework isn't held to Shalav progress
 - The course card's Practice button was disabled until a stage was completed; homework and single questions don't need that, so it is enabled whenever there's a plan (normal practice still says it's locked). The `shalav_practice` description says the same.
 - Homework clues and grading no longer get the knowledge boundary built from Shalav progress ("not learned yet"); homework follows the course's own schedule, so they use the course material and example exercises (as the AI solve already did).
+
+## M59: Test practice (past exam questions only)
+- Practice has a fourth mode, **Test practice**. It serves only questions from past exams in the course files. It needs a plan but no completed stage. When no exam is found, its chooser says so and asks for exams to be added and scanned.
+- Exams are recognized by file name (`moed`, `exam`, `final`, `midterm`, `quiz`, `test`, `מועד`, `מבחן`, `בחינה`, `בוחן`, `בחן`). Only scanned files count, so the pool grows as the scan goes on. An exam and its solution twin (`_sol`, `sol`, `_with_answers`, `פתרון`) are one question set; the copy with the solution is served.
+- Burned: each served question is written to `.shalav/test-practice.json` (`burned`: file, question label, key = file without the solution suffix + question number and part) and is never served again, across sessions.
+- What a session covers: **The whole course** (default), **Main subjects** (units of the plan, e.g. for a midterm), or **Quiz material from the course** (the student uploads it; the host model picks the stages it covers, job `submit_test_scope`). A question is in scope when its own stage is one of those, and nothing it needs comes later in the plan (earlier prerequisites are fine: in the real course, almost every unit-4 quiz question needs unit-2 stages).
+- A miss is any answer that isn't perfect on the first submission (over 95 and the final answer right). A miss that the student fixes on a retry still counts. After a miss:
+  - The board shows a stern note, and up to 2 similar questions on the same concept follow: an unburned exam question of that stage, else a new exam-level question like the missed one, generated and verified (solvable, matching its reference solution; one regeneration).
+  - A perfect follow-up ends the run of follow-ups. Two misses after the first one mark the concept **weak**: "needs more practice" is noted on the board, and the concept is listed in the Test practice chooser.
+  - Weak concepts come up first half of the time. Four perfect answers in a row on a weak concept make it **learned** ("under control").
+- Variety: questions avoid the last 3 subjects served when possible. When every exam question in scope is burned, a new one is generated for a weak concept, or else for a subject the exams test.
+- The answer is scored once, when moving on or ending the session (a Retry after an error, or End, doesn't score it twice; the last answer of a session counts).
+- Grading and clues for test questions use the whole course material, not the Shalav-progress boundary (`Ex.open`). Attempts still write progress events.
+- Tests: unit (exam names from the real course folder, burn keys of twins and parts, pool, pick never serves burned / follows the concept / generates when out / scope, follow-ups → weak → learned). Server round trip (burned twin with the solution, stern note + same-stage question, generation like the missed question + verification, weak concept in the file, scope from quiz notes). e2e (scope choices, quiz notes read, question left count, stern and weak notes) in he/en, light/dark.
+
+## M60: saved lessons and practice sessions (`.chat_history`)
+- Every lesson and practice session is saved under `<data folder>/.chat_history/<course>/<id>.json`, one file each. The files survive closing Claude Desktop, and copying the data folder to another computer takes them along. Each one has a title, a type and the time of its last action (a slide, a question, an answer, a button press). Writes to one file go one at a time, so a slide and a click arriving together both land. A deleted conversation is never recreated by a late write.
+- Lessons: the conversation is created with the lesson's first card. It records:
+  - the tutor's cards (slides, questions with their answer key, exercises, figures, answers to questions, check results, assessments);
+  - the student's card actions (Continue, Explain differently, questions, answers, MCQ choices).
+  - Shalav can't see text typed straight into the Claude chat.
+- Continuing a lesson happens in the current chat (Shalav can't reopen an old Claude chat). `shalav_start_lesson` has `resume` (an id, or `"latest"`):
+  - the tutor gets the system prompt, the status and `THE LESSON SO FAR` (the newest 12k characters), and continues from the checkpoint;
+  - the card opens on the last card shown. An MCQ gets its answer key back; an exercise is opened again with a new run.
+  - **Earlier slides (n)** browses that lesson's slides, read-only, with Previous / Next and **Back to where I stopped**.
+  - The "continue learning" prompt uses `resume: "latest"`.
+- Course card: when the course has saved lessons, **Learn** asks **Start new lesson** / **Load older lesson**; with none it starts as before.
+- Practice card: with saved sessions, the first screen asks **Start new practice** (the 4 modes) / **Load older practice**.
+  - Sessions are labeled Homework / Single question / Test practice / Normal practice, with a type filter.
+  - Opening one continues it where it was, an ended one too. Normal and test sessions keep their engine state (`PState.cid`); a homework keeps its questions and accepted pages.
+  - A running session has **Back** to this screen.
+- Lists (both): newest first, title and last action date/time. Open or delete per row; checkboxes, **Select all** (only what the filter shows), **Delete selected (n)**, with a confirm. Deleting a running practice session or homework ends it.
+- Card-only tools: `history_list`, `history_delete`, `history_slides`, `practice_resume`; card request `{ kind: "resume" }`.
+- A deleted session stays deleted: a practice conversation is created once (a new session, or one from before M60) and only updated after that. A session restored from the device's log whose conversation was deleted is dropped.
+- A resumed MCQ that was answered before leaving keeps that answer; it is not recorded again.
+- The server instructions and `shalav_start_lesson` say that continuing means `resume: "latest"`, and that without `resume` a new lesson starts. So typing "let's continue" after reopening Claude Desktop goes back to the checkpoint.
+- Not yet: a graded lesson exercise isn't logged (a resumed exercise opens ungraded, and the transcript lacks the grade).
+- Tests:
+  - unit: store, sort, concurrent writes, no recreate after delete, checkpoint, transcript cap;
+  - server: a lesson saved by one server is continued by a **new server** on the same data folder (transcript, the MCQ card with its key working, slides); a card resume request; delete;
+  - practice: 5 sessions listed by type, an ended normal session continues at its open question, a homework comes back, deleting running ones ends them;
+  - e2e he/en, light/dark: lesson chooser, list, delete with confirm, open; practice filter + select all of the filter; slide browsing.

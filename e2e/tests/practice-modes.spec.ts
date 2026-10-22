@@ -9,15 +9,16 @@ for (const lang of LANGS)
       const errors = pageErrors(page);
       const he = lang === "he";
       await page.goto(host(`view=practice&lang=${lang}&theme=${theme}`));
-      // three modes on the board
+      // four modes on the board
       const modes = page.locator(".board-surface button");
-      await expect(modes).toHaveCount(3);
+      await expect(modes).toHaveCount(4);
       await axe(page);
       await page.screenshot({ path: `e2e/tests_output/practice-modes/modes-${lang}-${theme}.png` });
       await page.getByRole("button", { name: he ? /פתרון שיעורי בית/ : /Solve homework/ }).click();
       // upload, read (a job: the chat is asked to continue), then the questions
       const read = page.getByRole("button", { name: he ? "קריאת השאלות" : "Read it" });
       await expect(read).toBeDisabled();
+      await expect(page.getByRole("button", { name: he ? "העלאת שיעורי בית" : "Upload homework" })).toBeVisible(); // not "Upload solution"
       await page.locator("input[type=file]").setInputFiles(png);
       await read.click();
       expect((await said(page)).at(-1)).toBe(he ? "▶️ המשך" : "▶️ Continue");
@@ -40,7 +41,7 @@ for (const lang of LANGS)
       await expect(page.getByRole("button", { name: he ? "שאלה 2" : "Question 2" })).toHaveAttribute("aria-current", "step");
       await expect(page.getByRole("button", { name: he ? /שאלה 1/ : /Question 1/ }).getByLabel(he ? "בקובץ הפתרונות" : "in your solutions")).toBeVisible();
       await page.getByRole("button", { name: he ? "יציאה" : "Leave" }).click();
-      await expect(modes).toHaveCount(3);
+      await expect(modes).toHaveCount(4);
       expect(errors).toEqual([]);
     });
 
@@ -50,6 +51,7 @@ for (const lang of LANGS)
     const he = lang === "he";
     await page.goto(host(`view=practice&lang=${lang}`));
     await page.getByRole("button", { name: he ? /שאלה בודדת/ : /Single question/ }).click();
+    await expect(page.getByRole("button", { name: he ? "העלאת שאלה" : "Upload question" })).toBeVisible();
     await page.locator("input[type=file]").setInputFiles(png);
     await page.getByRole("button", { name: he ? "קריאת השאלות" : "Read it" }).click();
     // one question straight into the loop: no "how" step, no question list, no download
@@ -91,3 +93,22 @@ for (const lang of LANGS)
       await page.screenshot({ path: `e2e/tests_output/practice-modes/ai-ready-${lang}-${theme}.png` });
       expect(errors).toEqual([]);
     });
+
+for (const lang of LANGS)
+  test(`back in the chat after the AI stopped solving: the card shows it and continues (${lang})`, async ({ page }) => {
+    const errors = pageErrors(page);
+    const he = lang === "he";
+    await page.goto(host(`view=practice&lang=${lang}&hw=stopped`));
+    // the live state, not the stored one: the homework, 1 of 3 solved, stopped
+    await expect(page.getByText(he ? /הפתרון נעצר/ : /Solving stopped/)).toBeVisible();
+    await expect(page.getByLabel(he ? "נפתרה" : "solved")).toHaveCount(1);
+    await expect(page.getByRole("button", { name: he ? "הורדת הפתרונות" : "Download solutions" })).toBeDisabled();
+    await axe(page);
+    await page.screenshot({ path: `e2e/tests_output/practice-modes/ai-stopped-${lang}.png` });
+    await page.getByRole("button", { name: he ? "להמשיך לפתור" : "Continue solving" }).click();
+    expect((await said(page)).at(-1)).toBe(he ? "▶️ המשך" : "▶️ Continue");
+    await expect(page.getByText(he ? /פותרים את שאלה/ : /Solving question/)).toBeVisible();
+    await expect(page.getByRole("button", { name: he ? "ביטול" : "Cancel" })).toBeVisible();
+    await page.screenshot({ path: `e2e/tests_output/practice-modes/ai-continued-${lang}.png` });
+    expect(errors).toEqual([]);
+  });

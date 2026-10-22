@@ -1,10 +1,11 @@
 import { beforeEach, expect, it } from "vitest";
-import type { FileIndex, PlanJson } from "@/core/domain/dataSchemas";
+import type { ClaudeGateway } from "@/core/claude/types";
+import type { CourseJson, FileIndex, PlanJson } from "@/core/domain/dataSchemas";
 import { setFs } from "@/core/lib/fs/fs";
 import { useSettings } from "@/stores/settings";
 import { memFs } from "@/test/memfs";
 import { writeFileIndex } from "./indexStore";
-import { shares } from "./web";
+import { gatherWeb, shares } from "./web";
 
 const N = "Cabc";
 const stage = (id: string, unitId: string, order: number) => ({
@@ -33,4 +34,19 @@ it("gives the new documents to the units with the least material, an average fil
   expect((await shares(N, plan, 3)).map((u) => [u.id, u.have, u.docs])).toEqual([["U02", 2, 1], ["U03", 0, 2]]);
   expect((await shares(N, plan, 9)).map((u) => u.docs)).toEqual([2, 3, 4]); // many documents: every unit gets some
   expect(await shares(N, null, 3)).toEqual([]); // no plan: the request is about the whole subject
+});
+
+it("asks for full, elaborated solutions, not summaries (the student learns to write complete answers)", async () => {
+  let ask = "";
+  const gw: ClaudeGateway = {
+    send: async (r) => {
+      const c = r.messages[0]?.content;
+      ask = typeof c === "string" ? c : "";
+      throw new Error("stop");
+    },
+  };
+  const course: CourseJson = { schema: 1, courseNumber: N, nameHe: "ק", credits: 0, faculty: "", syllabusHe: "s", prerequisitesRaw: "", catalogSemester: null, courseKind: "mixed", planVersion: 1, createdAt: "t", updatedAt: "t" };
+  await expect(gatherWeb(gw, course, "he", 3)).rejects.toThrow("stop");
+  expect(ask).toMatch(/Solutions are never summarized/);
+  expect(ask).toMatch(/Every step is shown and justified/);
 });

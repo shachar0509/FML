@@ -23,7 +23,7 @@ const text = (t: string): Content[] => [{ type: "text", text: t }];
 const readable = (g: { verdict: string; legibility: string } | null) => !!g && g.verdict !== "unreadable" && g.legibility !== "illegible";
 const toAtt = (f: z.infer<typeof files>): Attachment[] => f.map((x) => ({ type: "image_ref", ...x }));
 
-type R = { run: ExerciseRun; n: string; context: Context; busy: "grade" | "hint" | "solution" | "clue" | null; figures: string[] };
+type R = { id: string; run: ExerciseRun; n: string; context: Context; busy: "grade" | "hint" | "solution" | "clue" | null; figures: string[] };
 
 /** Exercise card (plan v2 §6.4): Grade / Hint / Show solution run the v1 pipeline as bridge ops; state lives in memory (lost on a restart). */
 export function registerExerciseTools(server: McpServer, bridge: BridgeGateway) {
@@ -55,7 +55,7 @@ export function registerExerciseTools(server: McpServer, bridge: BridgeGateway) 
 
   /** Register a run (idempotent per runId) and return its card data. */
   async function adopt(runId: string, n: string, run: ExerciseRun, context: Context): Promise<ExerciseData> {
-    if (runs.get(runId)?.run !== run) runs.set(runId, { run, n, context, busy: null, figures: (await figureImages(n, run.ex)).map((f) => `data:${f.mediaType};base64,${f.base64}`) });
+    if (runs.get(runId)?.run !== run) runs.set(runId, { id: runId, run, n, context, busy: null, figures: (await figureImages(n, run.ex)).map((f) => `data:${f.mediaType};base64,${f.base64}`) });
     return data(runId);
   }
 
@@ -75,7 +75,7 @@ export function registerExerciseTools(server: McpServer, bridge: BridgeGateway) 
       } finally {
         x.busy = null;
       }
-    }, () => text(summary())).done.catch(() => undefined);
+    }, () => text(summary()), "study", `exercise:${x.id}`).done.catch(() => undefined);
   }
   const wait = "Call shalav_next_job now.";
 

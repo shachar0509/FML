@@ -38,16 +38,21 @@ export async function nearestExercises(ctx: Ctx, stageId: string | null, query =
 }
 export const refsText = (refs: IndexedExercise[]) => refs.map((r) => `- ${r.statementMd}${r.referenceSolutionMd ? `\n  Solution: ${r.referenceSolutionMd}` : ""}`).join("\n");
 
-/** 7.5: generate + verify one exercise (one regeneration with the verifier's issues). Null if both attempts fail. */
-export async function generateExercise(env: Env, ctx: Ctx, focus: Focus): Promise<GeneratedExercise | null> {
+/** 7.5: generate + verify one exercise (one regeneration with the verifier's issues). Null if both attempts fail.
+ * M59 `test`: an exam question for test practice, like `like` (the exam question the student missed) when given; any stage of the course, no progress boundary. */
+export async function generateExercise(env: Env, ctx: Ctx, focus: Focus, test?: { like: IndexedExercise | null }): Promise<GeneratedExercise | null> {
   const n = ctx.course.courseNumber;
-  const done = completedIds(ctx.progress);
-  const refs = await nearestExercises(ctx, focus.stageId);
-  const styleRefs = refsText(refs);
+  const done = test ? new Set(ctx.plan.stages.map((s) => s.id)) : completedIds(ctx.progress);
+  const refs = test?.like ? [test.like] : await nearestExercises(ctx, focus.stageId);
+  const styleRefs = test?.like
+    ? `The student got this past exam question wrong. Write a NEW exam question that tests the same concept and skills, with different data and setting (not a copy):\n${refsText(refs)}`
+    : refsText(refs);
+  const boundary = test ? "" : boundaryFor(ctx);
   const type = ctx.course.courseKind === "proof-based" ? "proof" : ctx.course.courseKind === "programming" ? "coding" : "computation";
   const common = {
     course: ctx.course, lang: langName(), type, difficulty: Math.round(targetDifficulty(ctx.events)), requiredStages: stageList(ctx, focus.required),
-    focusJson: focusJson(ctx, focus.stageId), styleRefs, digest: await digest(env, ctx, focus.stageId), boundary: boundaryFor(ctx), mistakes: mistakesText(ctx, focus.required),
+    focusJson: focusJson(ctx, focus.stageId), styleRefs, digest: await digest(env, ctx, focus.stageId), boundary, mistakes: mistakesText(ctx, focus.required),
+    ...(test ? { difficulty: Math.max(4, test.like?.difficulty ?? 4) } : {}),
   };
   let issues: string[] = [];
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -56,7 +61,7 @@ export async function generateExercise(env: Env, ctx: Ctx, focus: Focus): Promis
     });
     if (!g.requiredStageIds.every((s) => done.has(s))) { issues = [`requiredStageIds must be among: ${[...done].join(", ")}`]; continue; }
     const { value: v } = await callStructured(env.gw, submitVerification, {
-      task: "grading", courseNumber: n, system: verificationPrompt(stageList(ctx, g.requiredStageIds), boundaryFor(ctx)),
+      task: "grading", courseNumber: n, system: verificationPrompt(stageList(ctx, g.requiredStageIds), boundary),
       messages: [{ role: "user", content: `<exercise>${g.statementMd}</exercise>\nReference solution:\n${g.referenceSolutionMd}\nGrading notes: ${g.gradingNotes}` }], signal: env.signal,
     });
     if (v.wellPosed && v.solvable && v.matchesReference && !v.requiresStagesBeyond.length) {

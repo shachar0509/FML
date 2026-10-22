@@ -10,12 +10,15 @@ export function Waiting({
   req,
   label,
   afterMs = 20000,
+  cancel,
 }: {
   go: Go;
   /** what the Nudge asks for (default: "▶️ Continue") */
   req?: Parameters<Go>[0];
   label?: string;
   afterMs?: number;
+  /** Stops the job (shalav_cancel); the card's polling then shows it ended. */
+  cancel?: () => void;
 }) {
   const { t } = useTranslation();
   const [late, setLate] = useState(false);
@@ -35,6 +38,11 @@ export function Waiting({
       {late && (
         <Button variant="outline" size="sm" onClick={() => void (req ? go(req) : go())}>
           {t("mcp.nudgeBtn")}
+        </Button>
+      )}
+      {cancel && (
+        <Button variant="ghost" size="sm" onClick={cancel}>
+          {t("job.cancel")}
         </Button>
       )}
     </div>

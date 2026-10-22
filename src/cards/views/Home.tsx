@@ -2,7 +2,8 @@ import { BookOpen, ChevronLeft, ChevronRight, Compass, GraduationCap, Landmark, 
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { UNIVERSITIES, UNIVERSITY_IDS, type UniversityId } from "@/core/universities";
-import type { HomeData } from "../types";
+import type { Go, HomeData, Host } from "../types";
+import { CourseActions } from "./History";
 import { Bar, panel } from "../ui";
 
 /** Each course keeps one colour (from its number) so the student can spot it at a glance. */
@@ -45,6 +46,9 @@ export function Home({
   add,
   custom,
   open,
+  callTool,
+  go,
+  practice,
   settings,
   choose,
 }: {
@@ -52,6 +56,9 @@ export function Home({
   add: (example: string) => void;
   custom: () => void;
   open: (n: string) => void;
+  callTool: Host["callTool"];
+  go: Go;
+  practice: (n: string) => void;
   settings: () => void;
   choose: (id: UniversityId) => void;
 }) {
@@ -114,10 +121,13 @@ export function Home({
       )}
       <ul className="flex flex-col gap-3">
         {data.courses.map((c) => (
-          <li
-            key={c.number}
-            className={`${panel} flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4`}
-          >
+          <li key={c.number} className={`${panel} flex flex-col gap-3 p-4 transition-colors hover:border-primary/60`}>
+            {/* the box opens the course; Learn / Practice below act directly */}
+            <button
+              className="flex w-full flex-col gap-3 rounded-lg text-start focus-visible:outline-2 focus-visible:outline-primary sm:flex-row sm:items-center sm:gap-4"
+              onClick={() => open(c.number)}
+              aria-label={`${t("home.open")} ${c.name}`}
+            >
             <span
               className={`hidden size-12 shrink-0 place-items-center rounded-2xl text-xl font-bold text-white sm:grid dark:text-[var(--bg)] ${tint(c.number)}`}
               aria-hidden
@@ -156,10 +166,18 @@ export function Home({
                 )}
               </p>
             </div>
-            <Button className="shrink-0 sm:self-center" onClick={() => open(c.number)}>
-              {t("home.continue")}
-              <Arrow className="size-4" aria-hidden />
-            </Button>
+              <Arrow className="hidden size-5 shrink-0 text-muted sm:block" aria-hidden />
+            </button>
+            {c.hasPlan && (
+              <CourseActions
+                number={c.number}
+                current={c.current ?? null}
+                hasPlan
+                callTool={callTool}
+                go={go}
+                practice={() => practice(c.number)}
+              />
+            )}
           </li>
         ))}
       </ul>

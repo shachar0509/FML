@@ -29,7 +29,9 @@ for (const lang of LANGS)
       await page.locator("ul button").first().click();
       await expect(page.getByRole("heading", { level: 1 })).toContainText(lang === "he" ? "חשבון" : "Infinitesimal");
       await expect(page.getByText(lang === "he" ? "שכחו את תנאי ההתכנסות" : "Forgot the convergence condition")).toBeVisible();
-      await expect(page.getByText("S002").first()).toBeVisible(); // current unit is expanded
+      // every unit starts collapsed, the current one too; Learn / Practice are on the course's row in My courses
+      await expect(page.locator("[aria-expanded=true]")).toHaveCount(0);
+      await expect(page.getByRole("button", { name: lang === "he" ? /^לימוד/ : /^Learn/ })).toHaveCount(0);
       // file lists start collapsed (like the plan units); the rings show without opening them
       await expect(page.getByRole("img", { name: lang === "he" ? "50% נסרקו" : "50% scanned" })).toBeVisible();
       await expect(page.getByRole("img", { name: lang === "he" ? "100% נסרקו" : "100% scanned" })).toBeVisible();
@@ -97,6 +99,7 @@ for (const lang of LANGS)
       await page.waitForTimeout(400);
       await page.screenshot({ path: `e2e/tests_output/course/card-course-${lang}-${theme}.png` });
       await axe(page);
+      await page.getByRole("button", { name: lang === "he" ? /^סדרות/ : /^Sequences/ }).click(); // units start collapsed
       await page.getByRole("button", { name: /S002 .*%/ }).click(); // the stage row (not Learn or its delete button)
       await expect(page.getByText(lang === "he" ? "תקציר: גבולות" : "Limits summary")).toBeVisible();
       expect(errors).toEqual([]);
@@ -271,6 +274,7 @@ for (const lang of LANGS)
     await page.goto(host(`lang=${lang}&theme=light&del=1`));
     await page.locator("ul button").first().click();
     const squeeze = lang === "he" ? "כלל הסנדוויץ'" : "Squeeze";
+    await page.getByRole("button", { name: lang === "he" ? /^סדרות/ : /^Sequences/ }).click(); // units start collapsed
     await page.getByText(squeeze).hover();
     await page.getByRole("button", { name: lang === "he" ? `מחיקת השלב ${squeeze}` : `Delete the stage ${squeeze}` }).click();
     const ask = page.getByRole("alertdialog");
@@ -301,6 +305,7 @@ for (const lang of LANGS)
     await page.goto(host(`lang=${lang}&theme=light&custom=1`));
     await page.locator("ul > li").filter({ hasText: lang === "he" ? "תורת המוזיקה" : "Music theory" }).getByRole("button").click();
     const squeeze = lang === "he" ? "כלל הסנדוויץ'" : "Squeeze";
+    await page.getByRole("button", { name: lang === "he" ? /^סדרות/ : /^Sequences/ }).click(); // units start collapsed
     await page.getByText(squeeze).hover();
     await page.getByRole("button", { name: lang === "he" ? `מחיקת השלב ${squeeze}` : `Delete the stage ${squeeze}` }).click();
     const ask = page.getByRole("alertdialog");

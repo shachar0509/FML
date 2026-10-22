@@ -53,6 +53,12 @@ export const submitHomework = defineTool(
   "Submit the questions transcribed from the homework pages.",
   z.object({ name: z.string(), questions: z.array(z.object({ label: z.string(), statementMd: z.string(), pages: z.array(z.number().int().min(1)) })).min(1).max(30) }),
 );
+/** M59: the plan stages a quiz covers, read from the quiz material the course gave. */
+export const submitTestScope = defineTool(
+  "submit_test_scope",
+  "Submit the plan stages the quiz covers.",
+  z.object({ stageIds: z.array(z.string()).min(1) }),
+);
 export const submitSolution = defineTool("submit_solution", "Submit the complete solution.", z.object({ solutionMd: z.string() }));
 
 export const submitGeneratedExercise = defineTool(

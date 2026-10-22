@@ -1,5 +1,7 @@
 import type { CheckGrade, CheckItem } from "@/core/claude/practiceTools";
+import { createConv, loadConv, updateConv } from "@/core/domain/history/history";
 import { getDeviceId } from "@/core/lib/device";
+import { useSettings } from "@/stores/settings";
 import { appendJsonl, readJsonl } from "@/core/lib/fs/jsonl";
 import { newId } from "@/core/lib/ids";
 import { nowIso } from "@/core/lib/time";
@@ -9,8 +11,9 @@ import type { ExerciseRef } from "@/core/domain/dataSchemas";
 import { allExercises, fromExercise, loadCtx, paths, type Ctx, type Ex } from "./exercises";
 import { chooseFocus, generateChecks, generateExercise } from "./generate";
 import { gradeCheck, type Attachment, type Env } from "./grade";
-import { emptyRun, ExerciseRun, type RunState } from "./run";
-import { completedIds, itemKind, pick, skill, type Scope } from "./select";
+import { emptyRun, ExerciseRun, perfect, type RunState } from "./run";
+import { completedIds, itemKind, pick, requiredSet, skill, type Scope } from "./select";
+import { after, burn, examPool, loadStore, pickTest, saveStore, scopeOf, type Chain, type Note } from "./test";
 
 export type Check = CheckItem & { id: string };
 export type Item =
@@ -21,6 +24,10 @@ export type Result = { kind: "E" | "M" | "O"; score: number; correct: boolean; s
 export type PState = {
   sid: string; scope: Scope; startedAt: string; endedAt: string | null; index: number; served: string[];
   current: Item | null; next: Item | null; queue: Check[]; queueKey: string; results: Result[];
+  /** M59 Test practice: the follow-up chain after a miss, the note shown with the current question, the last stages served */
+  /** M60: its saved conversation in .chat_history */
+  cid?: string;
+  test?: { chain: Chain | null; note: Note; noteStage?: string; recent: string[]; /** the question last scored (a retried Next or End doesn't score it twice) */ scored?: string };
 };
 export type Summary = { items: number; avgScore: number; newMistakes: string[]; weakStages: { id: string; title: string }[] };
 
@@ -54,7 +61,42 @@ export class Practice {
   }
   private async persist() {
     if (!this.state) return;
+    const fresh = !this.state.cid; // a new session, or one from before M60
+    this.state.cid ??= newId();
     await appendJsonl(this.file(), { kind: "ui", id: newId(), ts: nowIso(), deviceId: getDeviceId(), widgetId: WIDGET, state: this.state });
+    const meta = { type: this.state.scope.kind === "test" ? ("test" as const) : ("normal" as const), title: this.title() };
+    // created once; after that only updated, so a session deleted from the list is never saved back into it
+    const st = this.state;
+    await (fresh ? createConv(this.courseNumber, { id: st.cid, kind: "practice", ...meta, state: st }) : updateConv(this.courseNumber, st.cid as string, (c) => ({ ...c, ...meta, state: st }))).catch(() => undefined);
+  }
+  /** What the session covers, for the saved-sessions list. */
+  private title() {
+    const sc = (this.state as PState).scope;
+    const p = this.ctx?.plan;
+    const he = useSettings.getState().settings.language === "he";
+    const stage = (id: string) => `${id} · ${p?.stages.find((s) => s.id === id)?.title ?? ""}`;
+    if (sc.kind === "unit") return p?.units.find((u) => u.id === sc.unitId)?.title ?? sc.unitId;
+    if (sc.kind === "stage") return stage(sc.stageId);
+    if (sc.kind === "weak") return he ? "נושאים חלשים" : "Weak topics";
+    if (sc.kind === "test" && sc.stageIds) return sc.stageIds.slice(0, 3).map(stage).join(", ") + (sc.stageIds.length > 3 ? "…" : "");
+    return he ? (sc.kind === "test" ? "כל הקורס" : "כל מה שנלמד") : sc.kind === "test" ? "The whole course" : "Everything learned";
+  }
+  /** M60: continue a saved session (an ended one too). */
+  async resume(st: PState) {
+    this.summary = null;
+    this.ctx = await loadCtx(this.courseNumber);
+    this.state = { ...st, endedAt: null };
+    this.bindRun();
+    await this.persist();
+    this.emit();
+    if (!this.state.current) await this.advance();
+  }
+  /** M60: the running session was deleted from the list. */
+  drop() {
+    this.state = null;
+    this.run = null;
+    this.summary = null;
+    this.emit();
   }
   private async set(patch: Partial<PState>) {
     this.state = { ...(this.state as PState), ...patch };
@@ -80,6 +122,7 @@ export class Practice {
     const last = lines.findLast((l) => l.kind === "ui" && l.widgetId === WIDGET);
     const st = last?.kind === "ui" ? (last.state as PState) : null;
     this.state = st && !st.endedAt ? st : null;
+    if (this.state?.cid && !(await loadConv(this.courseNumber, this.state.cid))) this.state = null; // deleted from the saved sessions
     this.bindRun();
     this.emit();
     if (this.state && !this.state.current) await this.advance();
@@ -102,6 +145,7 @@ export class Practice {
     const st = this.state as PState;
     this.ctx = await loadCtx(this.courseNumber);
     const ctx = this.ctx;
+    if (st.scope.kind === "test") return this.produceTest(st, st.scope.stageIds);
     if (st.queueKey !== this.key()) { st.queue = []; st.queueKey = this.key(); } // 7.5: queue is discarded on scope/completed change
     let kind = itemKind(st.index, skill(ctx.events));
     if (kind === "E") {
@@ -132,10 +176,46 @@ export class Practice {
     return { item: check.kind === "mcq" ? { kind: "M", check, selected: null } : { kind: "O", check, answer: null, result: null } };
   }
 
+  /** M59: a past exam question (burned once served), or a new verified one like it when the concept's exam questions are used up. */
+  private async produceTest(st: PState, scope: string[] | null): Promise<{ item: Item; served: string } | null> {
+    const n = this.courseNumber;
+    const t = (st.test ??= { chain: null, note: null, recent: [] });
+    const store = await loadStore(n);
+    const p = pickTest(await examPool(n), store, t.chain, scopeOf(this.ctx.plan.stages, scope), t.recent);
+    if (!p) return null;
+    let chosen: Parameters<typeof fromExercise>[0] | null;
+    if ("pick" in p) {
+      await saveStore(n, burn(store, p.pick));
+      chosen = p.pick.ex;
+    } else {
+      const like = t.chain ? ((await allExercises(n)).find((x) => x.id === t.chain?.missedId) ?? null) : null;
+      const all = new Set(this.ctx.plan.stages.map((s) => s.id));
+      chosen = await generateExercise(this.e, this.ctx, { stageId: p.generate, required: like?.requiredStageIds ?? requiredSet(this.ctx.plan, p.generate, all) }, { like });
+      if (!chosen) throw new Error("practice.test.generateFailed");
+    }
+    t.recent = [...t.recent, chosen.primaryStageId].slice(-3);
+    return { item: { kind: "E", ref: fromExercise(chosen).ref, run: emptyRun() }, served: chosen.id };
+  }
+  /** M59: the answer to the current question decides the follow-ups; perfect = the first submission perfect (a miss fixed on retry is still a miss). */
+  private async scoreTest() {
+    const st = this.state;
+    if (st?.scope.kind !== "test") return;
+    await this.binding;
+    const cur = st.current;
+    const stageId = this.exercise?.stageIds[0];
+    const t = (st.test ??= { chain: null, note: null, recent: [] });
+    if (cur?.kind === "E" && t.scored === cur.ref.id) return;
+    t.note = null;
+    if (cur?.kind !== "E" || !cur.run.grade || !stageId) return; // skipped: nothing changes
+    const r = after(await loadStore(this.courseNumber), t.chain, stageId, cur.ref.id, perfect(cur.run.grade) && cur.run.attempts === 1);
+    await saveStore(this.courseNumber, r.store);
+    st.test = { ...t, chain: r.chain, note: r.note, noteStage: stageId, scored: cur.ref.id };
+  }
+
   /** Prefetch the next item while the user works (7.5). */
   private prefetch() {
     const st = this.state;
-    if (!this.prefetchOn || !st || st.next || this.prefetching) return;
+    if (!this.prefetchOn || !st || st.next || this.prefetching || st.scope.kind === "test") return; // the next test question depends on this answer
     this.prefetching = (async () => {
       try {
         const made = await this.produce();
@@ -157,6 +237,7 @@ export class Practice {
     this.emit();
     try {
       await this.prefetching;
+      await this.scoreTest();
       let st = this.state;
       if (!st.next) {
         const made = await this.produce();
@@ -189,7 +270,7 @@ export class Practice {
     this.binding = (async () => {
       const found = (await allExercises(this.courseNumber)).find((x) => x.id === cur.ref.id);
       if (!found || this.state?.current !== cur) return;
-      this.exercise = fromExercise(found);
+      this.exercise = { ...fromExercise(found), ...(this.state?.scope.kind === "test" ? { open: true } : {}) };
       this.run = new ExerciseRun(this.courseNumber, this.exercise, "practice", this.e, cur.run, async (s) => {
         const it = (this.state as PState).current;
         if (it?.kind !== "E") return;
@@ -247,6 +328,7 @@ export class Practice {
   // ----- end -----
 
   async end(): Promise<Summary> {
+    await this.scoreTest(); // M59: the last answer counts too
     const st = this.state as PState;
     this.ctx = await loadCtx(this.courseNumber);
     const stages = new Set(st.results.flatMap((r) => r.stageIds));

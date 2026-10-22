@@ -43,6 +43,14 @@ export function Exercise({
     return !r.isError;
   };
 
+  // The host renders the card from its stored result (e.g. back in this chat later): show the live state.
+  useEffect(() => {
+    void callTool("exercise_state", { runId: d.runId })
+      .then((r) => !r.isError && r.structuredContent && apply(r))
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // A grade/hint/solution is produced by Claude in the chat; follow it until it lands.
   useEffect(() => {
     if (!d.busy) return;
@@ -139,7 +147,13 @@ export function Exercise({
           <Markdown>{d.solutionMd}</Markdown>
         </div>
       )}
-      {busy && <Waiting go={go} label={d.busy === "grade" ? t("exercise.grading") : undefined} />}
+      {busy && (
+        <Waiting
+          go={go}
+          label={d.busy === "grade" ? t("exercise.grading") : undefined}
+          cancel={() => void callTool("shalav_cancel", { key: `exercise:${d.runId}` })}
+        />
+      )}
       {open && !busy && (
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" onClick={() => void ask("exercise_clarify_request", {})}>

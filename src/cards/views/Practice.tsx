@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { Check, ClipboardList, FileQuestion, Repeat, X } from "lucide-react";
+import { Check, ClipboardList, FileQuestion, Repeat, Timer, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Markdown } from "@/core/render/Markdown";
-import type { PracticeData, Go } from "../types";
+import type { PracticeData, Go, SavedItem } from "../types";
+import { NewOrOlder, SavedList } from "./History";
 import { Exercise } from "./Exercise";
 import { Homework } from "./Homework";
+import { TestChooser } from "./TestPractice";
 import { Board, Skeleton, chalkChoice, inkBox } from "../ui";
 
 type Tool = (
@@ -15,6 +17,9 @@ type Tool = (
 type Scope =
   { kind: "all" | "weak" } | { kind: "unit"; unitId: string } | { kind: "stage"; stageId: string };
 const letter = (i: number) => String.fromCharCode(65 + i);
+
+const kindOf = (d: PracticeData) =>
+  d.hw ? d.hw.kind : d.test.active ? ("test" as const) : d.mode === "item" || d.mode === "summary" ? ("normal" as const) : null;
 
 export function Practice({
   data,
@@ -31,11 +36,30 @@ export function Practice({
   const [scope, setScope] = useState<"all" | "unit" | "weak" | "stage">("all");
   const [pick, setPick] = useState("");
   const [text, setText] = useState("");
-  // M57: which practice: own homework, one question, or normal practice (a session already running picks it)
-  const [kind, setKind] = useState<"homework" | "single" | "normal" | null>(
-    data.hw ? data.hw.kind : data.mode === "item" || data.mode === "summary" ? "normal" : null,
-  );
+  // M57: which practice: own homework, one question, test practice (M59) or normal practice (a session already running picks it)
+  const [kind, setKind] = useState<"homework" | "single" | "test" | "normal" | null>(kindOf(data));
   const n = d.number;
+  // The host renders the card from its stored result (e.g. back in this chat later): show the live state.
+  useEffect(() => {
+    void callTool("practice_state", { courseNumber: n })
+      .then((r) => {
+        const x = r.structuredContent as PracticeData | undefined;
+        if (r.isError || !x) return;
+        setD(x);
+        setKind((k) => k ?? kindOf(x));
+      })
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // M60: saved sessions: start new or load an older one
+  const [saved, setSaved] = useState<SavedItem[] | null>(null);
+  const [pane, setPane] = useState<"ask" | "modes" | "older">("ask");
+  useEffect(() => {
+    if (kind) return;
+    void callTool("history_list", { number: n, kind: "practice" }).then((r) =>
+      setSaved((r.structuredContent as { items?: SavedItem[] } | undefined)?.items ?? []),
+    );
+  }, [kind, n, callTool]);
   const call = async (name: string, args: Record<string, unknown> = {}) => {
     const r = await callTool(name, { courseNumber: n, ...args });
     if (r.structuredContent) {
@@ -84,12 +108,32 @@ export function Practice({
         back={() => setKind(null)}
       />
     );
-  if (!kind)
+  const resume = async (i: SavedItem) => {
+    const r = await call("practice_resume", { id: i.id });
+    if (!r.isError) setKind(i.type === "lesson" ? "normal" : i.type);
+  };
+  if (!kind && saved?.length && pane !== "modes")
     return (
       <section className="flex flex-col gap-4" aria-label={t("nav.practice")}>
         <Board title={t("practice.modes.title")}>
+          <NewOrOlder kind="practice" start={() => setPane("modes")} older={() => setPane("older")} />
+        </Board>
+        {pane === "older" && (
+          <SavedList number={n} kind="practice" callTool={callTool} items={saved} onChange={setSaved} open={(i) => void resume(i)} />
+        )}
+      </section>
+    );
+  if (!kind)
+    return (
+      <section className="flex flex-col gap-4" aria-label={t("nav.practice")}>
+        {!!saved?.length && (
+          <Button variant="ghost" className="self-start" onClick={() => setPane("ask")}>
+            {t("homework.back")}
+          </Button>
+        )}
+        <Board title={t("practice.modes.title")}>
           <div className="grid gap-3">
-            {([["homework", ClipboardList], ["single", FileQuestion], ["normal", Repeat]] as const).map(([k, Icon]) => (
+            {([["homework", ClipboardList], ["single", FileQuestion], ["test", Timer], ["normal", Repeat]] as const).map(([k, Icon]) => (
               <button
                 key={k}
                 onClick={() => setKind(k)}
@@ -105,6 +149,18 @@ export function Practice({
           </div>
         </Board>
       </section>
+    );
+
+  if (kind === "test" && (mode === "choose" || mode === "locked"))
+    return (
+      <TestChooser
+        number={n}
+        test={d.test}
+        callTool={callTool}
+        go={go}
+        set={(x) => (setD(x), setAgain(false))}
+        back={() => setKind(null)}
+      />
     );
 
   return (
@@ -189,10 +245,22 @@ export function Practice({
           >
             {t("practice.answered")}: {d.counters.answered} · {t("practice.correct")}:{" "}
             {d.counters.correct} · {t("practice.avg")}: {d.counters.avg}
+            {d.test.active && <> · {t("practice.test.left", { n: d.test.left })}</>}
           </p>
+          {d.test.active && d.test.note && (
+            <div
+              className={`${inkBox} board-note ${d.test.note === "learned" ? "border-success!" : "border-danger!"}`}
+              role="status"
+            >
+              {t(`practice.test.note.${d.test.note}`, { concept: d.test.noteStage?.title ?? "" })}
+            </div>
+          )}
           {d.loading && !d.item && (
-            <p role="status" className="text-muted">
+            <p role="status" className="flex items-center gap-2 text-muted">
               {t("practice.preparing")}
+              <Button variant="ghost" size="sm" onClick={() => void callTool("shalav_cancel", { key: `practice:${n}` })}>
+                {t("job.cancel")}
+              </Button>
             </p>
           )}
           {d.loading && !d.item && <Skeleton />}
@@ -314,6 +382,9 @@ export function Practice({
               onClick={() => void call("practice_end")}
             >
               {t("practice.end")}
+            </Button>
+            <Button variant="ghost" onClick={() => (setKind(null), setPane("ask"))}>
+              {t("homework.back")}
             </Button>
           </div>
         </>

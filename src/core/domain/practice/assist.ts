@@ -7,7 +7,7 @@ import { appendEvent } from "@/core/domain/progress/store";
 import { getLessonBrief } from "@/core/domain/retrieval/retrieve";
 import { cachedSolution, saveSolution, type Ctx, type Ex } from "./exercises";
 import { nearestExercises, refsText } from "./generate";
-import { boundaryFor, imageBlocks, langName, stageList, type Attachment, type Context, type Env } from "./grade";
+import { boundaryFor, boundaryOf, imageBlocks, langName, stageList, type Attachment, type Context, type Env } from "./grade";
 
 /** Material digest for the exercise's focus stage (cached lesson brief, 7.7/9.9); "" if unavailable. Without a stage (homework) the host's digest ranks all materials by the statement. */
 export async function digest(env: Env, ctx: Ctx, ex: Ex): Promise<string> {
@@ -44,7 +44,7 @@ export async function getSolution(env: Env, ctx: Ctx, ex: Ex, context: Context):
   if (!md) {
     const { value } = await callStructured(env.gw, submitSolution, {
       task: "grading", courseNumber: n,
-      system: solvePrompt(langName(), stageList(ctx, ex.requiredStageIds), boundaryFor(ctx), await digest(env, ctx, ex), isCustom(ctx.course), await examples(ctx, ex)),
+      system: solvePrompt(langName(), stageList(ctx, ex.requiredStageIds), boundaryOf(ctx, ex), await digest(env, ctx, ex), isCustom(ctx.course), await examples(ctx, ex)),
       messages: [{ role: "user", content: `<exercise>${ex.statementMd}</exercise>` }], signal: env.signal,
     });
     md = value.solutionMd;
@@ -60,7 +60,7 @@ export const examples = async (ctx: Ctx, ex: Ex) =>
 
 async function clueArgs(env: Env, ctx: Ctx, ex: Ex) {
   return {
-    lang: langName(), statement: ex.statementMd, reference: ex.referenceSolutionMd, boundary: ex.stageIds.length ? boundaryFor(ctx) : "", // homework follows the course's own schedule, not Shalav progress
+    lang: langName(), statement: ex.statementMd, reference: ex.referenceSolutionMd, boundary: boundaryOf(ctx, ex), // homework and exams follow the course's own schedule, not Shalav progress
     requiredStages: stageList(ctx, ex.requiredStageIds), digest: await digest(env, ctx, ex), examples: await examples(ctx, ex),
   };
 }
