@@ -372,3 +372,7 @@
 - Teacher-file evidence, plan changes and graph edits are written by scans and builds, not by the student, so they never count. Per-stage `lastActivityAt` is not used: it is per stage and teacher `mistake_observed` touches it.
 - The lesson's last action is kept in memory (`active.at`, set by every `log()`) rather than read from `.chat_history` on each status; on resume it starts from the saved conversation's `updatedAt`. A new lesson does not read older conversations: a slides-only session with no check is not seen.
 - No prompt rule uses the number (v2 rule 10 recaps from the RECAP block). It is context for the tutor, as in v1 §6.3/§10.2; dropping the line was the alternative, rejected because the resume path has no other gap signal.
+
+## M90 (U7) — File zones open by default when they fit one page
+- A zone's default is decided once, at its first non-empty file list in the card: open when it has at most 10 rows (one page). Later growth or shrinking never changes it: a short zone that grows past 10 stays open (with the pager), a long zone trimmed to 5 stays collapsed. An empty zone is decided when its first files arrive.
+- The student's toggle and a legend filter (which opens the zone) win over the default for the card's lifetime; the 1.5 s poll never changes `open`.

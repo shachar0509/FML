@@ -76,6 +76,15 @@ const STATES = [
 ];
 const groups = (rows: FileRow[]) => STATES.map((s) => ({ ...s, n: rows.filter(s.has).length }));
 const PAGE = 10;
+type Open = Partial<Record<Role, boolean>>;
+/** Each zone's default, decided once at its first non-empty list: open when it fits one page (U7). A zone already decided (by this, a click or a filter) is never touched, so the poll cannot move it. */
+const latch = (x: Open, f: FilesData): Open => {
+  const lists: Record<Role, FileRow[]> = { material: f.materials, exercises: f.exercises, teacher: f.teacher ?? [] };
+  let y = x;
+  for (const role of Object.keys(lists) as Role[])
+    if (y[role] === undefined && lists[role].length > 0) y = { ...y, [role]: lists[role].length <= PAGE };
+  return y; // the same object when nothing was decided: no extra render on an ordinary poll
+};
 
 /** Alphabetical, names in the settings language first (Hebrew names first in Hebrew, the rest first in English). */
 const sortNames = (rows: FileRow[], lang: string) => {
@@ -249,16 +258,23 @@ export function Files({
   const [sent, setSent] = useState<{ done: number; total: number } | null>(null); // upload bytes
   const [del, setDel] = useState<string | null>(null); // sha awaiting "are you sure"
   const [url, setUrl] = useState("");
-  const [open, setOpen] = useState<Partial<Record<Role, boolean>>>({}); // collapsed by default, like the plan units
+  const [open, setOpen] = useState<Open>({}); // per zone; unset until it has files, then open if they fit one page (latch); a click or a filter changes it
   const refresh = useCallback(async () => {
     const r = await callTool("files_list", { number });
-    if (!r.isError) setD(r.structuredContent as FilesData);
+    if (!r.isError) {
+      const f = r.structuredContent as FilesData;
+      setD(f);
+      setOpen((x) => latch(x, f));
+    }
   }, [callTool, number]);
   useEffect(() => {
     let on = true;
-    void callTool("files_list", { number }).then(
-      (r) => on && !r.isError && setD(r.structuredContent as FilesData),
-    );
+    void callTool("files_list", { number }).then((r) => {
+      if (!on || r.isError) return;
+      const f = r.structuredContent as FilesData;
+      setD(f);
+      setOpen((x) => latch(x, f));
+    });
     return () => void (on = false);
   }, [callTool, number]);
   useEffect(() => {

@@ -14,7 +14,7 @@ for (const lang of LANGS)
     await page.getByRole("button", { name: lang === "he" ? /הוספת קורס/ : /Add course/ }).click();
     // the course opens without a plan and nothing is sent to Claude: files first, Build plan when ready
     await expect(page.getByText(lang === "he" ? "השלב הבא: קבצי הקורס" : "Next: your course files")).toBeVisible();
-    await expect(page.getByRole("button", { name: lang === "he" ? /חומרי לימוד/ : /Study materials/ })).toHaveAttribute("aria-expanded", "false"); // Files section, collapsed
+    await expect(page.getByRole("button", { name: lang === "he" ? /חומרי לימוד/ : /Study materials/ })).toHaveAttribute("aria-expanded", "true"); // Files section: 2 files fit one page, open (U7)
     expect(await said(page)).toEqual([]);
     await page.getByRole("button", { name: lang === "he" ? "בניית תוכנית" : "Build plan" }).click();
     expect(await said(page)).toEqual([lang === "he" ? "▶️ בניית תוכנית" : "▶️ Building the plan"]); // the build lane
@@ -40,10 +40,10 @@ for (const lang of LANGS)
       // M65: the student's stars and exam readiness
       await expect(page.getByRole("img", { name: lang === "he" ? "2.5 מתוך 5 כוכבים" : "2.5 of 5 stars" })).toBeVisible();
       await expect(page.getByText(lang === "he" ? "מוכנות למבחן 40%" : "Exam-ready 40%")).toBeVisible();
-      // every unit starts collapsed, the current one too; Learn / Practice are on the course's row in My courses
-      await expect(page.locator("[aria-expanded=true]")).toHaveCount(0);
+      // every unit starts collapsed, the current one too; only the two short file lists are open (U7); Learn / Practice are on the course's row in My courses
+      await expect(page.locator("[aria-expanded=true]")).toHaveCount(2);
       await expect(page.getByRole("button", { name: lang === "he" ? /^לימוד/ : /^Learn/ })).toHaveCount(0);
-      // file lists start collapsed (like the plan units); the rings show without opening them
+      // short file lists start open (U7); the rings show either way
       await expect(page.getByRole("img", { name: lang === "he" ? "50% נסרקו" : "50% scanned" })).toBeVisible();
       await expect(page.getByRole("img", { name: lang === "he" ? "100% נסרקו" : "100% scanned" })).toBeVisible();
       // each list shows its counts by scan state
@@ -54,11 +54,16 @@ for (const lang of LANGS)
       const filesSection = page.getByRole("region", { name: lang === "he" ? "קבצי לימוד" : "Study files" });
       const mats = page.getByRole("button", { name: lang === "he" ? /חומרי לימוד/ : /Study materials/ });
       const exs = page.getByRole("button", { name: lang === "he" ? /תרגילים לדוגמה/ : /Sample exercises/ });
-      await expect(mats).toHaveAttribute("aria-expanded", "false");
-      await expect(exs).toHaveAttribute("aria-expanded", "false");
-      await expect(page.getByText("lecture2.pdf")).toBeHidden();
-      await expect(page.getByText("hw1.pdf")).toBeHidden();
+      await expect(mats).toHaveAttribute("aria-expanded", "true");
+      await expect(exs).toHaveAttribute("aria-expanded", "true");
+      await expect(page.getByText("lecture2.pdf")).toBeVisible();
+      await expect(page.getByText("hw1.pdf")).toBeVisible();
       await page.waitForTimeout(400); // card fade-in
+      await filesSection.screenshot({ path: `e2e/tests_output/course/card-files-open-${lang}-${theme}.png` });
+      await mats.click();
+      await exs.click();
+      await expect(mats).toHaveAttribute("aria-expanded", "false");
+      await expect(page.getByText("lecture2.pdf")).toBeHidden();
       await filesSection.screenshot({ path: `e2e/tests_output/course/card-files-collapsed-${lang}-${theme}.png` });
       await mats.click();
       await exs.click();
@@ -159,7 +164,7 @@ for (const lang of LANGS)
       const zone = page.getByRole("button", { name: lang === "he" ? /הערות המרצה/ : /Teacher's notes & comments/ });
       await expect(zone).toBeVisible();
       await expect(page.getByText(lang === "he" ? /נלקחות רק הערות המרצה/ : /Only the teacher's comments are used/)).toBeVisible();
-      await zone.click();
+      await expect(zone).toHaveAttribute("aria-expanded", "true"); // 1 file: open by default (U7)
       await expect(page.getByText(lang === "he" ? "תרגיל בית 2 - בדוק.pdf" : "hw2 graded.pdf")).toBeVisible();
       await page.waitForTimeout(400);
       await axe(page);
@@ -172,9 +177,14 @@ for (const lang of LANGS)
     const errors = pageErrors(page);
     await page.goto(host(`lang=${lang}&files=many`)); // 23 materials: 11 Hebrew names, 12 English
     await page.locator("ul button").first().click();
-    await page.getByRole("button", { name: lang === "he" ? /חומרי לימוד/ : /Study materials/ }).click();
+    const matsBtn = page.getByRole("button", { name: lang === "he" ? /חומרי לימוד/ : /Study materials/ });
+    await expect(matsBtn).toHaveAttribute("aria-expanded", "false"); // 23 files: collapsed by default
+    await matsBtn.click();
+    const exs = page.getByRole("button", { name: lang === "he" ? /תרגילים לדוגמה/ : /Sample exercises/ });
+    await exs.click();
+    await expect(exs).toHaveAttribute("aria-expanded", "false"); // 1 file, open by default: collapsed here so only materials are listed
     const names = () => page.locator("span[dir=auto]").allTextContents();
-    const mats = await names(); // the exercises list stays collapsed
+    const mats = await names();
     expect(mats).toHaveLength(10);
     // the settings language first, then alphabetical with numbers in order
     if (lang === "he") expect(mats.slice(0, 3)).toEqual(["הרצאה 0.pdf", "הרצאה 2.pdf", "הרצאה 4.pdf"]);
@@ -214,7 +224,7 @@ for (const lang of LANGS)
     await expect(page.getByText(lang === "he" ? "בתור: הצ'אט שבונה עכשיו ימשיך לקורס הזה." : "In line: the chat that is building now continues with this course.")).toBeVisible();
     expect(await said(page)).toEqual([]); // nothing sent: that chat picks it up
     // while the plan builds: a file it will read waits for it (no "press Update plan"); one added meanwhile waits for the next build; Re-scan is off for every file
-    await page.getByRole("button", { name: lang === "he" ? /חומרי לימוד/ : /Study materials/ }).click();
+    // the materials list (3 files) is open by default (U7)
     await expect(page.getByText(lang === "he" ? "ממתין לסריקה" : "Waiting to scan", { exact: true })).toBeVisible();
     await expect(page.getByText(lang === "he" ? /לחצו על/ : /press Update plan/)).toHaveCount(1);
     await expect(page.getByText("lecture4.pdf").locator("..")).toContainText(lang === "he" ? /לחצו על/ : /press Update plan/);
@@ -234,11 +244,9 @@ for (const lang of LANGS)
     const errors = pageErrors(page);
     await page.goto(host(`lang=${lang}&files=outside`));
     await page.locator("ul button").first().click();
-    await page.getByRole("button", { name: lang === "he" ? /חומרי לימוד/ : /Study materials/ }).click();
     await expect(page.getByText("outside.pdf")).toBeVisible({ timeout: 4000 }); // no click: the card follows the folder
     await expect(page.getByText("lecture2.pdf")).toBeHidden();
     await expect(page.getByText("lecture1-final.pdf").locator("..")).toContainText(lang === "he" ? "מוכן" : "Ready"); // renamed: keeps its scan
-    await page.getByRole("button", { name: lang === "he" ? /תרגילים לדוגמה/ : /Sample exercises/ }).click();
     await expect(page.getByText("hw1.pdf").locator("..")).toContainText(lang === "he" ? /לחצו על/ : /press Update plan/); // edited: to be scanned again
     await page.waitForTimeout(400); // card fade-in
     await page.getByRole("region", { name: lang === "he" ? "קבצי לימוד" : "Study files" }).screenshot({ path: `e2e/tests_output/course/card-files-outside-${lang}.png` });
@@ -275,12 +283,13 @@ for (const lang of LANGS)
     expect(await toolsCalled(page)).toContain("course_translate_request");
     expect(await said(page)).toEqual([lang === "he" ? "▶️ המשך" : "▶️ Continue"]); // the chat does the translating
     await expect(page.getByText(lang === "he" ? "מתרגמים את התוכנית לעברית…" : "Translating the plan to English…")).toBeVisible();
-    // the card reloads every 3 s meanwhile and keeps what the student opened
+    // the card reloads every 3 s and the files poll every 1.5 s meanwhile; a short list the student collapsed stays collapsed
     const mats = page.getByRole("button", { name: lang === "he" ? /חומרי לימוד/ : /Study materials/ });
+    await expect(mats).toHaveAttribute("aria-expanded", "true"); // 2 files: open by default
     await mats.click();
     await page.waitForTimeout(3500);
     expect((await toolsCalled(page)).filter((n) => n === "shalav_course").length).toBeGreaterThan(2);
-    await expect(mats).toHaveAttribute("aria-expanded", "true");
+    await expect(mats).toHaveAttribute("aria-expanded", "false");
     expect(errors).toEqual([]);
   });
 
