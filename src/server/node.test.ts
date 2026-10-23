@@ -2,9 +2,13 @@
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import type { FileIndex } from "@/core/domain/dataSchemas";
+import { listFileIndexes, readFileIndex, writeFileIndex } from "@/core/domain/ingest/indexStore";
 import { openSource } from "@/core/domain/ingest/pageSource";
 import { setFs } from "@/core/lib/fs/fs";
+import { coursePaths } from "@/core/lib/fs/paths";
+import { useSettings } from "@/stores/settings";
 import { nodeDirs } from "@/core/lib/platform";
 import { readJson, writeJson } from "@/core/lib/storage";
 import { enableNodeCanvas } from "./canvas";
@@ -52,6 +56,53 @@ describe("nodeFs", () => {
     expect(await f.exists(join(d, "y.bin"))).toBe(false);
     await f.remove(join(dir, "a"));
     expect(await f.exists(d)).toBe(false);
+  });
+
+  it("stat gives size and times", async () => {
+    const p = join(dir, "stat.txt");
+    await writeFile(p, "abc");
+    const s = await nodeFs().stat(p);
+    expect(s.size).toBe(3);
+    expect(s.mtimeMs).toBeGreaterThan(0);
+    expect(s.ctimeMs).toBeGreaterThan(0);
+    expect(typeof s.ino).toBe("number");
+    await expect(nodeFs().stat(join(dir, "nope"))).rejects.toThrow();
+  });
+
+  it("R1: index listing on a real disk equals a fresh parse, inside and after the racy window", async () => {
+    const reads: string[] = [];
+    setFs({ ...nodeFs(), readText: (p) => (reads.push(p), readFile(p, "utf8")) });
+    const N = "01040195";
+    const rec = (o: Partial<FileIndex> = {}): FileIndex => ({
+      schema: 1, sha256: "a", fileName: "x1.md", relPath: "m/a.md", role: "material", mediaType: "text/markdown", pageCount: 1, addedAt: "t-a",
+      status: "indexed", error: null, indexedAt: "t", indexModel: "m", planVersion: 1,
+      materialPages: [{ page: 1, stageIds: ["S001"], summary: "s", hasFigure: false, text: "page text" }],
+      exercises: [], ...o,
+    });
+    useSettings.setState({ settings: { ...useSettings.getState().settings, dataRoot: join(dir, "root") } });
+    const idxDir = coursePaths(join(dir, "root"), N).indexFiles;
+    const jsonReads = () => reads.filter((p) => p.startsWith(idxDir) && p.endsWith(".json")).length;
+    try {
+      await writeFileIndex(N, rec());
+      expect(await listFileIndexes(N)).toEqual([await readFileIndex(N, "a")]);
+      await writeFileIndex(N, rec({ fileName: "x2.md" })); // inside the window: not cached yet
+      expect(await listFileIndexes(N)).toEqual([await readFileIndex(N, "a")]);
+      const spy = vi.spyOn(Date, "now").mockReturnValue(Date.now() + 5000);
+      try {
+        await listFileIndexes(N); // caches
+        reads.length = 0;
+        await listFileIndexes(N);
+        expect(jsonReads()).toBe(0);
+        await writeFileIndex(N, rec({ fileName: "x3.md" })); // new inode via temp + rename
+        const l = await listFileIndexes(N);
+        expect(l).toEqual([await readFileIndex(N, "a")]);
+        expect(l[0]?.fileName).toBe("x3.md");
+      } finally {
+        spy.mockRestore();
+      }
+    } finally {
+      setFs(nodeFs());
+    }
   });
 });
 

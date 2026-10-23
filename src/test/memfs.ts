@@ -5,6 +5,8 @@ export function memFs(): Fs & { files: Map<string, string>; bytes: Map<string, U
   const files = new Map<string, string>();
   const bytes = new Map<string, Uint8Array>();
   const dirs = new Set<string>();
+  const seen = new Map<string, { v: string | Uint8Array; n: number }>(); // R1 stat: version bumps when the content differs
+  let tick = 0;
   const children = (p: string) => {
     const pre = p.replace(/\/$/, "") + "/";
     const out = new Map<string, boolean>();
@@ -58,6 +60,13 @@ export function memFs(): Fs & { files: Map<string, string>; bytes: Map<string, U
       for (const k of [...files.keys()]) if (k === p || k.startsWith(p + "/")) files.delete(k);
       for (const k of [...bytes.keys()]) if (k === p || k.startsWith(p + "/")) bytes.delete(k);
       dirs.delete(p);
+    },
+    async stat(p) {
+      const v = files.get(p) ?? bytes.get(p);
+      if (v === undefined) throw new Error(`ENOENT ${p}`);
+      let s = seen.get(p);
+      if (!s || s.v !== v) seen.set(p, (s = { v, n: ++tick }));
+      return { size: v.length, mtimeMs: s.n, ctimeMs: s.n, ino: s.n };
     },
   };
 }

@@ -356,3 +356,9 @@
 - An older Shalav on a newer folder: practice sessions complete; lessons created after R7 show title and date with no history (resume opens the stage card). Accepted: a downgrade degrades without crash or corruption; writing entries into both files would cancel the change.
 - A crash mid-append loses that line (and the next, appended onto it); the same risk the event log already has. A schema-invalid jsonl line is skipped, while a bad entry in the header still makes the conversation unreadable, as before.
 - `loadConv` runs in the write queue of its id, so readers never see a half-appended line (the atomic rename gave that before).
+
+## M87 (R1) — Index cache keyed on disk, not on our writes
+- The key is the file's size, mtime, ctime and inode from `stat`, so edits from another computer (Drive/iCloud) are always seen; there is no in-memory invalidation on write.
+- A file changed within the last 3 s is parsed but not kept (git's racy-clean rule: FAT keeps mtime in 2 s steps, Linux ctime is coarse).
+- Callers get a structural copy (new objects, shared strings) instead of the cached objects: scanCourse mutates records in place, and freezing would turn an unaudited mutation into a crash.
+- Conflict copies in the index folder are still listed as before (no new filtering); a null parse is never cached; `readFileIndex` stays uncached.

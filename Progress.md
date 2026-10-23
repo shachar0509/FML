@@ -364,6 +364,11 @@ One `teach_step` can carry `beats` (2–8): the card plays them locally. **Next*
 - A crash in the middle of an append loses that entry (and the next one, if it is appended onto the partial line); a sync conflict copy `<id> (1).jsonl` is ignored and reported in Settings.
 - Tests: history.test.ts: old layout loads and appends without moving entries; same transcript/checkpoint/MCQ key/graded-exercise entry in both layouts; concurrent appends in order; nothing written after delete; list order; both files deleted; jsonl conflict copy ignored; stale log dropped on create; partial and CRLF lines.
 
+## M87 (R1): index records cached by file signature
+- `listFileIndexes` keeps the last parse of each index file (per Fs instance → index dir → file name) and reuses it while `stat` gives the same size:mtime:ctime:inode; it stats before reading, keeps nothing parsed within 3 s of the file's last change (coarse clocks), never keeps a null, drops entries of files that are gone, and returns a structural copy (callers mutate). `readFileIndex` / `writeFileIndex` are unchanged (read-modify-write guards read disk). New `Fs.stat` (nodeFs: node stat; memFs: a content version).
+- Files card poll, practice, hints and consult now stat unchanged index files instead of re-parsing them; results are identical.
+- Tests: indexStore (fresh-parse equality after write / dropIndex / same-length external overwrite / invalid then fixed; no reads when unchanged; copies; stat failure; two courses; new fs), import (rename keeps the record = fresh parse), node (stat; real disk inside and after the 3 s window).
+
 ## Drawing roadmap M79–M83 (agreed with the user, 2026-10-23)
 Goal: slides can draw for any course, including unusual ones, in a professional look, with beats.
 

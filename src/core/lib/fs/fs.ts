@@ -11,6 +11,8 @@ export interface Fs {
   writeBytes(path: string, data: Uint8Array): Promise<void>;
   readDir(path: string): Promise<DirEntry[]>;
   remove(path: string): Promise<void>;
+  /** Throws if missing. R1: the index cache keys on these. */
+  stat(path: string): Promise<{ size: number; mtimeMs: number; ctimeMs: number; ino: number }>;
 }
 
 let current: Fs | undefined; // set by initNode() (server) or setFs() (tests)

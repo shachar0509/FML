@@ -17,4 +17,8 @@ export const nodeFs = (): Fs => ({
     return (await readdir(p, { withFileTypes: true })).map((e) => ({ name: e.name, isDirectory: e.isDirectory(), isFile: e.isFile() }));
   },
   remove: (p) => rm(p, { recursive: true }),
+  async stat(p) {
+    const s = await stat(p);
+    return { size: s.size, mtimeMs: s.mtimeMs, ctimeMs: s.ctimeMs, ino: s.ino };
+  },
 });

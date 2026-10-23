@@ -5,7 +5,7 @@ import { useSettings } from "@/stores/settings";
 import { memFs } from "@/test/memfs";
 import { importFiles, reindex, removeFile, scanCourse, type Deps } from "./import";
 import type { FileIndex } from "@/core/domain/dataSchemas";
-import { listFileIndexes, writeFileIndex } from "./indexStore";
+import { listFileIndexes, readFileIndex, writeFileIndex } from "./indexStore";
 import { writeJsonAtomic } from "@/core/lib/fs/atomicWrite";
 import { PasswordProtectedError, TooManyPagesError } from "./types";
 
@@ -89,6 +89,21 @@ describe("scanCourse / remove / reindex", () => {
     mem.files.delete(`${p.materials}/renamed.pdf`);
     expect(await scanCourse(C, deps())).toEqual({ added: 0, removed: ["h:new.pdf"] });
     expect(await listFileIndexes(C)).toEqual([]);
+  });
+
+  it("R1: a renamed course file keeps its record, and the listing equals a fresh parse", async () => {
+    const p = coursePaths(root(), C);
+    mem.files.set(`${p.materials}/new.pdf`, "x");
+    await scanCourse(C, deps());
+    hashes[`${p.materials}/renamed.pdf`] = "h:new.pdf";
+    mem.files.delete(`${p.materials}/new.pdf`);
+    mem.files.set(`${p.materials}/renamed.pdf`, "x");
+    await scanCourse(C, deps());
+    const fresh = [await readFileIndex(C, "h:new.pdf")];
+    expect(await listFileIndexes(C)).toEqual(fresh);
+    expect(fresh[0]?.fileName).toBe("renamed.pdf");
+    await scanCourse(C, deps());
+    expect(await listFileIndexes(C)).toEqual([await readFileIndex(C, "h:new.pdf")]);
   });
 
   it("M70: the teacher's-notes folder is a third role; a file Find materials online wrote is marked as Shalav's own", async () => {
