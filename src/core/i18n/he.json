@@ -342,10 +342,6 @@
     "cancel": "ביטול"
   },
   "mcp": {
-    "pin": "הצמד את הכרטיס",
-    "full": "מסך מלא",
-    "exitFull": "יציאה ממסך מלא",
-    "unpin": "החזר לשיחה",
     "waiting": "ממתין ש-Claude יעבוד על זה…",
     "nudgeBtn": "דחיפה ל-Claude",
     "settings": {

@@ -133,19 +133,11 @@ for (const sample of ["beatsFn", "beatsCircuit", "beatsCell", "beatsIncline"])
     }
   });
 
-test("full screen: a slide fills the window, with a bigger figure", async ({ page }) => {
-  await page.goto(`/src/cards/test-host.html?lang=he&theme=light&view=step&sample=beatsCell`);
-  const fig = page.locator(".pinned-figure svg");
-  await expect(fig).toBeVisible();
-  const inline = await box(fig);
-  const size = () => page.locator('[data-beat-text="1"] p').first().evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
-  const inlineSize = await size();
-  await page.getByRole("button", { name: "מסך מלא" }).click();
-  await expect(page.locator(".cards[data-mode=fullscreen]")).toBeVisible();
+test("full screen only: the card opens in full screen, with no pin or inline option", async ({ page }) => {
   await page.setViewportSize({ width: 1500, height: 950 });
-  await expect.poll(async () => (await box(fig)).width).toBeGreaterThan(inline.width);
-  expect(await size()).toBeGreaterThan(inlineSize); // bigger text too
+  await page.goto(`/src/cards/test-host.html?lang=he&theme=light&view=step&sample=beatsCell`);
+  await expect(page.locator(".pinned-figure svg")).toBeVisible();
+  await expect(page.locator(".cards[data-mode=fullscreen]")).toBeVisible();
+  await expect(page.getByRole("button", { name: /מסך מלא|הצמד|החזר לשיחה/ })).toHaveCount(0);
   await page.screenshot({ path: "e2e/tests_output/slides/fullscreen.png" });
-  await page.getByRole("button", { name: "יציאה ממסך מלא" }).click();
-  await expect(page.locator(".cards[data-mode=inline]")).toBeVisible();
 });

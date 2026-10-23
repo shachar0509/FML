@@ -283,3 +283,5 @@
 - **Vega-Lite** (`vega` + `vega-lite`, BSD-3, `renderer: "none"` → `toSVG()`). Beats on layers only (`"beat"`/`"until"`, removed before compiling); scales come from all layers, so axes never move. Shalav's config: transparent background, Helvetica, axes/labels/titles in black (→ the board's ink), a faint grid. Data must be inline.
 - **Theme colour names in sources.** `m-blue|green|pink|orange` (quoted or not) are replaced by their exact marker values before Graphviz/Vega render (`markColors`), and `themeColors` (now per tag, merging into an existing `class`) turns them back into the card's colours.
 - `server.mjs` grew from 7.8 MB to 11.1 MB (Graphviz WebAssembly, Vega).
+
+- Full screen only (user request, after M80): the card asks the host for `fullscreen` on load and again whenever the host returns it (Esc, its own button); the pin (pip) and full-screen toggle buttons are gone. A card replaced by a newer one goes back inline so it does not cover it. A host without full screen shows the card inline.

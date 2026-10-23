@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, CornerDownLeft, GraduationCap, Maximize2, Minimize2, Pin, PinOff, X } from "lucide-react";
+import { ArrowLeft, CornerDownLeft, GraduationCap, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { applyLanguage, applyTheme } from "@/core/lib/dom";
 import { setFigureRenderer } from "@/core/render/Figure";
@@ -24,15 +24,17 @@ export function Cards({ host }: { host: Host }) {
   setFigureRenderer((kind, source) => callTool("figure_render", { kind, source })); // M79: server-drawn figures (set before any figure mounts)
   const { t, i18n } = useTranslation();
   const [mode, setMode] = useState(ctx.displayMode ?? "inline");
-  const canPin = !!ctx.availableDisplayModes?.includes("pip");
-  const pinned = mode === "pip";
-  const togglePin = async () =>
-    setMode(await displayMode(pinned ? "inline" : "pip").catch(() => mode));
-  // M78: a lesson slide can fill the window, when the host offers it.
+  // The card only runs in full screen: it asks for it on load and whenever the host puts it back (no pin or inline option).
   const canFull = !!ctx.availableDisplayModes?.includes("fullscreen");
   const full = mode === "fullscreen";
-  const toggleFull = async () =>
-    setMode(await displayMode(full ? "inline" : "fullscreen").catch(() => mode));
+  const [hostMode, setHostMode] = useState(ctx.displayMode);
+  if (ctx.displayMode !== hostMode) {
+    setHostMode(ctx.displayMode);
+    if (ctx.displayMode) setMode(ctx.displayMode);
+  }
+  useEffect(() => {
+    if (canFull && !stale && !full) void displayMode("fullscreen").then(setMode, () => undefined);
+  }, [canFull, stale, full, displayMode]);
   // Card-side navigation is a history on top of what the model last rendered (h[0]);
   // a new model result (data) starts a new history. Back pops it, or opens the screen above (course, home).
   const [nav, setNavState] = useState<{ on: CardData | null; h: CardData[] } | null>(null);
@@ -76,9 +78,9 @@ export function Cards({ host }: { host: Host }) {
     return () => clearTimeout(h);
   }, [asked, clearAsked]);
   useEffect(() => clearAsked(), [data, clearAsked]);
-  // A newer card took over: unpin this one so it does not float over the new card.
+  // A newer card took over: leave full screen so it does not cover the new card.
   useEffect(() => {
-    if (stale && mode === "pip") void displayMode("inline").then(setMode, () => undefined);
+    if (stale && mode !== "inline") void displayMode("inline").then(setMode, () => undefined);
   }, [stale, mode, displayMode]);
 
   if (stale)
@@ -158,7 +160,6 @@ export function Cards({ host }: { host: Host }) {
     );
   };
   const slide = shown?.view === "step" || !!(shown && "history" in shown && shown.history);
-  // Inline cards scroll away with the chat; hosts that support it can float the card (pip) so it stays visible.
   return (
     <div data-mode={mode} className={`cards mx-auto flex flex-col ${full ? "max-w-none" : slide ? "max-w-5xl" : "max-w-3xl"}`}>
       <header className="sticky top-0 z-10 flex items-center gap-2 bg-bg px-4 pt-3 pb-2">
@@ -181,32 +182,6 @@ export function Cards({ host }: { host: Host }) {
         <span className="grow text-sm font-semibold tracking-tight text-muted">
           {language === "he" ? "שלב" : "Shalav"}
         </span>
-        {canFull && slide && (
-          <button
-            className="grid size-8 place-items-center rounded-full text-muted transition-colors hover:bg-border/60 hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
-            aria-label={t(full ? "mcp.exitFull" : "mcp.full")}
-            title={t(full ? "mcp.exitFull" : "mcp.full")}
-            aria-pressed={full}
-            onClick={() => void toggleFull()}
-          >
-            {full ? <Minimize2 className="size-4" aria-hidden /> : <Maximize2 className="size-4" aria-hidden />}
-          </button>
-        )}
-        {canPin && (
-          <button
-            className="grid size-8 place-items-center rounded-full text-muted transition-colors hover:bg-border/60 hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
-            aria-label={t(pinned ? "mcp.unpin" : "mcp.pin")}
-            title={t(pinned ? "mcp.unpin" : "mcp.pin")}
-            aria-pressed={pinned}
-            onClick={() => void togglePin()}
-          >
-            {pinned ? (
-              <PinOff className="size-4" aria-hidden />
-            ) : (
-              <Pin className="size-4" aria-hidden />
-            )}
-          </button>
-        )}
       </header>
       <main className="flex grow flex-col px-4 pb-4">
         {shown && "history" in shown && shown.history ? (

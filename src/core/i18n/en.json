@@ -336,10 +336,6 @@
     "cancel": "Cancel"
   },
   "mcp": {
-    "pin": "Keep this card on screen",
-    "full": "Full screen",
-    "exitFull": "Exit full screen",
-    "unpin": "Back into the chat",
     "waiting": "Waiting for Claude to work on it…",
     "nudgeBtn": "Nudge Claude",
     "settings": {
