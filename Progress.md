@@ -331,7 +331,7 @@ One `teach_step` can carry `beats` (2–8): the card plays them locally. **Next*
 - `smoke:mcpb` renders bytefield and go too (passes).
 - Vega-Lite renders with `aria: false` (axe `aria-prohibited-attr` on beatsRegression, an M80 sample never run before).
 - e2e run: `slides.spec.ts` all 21 samples × 2 themes, `render.spec.ts`, `step.spec.ts`: all pass.
-- **Open, the user decides:** move Verovio out of `server.mjs` (23.4 MB, most of the growth since M81). Cold start (spawn → listTools, packed server, this Mac): ~0.9 s first run, ~0.44 s after.
+- **Decided (user, 2026-10-23): Verovio stays in `server.mjs`** (23.4 MB, most of the growth since M81); revisit if the Desktop check shows a slow start (see DECISIONS M83). Cold start (spawn → listTools, packed server, this Mac): ~0.9 s first run, ~0.44 s after.
 - Screenshots of each M81/M82 tool: `e2e/tests_output/tools/` (light theme, last beat).
 
 ## M83: 3D scenes with three.js (2026-10-23)
@@ -343,7 +343,7 @@ One `teach_step` can carry `beats` (2–8): the card plays them locally. **Next*
 - **Not done:** 3Dmol.js for PDB proteins (optional, on the roadmap).
 - 🧪 **Desktop check.** Does WebGL run in Claude Desktop's card iframe? Does dragging the scene work there? (Without WebGL the figure shows its fallback.)
 
-**Handoff after M83 (2026-10-23).** The M79–M83 drawing roadmap is done and committed. Not yet done: `render.spec.ts` and `step.spec.ts` for the user's end-of-roadmap run, and the user's review of the screenshots in `e2e/tests_output/slides/`. The Verovio size decision is still open (see the M82 review fixes).
+**Handoff after M83 (2026-10-23).** The M79–M83 drawing roadmap is done and committed. Not yet done: `render.spec.ts` and `step.spec.ts` for the user's end-of-roadmap run, and the user's review of the screenshots in `e2e/tests_output/slides/`.
 
 ---
 
