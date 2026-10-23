@@ -94,6 +94,10 @@ describe("Practice", () => {
     expect(pr.counters).toEqual({ answered: 1, correct: 0, avg: 70 });
     // M62: the grader sees the stage's nodes by number; its node results and a new convention are kept (an unknown number and stage are dropped)
     expect(gradeSystem).toContain("1. [concept] c");
+    // T5: with a boundary the completed stages are sent once, on its Learned line
+    expect(gradeSystem).not.toContain("Completed stages (may be cited)");
+    expect(gradeSystem).toContain("- Learned: S001 t1");
+    expect(gradeSystem).toContain('the stages on the \\"Learned:\\" line of the KNOWLEDGE BOUNDARY');
     expect(att.nodes).toEqual([{ id: expect.stringMatching(/^S001\/concept\//), score: 0.8 }, { id: expect.stringMatching(/^S001\/convention\//), score: 0.3 }]);
     expect((await events()).filter((e) => e.type === "node_added")).toMatchObject([{ kind: "convention", label: "States the units", stageIds: ["S001"], origin: "grader", refId: att.attemptId }]);
     // reveal is allowed after a graded attempt and counts

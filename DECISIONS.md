@@ -341,3 +341,6 @@
 - **Rendering.** Only on change (a beat, a drag, a resize, the camera move), with no continuous loop. Cleanup disposes geometry and materials and forces context loss, because browsers cap live WebGL contexts and a lesson keeps many cards. No WebGL means the figure's fallback.
 - **Not added:** 3Dmol.js (PDB proteins) and JSCAD. Ball-and-stick molecules are spheres plus `cylinder` rods with `from`/`to`; SMILES/TikZ cover 2D.
 - **Verovio stays in `server.mjs`** (user, 2026-10-23). Cold start is ~0.9 s first run, ~0.44 s after, and moving it to its own file wouldn't shrink the `.mcpb`. Revisit if Claude Desktop starts Shalav slowly (Windows, older Macs): then load it on the first score, like `playwright-core`.
+
+## M84 (T5) — Grading prompt: completed stages only on the boundary's Learned line
+- Spec 10.5 sends `{{COMPLETED_STAGE_TITLES}}` and `{{KNOWLEDGE_BOUNDARY}}`, whose Learned line lists the same completed stages (6.8). When a boundary is present the separate list is dropped and the rule reads "Results from the stages on the "Learned:" line of the KNOWLEDGE BOUNDARY below may be cited without proof." It names the Learned line, not all "allowed knowledge", so the Baseline does not become citable. With no boundary (homework, test practice: `boundaryOf` = "") the 10.5 text is kept verbatim.

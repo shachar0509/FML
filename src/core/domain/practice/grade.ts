@@ -68,7 +68,7 @@ export async function defineTags(courseNumber: string, ctx: Ctx, tags: { tag: st
 }
 
 export type GradeOpts = {
-  hintsUsed: number; solutionRevealed: boolean; context: Context; completedTitles?: string; /** M56 loop: the course's conventions to grade by */ examples?: string; digest?: string;
+  hintsUsed: number; solutionRevealed: boolean; context: Context; /** M56 loop: the course's conventions to grade by */ examples?: string; digest?: string;
   /** a typed answer instead of (or next to) the pages */
   answerText?: string;
 };

@@ -158,6 +158,8 @@ it("practice card: scope, generated exercise through the bridge, MCQ, open answe
   const gj = await job({ ...g, finalAnswerCorrect: true });
   expect(gj).toContain("Show A");
   expect(gj).not.toContain("KNOWLEDGE BOUNDARY"); // homework follows the course, not Shalav progress
+  expect(gj).toContain("Completed stages (may be cited)"); // T5: no boundary → the list stays
+  expect(gj).toContain("Results from the completed stages listed below may be cited");
   expect(sc<PracticeData>(await call("practice_state", { courseNumber: n })).hw?.questions.map((q) => q.accepted)).toEqual([true, false, false]);
   expect((await readJsonlDir(coursePaths(useSettings.getState().settings.dataRoot, n).events, EventSchema)).length).toBe(before); // homework moves no mastery
   expect(sc<PracticeData>(await call("homework_open", { courseNumber: n, index: 2 })).hw?.exercise).toMatchObject({ statementMd: "Show C", grade: null });
@@ -212,6 +214,7 @@ it("practice card: scope, generated exercise through the bridge, MCQ, open answe
     await call("exercise_grade_request", { runId: ex.runId, files: sol });
     const gj = await job(bad);
     expect(gj).not.toContain("KNOWLEDGE BOUNDARY"); // exams cover the whole course
+    expect(gj).toContain("Completed stages (may be cited)"); // T5: test practice keeps the list
   };
   ahead = "";
   await call("practice_start_request", { courseNumber: n, scope: { kind: "test", stageIds: ["S001"] } });

@@ -347,6 +347,11 @@ One `teach_step` can carry `beats` (2–8): the card plays them locally. **Next*
 
 ---
 
+## M84 (T5): grading sends the completed stages once
+- With a knowledge boundary (lesson exercises, normal practice), the grading prompt no longer repeats the completed stages as a separate "Completed stages (may be cited)" list; the boundary's `- Learned:` line already has them (same ids and titles, same `completed`/`completed_override` set). The citing rule now reads "Results from the stages on the "Learned:" line of the KNOWLEDGE BOUNDARY below may be cited without proof." About 350-550 tokens less per graded attempt with 40 completed stages.
+- Without a boundary (homework, single question, test practice) the prompt is byte-identical to before. `checkGradingPrompt`, the course-facts check (`DISPUTE_RULES`, `settleDisputes`, typed answers) and the M77 `[edge]` label sentence are unchanged. Dead `GradeOpts.completedTitles` removed.
+- Tests: `prompts/practice.test.ts` (frozen pre-T5 prompt at eabd051: equal without a boundary in 4 shapes; with one, equal up to exactly the two edits; each completed id once; facts and [edge] text kept; check prompt unchanged), practice engine (no list, Learned line, new rule), server homework and test practice (list still there).
+
 ## Drawing roadmap M79–M83 (agreed with the user, 2026-10-23)
 Goal: slides can draw for any course, including unusual ones, in a professional look, with beats.
 

@@ -1,5 +1,5 @@
 import { courseRef, isCustom, uniName } from "@/core/universities";
-// Spec 10.5-10.8 (placeholders filled by the caller).
+// Spec 10.5-10.8 (placeholders filled by the caller). 10.5 deviation (T5): with a knowledge boundary the completed-stages list is its Learned line (DECISIONS.md).
 import { nodeRules } from "@/core/domain/knowledge/tag";
 import { DISPUTE_RULES } from "./facts";
 import { EXAM_CONVENTIONS, languageRules, type Lang } from "./shared";
@@ -24,7 +24,7 @@ export const gradingPrompt = (a: GradeArgs) =>
 Scoring (0-100), as in a ${isCustom(a.course) ? "strict" : uniName()} exam:
 - 100 only for a complete, correct and fully justified solution.
 - Unjustified step: -5 to -15 each. Missing case or edge case: -5 to -20. Computational slip with a correct method: -3 to -5. Wrong method or invalid reasoning: major deduction. A correct final answer reached by invalid reasoning: at most 40.
-- Results from the completed stages listed below may be cited without proof. A valid argument that uses material beyond them is not penalized; list it in usesMaterialBeyondCompleted.
+- Results from ${a.boundary ? `the stages on the "Learned:" line of the KNOWLEDGE BOUNDARY below` : "the completed stages listed below"} may be cited without proof. A valid argument that uses material beyond them is not penalized; list it in usesMaterialBeyondCompleted.
 
 Reading handwriting: read carefully. If a symbol or step is unclear and it affects the grade, list it in illegibleParts instead of guessing. If the solution cannot be read, set legibility "illegible" and verdict "unreadable".
 
@@ -42,9 +42,7 @@ Reference solution: ${a.reference ?? "No reference solution; solve it yourself f
 Grading notes: ${a.gradingNotes || "(none)"}${a.examples ? `\nExample exercises of this course with their solutions (the expected conventions):\n${a.examples}` : ""}${a.digest ? `\nCourse material digest:\n<materials>${a.digest}</materials>` : ""}
 Required stages and objectives:
 ${a.requiredStages}
-Completed stages (may be cited):
-${a.completedTitles}
-Existing mistake tags:
+${a.boundary ? "" : `Completed stages (may be cited):\n${a.completedTitles}\n`}Existing mistake tags:
 ${a.mistakeTags || "(none)"}
 ${nodesPart(a)}
 ${a.boundary ? `${a.boundary}
