@@ -4,7 +4,7 @@
 Rules: work only on branch `dev`; one commit per step with tests; update this file after every step; record silent-spec choices in `DECISIONS.md`; stop after each step so the user can compact. Steps marked 🧪 need a manual Claude Desktop check by the user; list what to check.
 Environment: Node 22, pnpm, Playwright chromium. Never store keys in files.
 
-Status: plan v2 §9 (M0–M13) is done, plus follow-ups M14–M80. The v1 desktop app (Tauri, API key, Drive sync, Ask panel) is deleted; it lives in git tag `desktop-v1-final` (= `01640cb`).
+Status: plan v2 §9 (M0–M13) is done, plus follow-ups M14–M81. The v1 desktop app (Tauri, API key, Drive sync, Ask panel) is deleted; it lives in git tag `desktop-v1-final` (= `01640cb`).
 
 ---
 
@@ -294,7 +294,22 @@ One `teach_step` can carry `beats` (2–8): the card plays them locally. **Next*
 - **Samples:** beatsAutomaton (Graphviz DFA, 3 beats), beatsFlow (Mermaid flowchart with Hebrew labels, 4), beatsRegression (Vega-Lite, 2), added to `slides.spec.ts` (not run yet). A quick dev-server check of all three passed (beats toggle, no errors); the Mermaid `>` label needed quotes (guide says so).
 - **Tests:** `render.test.ts` (Graphviz/Vega beats, colours, errors; the guide examples of tikz/graphviz/vegalite render), `mermaid.test.ts`, `tutorMcp.test.ts`. `smoke:mcpb` renders Graphviz and Vega-Lite in the packed server.
 
-**Handoff to M81 (state at compaction, 2026-10-23).** M79 and M80 are committed; e2e not run (the user runs it at the end of M83 to review screenshots: `pnpm exec playwright test e2e/tests/slides.spec.ts`, plus `render.spec.ts` and `step.spec.ts` because figures changed). Next per the roadmap below: M81 annotated course images (crops from the student's PDFs with arrows/circles/labels by beat), abcjs + svguitar (card-side, lazy chunk), d3-geo + Natural Earth maps (server). Then M82, M83 (three.js bundled as a lazy chunk; no CDN, see DECISIONS M79). Pattern for a new kind: guide in `figureGuides.ts` (with an example that a test renders), a server renderer in `src/server/figures/` + `SERVER_KINDS` + card `REMOTE`, or a card component in `Figure.tsx` `F`; beats tag output groups after a single layout; colours via `markColors`/`themeColors`; a sample in `test-advanced.ts` + `slides.spec.ts` SAMPLES; a smoke call if server-side; DECISIONS + THIRD_PARTY_NOTICES.
+## M81: course images, maps, music, chord charts (2026-10-23)
+- **Kinds.**
+  - `image` and `map` are server kinds (`src/server/figures/{image,map}.ts`, `SERVER_KINDS`, card `REMOTE`).
+  - `abc` (abcjs) and `chords` (svguitar) are drawn in the card (`figures/{Abc,Chords}.tsx`, `Figure.tsx` `F`). The server checks the `K:` line and `{"chords": [...]}`.
+  - Guides are in `figureGuides.ts`. `render.test.ts` renders the map and image examples.
+- **Course images.**
+  - The new tool `course_page({file, page})` returns the page image with a grid of page fractions. `consult_materials` marks pages with "has a figure".
+  - The image source's crop and marks are page fractions. teach_step/show_figure add the lesson's course number to the source. The sanitizer keeps JPEG/PNG data URIs on `<image>` in server drawings only.
+- **Maps:** Natural Earth 50m (world-atlas) with d3-geo. Projections: mercator, equalEarth, naturalEarth, orthographic, conic. Layers: countries, route, points, label, each with beats.
+- **Music:** `% @n` per music line. Play uses WebAudio tones and plays only the lines on the board (abcjs's synth needs a CDN sound font).
+- **Samples:** beatsHeart (image, dev course 999 from `e2e/fixtures/devCourse.ts`, which `/__figure` creates), beatsMap, beatsScale, beatsChords. They are in `slides.spec.ts` SAMPLES but not run there yet. A quick dev-server check passed in both themes: no errors, abc line 2 hidden until beat 2.
+- **Sizes:** `cards.html` grew from 3.2 to 4.1 MB, `server.mjs` from 11.6 to 12.5 MB. `smoke:mcpb` renders a map (75 tools).
+- **Tests:** `render.test.ts` (map, image, grid), `music.test.ts` (abcBeats, parseChords), `specs.test.ts` (data URI only on server `<image>`), `learnTools.test.ts` (image course, abc/chords checks, course_page).
+- 🧪 **Desktop check.** Does Claude call course_page before an image figure, and are its marks on target? Does Play sound in Claude Desktop's card (WebAudio after a click)?
+
+**Handoff to M82 (2026-10-23).** M79–M81 are committed; e2e not run (the user runs it at the end of M83: `pnpm exec playwright test e2e/tests/slides.spec.ts`, plus `render.spec.ts` and `step.spec.ts`). Next: M82, then M83 (three.js bundled as a lazy chunk; no CDN, see DECISIONS M79). Pattern for a new kind: guide in `figureGuides.ts` (with an example that a test renders), a server renderer in `src/server/figures/` + `SERVER_KINDS` + card `REMOTE`, or a card component in `Figure.tsx` `F`; beats tag output groups after a single layout; colours via `markColors`/`themeColors`; a sample in `test-advanced.ts` + `slides.spec.ts` SAMPLES; a smoke call if server-side; DECISIONS + THIRD_PARTY_NOTICES.
 
 ---
 

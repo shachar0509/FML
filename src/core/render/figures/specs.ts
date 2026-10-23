@@ -134,17 +134,19 @@ export function parseGeometry(src: string): GeometrySpec {
 
 const MAX_SVG = 50 * 1024;
 
-function stripExternalHrefs(node: Element) {
+/** M81: a server drawing (`max` given) may hold its page image as a PNG/JPEG data URI on <image>; nothing else leaves the SVG. */
+const stripExternalHrefs = (server: boolean) => (node: Element) => {
   for (const name of ["href", "xlink:href"]) {
-    if (!node.getAttribute(name)?.startsWith("#") && node.hasAttribute(name)) {
-      node.removeAttribute(name);
-    }
+    const v = node.getAttribute(name);
+    if (v === null || v.startsWith("#") || (server && node.localName === "image" && /^data:image\/(png|jpeg);base64,/.test(v))) continue;
+    node.removeAttribute(name);
   }
-}
+};
 
-export function sanitizeSvg(src: string, max = MAX_SVG): string {
-  if (src.length > max) throw new Error(`SVG is larger than ${Math.round(max / 1024)} KB`);
-  DOMPurify.addHook("afterSanitizeAttributes", stripExternalHrefs);
+export function sanitizeSvg(src: string, max?: number): string {
+  if (src.length > (max ?? MAX_SVG)) throw new Error(`SVG is larger than ${Math.round((max ?? MAX_SVG) / 1024)} KB`);
+  const strip = stripExternalHrefs(max !== undefined);
+  DOMPurify.addHook("afterSanitizeAttributes", strip);
   let clean: string;
   try {
     clean = DOMPurify.sanitize(src, {
@@ -152,7 +154,7 @@ export function sanitizeSvg(src: string, max = MAX_SVG): string {
       FORBID_TAGS: ["foreignObject", "script", "animate", "animateMotion", "animateTransform", "set"],
     });
   } finally {
-    DOMPurify.removeHook("afterSanitizeAttributes", stripExternalHrefs);
+    DOMPurify.removeHook("afterSanitizeAttributes", strip);
   }
   const t = document.createElement("template");
   t.innerHTML = clean;

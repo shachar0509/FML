@@ -14,6 +14,10 @@ Shalav draws figures with these open-source projects and assets. Each is used un
 | Mermaid | diagrams | MIT |
 | @viz-js/viz (Graphviz) | graph and automaton figures | MIT (wrapper); Graphviz EPL-1.0 |
 | Vega, Vega-Lite | data charts | BSD-3-Clause |
+| d3-geo, topojson-client | map figures | ISC |
+| world-atlas (Natural Earth 1:50m borders) | map figures | ISC; Natural Earth data: public domain |
+| abcjs | music notation figures | MIT |
+| svguitar (with svg.js) | chord chart figures | MIT |
 | WaveDrom | timing diagrams | MIT |
 | DOMPurify | SVG sanitizing | MPL-2.0 / Apache-2.0 |
 | KaTeX | math | MIT |

@@ -3,17 +3,17 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { BEAT_MARK, beatAttrs, MARK, markColors } from "@/core/render/figures/beats";
 import { graphvizToSvg, vegaLiteToSvg } from "./graphs";
+import { imageToSvg } from "./image";
+import { mapToSvg } from "./map";
 import { tikzToSvg, textToPaths } from "./tikz";
 
 /**
  * M79: figure kinds drawn on the server (heavy engines stay out of the card). The card asks for the SVG with the app-only tool
  * figure_render, so the drawing never enters the model's context; the card then shows it like an `svg` figure (beats, colours).
  */
-export const SERVER_KINDS = ["tikz", "bio", "graphviz", "vegalite"] as const;
+export const SERVER_KINDS = ["tikz", "bio", "graphviz", "vegalite", "map", "image"] as const;
 export type ServerKind = (typeof SERVER_KINDS)[number];
 export const isServerKind = (k: string): k is ServerKind => (SERVER_KINDS as readonly string[]).includes(k);
-
-
 
 /** Black and white become the board's ink and paper; the four theme colours follow the card's light/dark values. */
 export function themeColors(svg: string): string {
@@ -97,6 +97,8 @@ export function renderFigure(kind: ServerKind, source: string): Promise<string> 
       if (kind === "bio") return ownIds(withLibrary(source), key);
       if (kind === "graphviz") return ownIds(themeColors(await graphvizToSvg(markColors(source))), key);
       if (kind === "vegalite") return ownIds(themeColors(await vegaLiteToSvg(markColors(source))), key);
+      if (kind === "map") return mapToSvg(source);
+      if (kind === "image") return imageToSvg(source);
       throw new Error(`Unknown figure kind ${kind as string}`);
     })();
     cache.set(key, hit);

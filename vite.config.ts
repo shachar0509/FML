@@ -14,6 +14,7 @@ const figures: Plugin = {
       req.on("end", async () => {
         const { kind, source } = JSON.parse(body) as { kind: string; source: string };
         const { renderFigure } = (await server.ssrLoadModule("/src/server/figures/render.ts")) as typeof import("./src/server/figures/render");
+        if (kind === "image") await ((await server.ssrLoadModule("/e2e/fixtures/devCourse.ts")) as typeof import("./e2e/fixtures/devCourse")).ensureDevCourse();
         res.setHeader("content-type", "application/json");
         try {
           res.end(JSON.stringify({ structuredContent: { svg: await renderFigure(kind as "tikz", source) } }));

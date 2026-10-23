@@ -285,3 +285,25 @@
 - `server.mjs` grew from 7.8 MB to 11.1 MB (Graphviz WebAssembly, Vega).
 
 - Full screen only (user request, after M80): the card asks the host for `fullscreen` on load and again whenever the host returns it (Esc, its own button); the pin (pip) and full-screen toggle buttons are gone. A card replaced by a newer one goes back inline so it does not cover it. A host without full screen shows the card inline.
+
+## M81 — Course images, maps, music, chord charts
+- **Course images (`image`, server).** Claude first calls `course_page({file, page})`. It returns the page image (the indexer's cached page JPEG) with a 10 × 10 grid of page fractions, so Claude can see where to crop and where to point. `consult_materials` headers say "has a figure" for those pages.
+  - The crop and every mark use page fractions, and the SVG's `viewBox` is the crop, so nothing is converted.
+  - The crop comes from the full-resolution page (`PageSource.crop`: 2400 px for a PDF, a photo's own pixels), so it stays sharp at full screen on a retina display. It rides in the SVG as a PNG/JPEG data URI, placed at the padded box `crop` returns, so the marks keep page units. Without a crop, the cached 1568 px page image is used. All of this stays under the 4 MB cap for server drawings.
+  - A mark outside the crop is an error for Claude ("move it or widen the crop"), not a silent clip.
+  - `abc` is one voice only, because beats follow staff lines.
+  - The sanitizer keeps a `data:image/png|jpeg;base64` href only on `<image>` and only in server drawings. Claude-written `svg` figures still can't embed data.
+  - Marks are drawn twice, a paper halo and then the colour, and labels sit on a paper pill. They read on any photo in both themes, where the contrast guard can't see the pixels.
+- **The course is in the source.** teach_step/show_figure write the open lesson's course number into an `image` source. `figure_render` has no lesson state, and a saved lesson replays later (history, a restarted server). The file is found by its name or path in the course's indexes, and errors list the files.
+- **Maps (`map`, server).** d3-geo (ISC) and topojson-client (ISC), with Natural Earth borders (public domain) from world-atlas `countries-50m` (ISC), bundled into `server.mjs` (+0.9 MB). 110m is too coarse for small countries like Israel.
+  - The projection is fitted once to the region and clipped, so layers (countries, routes, points, labels) only toggle.
+  - Countries go by Natural Earth's English names. An unknown name lists names with the same first letter.
+  - The borders are today's. A historical map is drawn as shaded countries, routes and labels.
+  - Labels stay SVG text with a paper halo, so Hebrew works.
+- **Music (`abc`, card).** abcjs (MIT) draws ABC notation in `currentColor`; `% @n` on a music line puts that staff line's elements (`abcjs-l<k>`) on beat n.
+  - abcjs's own synth fetches its sound font from a CDN, so it is not used (see M79 "No CDN"). Instead, Play schedules abcjs's note events (`setUpAudio`) as WebAudio triangle tones, and only for the lines already on the board.
+- **Chord charts (`chords`, card).** svguitar (MIT, with svg.js MIT) needs a DOM, so it stays in the card.
+  - Finger dots are outlined in ink on the card's paper, so the number reads in both themes.
+  - A chord's beat goes on its chart's SVG parts, and the chart keeps its room while hidden.
+- **Card size.** abcjs and svguitar are lazy chunks, but vite-plugin-singlefile inlines them: `cards.html` grew from 3.2 MB to 4.1 MB.
+- **Dev fixture.** In the test host, `/__figure` creates course 999 for `image` figures (`e2e/fixtures/devCourse.ts`): a generated textbook page with the library's heart section.

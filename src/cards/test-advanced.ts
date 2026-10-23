@@ -753,4 +753,55 @@ q2 -> q1 [label="a"]; q2 -> q0 [label="b"]; // @3
     figure: { kind: "vegalite", source: JSON.stringify({ width: 520, height: 320, data: { values: [{ x: 1, y: 2.1 }, { x: 2, y: 3.9 }, { x: 3, y: 6.2 }, { x: 4, y: 7.8 }, { x: 5, y: 10.1 }] }, layer: [{ mark: { type: "point", filled: true, size: 80, color: "m-blue" }, encoding: { x: { field: "x", type: "quantitative" }, y: { field: "y", type: "quantitative" } } }, { beat: 2, mark: { type: "line", color: "m-orange", strokeWidth: 3 }, transform: [{ regression: "y", on: "x" }], encoding: { x: { field: "x", type: "quantitative" }, y: { field: "y", type: "quantitative" } } }] }), captionMd: "" },
     progress: null,
   },
+  // M81 image: a page from the student's files (dev course 999, e2e/fixtures/devCourse.ts), marked part by part
+  beatsHeart: {
+    titleMd: "חתך רוחב של הלב",
+    bodyMd: "התמונה מהעמוד בחוברת:",
+    beats: [
+      { md: String.raw`ה\pink{חדר השמאלי}: הדופן העבה, הוא דוחף דם לכל הגוף.` },
+      { md: String.raw`ה\blue{חדר הימני}: דופן דקה, דוחף דם רק לריאות.` },
+      { md: String.raw`ה\green{מחיצה} מפרידה בין החדרים.` },
+      { md: String.raw`\orange{עורק כלילי} מזין את שריר הלב עצמו.` },
+    ],
+    sideMd: null,
+    figure: { kind: "image", source: JSON.stringify({ course: "999", file: "anatomy.png", page: 1, crop: [0.2, 0.25, 0.8, 0.75], marks: [{ type: "circle", at: [0.57, 0.47], r: 0.08, text: "חדר שמאל", color: "m-pink", beat: 1 }, { type: "arrow", from: [0.25, 0.38], to: [0.33, 0.47], text: "חדר ימין", color: "m-blue", beat: 2 }, { type: "box", box: [0.39, 0.38, 0.5, 0.66], text: "מחיצה", color: "m-green", beat: 3 }, { type: "arrow", from: [0.68, 0.29], to: [0.5, 0.29], text: "עורק כלילי", color: "m-orange", beat: 4 }] }), captionMd: "" },
+    progress: null,
+  },
+  // M81 map: Natural Earth with d3-geo on the server, a layer per beat
+  beatsMap: {
+    titleMd: "יציאת מצרים",
+    bodyMd: "המסלול לפי המסורת:",
+    beats: [
+      { md: String.raw`ה\orange{מצרים}: בני ישראל בארץ גושן.` },
+      { md: String.raw`שתי \pink{נקודות} ציון: גושן והר סיני.` },
+      { md: String.raw`ה\blue{מסלול} דרך מדבר סיני.` },
+    ],
+    sideMd: null,
+    figure: { kind: "map", source: JSON.stringify({ region: [[24, 21], [40, 34]], layers: [{ countries: ["Egypt"], color: "m-orange", label: "מצרים", beat: 1 }, { points: [{ at: [31.2, 30.0], label: "גושן" }, { at: [33.97, 28.54], label: "הר סיני" }], color: "m-pink", beat: 2 }, { route: [[31.2, 30.0], [32.6, 29.9], [33.5, 29.0], [33.97, 28.54]], color: "m-blue", dashed: true, beat: 3 }, { label: "הים התיכון", at: [29, 33] }] }), captionMd: "" },
+    progress: null,
+  },
+  // M81 abc: a scale, then its triad (Play plays what is on the board)
+  beatsScale: {
+    titleMd: "סולם דו מז'ור",
+    bodyMd: "שמונה צלילים, בלי סימני היתק:",
+    beats: [
+      { md: "הסולם עולה מ-C עד C באוקטבה." },
+      { md: String.raw`המשולש של הטוניקה: הצלילים $1, 3, 5$ יחד.` },
+    ],
+    sideMd: null,
+    figure: { kind: "abc", source: "X:1\nM:4/4\nL:1/4\nQ:1/4=90\nK:C\nC D E F | G A B c | % @1\n[CEG]4 | % @2", captionMd: "" },
+    progress: null,
+  },
+  // M81 chords: two chord charts, the second at beat 2
+  beatsChords: {
+    titleMd: "אקורדים פתוחים",
+    bodyMd: "שני אקורדים בסיסיים בגיטרה:",
+    beats: [
+      { md: "Am: שלוש אצבעות, המיתר השישי לא מנוגן." },
+      { md: "E: אותה צורה, מיתר אחד למטה." },
+    ],
+    sideMd: null,
+    figure: { kind: "chords", source: JSON.stringify({ chords: [{ title: "Am", fingers: [[2, 1, "1"], [3, 2, "3"], [4, 2, "2"], [1, 0], [5, 0], [6, "x"]], beat: 1 }, { title: "E", fingers: [[3, 1, "1"], [4, 2, "3"], [5, 2, "2"], [1, 0], [2, 0], [6, 0]], color: "m-blue", beat: 2 }] }), captionMd: "" },
+    progress: null,
+  },
 };

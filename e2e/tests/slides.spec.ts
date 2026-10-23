@@ -21,8 +21,9 @@ const lowContrast = (page: Page) =>
 // M79: beatsCircuit, beatsIncline and beatsMethane are TikZ (drawn by TeX on the server, % @n markers); beatsPhoto and beatsCell
 // place library parts (bio); beatsCircuitSvg is the hand-drawn svg kind.
 // M80: beatsAutomaton (Graphviz), beatsRegression (Vega-Lite) are server-drawn too; beatsFlow is Mermaid in the card (%% @n).
-const SAMPLES = { beatsFn: 7, beatsCircuit: 3, beatsPhoto: 5, beatsCell: 3, beatsCircuitSvg: 3, beatsIncline: 5, beatsMethane: 3, beatsAutomaton: 3, beatsFlow: 4, beatsRegression: 2 } as const;
-const SERVER = ["beatsCircuit", "beatsPhoto", "beatsCell", "beatsIncline", "beatsMethane", "beatsAutomaton", "beatsRegression"];
+// M81: beatsHeart (a page of the dev course with marks) and beatsMap (Natural Earth) are server-drawn; beatsScale (abcjs) and beatsChords (svguitar) are drawn in the card.
+const SAMPLES = { beatsFn: 7, beatsCircuit: 3, beatsPhoto: 5, beatsCell: 3, beatsCircuitSvg: 3, beatsIncline: 5, beatsMethane: 3, beatsAutomaton: 3, beatsFlow: 4, beatsRegression: 2, beatsHeart: 4, beatsMap: 3, beatsScale: 2, beatsChords: 2 } as const;
+const SERVER = ["beatsCircuit", "beatsPhoto", "beatsCell", "beatsIncline", "beatsMethane", "beatsAutomaton", "beatsRegression", "beatsHeart", "beatsMap"];
 for (const [sample, of] of Object.entries(SAMPLES))
   for (const theme of ["light", "dark"] as const)
     test(`slide ${sample} (${theme})`, async ({ page }) => {

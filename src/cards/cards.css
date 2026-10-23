@@ -283,6 +283,10 @@ body {
 .fig-svg .glow { filter: drop-shadow(0 0 6px currentColor); }
 .fig-svg { flex-direction: column; align-items: center; }
 .fig-svg .fig-credit { margin: 0.25rem 0 0; font-size: 0.7rem; color: var(--muted, currentColor); opacity: 0.8; }
+/* M81: chord charts side by side; abcjs draws in currentColor */
+.fig-svg.fig-chords { flex-direction: row; align-items: flex-start; }
+.fig-chord { width: 12rem; }
+.fig-abc svg { max-height: none; }
 /* M80: Mermaid nodes with `class A m-blue` take the theme colour (Mermaid's own theme sets fill and stroke) */
 .fig-mermaid :is(.m-blue, .m-green, .m-pink, .m-orange) :is(rect, circle, ellipse, polygon, path) { stroke: currentColor !important; stroke-width: 2.5px !important; }
 .fig-mermaid :is(.m-blue, .m-green, .m-pink, .m-orange) :is(text, tspan) { fill: currentColor !important; }

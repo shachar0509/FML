@@ -31,5 +31,7 @@ const gv = await client.callTool({ name: "figure_render", arguments: { kind: "gr
 ok(!gv.isError && /class="edge" data-beat="1"/.test(gv.structuredContent?.svg ?? ""), `graphviz render: ${JSON.stringify(gv).slice(0, 300)}`);
 const vlt = await client.callTool({ name: "figure_render", arguments: { kind: "vegalite", source: JSON.stringify({ data: { values: [{ x: 1 }] }, mark: "point", encoding: { x: { field: "x", type: "quantitative" } } }) } });
 ok(!vlt.isError && vlt.structuredContent?.svg.startsWith("<svg"), `vega-lite render: ${JSON.stringify(vlt).slice(0, 300)}`);
+const map = await client.callTool({ name: "figure_render", arguments: { kind: "map", source: '{"region":[[33,29],[37,34]],"layers":[{"countries":["Israel"],"beat":1}]}' } });
+ok(!map.isError && /data-beat="1"/.test(map.structuredContent?.svg ?? ""), `map render: ${JSON.stringify(map).slice(0, 300)}`);
 await client.close();
 console.log(`smoke ok (${tools.length} tools)`);

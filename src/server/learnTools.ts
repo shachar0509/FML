@@ -20,6 +20,7 @@ import { resolveExercise, type Ex } from "@/core/domain/practice/exercises";
 import { materialsLang, pagesFor } from "@/core/domain/retrieval/retrieve";
 import { MAX_BEATS, parseGeometry, parsePlot } from "@/core/render/figures/specs";
 import { FIGURE_KINDS } from "@/core/claude/prompts/figureGuides";
+import { gridImage } from "./figures/image";
 import { isServerKind, renderFigure } from "./figures/render";
 import { readJsonFile } from "@/core/lib/fs/atomicWrite";
 import { readJsonlDir } from "@/core/lib/fs/jsonl";
@@ -190,7 +191,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
       const pages = await pagesFor({ gw: bridge }, s.course, [stage.id], [...stage.objectives, ...stage.newConcepts].join(" "));
       let brief = "";
       for (const p of pages) {
-        const t = `[${p.fileName} p.${p.page}]\n${p.text}\n\n`;
+        const t = `[${p.fileName} p.${p.page}${p.hasFigure ? ", has a figure" : ""}]\n${p.text}\n\n`;
         if (brief && brief.length + t.length > MATERIAL_CHARS) break;
         brief += t;
       }
@@ -265,14 +266,30 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     try {
       if (kind === "plot") parsePlot(source);
       else if (kind === "geometry") parseGeometry(source);
+      else if (kind === "image" && !source) throw new Error("image figures need an open lesson (they show the lesson's course files)");
       else if (isServerKind(kind)) await renderFigure(kind, source);
-      else if (kind === "mermaid") {
+      else if (kind === "abc") {
+        if (!/^\s*K:/m.test(source)) throw new Error("ABC notation needs a K: (key) header line");
+      } else if (kind === "chords") {
+        const c = (JSON.parse(source) as { chords?: unknown }).chords;
+        if (!Array.isArray(c) || !c.length) throw new Error('expected {"chords": [{"title", "fingers": [[string, fret], …]}, …]}');
+      } else if (kind === "mermaid") {
         if (!/^\s*(flowchart|graph|sequenceDiagram|stateDiagram|classDiagram|erDiagram|mindmap|timeline|gantt|journey|pie|quadrantChart|gitGraph|sankey|xychart|block)/m.test(source)) throw new Error("start with the diagram type (flowchart TD, sequenceDiagram, stateDiagram-v2, …)");
       }
       else if (!/^\s*<svg[\s>]/i.test(source)) throw new Error("source must be one <svg> element");
       return null;
     } catch (e) {
       return `Invalid ${kind} figure: ${e instanceof Error ? e.message : String(e)}.`;
+    }
+  };
+  /** M81: an image figure names the lesson's course itself, so the card can redraw it later (history, a server restart). */
+  const ownCourse = <F extends { kind: string; source: string }>(f: F): F => {
+    if (f.kind !== "image") return f;
+    if (!active) return { ...f, source: "" }; // badFigure: "image figures need an open lesson"
+    try {
+      return { ...f, source: JSON.stringify({ ...(JSON.parse(f.source) as object), course: active.n }) };
+    } catch {
+      return f; // badFigure reports the JSON error
     }
   };
   const figure = z.object({ kind: z.enum(FIGURE_KINDS).describe("Before the first figure of a kind in this lesson, call figure_guide for it."), source: z.string().max(50_000), captionMd: z.string().max(500).default("") });
@@ -287,7 +304,8 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
       inputSchema: figure,
       _meta: withCard,
     },
-    async ({ kind, source, captionMd }) => {
+    async (i) => {
+      const { kind, source, captionMd } = ownCourse(i);
       const bad = await badFigure(kind, source);
       if (bad) return fail(`${bad} Fix it and call show_figure again.`);
       const { language, theme } = sets();
@@ -306,8 +324,9 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
       inputSchema: z.object({ titleMd: z.string().max(120), bodyMd: z.string().max(6000).describe("The text shown from the start (with beats: a one-line intro, or empty)."), beats: z.array(z.object({ md: z.string().min(1).max(6000), sideMd: z.string().max(1500).optional() })).min(2).max(MAX_BEATS).optional().describe("The slide's stages, tiny steps (the student sets the pace), shown one after another under bodyMd; earlier ones stay on the board. sideMd: a side note for that beat only."), sideMd: z.string().max(1500).optional().describe("A short side remark written beside the board (an inclusion, a reminder, a warning), shown as a note next to the step."), figure: figure.optional(), progress: z.object({ n: z.number().int().min(1), of: z.number().int().min(1).max(30) }).optional().describe("This step's number within the current part of the stage and your estimate of its steps (shown as a progress bar).") }),
       _meta: withCard,
     },
-    async ({ titleMd, bodyMd, beats, sideMd, figure: f, progress }) => {
+    async ({ titleMd, bodyMd, beats, sideMd, figure: given, progress }) => {
       if (!active) return fail(NO_LESSON);
+      const f = given && ownCourse(given);
       // ponytail: length cap counts characters without LaTeX commands; tune STEP_CHARS if Hebrew steps feel cramped.
       const chars = (md: string) => md.replace(/\\[a-zA-Z]+|[{}$]/g, "").length;
       if (chars(bodyMd + (sideMd ?? "")) > STEP_CHARS) return fail(`This step is too long (${bodyMd.length + (sideMd?.length ?? 0)} characters). Teach less at once: split it into smaller steps and send only the first one.`);
@@ -466,6 +485,22 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     }
     return out(body ? `<materials>\n${body.trim()}\n</materials>\nThese are the best-matching pages. Quote exact wording only from them.` : "No indexed course material matches. Explain in your own words and say the materials do not cover it.");
   });
+
+  // M81: Claude sees a page (with a grid of page fractions) before it crops and marks it in an image figure.
+  server.registerTool(
+    "course_page",
+    { title: "See a course page", description: "The image of one page of a course file (as consult_materials names it), with a grid of page fractions, to show a region of it in an image figure (a painting, a micrograph, a map, a machine, a diagram from the lecture).", inputSchema: z.object({ file: z.string(), page: z.number().int().min(1) }), annotations: { readOnlyHint: true } },
+    async ({ file, page }) => {
+      const c = await ctx();
+      if (!c) return fail(NO_LESSON);
+      try {
+        const data = await gridImage(c.n, file, page);
+        return { content: [{ type: "image" as const, data, mimeType: "image/jpeg" }, { type: "text" as const, text: `Page ${page} of "${file}". The grid lines are page fractions (x from the left, y from the top, .5 in bold). In an image figure use "file": ${JSON.stringify(file)}, "page": ${page}; the crop and every mark are in these page fractions.` }] };
+      } catch (e) {
+        return fail(e instanceof Error ? e.message : String(e));
+      }
+    },
+  );
 
   registerAppTool(server, "lesson_state", { title: "Lesson state", description: "Card-only: current data of the lesson card.", inputSchema: z.object({ number: num, stageId: z.string() }), _meta: appOnly }, async ({ number, stageId }) => {
     const s = await load(number);

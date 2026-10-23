@@ -9,9 +9,11 @@ const F = {
   geometry: lazy(() => import("./figures/Geometry").then((m) => ({ default: m.Geometry }))),
   wavedrom: lazy(() => import("./figures/Wavedrom").then((m) => ({ default: m.Wavedrom }))),
   svg: lazy(() => import("./figures/Svg").then((m) => ({ default: m.Svg }))),
+  abc: lazy(() => import("./figures/Abc").then((m) => ({ default: m.Abc }))),
+  chords: lazy(() => import("./figures/Chords").then((m) => ({ default: m.Chords }))),
 };
 /** M79: kinds drawn on the server (src/server/figures/render.ts SERVER_KINDS) */
-const REMOTE = new Set(["tikz", "bio", "graphviz", "vegalite"]);
+const REMOTE = new Set(["tikz", "bio", "graphviz", "vegalite", "map", "image"]);
 export const FIGURE_TAGS = Object.keys(F);
 export const isFigureTag = (lang: string): lang is keyof typeof F => Object.hasOwn(F, lang);
 export { setFigureRenderer } from "./figures/Remote";

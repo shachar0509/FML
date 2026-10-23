@@ -223,7 +223,9 @@
     "copy": "העתק",
     "copied": "הועתק",
     "figureFailed": "לא ניתן היה לצייר את האיור",
-    "showSource": "הצג מקור"
+    "showSource": "הצג מקור",
+    "play": "השמע",
+    "stop": "עצור"
   },
   "learn": {
     "objectives": "מטרות השלב",

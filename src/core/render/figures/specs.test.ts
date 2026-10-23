@@ -39,6 +39,13 @@ describe("sanitizeSvg", () => {
     expect(() => sanitizeSvg("<div>x</div>")).toThrow();
     expect(() => sanitizeSvg(`<svg viewBox="0 0 1 1"><!--${"a".repeat(51200)}--></svg>`)).toThrow();
   });
+  it("M81: only a server drawing keeps a PNG/JPEG data URI, and only on <image>", () => {
+    const src = '<svg viewBox="0 0 1 1"><image href="data:image/jpeg;base64,AAAA" width="1" height="1"/><image href="data:image/svg+xml;base64,AAAA"/><a href="data:image/png;base64,AAAA"><path d="M0 0"/></a></svg>';
+    expect(sanitizeSvg(src)).not.toContain("data:");
+    const server = sanitizeSvg(src, 4e6);
+    expect(server.match(/data:/g)).toHaveLength(1);
+    expect(server).toContain("data:image/jpeg;base64,AAAA");
+  });
 });
 
 describe("beats (M78)", () => {

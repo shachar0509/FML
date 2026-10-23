@@ -85,6 +85,12 @@ it("runs a lesson: start, questions, events, status, completion, reopen + recap"
   expect(text(await call("figure_guide", { kind: "bio" }))).toMatch(/Parts: .*mitochondrion/);
   const drawn = sc<{ svg: string }>(await call("figure_render", { kind: "tikz", source: tikz(2) }));
   expect(drawn.svg).toContain('data-beat="2"');
+  // M81: an image figure gets the lesson's course; the student's files are listed when the name is wrong; abc and chords are checked; course_page answers
+  expect(text(await call("teach_step", { titleMd: "i", bodyMd: "", figure: { kind: "image", source: '{"file":"x.pdf","course":"other"}' } }))).toMatch(/No course file .*x\.pdf.*no scanned files/);
+  expect(text(await call("show_figure", { kind: "abc", source: "X:1\nCDE" }))).toMatch(/K: \(key\) header/);
+  expect(text(await call("show_figure", { kind: "chords", source: "{}" }))).toMatch(/Invalid chords figure: expected/);
+  expect(sc(await call("show_figure", { kind: "map", source: '{"layers":[{"countries":["Israel"],"beat":0}]}' }))).toMatchObject({ kind: "map" });
+  expect(text(await call("course_page", { file: "x.pdf", page: 1 }))).toMatch(/No course file/);
   // a question about the step: answered in a pop-up over the step card, which polls for answers newer than its question
   const asked = Date.now();
   expect(sc(await call("step_answer", { since: asked }))).toEqual({ answerMd: null });

@@ -217,7 +217,9 @@
     "copy": "Copy",
     "copied": "Copied",
     "figureFailed": "The figure could not be drawn",
-    "showSource": "Show source"
+    "showSource": "Show source",
+    "play": "Play",
+    "stop": "Stop"
   },
   "learn": {
     "objectives": "Stage objectives",

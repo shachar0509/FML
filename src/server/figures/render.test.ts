@@ -54,7 +54,7 @@ it("bio: each placement becomes the part in a nested svg (the card drops <use>),
 });
 
 /** The guide's own example of a kind (after its "Example (…):" line). */
-const example = async (kind: "graphviz" | "vegalite" | "tikz") => {
+const example = async (kind: "graphviz" | "vegalite" | "tikz" | "map" | "image") => {
   const { GUIDES } = await import("@/core/claude/prompts/figureGuides");
   const g = GUIDES[kind].guide;
   const from = g.indexOf("\n", g.indexOf("Example ("));
@@ -86,4 +86,47 @@ it("tikz: the guide's examples render", async () => {
   const { GUIDES } = await import("@/core/claude/prompts/figureGuides");
   const g = GUIDES.tikz.guide;
   for (const m of g.matchAll(/\n(\\begin\{(circuitikz|tikzpicture)\}[\s\S]*?\\end\{\2\})/g)) expect(await renderFigure("tikz", m[1] ?? "")).toMatch(/data-beat/);
+});
+
+it("map: the guide's example draws countries, points and a route with their beats; unknown names are listed", async () => {
+  const svg = await renderFigure("map", await example("map"));
+  expect(svg).toMatch(/^<svg[^>]*viewBox="0 0 800 520"/);
+  expect(svg).toMatch(/<g class="m-orange" data-beat="1">/);
+  expect(svg).toMatch(/<g class="m-blue" data-beat="3">.*stroke-dasharray/);
+  expect(svg).toContain("הר סיני");
+  expect(svg.length).toBeLessThan(4 * 1024 * 1024);
+  await expect(renderFigure("map", '{"layers":[{"countries":["Isreal"]}]}')).rejects.toThrow(/Unknown country "Isreal".*Israel/);
+});
+
+it("image: a page of a course file with marks by beat; the crop is the viewBox; errors name the files", async () => {
+  const { mkdtemp, mkdir, writeFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const d = await mkdtemp(join(tmpdir(), "shalav-"));
+  Object.assign(process.env, { SHALAV_CONFIG_DIR: join(d, "c"), SHALAV_CACHE_DIR: join(d, "k"), SHALAV_DOCUMENTS_DIR: join(d, "d") });
+  const { initNode } = await import("../platform");
+  const { coursePaths } = await import("@/core/lib/fs/paths");
+  const { writeFileIndex } = await import("@/core/domain/ingest/indexStore");
+  const { createCanvas } = await import("@napi-rs/canvas");
+  const { dataRoot } = await initNode();
+  const c = createCanvas(400, 600);
+  c.getContext("2d").fillRect(100, 100, 200, 200);
+  const dir = coursePaths(dataRoot, "999").materials;
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, "cell.png"), c.toBuffer("image/png"));
+  const now = new Date().toISOString();
+  await writeFileIndex("999", { schema: 1, sha256: "f".repeat(64), fileName: "cell.png", relPath: `${dir.slice(coursePaths(dataRoot, "999").course.length + 1)}/cell.png`, role: "material", mediaType: "image/png", pageCount: 1, addedAt: now, status: "indexed", error: null, indexedAt: now, indexModel: null, planVersion: null, materialPages: [], exercises: [] });
+  const src = { ...JSON.parse(await example("image")), course: "999", file: "cell.png", page: 1 };
+  const svg = await renderFigure("image", JSON.stringify(src));
+  // [0.1,0.3,0.9,0.75] of 400 × 600, within the crop's pixel rounding
+  const vb = (/viewBox="([^"]+)"/.exec(svg)?.[1] ?? "").split(" ").map(Number);
+  [40, 180, 320, 270].forEach((v, k) => expect(vb[k]).toBeCloseTo(v, -0.5));
+  expect(svg).toMatch(/<image href="data:image\/png;base64,[^"]+" x="3[12]\.\d+" y="168\.\d+" width="336" height="29\d"\/>/); // the crop at full resolution, padded as PageSource.crop pads it
+  expect(svg).toMatch(/<g class="m-blue" data-beat="1">.*<circle.*גרעין/);
+  expect(svg).toMatch(/<g class="m-green" data-beat="2">/);
+  expect(svg).toContain('class="fig-paper-fill"');
+  await expect(renderFigure("image", JSON.stringify({ ...src, file: "nope.pdf" }))).rejects.toThrow(/No course file "nope.pdf"; files: cell.png/);
+  await expect(renderFigure("image", JSON.stringify({ ...src, marks: [{ type: "label", at: [0.5, 0.5], text: "a" }, { type: "arrow", from: [0.95, 0.5], to: [0.5, 0.5] }] }))).rejects.toThrow(/Mark 2 \(arrow\) reaches \[0.95, 0.5\], outside the crop/);
+  const { gridImage } = await import("./image");
+  expect((await gridImage("999", "cell.png", 1)).length).toBeGreaterThan(1000);
 });
