@@ -376,3 +376,11 @@
 ## M90 (U7) — File zones open by default when they fit one page
 - A zone's default is decided once, at its first non-empty file list in the card: open when it has at most 10 rows (one page). Later growth or shrinking never changes it: a short zone that grows past 10 stays open (with the pager), a long zone trimmed to 5 stays collapsed. An empty zone is decided when its first files arrive.
 - The student's toggle and a legend filter (which opens the zone) win over the default for the card's lifetime; the 1.5 s poll never changes `open`.
+
+## M91 (U2): leaving the step question pop-up
+- The "may have answered in the chat" note shows 60 s after Send, counted from Send because the card cannot see the Enter press: longer than the 20 s Nudge (that one starts when the model already has the request) and shorter than the 90 s press-Enter banner. Its wording covers both causes (Enter not pressed, answered in plain text).
+- The card keeps polling after the note and after Back, because `answer_question` output is shown only by this card; it stops on the answer, a new question, Continue / Explain differently, or unmount. Back only hides the pill: it sends nothing, so the queued question and the transcript are as before.
+- Back is offered only for a question, not after Continue / Explain differently (a new step card replaces those; extra clicks there would add requests and transcript notes).
+- Back keeps the beat on screen (M78); a later question sends the beat shown at its Send. The arrow keys keep M78's behaviour (ignored only in the question box), also under the pill and the pop-up. "Back to the step" (`step.back`) is its own key, not the beat's Back (`step.beatPrev`), with the same backward arrow.
+- Back then another click before Enter replaces the queued question (only the newest click reaches the model); the transcript still shows "Asked: …" for it. Accepted: same inbox rule as any card click. Revealing beats sends nothing and does not replace it.
+- Known limit: with one global `answer` and only a time stamp, an answer to an earlier question that arrives after a newer question was sent is shown under the newer one. Rare (Back + a second Send during a running turn); accepted.

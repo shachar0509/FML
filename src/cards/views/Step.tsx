@@ -6,6 +6,9 @@ import { Markdown } from "@/core/render/Markdown";
 import type { Go, Host, StepData } from "../types";
 import { FigureCard } from "./FigureCard";
 
+/** No answer_question this long after Send: say the answer may be in the chat (U2). Between Waiting's 20 s Nudge and the 90 s press-Enter banner. */
+const ANSWER_LATE_MS = 60_000;
+
 /** One small lesson step on a notebook page; the student moves on, asks for another explanation, or asks a question. */
 /** `readOnly`: an earlier slide of a saved lesson (M60), without the buttons. */
 export function Step({ data, go, callTool, readOnly }: { data: StepData; go: Go; callTool: Host["callTool"]; readOnly?: boolean }) {
@@ -13,27 +16,32 @@ export function Step({ data, go, callTool, readOnly }: { data: StepData; go: Go;
   const [asking, setAsking] = useState(false);
   const [q, setQ] = useState("");
   const [sent, setSent] = useState<string | null>(null);
-  const send = (label: string, req: Parameters<Go>[0]) => (setSent(label), void go(req));
-  // A question is answered in a pop-up over this step (answer_question); the card polls for it.
-  const [since, setSince] = useState(0);
+  // A question is answered in a pop-up over this step (answer_question); the card polls for it until it comes, another
+  // question replaces it, Continue / Explain differently drops it, or the card goes away. Back only hides the pill.
+  // ponytail: no cap on the poll (bounded by the card's life); add one if it ever shows in load
+  const [pending, setPending] = useState<{ q: string; since: number } | null>(null);
+  const [late, setLate] = useState(false);
   const [answer, setAnswer] = useState<{ q: string; md: string } | null>(null);
+  const send = (label: string, req: Parameters<Go>[0]) => (setPending(null), setSent(label), void go(req));
   useEffect(() => {
-    if (!since) return;
-    const h = setInterval(
-      () =>
-        void callTool("step_answer", { since })
-          .then((r) => {
-            const md = (r.structuredContent as { answerMd?: string | null } | undefined)?.answerMd;
-            if (!md) return;
-            setAnswer({ q: sent ?? "", md });
-            setSince(0);
-          })
-          .catch(() => undefined),
-      2000,
-    );
-    return () => clearInterval(h);
-  }, [callTool, since, sent]);
-  const close = () => (setAnswer(null), setSent(null), setAsking(false), setQ(""));
+    if (!pending) return;
+    let live = true;
+    const h = setInterval(() => {
+      if (Date.now() - pending.since >= ANSWER_LATE_MS) setLate(true);
+      if (document.visibilityState === "hidden") return;
+      void callTool("step_answer", { since: pending.since })
+        .then((r) => {
+          const md = (r.structuredContent as { answerMd?: string | null } | undefined)?.answerMd;
+          if (!md || !live) return;
+          setAnswer({ q: pending.q, md });
+          setPending(null);
+          setSent(null);
+        })
+        .catch(() => undefined);
+    }, 2000);
+    return () => ((live = false), clearInterval(h));
+  }, [callTool, pending]);
+  const close = () => setAnswer(null);
   const p = data.progress;
   // M78: a slide with beats plays in the card: Next reveals the next beat (text and figure parts) without calling Claude.
   const beats = data.beats ?? [];
@@ -59,6 +67,16 @@ export function Step({ data, go, callTool, readOnly }: { data: StepData; go: Go;
     return () => window.removeEventListener("keydown", key);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [of]);
+  // The question says which beat was on screen (M78); Back keeps the beat, so a later question says it too.
+  const ask = () => {
+    const text = q.trim();
+    setPending({ q: text, since: Date.now() });
+    setLate(false);
+    setAsking(false);
+    setQ("");
+    setSent(text);
+    void go({ kind: "step", action: "question", text, ...(of ? { beat: { n: beat, of } } : {}) });
+  };
   const beatSide = beats[beat - 1]?.sideMd;
   const side = !!(data.figure || data.sideMd || beats.some((b) => b.sideMd));
   // A figure gets the larger column when the card is wide (full screen), and sits above the text when it is narrow (inline).
@@ -163,9 +181,25 @@ export function Step({ data, go, callTool, readOnly }: { data: StepData; go: Go;
           </Button>
         </div>
       ) : sent ? (
-        <p className="rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary self-start" role="status">
-          {sent}
-        </p>
+        <div className="flex flex-col items-start gap-2">
+          <p className="rounded-full bg-primary/5 px-4 py-2 text-sm font-medium text-primary self-start" role="status">
+            {sent}
+          </p>
+          {pending && (
+            <div className="flex flex-wrap items-center gap-2">
+              {late && (
+                <p className="text-sm text-muted" role="status">
+                  {t("step.late")}
+                </p>
+              )}
+              {/* U2: no request (no go, no clear): the queued question stays, Enter still sends it, the poll goes on. */}
+              <Button variant="ghost" size="sm" onClick={() => setSent(null)}>
+                <ArrowRight className="size-4 ltr:rotate-180" aria-hidden />
+                {t("step.back")}
+              </Button>
+            </div>
+          )}
+        </div>
       ) : asking ? (
         <div className="flex flex-col gap-2">
           <textarea
@@ -179,7 +213,7 @@ export function Step({ data, go, callTool, readOnly }: { data: StepData; go: Go;
             className="rounded-card border border-border bg-card p-4 text-[15px] shadow-card focus-visible:outline-2 focus-visible:outline-primary"
           />
           <div className="flex gap-2">
-            <Button disabled={!q.trim()} onClick={() => (setSince(Date.now()), send(q.trim(), { kind: "step", action: "question", text: q.trim(), ...(of ? { beat: { n: beat, of } } : {}) }))}>
+            <Button disabled={!q.trim()} onClick={ask}>
               {t("step.send")}
             </Button>
             <Button variant="ghost" onClick={() => setAsking(false)}>

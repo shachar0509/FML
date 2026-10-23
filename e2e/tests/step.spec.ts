@@ -71,4 +71,45 @@ for (const lang of LANGS)
       await expect(page.getByRole("button", { name: lang === "he" ? "הסבר אחרת" : "Explain differently" })).toBeVisible();
       expect(errors).toEqual([]);
     });
+
+    test(`step question: Back and the 60 s note (${lang}/${theme})`, async ({ page }) => {
+      const errors = pageErrors(page);
+      const he = lang === "he";
+      await page.clock.install();
+      await page.goto(`${url("step")}&noanswer=1`);
+      const askQ = async (text: string) => {
+        await page.getByRole("button", { name: he ? "יש לי שאלה" : "I have a question" }).click();
+        await page.getByRole("textbox").fill(text);
+        await page.getByRole("button", { name: he ? "שליחת השאלה" : "Send question" }).click();
+      };
+      const back = page.getByRole("button", { name: he ? "חזרה לצעד" : "Back to the step", exact: true });
+      const note = page.getByText(he ? "ייתכן ש-Claude ענה בצ'אט" : "Claude may have answered in the chat");
+      const requests = () => page.evaluate(() => (window as unknown as { __tools: string[] }).__tools.filter((n) => n === "shalav_request").length);
+      // Back at any time: the step buttons again, and no request (not even a clear)
+      await askQ("Why?");
+      expect(await lastReq(page)).toBe('{"kind":"step","action":"question","text":"Why?"}');
+      await expect(page.getByRole("status").filter({ hasText: "Why?" })).toBeVisible();
+      const n = await requests();
+      await back.click();
+      await expect(page.getByRole("button", { name: he ? "הסבר אחרת" : "Explain differently" })).toBeVisible();
+      expect(await requests()).toBe(n);
+      // a new question; no answer_question for 60 s → the note, the pill and Back stay
+      await askQ("Why not?");
+      await expect(note).toHaveCount(0);
+      await page.clock.fastForward(61_000);
+      await expect(note).toBeVisible();
+      await expect(back).toBeVisible();
+      await axe(page);
+      await page.screenshot({ path: `e2e/tests_output/step/card-step-timeout-${lang}-${theme}.png`, fullPage: true });
+      // a late answer_question still pops up, under the newer question
+      await page.evaluate(() => ((window as unknown as { __answer: boolean }).__answer = true));
+      await page.clock.fastForward(2_000);
+      const pop = page.getByRole("dialog", { name: he ? "תשובה לשאלה שלך" : "Answer to your question" });
+      await expect(pop.locator(".katex")).toBeVisible();
+      await expect(pop).toContainText("Why not?");
+      await expect(note).toHaveCount(0);
+      await pop.getByRole("button", { name: he ? "סגירה" : "Close" }).last().click();
+      await expect(page.getByRole("button", { name: he ? "הסבר אחרת" : "Explain differently" })).toBeVisible();
+      expect(errors).toEqual([]);
+    });
   }

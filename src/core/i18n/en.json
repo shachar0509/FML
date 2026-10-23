@@ -365,7 +365,9 @@
     "close": "Close",
     "beat": "Part {{n}} of {{of}}",
     "beatNext": "Next",
-    "beatPrev": "Back"
+    "beatPrev": "Back",
+    "back": "Back to the step",
+    "late": "No answer here yet. If you pressed Enter, Claude may have answered in the chat."
   },
   "board": {
     "definition": "Definition",

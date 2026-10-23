@@ -371,7 +371,9 @@
     "close": "סגירה",
     "beat": "חלק {{n}} מתוך {{of}}",
     "beatNext": "הלאה",
-    "beatPrev": "אחורה"
+    "beatPrev": "אחורה",
+    "back": "חזרה לצעד",
+    "late": "עדיין אין כאן תשובה. אם לחצתם Enter, ייתכן ש-Claude ענה בצ'אט."
   },
   "board": {
     "definition": "הגדרה",
