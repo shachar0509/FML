@@ -212,11 +212,13 @@ export function SlideBrowser({
   );
 }
 
-/** Learn and Practice for one course (on its row in My courses). Learn with saved lessons first asks: start new or load an older one (M60). */
+/** Learn and Practice for one course (on its row in My courses). Learn with saved lessons first asks: start new or load an older one (M60).
+ *  U4: Continue opens the newest saved lesson at once, with the same request as Load older → Open. */
 export function CourseActions({
   number,
   current,
   hasPlan,
+  last,
   callTool,
   go,
   practice,
@@ -224,16 +226,22 @@ export function CourseActions({
   number: string;
   current: { id: string; title: string } | null;
   hasPlan: boolean;
+  /** U4: the newest saved lesson (Home's data) */
+  last?: Omit<SavedItem, "type"> | null;
   callTool: Tool;
   go: Go;
   practice: () => void;
 }) {
   const { t } = useTranslation();
   const [lessons, setLessons] = useState<{ items: SavedItem[]; list: boolean } | null>(null);
+  // the saved lessons this row last fetched (Learn) or kept after a delete: a deleted lesson loses its Continue at once
+  const [known, setKnown] = useState<SavedItem[] | null>(null);
+  const resume = last && (!known || known.some((i) => i.id === last.id)) ? last : null;
   const learn = async () => {
     if (!current) return;
     if (lessons) return setLessons(null); // a second press folds the choice away
     const items = ((await callTool("history_list", { number, kind: "lesson" })).structuredContent as { items?: SavedItem[] } | undefined)?.items ?? [];
+    setKnown(items);
     if (items.length) setLessons({ items, list: false });
     else void go({ kind: "learn", stageId: current.id, title: current.title });
   };
@@ -245,6 +253,21 @@ export function CourseActions({
           {t("nav.learn")}
           {current ? ` — ${current.id}` : ""}
         </Button>
+        {resume && (
+          <Button
+            variant="outline"
+            className="max-w-full min-w-0"
+            title={resume.title}
+            aria-label={`${t("home.continue")}: ${resume.title}`}
+            onClick={() => (setLessons(null), void go({ kind: "resume", number, id: resume.id }))}
+          >
+            <HistoryIcon className="size-4 shrink-0" aria-hidden />
+            <span className="shrink-0">{t("home.continue")}</span>
+            <span className="min-w-0 truncate font-normal" dir="auto">
+              {resume.title}
+            </span>
+          </Button>
+        )}
         <Button variant="outline" disabled={!hasPlan} onClick={practice}>
           <Dumbbell className="size-4" aria-hidden />
           {t("nav.practice")}
@@ -263,7 +286,7 @@ export function CourseActions({
               kind="lesson"
               callTool={callTool}
               items={lessons.items}
-              onChange={(items) => (items.length ? setLessons({ items, list: true }) : setLessons(null))}
+              onChange={(items) => (setKnown(items), items.length ? setLessons({ items, list: true }) : setLessons(null))}
               open={(i) => (setLessons(null), void go({ kind: "resume", number, id: i.id }))}
             />
           )}

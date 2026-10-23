@@ -160,7 +160,8 @@
     "addCustom": "יצירת קורס אישי",
     "addCustomHint": "כל נושא שתרצו ללמוד",
     "customCourse": "קורס אישי",
-    "open": "פתיחת"
+    "open": "פתיחת",
+    "continue": "המשך לימוד"
   },
   "courseHome": {
     "stagesOf": "{{k}} מתוך {{n}} שלבים",

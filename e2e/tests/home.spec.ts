@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { axe, box, host, LANGS, lastReq, pageErrors, THEMES } from "./helpers";
+import { axe, box, host, LANGS, lastReq, pageErrors, said, THEMES, toolsCalled } from "./helpers";
 
 for (const lang of LANGS)
   for (const theme of THEMES)
@@ -69,4 +69,32 @@ for (const lang of LANGS)
     await page.goto(host(`lang=${lang}&theme=light`));
     await page.getByText(he ? "חשבון אינפיניטסימלי 1" : "Infinitesimal Calculus 1").click();
     await expect(page.getByRole("heading", { level: 1 })).toContainText(he ? "חשבון" : "Infinitesimal");
+  });
+
+for (const lang of LANGS)
+  test(`Continue on the row resumes the newest saved lesson in one click (${lang})`, async ({ page }) => {
+    const errors = pageErrors(page);
+    const he = lang === "he";
+    await page.goto(host(`lang=${lang}&theme=light&saved=1`));
+    const row = page.locator("ul > li").first();
+    const cont = row.getByRole("button", { name: he ? "המשך לימוד: S002 · גבולות" : "Continue learning: S002 · Limits" });
+    await expect(cont).toBeVisible();
+    // only a course with a saved lesson has it
+    await expect(page.locator("ul > li").nth(1).getByRole("button", { name: he ? /^המשך לימוד/ : /^Continue learning/ })).toHaveCount(0);
+    await axe(page);
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: `e2e/tests_output/home/card-home-continue-${lang}.png` });
+    // one click = one request (the same as Load older → Open) + one chat line + the "press Enter" banner
+    await cont.click();
+    expect(await lastReq(page)).toBe(JSON.stringify({ kind: "resume", number: "01040195", id: "l1" }));
+    expect((await toolsCalled(page)).filter((n) => n === "shalav_request")).toHaveLength(1);
+    expect(await said(page)).toEqual([he ? "▶️ המשך" : "▶️ Continue"]);
+    await expect(page.getByText(he ? "ההודעה מוכנה בתיבת הכתיבה. לחצו Enter כדי ש-Claude ימשיך." : "Ready in the message box. Press Enter so Claude continues.")).toBeVisible();
+    // deleting that lesson in Load older takes its Continue away (no click on an id that is gone)
+    await row.getByRole("button", { name: he ? /^לימוד/ : /^Learn/ }).click();
+    await page.getByRole("button", { name: he ? "טעינת שיעור קודם" : "Load older lesson" }).click();
+    await page.getByRole("button", { name: he ? "מחיקה S002 · גבולות" : "Delete S002 · Limits" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: he ? "מחיקה" : "Delete" }).click();
+    await expect(cont).toHaveCount(0);
+    expect(errors).toEqual([]);
   });

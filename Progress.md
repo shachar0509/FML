@@ -428,6 +428,13 @@ One `teach_step` can carry `beats` (2–8): the card plays them locally. **Next*
 - Course card "Watch out for": each stage chip is `S002 · title` (id small, `dir="ltr"`; the title is the plan's own `tr` title from `data.units`, follows the card direction, truncated with the full title on hover). A stage no longer in the plan shows its id alone. Card-only: `CourseData.watch`, `watchList` and `shalav_course` are unchanged (same rows, order, counts, stage ids).
 - Test: e2e course (S002 chip has its title, S009 = not in the plan, id only). Fixture: watch row stages `["S002", "S009"]`.
 
+## M99 (U4): Continue last lesson from Home
+- Home rows of a course with a saved lesson show **Continue learning · <title>** (between Learn and Practice). One click sends the same card request as Learn → Load older lesson → Open (`{ kind: "resume", number, id }`) and puts "▶️ המשך" in the chat.
+- `HomeData.courses[i].lastLesson` = `listConvs(n, "lesson")[0]` (the pick of `resume: "latest"`), only for courses with a plan; null when its stage left the plan or is locked (resume would fail). Deleting it in Load older hides the button at once.
+- Cost: every Home render calls `listConvs` per course with a plan (headers only since M86, cheap).
+- The home text (card and text-only) and the prompts are unchanged; `structuredContent` gains `lastLesson`.
+- Tests: learnTools (null without lessons, newest by last action, fresh after delete, null after the stage is removed); e2e home (one request + one chat line + banner, gone after delete). Screenshots: `home/card-home-continue-{he,en}.png`, `history/lessons-*` changed.
+
 ## Drawing roadmap M79–M83 (agreed with the user, 2026-10-23)
 Goal: slides can draw for any course, including unusual ones, in a professional look, with beats.
 

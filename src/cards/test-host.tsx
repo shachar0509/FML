@@ -19,7 +19,8 @@ const home: HomeData = {
   courses: q.get("empty")
     ? []
     : [
-        { number: "01040195", name: lang === "he" ? "חשבון אינפיניטסימלי 1" : "Infinitesimal Calculus 1", credits: 5.5, pct: 35, stage: L("S12 · גבולות של סדרות", "S12 · Limits of sequences"), current: { id: "S012", title: L("גבולות של סדרות", "Limits of sequences") }, hasPlan: true },
+        // ?saved=1: the newest saved lesson (= saved.lesson[0] below; inlined, `saved` is declared later) gives the row Continue
+        { number: "01040195", name: lang === "he" ? "חשבון אינפיניטסימלי 1" : "Infinitesimal Calculus 1", credits: 5.5, pct: 35, stage: L("S12 · גבולות של סדרות", "S12 · Limits of sequences"), current: { id: "S012", title: L("גבולות של סדרות", "Limits of sequences") }, hasPlan: true, lastLesson: q.get("saved") ? { id: "l1", title: L("S002 · גבולות", "S002 · Limits"), updatedAt: "2026-10-22T11:00:00.000Z", stageId: "S002" } : null },
         { number: "02340117", name: lang === "he" ? "מבוא למדעי המחשב" : "Intro to Computer Science", credits: 4, pct: 0, stage: null },
         // ?custom=1: also a custom course (no number or credits shown)
         ...(q.get("custom") ? [{ number: "Cm1abc", name: L("תורת המוזיקה לגיטרה", "Music theory for guitar"), credits: 0, pct: 10, stage: null, custom: true }] : []),

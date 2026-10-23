@@ -7,7 +7,7 @@ export type HomeData = {
   theme: "system" | "light" | "dark";
   /** null until the student has chosen (the card then shows the picker). */
   university: "technion" | "huji" | "reichman" | "braude" | null;
-  courses: { number: string; name: string; credits: number; pct: number; stage: string | null; building?: boolean; /** M52: a custom course (no number or credits shown) */ custom?: boolean; /** the stage Learn opens, and whether Practice can open */ current?: { id: string; title: string } | null; hasPlan?: boolean }[];
+  courses: { number: string; name: string; credits: number; pct: number; stage: string | null; building?: boolean; /** M52: a custom course (no number or credits shown) */ custom?: boolean; /** the stage Learn opens, and whether Practice can open */ current?: { id: string; title: string } | null; hasPlan?: boolean; /** U4: the newest saved lesson (Continue on the row); null without one, or when its stage left the plan or is locked */ lastLesson?: Omit<SavedItem, "type"> | null }[];
 };
 export type Base = {
   language: "he" | "en";

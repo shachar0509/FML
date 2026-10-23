@@ -6,11 +6,12 @@ import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/client";
 import { InMemoryTransport } from "@modelcontextprotocol/server";
 import { expect, it, vi } from "vitest";
-import type { LessonData, McqData } from "@/cards/types";
+import type { HomeData, LessonData, McqData } from "@/cards/types";
 import { FakeClaudeGateway, toolCall } from "@/core/claude/fake";
 import { setClaude } from "@/core/claude/runtime";
 import { createCourse } from "@/core/domain/courses/courses";
 import { EventSchema } from "@/core/domain/dataSchemas";
+import { addEntry } from "@/core/domain/history/history";
 import { mergeById, readJsonl, readJsonlDir } from "@/core/lib/fs/jsonl";
 import { coursePaths } from "@/core/lib/fs/paths";
 import { useSettings } from "@/stores/settings";
@@ -44,6 +45,8 @@ it("runs a lesson: start, questions, events, status, completion, reopen + recap"
   const client = new Client({ name: "t", version: "0" });
   await Promise.all([createServer().connect(a), client.connect(b)]);
   const call = (name: string, args: Record<string, unknown> = {}) => client.callTool({ name, arguments: args });
+  // U4: a course with a plan but no saved lesson has no Continue on its Home row
+  expect(sc<HomeData>(await call("shalav_choose_university", { university: "technion" })).courses[0]?.lastLesson).toBeNull();
   const tools = (await client.listTools()).tools;
   for (const t of ["check_answer", "lesson_state", "stage_complete", "stage_reopen"]) expect(tools.find((x) => x.name === t)?._meta).toMatchObject({ ui: { visibility: ["app"] } });
   for (const t of ["shalav_start_lesson", "shalav_lesson_status", "present_mcq", "ask_open_question", "record_check_result", "update_assessment", "consult_materials"]) expect(tools.map((x) => x.name)).toContain(t);
@@ -219,7 +222,7 @@ it("runs a lesson: start, questions, events, status, completion, reopen + recap"
   await call("answer_question", { answerMd: "y, because of the definition." }); // a saved action with no event, 30 min later
   vi.setSystemTime(t0 + 90 * 60_000);
   const answered = (await events()).filter((e) => e.type === "check_answered").length;
-  const lessons = sc<{ items: { id: string; title: string; stageId: string }[] }>(await call("history_list", { number: n, kind: "lesson" })).items;
+  const lessons = sc<{ items: { id: string; title: string; stageId: string; updatedAt: string }[] }>(await call("history_list", { number: n, kind: "lesson" })).items;
   expect(lessons[0]).toMatchObject({ stageId: "S002", title: expect.stringMatching(/^S002 · /) });
   expect(lessons.length).toBeGreaterThan(1); // the S001 lessons too
   const root = useSettings.getState().settings.dataRoot;
@@ -245,10 +248,21 @@ it("runs a lesson: start, questions, events, status, completion, reopen + recap"
   await call2("shalav_request", { kind: "resume", number: n, id: lessons[1]?.id });
   expect(text(await call2("shalav_next_job"))).toContain(`resume \\"${lessons[1]?.id}\\"`);
   expect((await call2("shalav_start_lesson", { courseNumber: n, resume: "nope" })).isError).toBe(true);
+  // U4: Home's Continue is the newest saved lesson (the top of history_list = resume "latest")
+  const homeLast = async () => sc<HomeData>(await call2("shalav_home")).courses[0]?.lastLesson;
+  expect(await homeLast()).toMatchObject({ id: lessons[0]?.id, title: lessons[0]?.title, stageId: "S002" }); // updatedAt moved on: the resume above logged "came back"
+  // newest by last action, not by creation: an action in the older lesson moves it to the top
+  await new Promise((r) => setTimeout(r, 5)); // a later millisecond than every action above
+  await addEntry(n, lessons[1]?.id ?? "", { who: "student", kind: "request", text: "x" });
+  expect((await homeLast())?.id).toBe(lessons[1]?.id);
   // delete
   const left = sc<{ items: unknown[] }>(await call2("history_delete", { number: n, kind: "lesson", ids: [lessons[0]?.id] })).items;
   expect(left).toHaveLength(lessons.length - 1);
+  expect((await homeLast())?.id).toBe(lessons[1]?.id); // read fresh: the deleted lessons[0] is not offered
   expect(block(await call2("shalav_start_lesson", { courseNumber: n, stageId: "S002" }))).toContain("\n- Minutes since last activity: 90\n"); // A8: no resume: the MCQ event at t0
+  // a lesson whose stage was removed from the plan cannot be resumed (shalav_start_lesson fails): no Continue
+  expect((await call2("plan_remove", { number: n, stageId: lessons[1]?.stageId })).isError).toBeFalsy();
+  expect(await homeLast()).toBeNull();
   vi.useRealTimers();
 });
 

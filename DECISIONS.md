@@ -422,3 +422,10 @@
 
 ## M98 — Watch-list stage titles come from the card's own plan data (U5)
 - The course card looks up watch-list stage titles in `data.units` (already translated with `tr`) instead of a new server field; a stage in no unit or deleted from the plan shows its id alone.
+
+## M99 — Continue last lesson on Home (U4)
+- The button is the newest saved lesson by last action, the same as `resume: "latest"` and the top of Load older; it is not picked by file time (copied or synced folders change file times).
+- It is hidden, not replaced by an older lesson, when the newest lesson's stage left the plan or is locked: the student can still pick another in Load older.
+- It is not disabled during a plan build, like Learn.
+- The label re-adds the `home.continue` key (deleted as unused in the 2026-10-23 cleanup).
+- Model-visible: `shalav_home`'s `structuredContent` gains `lastLesson` (benign; the home text is unchanged).

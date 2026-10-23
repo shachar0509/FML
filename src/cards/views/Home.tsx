@@ -173,6 +173,7 @@ export function Home({
                 number={c.number}
                 current={c.current ?? null}
                 hasPlan
+                last={c.lastLesson}
                 callTool={callTool}
                 go={go}
                 practice={() => practice(c.number)}

@@ -4,6 +4,7 @@ import { loadImageB64 } from "@/core/lib/attachments";
 import { getUiCapability, registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 import { McpServer } from "@modelcontextprotocol/server";
 import { listCourses } from "@/core/domain/courses/courses";
+import { listConvs } from "@/core/domain/history/history";
 import { localize } from "@/core/domain/plan/translate";
 import * as z from "zod";
 import { BridgeGateway } from "./bridge";
@@ -64,6 +65,10 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
           const t = progress?.totals;
           const stage = plan?.stages.find((x) => x.id === progress?.currentStageId);
           const { tr } = await localize(course, plan, language);
+          // U4: the same pick as resume "latest" and the top of Load older lesson; without a plan no lesson can be resumed
+          const l = plan ? (await listConvs(course.courseNumber, "lesson"))[0] : undefined;
+          // shalav_start_lesson cannot resume a lesson whose stage left the plan or is locked again: no Continue then
+          const resumable = !!l && (!l.stageId || (!!plan?.stages.some((x) => x.id === l.stageId) && progress?.stages[l.stageId]?.status !== "locked"));
           return {
             number: course.courseNumber,
             name: tr(course.nameHe),
@@ -75,6 +80,7 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
             hasPlan: !!plan,
             building: builds.building(course.courseNumber),
             custom: isCustom(course),
+            lastLesson: l && resumable ? { id: l.id, title: l.title, updatedAt: l.updatedAt, ...(l.stageId ? { stageId: l.stageId } : {}) } : null,
           };
         })),
       };

@@ -159,7 +159,8 @@
     "addCustom": "Create custom course",
     "addCustomHint": "Any subject you want to learn",
     "customCourse": "Custom course",
-    "open": "Open"
+    "open": "Open",
+    "continue": "Continue learning"
   },
   "courseHome": {
     "stagesOf": "{{k}} of {{n}} stages",
