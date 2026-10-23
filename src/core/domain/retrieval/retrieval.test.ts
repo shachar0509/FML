@@ -4,8 +4,8 @@ import { buildKnowledgeBoundary } from "@/core/domain/boundary/boundary";
 import type { FileIndex, PlanJson, ProgressJson } from "@/core/domain/dataSchemas";
 import { setFs } from "@/core/lib/fs/fs";
 import { memFs } from "@/test/memfs";
-import { rank, tokenize } from "./bm25";
-import { consult, getLessonBrief, materialsLang } from "./retrieve";
+import { rank, TOKEN_CACHE_MAX, tokenCache, tokenize } from "./bm25";
+import { consult, getLessonBrief, materialsLang, pagesFor } from "./retrieve";
 
 beforeEach(() => setFs(memFs()));
 
@@ -119,5 +119,71 @@ describe("materialsLang (M49)", () => {
     expect(await materialsLang({ gw, listIndexes: async () => [en] }, course)).toBe("English");
     expect(await materialsLang({ gw, listIndexes: async () => [he, he, en] }, course)).toBe("Hebrew");
     expect(await materialsLang({ gw, listIndexes: async () => [] }, course)).toBeNull();
+  });
+});
+
+describe("bm25 token cache (R3)", () => {
+  beforeEach(() => tokenCache.clear());
+  const cold = (docs: { id: string; text: string }[], q: string) => { tokenCache.clear(); return rank(docs, q); };
+  const docs = [
+    { id: "a:1", text: "הַגבול של סדרה מתכנסת $a_n \\to L$ סיכום: גבולות" },
+    { id: "a:2", text: "פונקציה רציפה בקטע סגור מקבלת מקסימום ומינימום" },
+    { id: "b:1", text: "The limit of a sequence: for every ε there is N" },
+    { id: "b:2", text: "ΣΑΣ σ derivative הנגזרת" },
+  ];
+
+  // (b) rank identical with and without the cache, and the warm call really reuses tokens
+  it("warm rank equals cold rank bit for bit and reuses the cached tokens", () => {
+    for (const q of ["גבול", "limit sequence", "הפונקציה רציפה", "σας", "nothing"]) {
+      const c = cold(docs, q);
+      const kept = tokenCache.get("a:1")?.toks;
+      expect(rank(docs, q)).toStrictEqual(c);
+      expect(tokenCache.get("a:1")?.toks).toBe(kept);
+    }
+  });
+
+  // (c) a re-scanned summary (same sha:page, new text) changes the ranking exactly as before
+  it("a re-scanned summary changes pagesFor's order exactly as without the cache", async () => {
+    const gw = new FakeClaudeGateway([]);
+    const idx = (sumB: string) => async () => [file("a", "גבול של סדרה", { summary: "סדרות" }), file("b", "נגזרת", { summary: sumB })];
+    const order = async (sumB: string) => (await pagesFor({ gw, listIndexes: idx(sumB) }, course, ["S002"], "גבול")).map((p) => p.sha256);
+    expect(await order("")).toEqual(["a", "b"]);
+    const warm = await order("גבול חד צדדי גבול");
+    tokenCache.clear();
+    expect(await order("גבול חד צדדי גבול")).toEqual(warm);
+    expect(warm).toEqual(["b", "a"]);
+  });
+
+  // (a) property: random Hebrew/English/math docs, re-scans included, warm == cold
+  it("200 random docs: warm and cold rank are identical, also after summary edits", () => {
+    let s = 42;
+    const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647); // Park-Miller, deterministic
+    // Hebrew letters (prefix letters included), niqqud + shin dots + maqaf, Latin, Greek sigmas, math, spaces, zero-width marks, geresh
+    const chars = "אבגדהוזחטיכלמנסעפצקרשתךםןףץ" + "ְֱִֵּׁׂ־" + "abcXYZΣσςΑ" + "0123456789$\\^_{}()+=-.,:'\"" + "  \n" + "​‏׳";
+    const str = (n: number) => Array.from({ length: n }, () => chars[Math.floor(rnd() * chars.length)]).join("");
+    for (let round = 0; round < 20; round++) {
+      const ds = Array.from({ length: 10 }, (_, i) => ({ id: `r${i}`, text: `${str(80)} ${str(20)}` }));
+      const q = str(15);
+      const c = cold(ds, q);
+      expect(rank(ds, q)).toStrictEqual(c);
+      const j = Math.floor(rnd() * ds.length);
+      const edited = ds.map((d, i) => (i === j ? { ...d, text: `${d.text.slice(0, 80)} ${str(20)}` } : d));
+      const warm = rank(edited, q);
+      expect(warm).toStrictEqual(cold(edited, q));
+      expect(tokenCache.get(`r${j}`)?.toks).toEqual(tokenize((edited[j] as { text: string }).text));
+    }
+  });
+
+  // (d) bound eviction, least recently used first
+  it("keeps at most TOKEN_CACHE_MAX entries, evicting the least recently used", () => {
+    const many = Array.from({ length: TOKEN_CACHE_MAX + 1 }, (_, i) => ({ id: `d${i}`, text: `w${i}` }));
+    rank(many, "w");
+    expect(tokenCache.size).toBe(TOKEN_CACHE_MAX);
+    expect(tokenCache.has("d0")).toBe(false);
+    expect(tokenCache.has(`d${TOKEN_CACHE_MAX}`)).toBe(true);
+    rank([{ id: "d1", text: "w1" }], "w"); // touch d1
+    rank([{ id: "new", text: "x" }], "w");
+    expect(tokenCache.has("d1")).toBe(true);
+    expect(tokenCache.has("d2")).toBe(false);
   });
 });

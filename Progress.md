@@ -352,6 +352,10 @@ One `teach_step` can carry `beats` (2–8): the card plays them locally. **Next*
 - Without a boundary (homework, single question, test practice) the prompt is byte-identical to before. `checkGradingPrompt`, the course-facts check (`DISPUTE_RULES`, `settleDisputes`, typed answers) and the M77 `[edge]` label sentence are unchanged. Dead `GradeOpts.completedTitles` removed.
 - Tests: `prompts/practice.test.ts` (frozen pre-T5 prompt at eabd051: equal without a boundary in 4 shapes; with one, equal up to exactly the two edits; each completed id once; facts and [edge] text kept; check prompt unchanged), practice engine (no list, Learned line, new rule), server homework and test practice (list still there).
 
+## M85 (R3): BM25 tokens cached per page
+- `retrieval/bm25.ts`: `rank` gets each doc's tokens from `tokenCache` (key = doc id, in pagesFor `sha:page`), reused only when the stored text is the exact same `text + " " + summary` string; a re-scan (new summary, new teacher transcription) re-tokenizes. LRU by entries, `TOKEN_CACHE_MAX` 5000, process memory only. df/idf/avg/tf stay per call (they depend on the candidate set). Scores, order and ties are bit-identical.
+- Tests: `retrieval.test.ts` "bm25 token cache (R3)": warm == cold (toStrictEqual) and tokens reused, re-scanned summary reorders pagesFor exactly as uncached, 200 random Hebrew/niqqud/Greek/math docs, LRU eviction.
+
 ## Drawing roadmap M79–M83 (agreed with the user, 2026-10-23)
 Goal: slides can draw for any course, including unusual ones, in a professional look, with beats.
 

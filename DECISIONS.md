@@ -344,3 +344,7 @@
 
 ## M84 (T5) — Grading prompt: completed stages only on the boundary's Learned line
 - Spec 10.5 sends `{{COMPLETED_STAGE_TITLES}}` and `{{KNOWLEDGE_BOUNDARY}}`, whose Learned line lists the same completed stages (6.8). When a boundary is present the separate list is dropped and the rule reads "Results from the stages on the "Learned:" line of the KNOWLEDGE BOUNDARY below may be cited without proof." It names the Learned line, not all "allowed knowledge", so the Baseline does not become citable. With no boundary (homework, test practice: `boundaryOf` = "") the 10.5 text is kept verbatim.
+
+## M85 (R3) — BM25 token cache
+- `rank` reuses a page's tokens only when the page id and its exact text (`text + " " + summary`) match the cached entry. Page text is not fixed per sha (teacher pages are re-transcribed on re-scan, summaries change), so neither the sha nor a summary hash alone is trusted.
+- The cache is a 5000-page LRU in process memory, never saved. A course with more candidate pages than that gets no speed-up but the same results.
