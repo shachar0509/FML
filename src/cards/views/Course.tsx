@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
+import { ErrorNote } from "../errors";
 import { Bar, Ring, Stars, h2, panel } from "../ui";
 import type { CourseData, FilesData, Stage, Go } from "../types";
 import { Checklist } from "./Checklist";
@@ -199,10 +200,8 @@ export function Course({
         </div>
       )}
       {!running && data.build?.state === "failed" && (
-        <div className={`${panel} flex flex-col gap-2 border-danger/50 p-4`} role="alert">
-          <p className="font-medium" title={data.build.error ?? undefined}>
-            {t("plan.failed")}
-          </p>
+        <div className={`${panel} flex flex-col gap-2 border-danger/50 p-4`}>
+          <ErrorNote raw={data.build.error} fallback="plan.failed" className="font-medium" />
         </div>
       )}
       {!data.hasPlan && !running && (

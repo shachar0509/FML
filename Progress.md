@@ -400,6 +400,12 @@ One `teach_step` can carry `beats` (2–8): the card plays them locally. **Next*
 - Outside folder changes show within ~5 s (was 1.5 s) or when the window shows again; in-card actions refresh at once as before. Builds still scan at start (`claim`).
 - Tests: `Files.poll.test.tsx` (fake timers: idle 5 s, fast 1.5 s per reason incl. hidden, live, fast→idle with one reload, hidden pause + refresh on show); `course.spec.ts` outside-folder wait 4 s → 8 s, U7's Translate stickiness wait 3.5 s → 5.5 s; `Files.test.tsx` poll step 5 s.
 
+## M94 (U1): card errors in the student's language
+- `src/cards/errors.tsx`: `errorKey(raw, fallback?)`: an existing i18n key → itself; `aborted` → `job.stopped`; missing course data / attachment, `ENOENT|EACCES|EPERM|ENOSPC|EROFS|EBUSY`, browser download → `errors.courseMissing|fileMissing|disk|download`; else the card's fallback; invalid model output → `errors.invalidOutput`; else `errors.generic`. `ErrorNote`: the sentence in `role="alert"`, the raw message in a closed Details (`dir="auto"`), none for a key. i18n `errors.*`.
+- Used by Practice (both error spots), TestPractice (fallback `homework.failed`), Exercise (was always `exercise.failed`), Homework (read: `homework.failed`; AI solve: `homework.solveFailed`, a stop shows `homework.paused`), Course build failure (`plan.failed`; the raw text was a hover title). AddCourse / CustomCourse errors got `role="alert"`. Files keeps `file.*` / `moodle.err.*`.
+- Server error strings and card data are unchanged (the model reads them). test-host `?err=<message>` sets the exercise fixture's error.
+- Tests: `errors.test.tsx` (keys, rules, fallbacks, keys are plain sentences in he/en, render), e2e exercise (translated key; unknown message → `errors.invalidOutput` + Details).
+
 ## Drawing roadmap M79–M83 (agreed with the user, 2026-10-23)
 Goal: slides can draw for any course, including unusual ones, in a professional look, with beats.
 

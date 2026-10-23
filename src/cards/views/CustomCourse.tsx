@@ -143,7 +143,7 @@ export function CustomCourse({
           {t("custom.level")}
           <Stars value={level} set={setLevel} />
         </div>
-        {error && <p className="text-sm text-danger">{error}</p>}
+        {error && <p className="text-sm text-danger" role="alert">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={back}>
             {t("home.cancel")}

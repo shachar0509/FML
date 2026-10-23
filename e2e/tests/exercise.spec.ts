@@ -55,3 +55,19 @@ for (const lang of LANGS)
       await page.screenshot({ path: `e2e/tests_output/exercise/loop-perfect-${lang}-${theme}.png`, fullPage: true });
       expect(errors).toEqual([]);
     });
+
+for (const lang of LANGS)
+  test(`exercise error: translated key, unknown message under Details (${lang})`, async ({ page }) => {
+    const errors = pageErrors(page);
+    const he = lang === "he";
+    await page.goto(host(`view=exercise&lang=${lang}&err=grade.tooManyPages`));
+    await expect(page.getByRole("alert")).toHaveText(he ? "אפשר להעלות עד 12 עמודים לפתרון אחד." : "You can upload up to 12 pages per solution.");
+    await expect(page.getByText(he ? "פרטים" : "Details")).toHaveCount(0);
+    await page.goto(host(`view=exercise&lang=${lang}&err=${encodeURIComponent("model did not call grade_answer")}`));
+    await expect(page.getByRole("alert")).toHaveText(he ? "התשובה של Claude לא הגיעה בצורה תקינה. נסו שוב." : "Claude's answer didn't come back in the right form. Try again.");
+    await page.getByText(he ? "פרטים" : "Details").click();
+    await expect(page.getByText("model did not call grade_answer")).toBeVisible();
+    await axe(page);
+    await page.screenshot({ path: `e2e/tests_output/exercise/error-${lang}.png` });
+    expect(errors).toEqual([]);
+  });

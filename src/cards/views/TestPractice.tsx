@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import type { Go, PracticeData, TestData } from "../types";
+import { ErrorNote } from "../errors";
 import { Board, chalkChoice, inkBox } from "../ui";
 import { AnswerFiles, type FileRef } from "./AnswerFiles";
 
@@ -127,11 +128,7 @@ export function TestChooser({
                 </ul>
               </div>
             )}
-            {test.error && (
-              <p className="text-sm text-danger" role="alert">
-                {t(test.error, { defaultValue: test.error })}
-              </p>
-            )}
+            {test.error && <ErrorNote raw={test.error} fallback="homework.failed" />}
           </>
         )}
       </Board>

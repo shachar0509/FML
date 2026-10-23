@@ -3,6 +3,7 @@ import { Check, Download, GraduationCap, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import type { Go, HomeworkData, PracticeData } from "../types";
+import { ErrorNote, errorKey } from "../errors";
 import { Board, chalkChoice } from "../ui";
 import { AnswerFiles, type FileRef } from "./AnswerFiles";
 import { Exercise } from "./Exercise";
@@ -115,7 +116,7 @@ export function Homework({
       <section className="flex flex-col gap-4" aria-label={title}>
         <Board title={title}>
           {hw.error || !hw.splitting ? (
-            <p role="alert">{t("homework.failed")}</p>
+            <ErrorNote raw={hw.error} fallback="homework.failed" className="" />
           ) : (
             <Waiting go={go} label={t("homework.reading")} cancel={stop} />
           )}
@@ -209,9 +210,13 @@ export function Homework({
             />
           )}
           {/* not solving and no PDF: it failed, was stopped, or Shalav restarted — it can go on from the first unsolved question */}
-          {!s && !hw.ready && (
-            <p role={hw.error ? "alert" : "status"}>{t(hw.error ? "homework.solveFailed" : "homework.paused")}</p>
-          )}
+          {!s &&
+            !hw.ready &&
+            (hw.error && errorKey(hw.error) !== "job.stopped" ? (
+              <ErrorNote raw={hw.error} fallback="homework.solveFailed" className="" />
+            ) : (
+              <p role="status">{t("homework.paused")}</p>
+            ))}
         </Board>
         <div className="flex flex-wrap items-center gap-2">
           {!s && !hw.ready && (

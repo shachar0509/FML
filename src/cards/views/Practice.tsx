@@ -8,6 +8,7 @@ import { NewOrOlder, SavedList } from "./History";
 import { Exercise } from "./Exercise";
 import { Homework } from "./Homework";
 import { TestChooser } from "./TestPractice";
+import { ErrorNote } from "../errors";
 import { Board, Skeleton, Stars, chalkChoice, inkBox } from "../ui";
 
 type Tool = (
@@ -196,11 +197,7 @@ export function Practice({
             ))}
           </div>
         </Board>
-        {d.error && (
-          <p className="text-sm text-danger" role="alert">
-            {t(d.error, { defaultValue: d.error })}
-          </p>
-        )}
+        {d.error && <ErrorNote raw={d.error} />}
         <Button
           className="h-11 self-end px-6 text-[15px]"
           disabled={d.loading || !unit}
@@ -214,12 +211,11 @@ export function Practice({
   return (
     <section className="flex flex-col gap-4" aria-label={t("nav.practice")}>
       {d.error && (
-        <p className="text-sm text-danger" role="alert">
-          {t(d.error, { defaultValue: d.error })}{" "}
+        <ErrorNote raw={d.error}>
           <Button variant="outline" onClick={() => void call("practice_next_request")}>
             {t("practice.retry")}
           </Button>
-        </p>
+        </ErrorNote>
       )}
 
       {mode === "locked" && (

@@ -397,3 +397,9 @@
 - `files_list` polls every 1.5 s while a build runs (card's `live`, or any row `inBuild`), a file of any zone is scanning, an upload runs, or Moodle is busy (install/login/sync all fast: progress bars and the login → sync switch); every 5 s otherwise. 5 s: ~3× fewer folder scans while an outside drop still shows "by itself". (Supersedes the poll interval in the M6 "No server-side fs.watch" line.)
 - Hidden window (`document.visibilityState`, which follows the top-level window, not the card's scroll position): idle ticks are skipped and one refresh runs when it shows; fast ticks keep running, because the poll's scan is what cancels a running build's work on a file deleted or edited outside the app.
 - No immediate refresh on a cadence switch: every in-card action already refreshes, and fast→idle is always seen by a fast poll.
+
+## M94 — Card errors are mapped in the card, from the message text (U1)
+- Server and domain error strings stay as they are (English; the model reads them through the bridge and in Claude Code's structuredContent), so no error-code field was added to card data; the card matches the message.
+- Order: an existing i18n key → its text; a known actionable class (stopped, missing course data or uploaded file, data-folder I/O, download) → its own sentence; else the card's own failure sentence (homework read, homework solve, plan build, quiz-notes read); else invalid model output → "Claude's answer didn't come back in the right form"; else a generic sentence.
+- The raw message stays in a closed "Details" disclosure under the sentence, not a title tooltip (keyboard, touch and screen readers can open it), and outside the alert so only the sentence is announced. A translated key has no Details.
+- A stopped AI homework solve shows the paused note (it can continue), not the failure. Quiz-notes read failures reuse `homework.failed` (same sentence).

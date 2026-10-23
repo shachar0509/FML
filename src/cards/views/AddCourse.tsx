@@ -83,7 +83,7 @@ export function AddCourse({
               onChange={(e) => setRaw(e.target.value)}
             />
           </label>
-          {error && <p className="text-sm text-danger">{error}</p>}
+          {error && <p className="text-sm text-danger" role="alert">{error}</p>}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={back}>
               {t("home.cancel")}
@@ -114,7 +114,7 @@ export function AddCourse({
             )}
           </div>
           <p className="text-sm text-muted">{t("course.afterAdd")}</p>
-          {error && <p className="text-sm text-danger">{error}</p>}
+          {error && <p className="text-sm text-danger" role="alert">{error}</p>}
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={back}>
               {t("home.cancel")}
@@ -164,7 +164,7 @@ export function AddCourse({
               {t("home.syllabusHint", { n: man.syllabusHe.trim().length })}
             </span>
           </label>
-          {error && <p className="text-sm text-danger">{error}</p>}
+          {error && <p className="text-sm text-danger" role="alert">{error}</p>}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={back}>
               {t("home.cancel")}

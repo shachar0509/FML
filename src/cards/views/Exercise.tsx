@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import { Markdown } from "@/core/render/Markdown";
 import { GradeCard, readable } from "./GradeCard";
+import { ErrorNote } from "../errors";
 import { Board, Stars, h2, inkBox, panel } from "../ui";
 import type { ExerciseData, Go } from "../types";
 import { AnswerFiles, type FileRef } from "./AnswerFiles";
@@ -169,11 +170,7 @@ export function Exercise({
           </Button>
         </div>
       )}
-      {(err || d.error) && (
-        <p role="alert" className="text-sm text-danger">
-          {t("exercise.failed")}
-        </p>
-      )}
+      {(err || d.error) && <ErrorNote raw={d.error} />}
       {!solved && !open && (
         <AnswerFiles
           number={d.number}
