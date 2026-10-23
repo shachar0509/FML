@@ -317,6 +317,36 @@ Goal: slides can draw for any course, including unusual ones, in a professional 
   - Replaces 3Dmol.js and JSCAD. 3Dmol.js stays an option only for PDB proteins.
 - **Later, if wanted:** a sandboxed simulation frame (Matter.js, p5.js) with no access to Shalav's tools.
 
+**M79 handoff (state at compaction, 2026-10-23):**
+- **Where it stopped.** M79 has not started in code. The only finding so far: `npm view node-tikzjax` gives v1.0.5, LPPL-1.3c, 8.4 MB unpacked.
+  - Its dependencies are `@prinsss/dvi2html`, jsdom, memfs, svgo and tar-fs.
+  - The README says: never run two instances at once (so renders go through a queue), the source needs `\documentclass{standalone}` … `\begin{document}` … `\end{document}`, and `tex2svg(src, { tikzLibraries, addToPreamble, disableOptimize })` can be split into `load()` / `tex()` / `dvi2svg()`.
+  - The fallback is `isomorphic-tikzjax`.
+  - **To check:** WebAssembly inside Claude Desktop's Electron utility process (see gotcha M29, `initNode`), time per render (target a few seconds), whether the SVG keeps groups (`\special{dvisvgm:raw …}` or scopes) so beats can toggle groups instead of rendering one SVG per beat, and the black → `currentColor` rewrite for dark mode.
+- **User's approvals.**
+  - The Servier CC BY credit is OK.
+  - The first drawing scope is biology plus circuits and physics; more complex cases go through TikZ and the rest of the roadmap.
+  - All tools on the roadmap are approved, three.js included (after the 2D ones).
+- **User's requirements for every drawing.**
+  - Text always contrasts with what it sits on.
+  - A graph never shifts between beats.
+  - Parts that are used up leave (`until`).
+  - Beats are tiny steps (the student sets the pace).
+  - Drawings look professional and realistic, not like plain vector line art. The beatsPhoto/beatsCell look was rejected.
+- **`figure_guide` design.**
+  - The catalogue is about 400 tokens. A guide is 300–800 tokens and is fetched once per kind per lesson.
+  - A guide teaches only Shalav's conventions (beat markers, `m-*` colours, Hebrew labels, dark mode, library part names) plus one example. Claude already knows the languages.
+  - The course type filters the catalogue (biology → library, Mermaid, course images, Vega; music → abcjs, svguitar). Other kinds are still reachable via `figure_guide`.
+- **three.js scene JSON (M83).**
+  - Objects: sphere, box, cylinder, cone, plane, arrow, line, surface z=f(x,y), point, label. Each has a position, an `m-*` colour, `beat` and `until`.
+  - A camera viewpoint can be set per beat.
+  - Rotation by mouse and arrow keys; reduced motion turns off automatic rotation.
+- **Loading routes for big card-side libraries:**
+  - Bundled into the single file. It costs size on every card.
+  - A CDN declared in the card resource's CSP `resourceDomains` (`@modelcontextprotocol/ext-apps` 2.0.3, `registerAppResource` in `server.ts`). Shalav declares none today. Pin exact versions, and verify that Claude Desktop honours it.
+  - Server Chromium snapshots. They work but are static.
+- **M78 screenshots** after the review fixes (`e2e/tests_output/slides/`) still await the user's approval. Delete them once approved.
+
 **Licenses:**
 - All of them are free, including for commercial use.
 - Visible credit: Servier and OpenMoji. Visible logo: bpmn-js.
