@@ -284,7 +284,6 @@ The approved plan was never committed; its final text (2026-10-22 14:47) was rec
 7. **Build: the MCP end-to-end eval** `pnpm eval:conventions --e2e` (CONVENTIONS_PLAN Verification A, "No manual tests"): real MCP server over in-memory transport, `CliGateway` answering `shalav_next_job` → `shalav_submit_job` like Claude Desktop: upload law solutions → `plan_build_request` → convention in `shalav_course` `CourseData.conventions`; graded homework in the teacher zone → Update plan → teacher-tagged convention on top, misconception node, stars moved only by the teacher's evidence; `file_remove` the solutions → the convention stays; contradicting teacher rubric → split or retired; then `shalav_start_lesson` [STATUS] lists the conventions (teacher first) and a practice grade tags them. Then run it (paid, ask).
 8. **Paid, last: 3 stability runs** of the whole eval (all fixtures + 5 + 7). Every row must give the same outcome all 3 times; a flip is a failure → tune the prompt and repeat. Then the feature is done: summarize the eval in this file, move `CONVENTIONS_PLAN.md` to `archive/`.
 
-Pending user review: the M70 screenshots `e2e/tests_output/course/card-files-teacher-*.png`.
 
 ---
 
