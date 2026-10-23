@@ -414,3 +414,8 @@
 ## M96 (U6) — Skip confirm in Practice
 - Next asks on any unanswered practice item; End asks only in test practice, because there the question on the board was burned at serve time and ending loses it, while in normal practice nothing is used up (served list per session, no attempt event) and End is a deliberate action.
 - "Unanswered" is judged in the card (exercise: no grade and not perfect; MCQ: selected null; open: no result); for an exercise the card reads practice_state once first. It only gates the confirm; the server still scores from its own state. While an exercise answer is being graded, the confirm says so instead of 'not answered'.
+
+## M97 — R4: the event-log cache is keyed by content, not by mtime
+- The plan suggested a stamp of file names + sizes + mtimes via a new `Fs.stat`. Keyed by the file text instead: the file is still read (cheap) but parsed only when its bytes changed, so a coarse mtime, a same-size rewrite by a sync tool or an append racing the stamp can never serve old events, and `Fs` needs no `stat`.
+- The reduction is not memoized: mistake weights decay continuously and are rounded to 3 decimals and sorted, so even a one-minute bucket could reorder the [STATUS] mistakes. Only `checkAdvanceCriteria` (provably `now`-independent: it reads stage mastery, never mistake weights) and the digest's `levelOf` (same graph as status()) are not recomputed.
+- The cached events are shared objects across calls; nothing mutates them, so production code neither copies nor freezes them. Under vitest they are deep-frozen, so a future in-place edit fails a test instead of silently changing [STATUS] or the engine evidence.

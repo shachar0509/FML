@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Event, MistakeSummary, PlanJson, StageProgress } from "@/core/domain/dataSchemas";
+import { EventSchema, type Event, type MistakeSummary, type PlanJson, type StageProgress } from "@/core/domain/dataSchemas";
+import { mergeById, readJsonl, readJsonlDir } from "@/core/lib/fs/jsonl";
 import { idleMinutes } from "@/core/domain/learn/recap";
 import { SettingsSchema } from "@/core/domain/schemas";
 import { setDeviceId } from "@/core/lib/device";
@@ -173,6 +174,22 @@ describe("render + store", () => {
     expect(JSON.parse(mem.files.get(p.progressJson) ?? "{}").stages.S001.status).toBe("in_progress");
     expect(mem.files.get(p.progressMd)).toContain("In progress");
     expect(await recomputeProgress("01040195")).toBe(false);
+  });
+  it("R4: our own append is seen by the next read", async () => {
+    const mem = memFs();
+    setFs(mem);
+    useSettings.setState({ settings: { ...useSettings.getState().settings, dataRoot: "/r4", language: "en" } });
+    setDeviceId("dev1");
+    const p = coursePaths("/r4", "01040195");
+    mem.files.set(p.courseJson, JSON.stringify(course));
+    mem.files.set(p.planJson, JSON.stringify(plan));
+    await appendEvent("01040195", { type: "stage_started", stageId: "S001" } as never);
+    const before = await readJsonlDir(p.events, EventSchema);
+    await appendEvent("01040195", { type: "stage_started", stageId: "S002" } as never);
+    const after = await readJsonlDir(p.events, EventSchema);
+    expect(after).toHaveLength(before.length + 1);
+    expect(after.at(-1)).toMatchObject({ type: "stage_started", stageId: "S002" });
+    expect(after).toEqual(mergeById(await readJsonl(p.eventsFile("dev1"), EventSchema)));
   });
   it("debounces 500 ms", async () => {
     vi.useFakeTimers();

@@ -71,8 +71,18 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     return { course, plan, events, progress: reduceProgress(plan, events, nowIso()), tr };
   }
   type S = NonNullable<Awaited<ReturnType<typeof load>>>;
-  const criteria = (s: S, stageId: string) =>
-    checkAdvanceCriteria({ plan: s.plan, events: s.events, stageId, cfg: sets().learning, lang: sets().language, now: nowIso() });
+  type Criteria = ReturnType<typeof checkAdvanceCriteria>;
+  /** R4: computed once per loaded course, stage, rules and language. It does not depend on `now` (only mistake weights do, and it never reads them). */
+  const criteriaOf = new WeakMap<S, Map<string, Criteria>>();
+  const criteria = (s: S, stageId: string): Criteria => {
+    const { learning: cfg, language: lang } = sets();
+    const key = JSON.stringify([stageId, lang, cfg]);
+    let m = criteriaOf.get(s);
+    if (!m) criteriaOf.set(s, (m = new Map()));
+    let r = m.get(key);
+    if (!r) m.set(key, (r = checkAdvanceCriteria({ plan: s.plan, events: s.events, stageId, cfg, lang, now: nowIso() })));
+    return r;
+  };
 
   function lessonData(s: S, stageId: string): LessonData {
     const i = s.plan.stages.findIndex((x) => x.id === stageId);
@@ -101,22 +111,24 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
   }
 
   /** M64: the engine's view for [STATUS]; a slow or failing engine never holds the lesson up (then no digest). */
-  async function knowledgeDigest(s: S, stageId: string) {
+  /** `lv`: status()'s own graph and control (R4: the same values levelOf would build again). */
+  async function knowledgeDigest(s: S, stageId: string, lv: Parameters<typeof targetDifficulty>[2]) {
     const sum = await quickSummary(knowledge, s.course.courseNumber);
     if (!sum) return undefined;
     const stageIds = [...completedIds(s.progress), stageId];
-    return digest(sum, { custom: s.course.type === "customCourse", stars: shownLevel(sum, s.course), stageIds, target: targetDifficulty({ plan: s.plan, progress: s.progress, events: s.events, course: s.course }, [stageId]) });
+    return digest(sum, { custom: s.course.type === "customCourse", stars: shownLevel(sum, s.course), stageIds, target: targetDifficulty({ plan: s.plan, progress: s.progress, events: s.events, course: s.course }, [stageId], lv) });
   }
 
   async function status(s: S, stageId: string) {
     const { g, list } = lessonNodes(s, stageId);
-    const k = knowledgeOf(g, mapEvents(s.events), priorOf(s.course));
+    const prior = priorOf(s.course);
+    const k = knowledgeOf(g, mapEvents(s.events), prior);
     const stage = s.plan.stages.find((x) => x.id === stageId);
     const sp = s.progress.stages[stageId];
     const lang = sets().language;
     return statusBlock({
       nodes: listText(list, k.control),
-      digest: await knowledgeDigest(s, stageId),
+      digest: await knowledgeDigest(s, stageId, { g, k, prior }),
       completed: s.progress.totals.stagesCompleted,
       total: s.progress.totals.stagesTotal,
       mastery: Math.round((sp?.tutorMastery ?? 0) * 100) / 100,
