@@ -1,5 +1,6 @@
 import type { FunctionPlotDatum } from "function-plot";
 import { useEffect, useState } from "react";
+import { ensureContrast } from "./contrast";
 import { parsePlot } from "./specs";
 import { boxClass, useDraw } from "./useDraw";
 
@@ -9,7 +10,7 @@ export function Plot({ source, beat }: { source: string; dark: boolean; beat?: n
     async (el) => {
       const all = parsePlot(source);
       // M78: only the parts whose beat has come (function-plot redraws fast, so a beat change redraws).
-      const on = (p: { beat?: number }) => beat === undefined || (p.beat ?? 0) <= beat;
+      const on = (p: { beat?: number; until?: number }) => beat === undefined || ((p.beat ?? 0) <= beat && beat <= (p.until ?? Infinity));
       const spec = { ...all, data: all.data.filter(on), annotations: all.annotations?.filter(on) };
       // CJS interop: the default export is nested once more in some bundles (Vite dev).
       const m = (await import("function-plot")) as unknown as { default: { default?: typeof import("function-plot").default } & typeof import("function-plot").default };
@@ -58,6 +59,7 @@ export function Plot({ source, beat }: { source: string; dark: boolean; beat?: n
       svg
         .querySelectorAll(".domain, .tick line, .origin")
         .forEach((n) => ((n as SVGElement).style.stroke = "currentColor"));
+      ensureContrast(el);
     },
     [source, beat, w],
   );

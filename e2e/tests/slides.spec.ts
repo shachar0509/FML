@@ -1,14 +1,30 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { axe, box, lastReq } from "./helpers";
 
 // M78 interactive slides (Step.tsx with beats): Next reveals the next beat's text and figure parts in the card, without a
 // request to Claude; what appeared stays. Samples in src/cards/test-advanced.ts. Screenshots per beat in e2e/tests_output/slides/.
-const SAMPLES = { beatsFn: 3, beatsCircuit: 3, beatsPhoto: 3, beatsCell: 3 } as const;
+/** Visible text in the slide's figure under 4.5:1 against the figure's background. */
+const lowContrast = (page: Page) =>
+  page.locator(".pinned-figure").evaluate((fig) => {
+    const rgb = (c: string) => (c.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
+    const lum = (c: string) => rgb(c).map((v) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)).reduce((a, v, i) => a + v * ([0.2126, 0.7152, 0.0722][i] ?? 0), 0);
+    const bg = lum(getComputedStyle(fig).backgroundColor);
+    return [...fig.querySelectorAll<HTMLElement | SVGElement>("svg text, div, span")]
+      .filter((e) => e.textContent?.trim() && e.getClientRects().length && getComputedStyle(e).visibility === "visible" && (e instanceof SVGElement || [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent?.trim())))
+      .map((e) => {
+        const l = lum(getComputedStyle(e)[e instanceof SVGElement ? "fill" : "color"]);
+        return [e.textContent?.trim(), (Math.max(l, bg) + 0.05) / (Math.min(l, bg) + 0.05)] as const;
+      })
+      .filter(([, k]) => k < 4.5)
+      .map(([t, k]) => `${t}: ${k.toFixed(2)}`);
+  });
+const SAMPLES = { beatsFn: 7, beatsCircuit: 3, beatsPhoto: 5, beatsCell: 3 } as const;
 for (const [sample, of] of Object.entries(SAMPLES))
   for (const theme of ["light", "dark"] as const)
     test(`slide ${sample} (${theme})`, async ({ page }) => {
       const errors: string[] = [];
       page.on("pageerror", (e) => errors.push(e.message));
+      await page.setViewportSize({ width: 1100, height: 1400 }); // the whole slide in view: screenshots without the sticky header over it
       await page.goto(`/src/cards/test-host.html?lang=he&theme=${theme}&view=step&sample=${sample}`);
       const board = page.locator("article.board");
       const next = page.getByRole("button", { name: "הלאה", exact: true });
@@ -33,22 +49,25 @@ for (const [sample, of] of Object.entries(SAMPLES))
           else await expect(beatText(k)).toBeHidden();
         }
         if (sample === "beatsFn") {
-          await expect(board.getByText("(1,0)", { exact: true }).last()).toBeVisible(); // the minimum stays marked
-          // beat 2 adds the parabola, beat 3 the dashed segment and its points: the drawing only grows
-          if (n > 1) {
-            const now = await drawn();
-            expect(now).toBeGreaterThan(before);
-            before = now;
-          }
-          if (n < 3) await expect(board.getByText("(0,1)", { exact: true }).last()).toBeHidden();
+          // the minimum is marked at beat 3 and stays; the parabola comes at 5, (0,1) at 6, (2,1) and the dashed line at 7
+          if (n >= 3) await expect(board.getByText("(1,0)", { exact: true }).last()).toBeVisible();
+          else await expect(board.getByText("(1,0)", { exact: true }).last()).toBeHidden();
+          if (n < 6) await expect(board.getByText("(0,1)", { exact: true }).last()).toBeHidden();
           else await expect(board.getByText("(0,1)", { exact: true }).last()).toBeVisible();
+          const now = await drawn();
+          if ([3, 5, 6, 7].includes(n)) expect(now).toBeGreaterThan(before); // the drawing only grows
+          else expect(now).toBe(before);
+          before = now;
         } else {
-          const parts = await board.locator("svg [data-beat]").evaluateAll((els) => els.map((e) => [Number((e as SVGElement).dataset.beat), getComputedStyle(e).visibility === "visible"] as const));
+          // a part shows from its data-beat until its data-until (CO₂ and H₂O are gone once they have reacted)
+          const parts = await board.locator("svg :is([data-beat], [data-until])").evaluateAll((els) => els.map((e) => [Number((e as SVGElement).dataset.beat ?? 0), Number((e as SVGElement).dataset.until ?? 99), getComputedStyle(e).visibility === "visible"] as const));
           expect(parts.length).toBeGreaterThan(0);
-          for (const [b, on] of parts) expect(on).toBe(b <= n);
+          for (const [b, u, on] of parts) expect(on).toBe(b <= n && n <= u);
         }
+        // every piece of text in the figure reads on the figure's background (no black numbers on the chalkboard)
+        expect(await lowContrast(page)).toEqual([]);
         await page.waitForTimeout(500); // fade-in
-        await page.screenshot({ path: `e2e/tests_output/slides/${sample}-${theme}-${n}.png`, fullPage: true });
+        await page.screenshot({ path: `e2e/tests_output/slides/${sample}-${theme}-${n}.png` });
         if (n < of) await next.click();
       }
       // no request to Claude while stepping, and the card never changed height

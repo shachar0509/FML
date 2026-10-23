@@ -18,7 +18,7 @@ import { appendEvent } from "@/core/domain/progress/store";
 import { addEntry, checkpoint, createConv, listConvs, loadConv, transcript, type Entry } from "@/core/domain/history/history";
 import { resolveExercise, type Ex } from "@/core/domain/practice/exercises";
 import { materialsLang, pagesFor } from "@/core/domain/retrieval/retrieve";
-import { parseGeometry, parsePlot } from "@/core/render/figures/specs";
+import { MAX_BEATS, parseGeometry, parsePlot } from "@/core/render/figures/specs";
 import { readJsonFile } from "@/core/lib/fs/atomicWrite";
 import { readJsonlDir } from "@/core/lib/fs/jsonl";
 import { coursePaths } from "@/core/lib/fs/paths";
@@ -296,8 +296,8 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     "teach_step",
     {
       title: "Lesson step",
-      description: `Show ONE step of the lesson as a slide card: one idea (a definition, one property, one proof step, one example), at most about 120 words of Markdown with $math$, optionally one figure. When the idea develops in stages (a derivation, a function investigation, a calculation on a circuit, a process, the parts of a structure), give the stages as beats (2-8, each about 120 words at most): the student steps through them inside the card and the figure builds up with them (each figure part carries the beat that brings it in). All teaching goes here, not in the chat. The student then presses Continue, Explain differently, or asks a question.${hint}`,
-      inputSchema: z.object({ titleMd: z.string().max(120), bodyMd: z.string().max(6000).describe("The text shown from the start (with beats: a one-line intro, or empty)."), beats: z.array(z.object({ md: z.string().min(1).max(6000), sideMd: z.string().max(1500).optional() })).min(2).max(8).optional().describe("The slide's stages, shown one after another under bodyMd; earlier ones stay on the board. sideMd: a side note for that beat only."), sideMd: z.string().max(1500).optional().describe("A short side remark written beside the board (an inclusion, a reminder, a warning), shown as a note next to the step."), figure: figure.optional(), progress: z.object({ n: z.number().int().min(1), of: z.number().int().min(1).max(30) }).optional().describe("This step's number within the current part of the stage and your estimate of its steps (shown as a progress bar).") }),
+      description: `Show ONE step of the lesson as a slide card: one idea (a definition, one property, one proof step, one example), at most about 120 words of Markdown with $math$, optionally one figure. When the idea develops in stages (a derivation, a function investigation, a calculation on a circuit, a process, the parts of a structure), give the stages as beats (2-16, each a tiny step: one sentence, one line of calculation or one new part of the drawing): the student steps through them inside the card and the figure builds up with them (each figure part carries the beat that brings it in). All teaching goes here, not in the chat. The student then presses Continue, Explain differently, or asks a question.${hint}`,
+      inputSchema: z.object({ titleMd: z.string().max(120), bodyMd: z.string().max(6000).describe("The text shown from the start (with beats: a one-line intro, or empty)."), beats: z.array(z.object({ md: z.string().min(1).max(6000), sideMd: z.string().max(1500).optional() })).min(2).max(MAX_BEATS).optional().describe("The slide's stages, tiny steps (the student sets the pace), shown one after another under bodyMd; earlier ones stay on the board. sideMd: a side note for that beat only."), sideMd: z.string().max(1500).optional().describe("A short side remark written beside the board (an inclusion, a reminder, a warning), shown as a note next to the step."), figure: figure.optional(), progress: z.object({ n: z.number().int().min(1), of: z.number().int().min(1).max(30) }).optional().describe("This step's number within the current part of the stage and your estimate of its steps (shown as a progress bar).") }),
       _meta: withCard,
     },
     async ({ titleMd, bodyMd, beats, sideMd, figure: f, progress }) => {
@@ -311,7 +311,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
       if (beats && chars(bodyMd + beats.map((b) => b.md).join("")) > STEP_CHARS * 4) return fail("This slide is too long. Keep it to one idea: move the later beats to the next teach_step.");
       const bad = f && badFigure(f.kind, f.source);
       if (bad) return fail(`${bad} Fix it and call teach_step again.`);
-      const beatOf = f && /"beat"\s*:\s*(\d+)|data-(?:beat|focus)="(\d+)"/g;
+      const beatOf = f && /"(?:beat|until)"\s*:\s*(\d+)|data-(?:beat|focus|until)="(\d+)"/g;
       for (const m of beatOf ? f.source.matchAll(beatOf) : []) if (Number(m[1] ?? m[2]) > (beats?.length ?? 0)) return fail(`The figure uses beat ${m[1] ?? m[2]}, but the slide has ${beats?.length ?? 0} beats. Fix it and call teach_step again.`);
       reexplain = false;
       const { language, theme } = sets();

@@ -269,6 +269,13 @@ One `teach_step` can carry `beats` (2–8): the card plays them locally. **Next*
   - `tutorMcp.test.ts`.
   - e2e `slides.spec.ts`: the 4 samples `beatsFn|beatsCircuit|beatsPhoto|beatsCell` × light/dark, stepping through every beat (the beatsFn drawing grows at each beat), a 720px run (the figure above the text at the board's width) and full screen (bigger figure and text). Screenshots per beat are in `e2e/tests_output/slides/`.
 - 🧪 **Desktop check.** Does Claude Desktop offer `fullscreen`? How wide is the inline card (side-by-side or stacked)? Does Claude use beats on a function-investigation stage?
+- **Review fixes (2026-10-23).**
+  - Every piece of text in a figure is checked against the figure's background (`figures/contrast.ts`). Text under 4.5:1 takes the board's text colour. The geometry axes and their numbers are drawn in the board's ink.
+  - Geometry no longer has its own resize observer. It used `dontSetBoundingBox` and shifted the graph; JSXGraph's built-in resize keeps the view.
+  - `until` (`data-until`) hides a part after a given beat, e.g. CO₂ and H₂O once they react.
+  - Beats are tiny steps (one sentence, one calculation line or one new drawn part), up to 16 per slide.
+  - The samples were redone with finer beats: beatsFn has 7 beats, beatsPhoto 5.
+  - The e2e test checks the contrast of figure text at every beat. Slide screenshots are viewport shots, so the sticky header no longer lands in the middle.
 - The "ResizeObserver loop completed" warning in the Vite log comes from geometry figures and predates M78. It is harmless and is not a page error.
 
 ---

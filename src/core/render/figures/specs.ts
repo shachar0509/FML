@@ -2,10 +2,11 @@ import DOMPurify from "dompurify";
 import { z } from "zod";
 
 const pair = z.tuple([z.number(), z.number()]);
-/** M78: the beat of a slide that brings a part in (it stays after), and a colour shared with the text's \blue{…} etc. */
+/** M78: the beat of a slide that brings a part in (it stays after, or until the beat `until`), and a colour shared with the text's \blue{…} etc. */
 export const COLORS = ["blue", "green", "pink", "orange"] as const;
-const beat = z.number().int().min(1).max(8).optional();
-const tag = { beat, color: z.enum(COLORS).optional() };
+export const MAX_BEATS = 16;
+const beat = z.number().int().min(1).max(MAX_BEATS).optional();
+const tag = { beat, until: beat, color: z.enum(COLORS).optional() };
 
 const plotSchema = z.object({
   title: z.string().optional(),
@@ -20,21 +21,23 @@ const plotSchema = z.object({
         range: pair.optional(),
         color: z.string().optional(),
         beat,
+        until: beat,
       }),
       z.object({
         points: z.array(pair),
         mode: z.enum(["scatter", "polyline"]),
         label: z.string().optional(),
         beat,
+        until: beat,
       }),
-      z.object({ vector: pair, offset: pair.optional(), label: z.string().optional(), beat }),
+      z.object({ vector: pair, offset: pair.optional(), label: z.string().optional(), beat, until: beat }),
     ]),
   ),
   annotations: z
     .array(
       z.union([
-        z.object({ x: z.number(), text: z.string().optional(), beat }),
-        z.object({ y: z.number(), text: z.string().optional(), beat }),
+        z.object({ x: z.number(), text: z.string().optional(), beat, until: beat }),
+        z.object({ y: z.number(), text: z.string().optional(), beat, until: beat }),
       ]),
     )
     .optional(),

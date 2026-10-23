@@ -1,13 +1,14 @@
 import { useEffect, useRef } from "react";
 import type { Board, GeometryElement } from "jsxgraph";
+import { ensureContrast } from "./contrast";
 import { parseGeometry } from "./specs";
 import { boxClass, useDraw } from "./useDraw";
 
-/** M78: elements tagged with a later beat stay hidden; what has appeared stays. */
-type Parts = { el: GeometryElement; beat: number }[];
+/** M78: elements tagged with a later beat stay hidden; what has appeared stays (until its `until` beat has passed). */
+type Parts = { el: GeometryElement; beat: number; until: number }[];
 function showBeat(parts: Parts, beat: number | undefined) {
   for (const p of parts) {
-    if (beat === undefined || p.beat <= beat) p.el.showElement();
+    if (beat === undefined || (p.beat <= beat && beat <= p.until)) p.el.showElement();
     else p.el.hideElement();
   }
 }
@@ -41,6 +42,8 @@ export function Geometry({ source, dark, beat }: { source: string; dark: boolean
         pan: { enabled: false },
         zoom: false,
         keepAspectRatio: false,
+        // the axes and their numbers in the board's ink (the defaults are dark grey, unreadable on the chalkboard)
+        defaultAxes: Object.fromEntries(["x", "y"].map((a) => [a, { strokeColor: ink, highlightStrokeColor: ink, ticks: { strokeColor: ink, strokeOpacity: 0.35, label: { strokeColor: ink } } }])),
       });
       const base = { fixed: true, strokeColor: ink, highlight: false } as const;
       const made: Parts = [];
@@ -101,22 +104,15 @@ export function Geometry({ source, dark, beat }: { source: string; dark: boolean
             made1 = board.create("text", [e.x, e.y, e.text], { ...base, fixed: true, strokeColor: c });
             break;
         }
-        if (made1 && e.beat) made.push({ el: made1 as GeometryElement, beat: e.beat });
+        if (made1 && (e.beat || e.until)) made.push({ el: made1 as GeometryElement, beat: e.beat ?? 0, until: e.until ?? Infinity });
       }
       parts.current = made;
       showBeat(made, at.current);
       const svg = box.querySelector("svg");
       if (svg) svg.style.maxWidth = "100%";
-      // A wider card (full screen, a resized window) redraws the board at its new size.
-      // dontSet: the box keeps its CSS size (setting px sizes here would feed the observer again).
-      let w = box.clientWidth;
-      const ro = new ResizeObserver(() => {
-        if (!box.clientWidth || Math.abs(box.clientWidth - w) < 2) return;
-        w = box.clientWidth;
-        board.resizeContainer(box.clientWidth, box.clientHeight, true, true);
-      });
-      ro.observe(box);
-      return () => (ro.disconnect(), (parts.current = []), JXG.JSXGraph.freeBoard(board));
+      ensureContrast(el);
+      // A wider card (full screen) is handled by JSXGraph's own resize observer, which keeps the bounding box.
+      return () => ((parts.current = []), JXG.JSXGraph.freeBoard(board));
     },
     [source, dark],
   );

@@ -1,14 +1,15 @@
 import { useEffect, useRef } from "react";
+import { ensureContrast } from "./contrast";
 import { sanitizeSvg } from "./specs";
 import { boxClass, useDraw } from "./useDraw";
 
-/** M78: parts with data-beat="n" appear at beat n and stay; data-focus="n" is stressed only during beat n. */
+/** M78: parts with data-beat="n" appear at beat n and stay (until data-until="m": gone after beat m); data-focus="n" is stressed only during beat n. */
 function showBeat(el: HTMLElement, beat: number | undefined) {
-  for (const n of el.querySelectorAll<SVGElement>("[data-beat]")) n.classList.toggle("beat-off", beat !== undefined && Number(n.dataset.beat) > beat);
+  for (const n of el.querySelectorAll<SVGElement>("[data-beat], [data-until]")) n.classList.toggle("beat-off", beat !== undefined && (Number(n.dataset.beat ?? 0) > beat || Number(n.dataset.until ?? Infinity) < beat));
   for (const n of el.querySelectorAll<SVGElement>("[data-focus]")) n.classList.toggle("beat-focus", beat !== undefined && Number(n.dataset.focus) === beat);
 }
 
-export function Svg({ source, beat }: { source: string; dark: boolean; beat?: number }) {
+export function Svg({ source, dark, beat }: { source: string; dark: boolean; beat?: number }) {
   // The draw is async and runs after the effects below, so it reads the beat set there.
   const at = useRef(beat);
   const ref = useDraw(
@@ -19,8 +20,9 @@ export function Svg({ source, beat }: { source: string; dark: boolean; beat?: nu
       svg.style.height = "auto";
       svg.style.color = "currentColor";
       showBeat(el, at.current);
+      ensureContrast(el);
     },
-    [source],
+    [source, dark],
   );
   useEffect(() => {
     at.current = beat;

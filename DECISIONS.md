@@ -256,3 +256,6 @@
 - **Colour.** SVG reuses the text's `m-*` classes; there is no separate set. Geometry reads `--m-*` from the card theme. `\blue{word}` outside math is now allowed in the prompt, but only to link a word to its drawn part. The renderer already supported it (`Markdown.tsx`).
 - **Alignment.** A rows derivation lines up within one beat, not across beats, because each beat is its own `<Markdown>`. Figures keep `dir="ltr"`. The prompt asks for Hebrew SVG labels centred with `text-anchor="middle"`.
 - **Inline size.** vh can't be used in an auto-height iframe, so figures are capped at `--fig-h` (560px). Full screen sets it to 72vh.
+- **Contrast guard.** After drawing, any figure text (SVG `text`/`tspan` fill, an HTML label's colour) below 4.5:1 against the nearest opaque background is recoloured to the board's text colour. Lines and fills are left alone: faint grid lines and tinted areas are intentional. The prompt also forbids fixed black, white or grey in SVG.
+- **Tiny beats.** Each beat is a tiny step, because the student sets the pace. There are 2–16 beats per slide. The per-beat (900) and per-slide (3600) caps are unchanged.
+- **`until`.** A part can leave as well as arrive. It shows only while beat ≤ `until`.

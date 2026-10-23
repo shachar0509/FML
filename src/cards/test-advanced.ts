@@ -109,10 +109,10 @@ const PHOTO = `<svg viewBox="0 0 360 230" xmlns="http://www.w3.org/2000/svg" fon
 <rect x="110" y="50" width="140" height="120" rx="24"/>
 <g class="m-green"><ellipse cx="180" cy="110" rx="42" ry="22" fill="currentColor" fill-opacity="0.2"/><path d="M 150 110 h 60 M 158 102 h 44 M 158 118 h 44" stroke-width="1.5"/></g>
 <g data-beat="1" class="m-orange"><path class="pulse" d="M 150 4 l 12 34 M 180 2 v 36 M 210 4 l -12 34"/><text x="225" y="22" fill="currentColor" stroke="none">hν</text></g>
-<g data-beat="2" class="m-blue"><g class="drift" style="--dx:95;--dy:0"><text x="10" y="100" fill="currentColor" stroke="none">CO₂</text></g><path d="M 50 120 h 48 l -8 -5 m 8 5 l -8 5"/></g>
-<g data-beat="2"><g class="drift" style="--dx:0;--dy:-48"><text x="164" y="222" fill="currentColor" stroke="none">H₂O</text></g></g>
-<g data-beat="3" class="m-pink"><g class="drift" style="--dx:80;--dy:0"><text x="262" y="100" fill="currentColor" stroke="none">O₂</text></g><path d="M 262 120 h 48 l -8 -5 m 8 5 l -8 5"/></g>
-<g data-beat="3"><text x="180" y="155" fill="currentColor" stroke="none" font-size="12" text-anchor="middle">C₆H₁₂O₆</text></g>
+<g data-beat="2" data-until="3" class="m-blue"><g class="drift" style="--dx:95;--dy:0"><text x="10" y="100" fill="currentColor" stroke="none">CO₂</text></g><path d="M 50 120 h 48 l -8 -5 m 8 5 l -8 5"/></g>
+<g data-beat="3" data-until="3"><g class="drift" style="--dx:0;--dy:-48"><text x="164" y="222" fill="currentColor" stroke="none">H₂O</text></g></g>
+<g data-beat="5" class="m-pink"><g class="drift" style="--dx:80;--dy:0"><text x="262" y="100" fill="currentColor" stroke="none">O₂</text></g><path d="M 262 120 h 48 l -8 -5 m 8 5 l -8 5"/></g>
+<g data-beat="4"><text x="180" y="155" fill="currentColor" stroke="none" font-size="12" text-anchor="middle">C₆H₁₂O₆</text></g>
 </svg>`;
 
 const CELL = `<svg viewBox="0 0 360 230" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif" font-size="14" fill="none" stroke="currentColor" stroke-width="2">
@@ -530,15 +530,14 @@ $$`,
     titleMd: String.raw`חקירת $f(x) = x^2 - 2x + 1$`,
     bodyMd: "נמצא את נקודת הקיצון, את כיוון הפתיחה ואת הסימטריה.",
     beats: [
-      { md: String.raw`**נגזרת ראשונה:**
-$$
-f'(x) = 2x - 2 = 0 \;\Rightarrow\; x = 1
-$$
-ו-$f(1) = 0$, לכן נקודת הקיצון היא $\blue{(1,0)}$.` },
-      { md: String.raw`**כיוון הפתיחה:**
-` + fence("rows", String.raw`נגזרת שנייה | f''(x) = 2 > 0`) + String.raw`
-הפרבולה **פתוחה כלפי מעלה**, ולכן $(1,0)$ היא נקודת **מינימום**.`, sideMd: String.raw`$a = 1 > 0$ — אותה מסקנה ישר מהמקדם.` },
-      { md: String.raw`**סימטריה:** $f(0) = 1$, והגרף סימטרי סביב $x = 1$, לכן גם $f(2) = 1$:
+      { md: String.raw`**נגזרת:** $f'(x) = 2x - 2$` },
+      { md: String.raw`נשווה לאפס: $2x - 2 = 0 \;\Rightarrow\; x = 1$` },
+      { md: String.raw`נציב: $f(1) = 1 - 2 + 1 = 0$, לכן נקודת הקיצון היא $\blue{(1,0)}$.` },
+      { md: String.raw`**נגזרת שנייה:**
+` + fence("rows", String.raw`נגזרת שנייה | f''(x) = 2 > 0`) },
+      { md: String.raw`לכן הפרבולה **פתוחה כלפי מעלה**, ו-$(1,0)$ היא **מינימום**.`, sideMd: String.raw`$a = 1 > 0$ — אותה מסקנה ישר מהמקדם.` },
+      { md: String.raw`**חיתוך עם ציר $y$:** $f(0) = 1$` },
+      { md: String.raw`הגרף סימטרי סביב $x = 1$, לכן גם $f(2) = 1$:
 $$
 f(x) = (x-1)^2 \ge 0
 $$` },
@@ -547,11 +546,11 @@ $$` },
     figure: {
       kind: "geometry",
       source: plot({ boundingBox: [-1.5, 4.5, 3.5, -1], axis: true, elements: [
-        { type: "point", id: "V", x: 1, y: 0, label: "(1,0)", beat: 1, color: "blue" },
-        { type: "curve", fn: "x^2-2*x+1", domain: [-1, 3], beat: 2 },
-        { type: "point", id: "P", x: 0, y: 1, label: "(0,1)", beat: 3 },
-        { type: "point", id: "Q", x: 2, y: 1, label: "(2,1)", beat: 3 },
-        { type: "segment", from: "P", to: "Q", dashed: true, beat: 3, color: "orange" },
+        { type: "point", id: "V", x: 1, y: 0, label: "(1,0)", beat: 3, color: "blue" },
+        { type: "curve", fn: "x^2-2*x+1", domain: [-1, 3], beat: 5 },
+        { type: "point", id: "P", x: 0, y: 1, label: "(0,1)", beat: 6 },
+        { type: "point", id: "Q", x: 2, y: 1, label: "(2,1)", beat: 7 },
+        { type: "segment", from: "P", to: "Q", dashed: true, beat: 7, color: "orange" },
       ] }),
       captionMd: "",
     },
@@ -586,11 +585,13 @@ $$
     bodyMd: String.raw`בתא העלה, בתוך ה\green{כלורופלסט}:`,
     beats: [
       { md: String.raw`**אור** נקלט בכלורופיל ומספק את האנרגיה לתהליך.` },
-      { md: String.raw`\blue{CO₂} מהאוויר ומים ($\ce{H2O}$) מהשורשים נכנסים לתא.` },
-      { md: String.raw`נוצרים סוכר ו\pink{חמצן}, והחמצן יוצא מהתא:
+      { md: String.raw`\blue{CO₂} נכנס מהאוויר דרך הפיוניות.` },
+      { md: String.raw`מים ($\ce{H2O}$) מגיעים מהשורשים.` },
+      { md: String.raw`ה-$\ce{CO2}$ והמים מגיבים ונוצר סוכר:
 $$
 \ce{6CO2 + 6H2O ->[h\nu] C6H12O6 + 6O2}
 $$` },
+      { md: String.raw`ה\pink{חמצן} שנוצר יוצא מהתא.` },
     ],
     sideMd: null,
     figure: { kind: "svg", source: PHOTO, captionMd: "" },
