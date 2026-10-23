@@ -258,7 +258,6 @@ The approved plan was never committed; its final text (2026-10-22 14:47) was rec
   5. `update_knowledge_graph` (`learnTools.ts`) has no rename and no `part_of` link (`rel` is only requires / misconception_of, `dataSchemas.ts`): add both, or record in DECISIONS that they are dropped.
   6. The real-binary test (`src/server/knowledge/knowledge.test.ts`, `TUTOR_MCP_BIN=~/Library/Application Support/il.shalav.app/engines/tutor-mcp-v0.6.1/tutor-mcp`) misses the plan's checks: 2 misses after 8 good stays high, sustained misses drop it, FSRS makes a review due, the focus is a frontier concept.
   Also open from M76: prerequisite changes between existing concepts are not sent to the engine (DECISIONS "M76").
-- **Open question for the user (not started):** after the conventions revert, should the graders get the course's explicit teacher rubric items (`FileIndex.teacherItems` requirement/deduction, the teacher's own words, no inference) as "the teacher's grading rules for this course" in `gradingPrompt` / `checkGradingPrompt`? Today they are evidence and reading material only.
 
 ---
 
