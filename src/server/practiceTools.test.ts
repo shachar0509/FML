@@ -126,7 +126,7 @@ it("practice card: scope, generated exercise through the bridge, MCQ, open answe
   expect(ev.filter((e) => e.type === "check_answered")).toHaveLength(2);
 
   // ----- M57: homework with the tutor -----
-  const upload = async (name: string) => sc<{ files: { sha256: string; mediaType: string }[] }>(await call("attachment_upload", { number: n, name, mime: "image/png", base64: createCanvas(60, 80 + name.length).toBuffer("image/png").toString("base64") })).files;
+  const upload = async (name: string) => sc<{ files: { sha256: string; mediaType: string }[] }>(await call("attachment_upload_chunk", { number: n, id: name.replace(/\W/g, "_"), name, mime: "image/png", index: 0, total: 1, data: createCanvas(60, 80 + name.length).toBuffer("image/png").toString("base64") })).files;
   const pages = [...(await upload("p1.png")), ...(await upload("p22.png"))];
   let ahead = ""; // a submit's answer may already carry the op's next job
   async function job(input: object) {

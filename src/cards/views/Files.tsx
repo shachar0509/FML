@@ -11,12 +11,12 @@ type Tool = (
   args?: Record<string, unknown>,
 ) => Promise<{ structuredContent?: unknown; isError?: boolean }>;
 type Role = "material" | "exercises" | "teacher";
-const CHUNK = 2 * 1024 * 1024; // raw bytes; base64 stays under the 4 MB tool limit
+export const CHUNK = 2 * 1024 * 1024; // raw bytes; base64 stays under the 4 MB tool limit
 /** files_list poll: every 1.5 s while something moves (build, scan, upload, Moodle), every 5 s otherwise. */
 const FAST_MS = 1500;
 const IDLE_MS = 5000;
 
-const b64 = (buf: ArrayBuffer) => {
+export const b64 = (buf: ArrayBuffer) => {
   let s = "";
   const a = new Uint8Array(buf);
   for (let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode(...a.subarray(i, i + 0x8000));
@@ -56,7 +56,7 @@ function Chip({ f, hasPlan }: { f: FileRow; hasPlan: boolean }) {
 }
 
 /** "Importing…" (or another label) with the percentage above a bar. */
-function Importing({ done, total, label }: { done: number; total: number; label?: string }) {
+export function Importing({ done, total, label }: { done: number; total: number; label?: string }) {
   const { t } = useTranslation();
   const pct = total ? Math.round((100 * done) / total) : 0;
   const text = label ?? t("files.importing");
@@ -321,14 +321,14 @@ export function Files({
     setSent({ done, total });
     try {
       for (const file of files) {
-        const total = Math.max(1, Math.ceil(file.size / CHUNK));
-        for (let i = 0; i < total; i++) {
+        const parts = Math.max(1, Math.ceil(file.size / CHUNK));
+        for (let i = 0; i < parts; i++) {
           const r = await callTool("file_upload_chunk", {
             number,
             role,
             name: file.name,
             index: i,
-            total,
+            total: parts,
             data: b64(await file.slice(i * CHUNK, (i + 1) * CHUNK).arrayBuffer()),
           });
           done += Math.min(CHUNK, file.size - i * CHUNK);

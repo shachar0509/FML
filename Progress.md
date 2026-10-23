@@ -406,6 +406,13 @@ One `teach_step` can carry `beats` (2–8): the card plays them locally. **Next*
 - Server error strings and card data are unchanged (the model reads them). test-host `?err=<message>` sets the exercise fixture's error.
 - Tests: `errors.test.tsx` (keys, rules, fallbacks, keys are plain sentences in he/en, render), e2e exercise (translated key; unknown message → `errors.invalidOutput` + Details).
 
+## M95 (U3): chunked answer uploads
+- Answer files (exercise, open question, homework, test scope; `AnswerFiles.tsx`) go through the card-only `attachment_upload_chunk` ({number, id nonce, name, mime, index, total ≤ 15, data ≤ 4 MB base64}); the card sends its prepared blob (resized photo or the original PDF) in 2 MB chunks with a byte bar (`Importing`, label `learn.uploading`). The last chunk calls the same `saveAnswerFile` with the same bytes; `attachment_upload` is removed.
+- `src/server/chunks.ts` `chunkedUploads(prefix)`: in-order reassembly in a fresh temp dir (`shalav-ans-` / `shalav-up-`), removed on finish, failure, out-of-order and after 10 idle minutes; `file_upload_chunk` uses it with its old key and replies. Files.tsx progress now divides bytes by bytes (the inner `total` shadowed the byte total).
+- A rejected tool call no longer leaves the card stuck on "Uploading…".
+- Tests: exerciseTools (3-chunk JPEG = direct `saveAttachment` sha, 3-chunk 2-page PDF = direct `saveAnswerFile` shas in order, same-name parallel uploads, out of order, >12 pages → `grade.tooManyPages`, >15 chunks, temp dir empty), fileTools unchanged; e2e exercise, practice-modes, practice-test, course, lesson.
+- 🧪 Claude Desktop: a ~10-page phone PDF from an exercise card (bar, 10 chips, grading sees the pages); two photos at once; a 13-page PDF shows the error and frees the card; no `shalav-ans-*` left in `$TMPDIR`.
+
 ## Drawing roadmap M79–M83 (agreed with the user, 2026-10-23)
 Goal: slides can draw for any course, including unusual ones, in a professional look, with beats.
 

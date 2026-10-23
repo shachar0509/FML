@@ -39,7 +39,7 @@ it("lists tools/prompts and calls shalav_home", async () => {
   expect((await client.callTool({ name: "shalav_cancel", arguments: { key: "web:01040195" } })).isError).toBeFalsy();
   // an answer solved on paper: the uploaded photo reaches the model as an image next to the request
   const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==";
-  const up = (await client.callTool({ name: "attachment_upload", arguments: { number: "01040195", name: "p.png", mime: "image/png", base64: PNG } })).structuredContent as { files: { sha256: string }[] };
+  const up = (await client.callTool({ name: "attachment_upload_chunk", arguments: { number: "01040195", id: "p1", name: "p.png", mime: "image/png", index: 0, total: 1, data: PNG } })).structuredContent as { files: { sha256: string }[] };
   expect((await client.callTool({ name: "shalav_request", arguments: { kind: "answer", text: " " } })).isError).toBe(true); // neither text nor files
   await client.callTool({ name: "shalav_request", arguments: { kind: "answer", text: "", number: "01040195", files: up.files.map((f) => f.sha256) } });
   const paper = (await client.callTool({ name: "shalav_next_job", arguments: {} })).content as { type: string; text?: string; mimeType?: string }[];

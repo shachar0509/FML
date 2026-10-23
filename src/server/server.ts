@@ -116,7 +116,7 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
       inputSchema: z.discriminatedUnion("kind", [
         z.object({ kind: z.literal("learn"), stageId: z.string().regex(/^S\d{3}$/), title: z.string().max(200) }),
         z.object({ kind: z.literal("relearn"), stageId: z.string().regex(/^S\d{3}$/), title: z.string().max(200) }),
-        // a written answer, or photos / a PDF of one solved on paper (attachment_upload of that course), or both
+        // a written answer, or photos / a PDF of one solved on paper (attachment_upload_chunk of that course), or both
         z.object({ kind: z.literal("answer"), text: z.string().max(4000), number: z.string().regex(COURSE_ID_RE).optional(), files: z.array(z.string().regex(/^[0-9a-f]{64}$/)).max(12).optional() }),
         z.object({ kind: z.literal("step"), action: z.enum(["next", "again", "question"]), text: z.string().max(4000).optional(), beat: z.object({ n: z.number().int(), of: z.number().int() }).optional() }),
         // M60: continue a saved lesson

@@ -3,18 +3,13 @@ import { ImagePlus, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
 import type { Host } from "../types";
+import { b64, CHUNK, Importing } from "./Files";
 
 export type FileRef = { sha256: string; mediaType: string; name: string };
+type Stored = { sha256: string; mediaType: string }[];
 
-const b64 = (b: Blob) =>
-  new Promise<string>((ok, no) => {
-    const r = new FileReader();
-    r.onload = () => ok(String(r.result).split(",")[1] ?? "");
-    r.onerror = () => no(r.error);
-    r.readAsDataURL(b);
-  });
 /** Phone photos are shrunk here (long edge 1568) so the upload stays small; anything the browser cannot decode goes as-is. */
-async function prep(f: File): Promise<{ mime: string; base64: string }> {
+async function prep(f: File): Promise<{ mime: string; blob: Blob }> {
   if (f.type.startsWith("image/"))
     try {
       const bm = await createImageBitmap(f);
@@ -24,17 +19,32 @@ async function prep(f: File): Promise<{ mime: string; base64: string }> {
       c.height = Math.round(bm.height * k);
       c.getContext("2d")?.drawImage(bm, 0, 0, c.width, c.height);
       const blob = await new Promise<Blob | null>((r) => c.toBlob(r, "image/jpeg", 0.85));
-      if (blob) return { mime: "image/jpeg", base64: await b64(blob) };
+      if (blob) return { mime: "image/jpeg", blob };
     } catch {
       /* fall through */
     }
-  return { mime: f.type, base64: await b64(f) };
+  return { mime: f.type, blob: f };
 }
 const accepted = (f: File) => f.type.startsWith("image/") || f.type === "application/pdf";
+const uploadId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+
+/** One prepared file in 2 MB chunks (attachment_upload_chunk); the last chunk's reply holds the stored pages. null = failed. */
+async function send(callTool: Host["callTool"], number: string, name: string, mime: string, blob: Blob, sent: (bytes: number) => void): Promise<Stored | null> {
+  const id = uploadId();
+  const parts = Math.max(1, Math.ceil(blob.size / CHUNK));
+  for (let i = 0; i < parts; i++) {
+    const data = b64(await blob.slice(i * CHUNK, (i + 1) * CHUNK).arrayBuffer());
+    const r = await callTool("attachment_upload_chunk", { number, id, name, mime, index: i, total: parts, data });
+    if (r.isError) return null;
+    sent(Math.min(CHUNK, blob.size - i * CHUNK));
+    if (i === parts - 1) return (r.structuredContent as { files?: Stored } | undefined)?.files ?? null;
+  }
+  return null;
+}
 
 /**
  * A solution solved on paper: photos or a PDF, dropped on the zone or picked with the button, stored as course
- * attachments (attachment_upload; a PDF becomes one image per page). The chips list what will be sent.
+ * attachments (attachment_upload_chunk; a PDF becomes one image per page). The chips list what will be sent.
  */
 export function AnswerFiles({
   number,
@@ -61,29 +71,35 @@ export function AnswerFiles({
   const [up, setUp] = useState(false);
   const [err, setErr] = useState(false);
   const [over, setOver] = useState(false);
+  const [sent, setSent] = useState<{ done: number; total: number } | null>(null); // upload bytes
   const busy = (b: boolean) => (setUp(b), onBusy?.(b));
 
   async function add(list: File[]) {
     busy(true);
     setErr(false);
-    for (const f of list) {
-      if (!accepted(f)) {
-        setErr(true);
-        continue;
+    try {
+      const ok = list.filter(accepted);
+      if (ok.length < list.length) setErr(true);
+      const ready: { f: File; mime: string; blob: Blob }[] = [];
+      for (const f of ok) ready.push({ f, ...(await prep(f)) });
+      const total = ready.reduce((n, p) => n + p.blob.size, 0);
+      let done = 0;
+      setSent({ done, total });
+      for (const { f, mime, blob } of ready) {
+        const got = await send(callTool, number, f.name, mime, blob, (n) => setSent({ done: (done += n), total })).catch(() => null);
+        if (!got) setErr(true);
+        else
+          setFiles((x) => [
+            ...x,
+            ...got
+              .filter((g) => !x.some((y) => y.sha256 === g.sha256))
+              .map((g, i) => ({ ...g, name: got.length > 1 ? `${f.name} ${i + 1}` : f.name })),
+          ]);
       }
-      const p = await prep(f);
-      const r = await callTool("attachment_upload", { number, name: f.name, mime: p.mime, base64: p.base64 });
-      const got = (r.structuredContent as { files?: { sha256: string; mediaType: string }[] } | undefined)?.files;
-      if (r.isError || !got) setErr(true);
-      else
-        setFiles((x) => [
-          ...x,
-          ...got
-            .filter((g) => !x.some((y) => y.sha256 === g.sha256))
-            .map((g, i) => ({ ...g, name: got.length > 1 ? `${f.name} ${i + 1}` : f.name })),
-        ]);
+    } finally {
+      setSent(null);
+      busy(false);
     }
-    busy(false);
   }
 
   return (
@@ -121,6 +137,7 @@ export function AnswerFiles({
           ))}
         </ul>
       )}
+      {sent && sent.total > 0 && <Importing {...sent} label={t("learn.uploading")} />}
       {err && (
         <p role="alert" className="text-sm text-danger">
           {t("exercise.failed")}

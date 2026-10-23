@@ -1,8 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { COURSE_ID_RE, isCustom } from "@/core/universities";
-import { appendFile, mkdir, mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import type { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod";
@@ -17,6 +15,7 @@ import { coursePaths } from "@/core/lib/fs/paths";
 import { useSettings } from "@/stores/settings";
 import { native, openFolder } from "./native";
 import type { MoodleState } from "@/cards/types";
+import { CHUNK_B64_MAX, chunkedUploads } from "./chunks";
 import { CARDS_URI } from "./resources";
 
 const both = { ui: { resourceUri: CARDS_URI, visibility: ["model" as const, "app" as const] } }; // plain tools in hosts without cards (Claude Code)
@@ -78,37 +77,25 @@ export function registerFileTools(server: McpServer, o: { openFolder?: (p: strin
   });
 
   // Chunks arrive in order; the file is reassembled in a temp dir under its real name, then imported like a picked file.
-  const uploads = new Map<string, { dir: string; path: string; next: number }>();
+  const uploads = chunkedUploads("shalav-up-");
   registerAppTool(
     server,
     "file_upload_chunk",
     {
       title: "Upload a file chunk",
       description: "Card-only: one base64 chunk (at most 4 MB) of a file; the last chunk imports it.",
-      inputSchema: z.object({ number: num, role, name: z.string().min(1), index: z.number().int().min(0), total: z.number().int().min(1), data: z.string().max(4 * 1024 * 1024) }),
+      inputSchema: z.object({ number: num, role, name: z.string().min(1), index: z.number().int().min(0), total: z.number().int().min(1), data: z.string().max(CHUNK_B64_MAX) }),
       _meta: appOnly,
     },
     async ({ number, role: r, name, index, total, data }) => {
       if (!(await courseExists(number))) return fail("No such course.");
-      const key = `${number}/${r}/${name}`;
-      let u = uploads.get(key);
-      if (index === 0) {
-        if (u) await rm(u.dir, { recursive: true, force: true });
-        const dir = await mkdtemp(join(tmpdir(), "shalav-up-"));
-        u = { dir, path: join(dir, basename(name)), next: 0 };
-        uploads.set(key, u);
-      }
-      if (!u || u.next !== index) return fail("Upload chunk out of order; send the file again.");
-      await mkdir(u.dir, { recursive: true });
-      await appendFile(u.path, Buffer.from(data, "base64"));
-      u.next++;
-      if (index + 1 < total) return out("ok", { ok: true, done: false });
-      uploads.delete(key);
       try {
-        const [res] = await importFiles(number, r, [u.path], deps());
+        const u = await uploads(`${number}/${r}/${name}`, name, { index, total, data }, async (path) => (await importFiles(number, r, [path], deps()))[0]);
+        if (!u.done) return out("ok", { ok: true, done: false });
+        const res = u.value;
         return out(res?.status ?? "failed", { ok: true, done: true, status: res?.status ?? "failed", error: res && "error" in res ? res.error : undefined });
-      } finally {
-        await rm(u.dir, { recursive: true, force: true });
+      } catch (e) {
+        return fail(e instanceof Error ? e.message : String(e));
       }
     },
   );

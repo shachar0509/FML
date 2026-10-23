@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { COURSE_ID_RE } from "@/core/universities";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import type { McpServer } from "@modelcontextprotocol/server";
@@ -12,6 +13,7 @@ import type { Attachment, Context } from "@/core/domain/practice/grade";
 import { newId } from "@/core/lib/ids";
 import { useSettings } from "@/stores/settings";
 import type { BridgeGateway, Content } from "./bridge";
+import { CHUNK_B64_MAX, chunkedUploads } from "./chunks";
 import { CARDS_URI } from "./resources";
 
 const appOnly = { ui: { resourceUri: CARDS_URI, visibility: ["app" as const] } };
@@ -148,17 +150,35 @@ export function registerExerciseTools(server: McpServer, bridge: BridgeGateway) 
     return out("ok", data(runId));
   });
 
+  // U3: answer files come in 2 MB chunks (one call per chunk) and are stored by the same saveAnswerFile as before, from the same bytes.
+  const uploads = chunkedUploads("shalav-ans-");
   registerAppTool(
     server,
-    "attachment_upload",
-    { title: "Upload a solution file", description: "Card-only: store an image or PDF (PDF pages become JPEGs, max 12).", inputSchema: z.object({ number: num, name: z.string().max(200), mime: z.string(), base64: z.string().max(40_000_000) }), _meta: appOnly },
-    async ({ number, name, mime, base64 }) => {
+    "attachment_upload_chunk",
+    {
+      title: "Upload a solution file chunk",
+      description: "Card-only: one base64 chunk of an image or PDF; the last chunk stores it (PDF pages become JPEGs, max 12).",
+      inputSchema: z.object({
+        number: num,
+        id: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/), // the card's per-upload nonce
+        name: z.string().min(1).max(200),
+        mime: z.string(),
+        index: z.number().int().min(0),
+        total: z.number().int().min(1).max(15), // 15 × 2 MB = 30 MB raw, today's 40 MB base64 cap
+        data: z.string().max(CHUNK_B64_MAX),
+      }),
+      _meta: appOnly,
+    },
+    async ({ number, id, name, mime, index, total, data }) => {
       if (!mime.startsWith("image/") && mime !== "application/pdf") return fail("Only images and PDFs.");
       try {
-        const saved = await saveAnswerFile(number, new File([Buffer.from(base64, "base64")], name, { type: mime }));
-        return out("stored", { files: saved.map((a) => ({ sha256: a.sha256, mediaType: a.mediaType })) });
+        const u = await uploads(`${number}/${name}/${id}`, name, { index, total, data }, async (path) =>
+          saveAnswerFile(number, new File([await readFile(path)], name, { type: mime })),
+        );
+        if (!u.done) return out("ok", { done: false });
+        return out("stored", { done: true, files: u.value.map((a) => ({ sha256: a.sha256, mediaType: a.mediaType })) });
       } catch (e) {
-        return fail(e instanceof Error ? e.message : String(e));
+        return fail(e instanceof Error ? e.message : String(e)); // e.g. "grade.tooManyPages", as before
       }
     },
   );

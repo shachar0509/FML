@@ -12,6 +12,9 @@ for (const lang of LANGS)
       await expect(grade).toBeDisabled();
       await page.locator("input[type=file]").setInputFiles({ name: "work.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64") });
       await expect(page.getByText("work.png")).toBeVisible();
+      // U3: the card chunks its prepared blob (canvas JPEG, 0.85), never the PNG the student picked
+      expect(await page.evaluate(() => (window as unknown as { __tools: string[] }).__tools)).toContain("attachment_upload_chunk");
+      expect(await page.evaluate(() => (window as unknown as { __chunks: string[] }).__chunks.every((d) => d.startsWith("/9j/")))).toBe(true); // JPEG magic, not PNG's "iVBOR"
       await grade.click();
       await expect(page.getByText(lang === "he" ? "נכון חלקית" : "Partly correct")).toBeVisible(); // the stub answers with a graded card
       expect((await said(page)).at(-1)).toBe(lang === "he" ? "▶️ המשך" : "▶️ Continue");

@@ -403,3 +403,10 @@
 - Order: an existing i18n key → its text; a known actionable class (stopped, missing course data or uploaded file, data-folder I/O, download) → its own sentence; else the card's own failure sentence (homework read, homework solve, plan build, quiz-notes read); else invalid model output → "Claude's answer didn't come back in the right form"; else a generic sentence.
 - The raw message stays in a closed "Details" disclosure under the sentence, not a title tooltip (keyboard, touch and screen readers can open it), and outside the alert so only the sentence is announced. A translated key has no Details.
 - A stopped AI homework solve shows the paused note (it can continue), not the failure. Quiz-notes read failures reuse `homework.failed` (same sentence).
+
+## M95 — Chunked answer uploads (U3)
+- `attachment_upload` is replaced by `attachment_upload_chunk` (no compatibility tool): `cards.html` is served by the same server from the same `.mcpb`, so a card always matches its server; an iframe left open across an update gets the generic upload error and works after reopening. (Supersedes the "no chunking" line under M8.)
+- Chunks are 2 MB raw (as course files); the cap is `total ≤ 15` (30 MB raw, today's 40 MB base64), not a byte counter, because the tool is card-only.
+- Upload key `number/name/id`, `id` a card nonce from `Date.now()` + `Math.random()` (`crypto.randomUUID` needs a secure context the card iframe may not have).
+- The shared reassembly drops the upload on an out-of-order chunk (`file_upload_chunk` used to keep it) and no longer recreates a vanished temp dir (that would reassemble a partial file). Idle uploads are swept after 10 minutes; no sweep at server start.
+- No new strings: the bar reuses `learn.uploading`, errors stay `exercise.failed`.
