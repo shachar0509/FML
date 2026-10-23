@@ -392,3 +392,8 @@
 - A warm at lesson start may begin the one-time engine download (`bin()` → `ensureEngine`). On a machine without the engine the lesson's own compute (the `stage_started` compute or the [STATUS] summary) starts the same download in the same tool call anyway, and a fresh 30 s cache implies the engine was installed or is in its backoff; so the warm only moves the start earlier by the handler's own work. Its progress (`installing`) still shows only in the course card; the lesson shows none and drops the digest while it runs, as before. No "only if installed" guard.
 - A failed warm sets the 10-min backoff, so the summary does not try a second download or spawn (one attempt, as before).
 - The 5 s / 3 s waits are unchanged.
+
+## M93 — Files poll cadence (R2)
+- `files_list` polls every 1.5 s while a build runs (card's `live`, or any row `inBuild`), a file of any zone is scanning, an upload runs, or Moodle is busy (install/login/sync all fast: progress bars and the login → sync switch); every 5 s otherwise. 5 s: ~3× fewer folder scans while an outside drop still shows "by itself". (Supersedes the poll interval in the M6 "No server-side fs.watch" line.)
+- Hidden window (`document.visibilityState`, which follows the top-level window, not the card's scroll position): idle ticks are skipped and one refresh runs when it shows; fast ticks keep running, because the poll's scan is what cancels a running build's work on a file deleted or edited outside the app.
+- No immediate refresh on a cadence switch: every in-card action already refreshes, and fast→idle is always seen by a fast poll.

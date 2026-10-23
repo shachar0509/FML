@@ -11,7 +11,7 @@ const list = (m: number, e: number, t: number): FilesData => ({
   materials: rows(m, 0), exercises: rows(e, 100), teacher: rows(t, 200),
 });
 const zone = (name: RegExp) => screen.getByRole("button", { name });
-const poll = () => act(() => vi.advanceTimersByTimeAsync(1500));
+const poll = () => act(() => vi.advanceTimersByTimeAsync(5000));
 
 afterEach(() => vi.useRealTimers());
 

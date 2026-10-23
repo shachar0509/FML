@@ -244,7 +244,7 @@ for (const lang of LANGS)
     const errors = pageErrors(page);
     await page.goto(host(`lang=${lang}&files=outside`));
     await page.locator("ul button").first().click();
-    await expect(page.getByText("outside.pdf")).toBeVisible({ timeout: 4000 }); // no click: the card follows the folder
+    await expect(page.getByText("outside.pdf")).toBeVisible({ timeout: 8000 }); // no click: the card follows the folder (idle poll every 5 s)
     await expect(page.getByText("lecture2.pdf")).toBeHidden();
     await expect(page.getByText("lecture1-final.pdf").locator("..")).toContainText(lang === "he" ? "מוכן" : "Ready"); // renamed: keeps its scan
     await expect(page.getByText("hw1.pdf").locator("..")).toContainText(lang === "he" ? /לחצו על/ : /press Update plan/); // edited: to be scanned again
@@ -283,11 +283,11 @@ for (const lang of LANGS)
     expect(await toolsCalled(page)).toContain("course_translate_request");
     expect(await said(page)).toEqual([lang === "he" ? "▶️ המשך" : "▶️ Continue"]); // the chat does the translating
     await expect(page.getByText(lang === "he" ? "מתרגמים את התוכנית לעברית…" : "Translating the plan to English…")).toBeVisible();
-    // the card reloads every 3 s and the files poll every 1.5 s meanwhile; a short list the student collapsed stays collapsed
+    // the card reloads every 3 s and the files poll runs meanwhile; a short list the student collapsed stays collapsed
     const mats = page.getByRole("button", { name: lang === "he" ? /חומרי לימוד/ : /Study materials/ });
     await expect(mats).toHaveAttribute("aria-expanded", "true"); // 2 files: open by default
     await mats.click();
-    await page.waitForTimeout(3500);
+    await page.waitForTimeout(5500); // files poll every 5 s (idle)
     expect((await toolsCalled(page)).filter((n) => n === "shalav_course").length).toBeGreaterThan(2);
     await expect(mats).toHaveAttribute("aria-expanded", "false");
     expect(errors).toEqual([]);

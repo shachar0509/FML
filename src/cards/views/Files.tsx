@@ -12,6 +12,9 @@ type Tool = (
 ) => Promise<{ structuredContent?: unknown; isError?: boolean }>;
 type Role = "material" | "exercises" | "teacher";
 const CHUNK = 2 * 1024 * 1024; // raw bytes; base64 stays under the 4 MB tool limit
+/** files_list poll: every 1.5 s while something moves (build, scan, upload, Moodle), every 5 s otherwise. */
+const FAST_MS = 1500;
+const IDLE_MS = 5000;
 
 const b64 = (buf: ArrayBuffer) => {
   let s = "";
@@ -281,11 +284,29 @@ export function Files({
     if (d) onFiles?.(d);
   }, [d, onFiles]);
   const active = !!d && [...d.materials, ...d.exercises].some((f) => f.status === "indexing");
-  // Always: files added to or deleted from the course folders outside the app show up at once (each call scans the folders).
+  // something moves: a plan build, a file scanning or held by a build (any zone), an upload, a Moodle step
+  const fast =
+    live ||
+    busy ||
+    !!sent ||
+    !!d?.moodle?.busy ||
+    (!!d && [...d.materials, ...d.exercises, ...(d.teacher ?? [])].some((f) => f.status === "indexing" || f.inBuild === true));
+  // Always: files added to or deleted from the course folders outside the app show up by themselves (each call scans the folders).
+  // Idle: every 5 s, skipped while the window is hidden, one refresh when it shows again. Fast keeps running hidden: its scan
+  // is what stops a running build from reading a file deleted or edited outside the app (fileTools `scan` → queue.cancel).
   useEffect(() => {
-    const id = setInterval(() => void refresh(), 1500);
-    return () => clearInterval(id);
-  }, [refresh]);
+    const id = setInterval(() => {
+      if (fast || document.visibilityState === "visible") void refresh();
+    }, fast ? FAST_MS : IDLE_MS);
+    const shown = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    document.addEventListener("visibilitychange", shown);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", shown);
+    };
+  }, [refresh, fast]);
   const wasActive = useRef(false);
   useEffect(() => {
     if (wasActive.current && !active) reload(); // plan may have changed
