@@ -242,7 +242,19 @@ export function createKnowledge(engineFor: ((course: string) => Engine) | null) 
   });
 
   /** M76: the one-time engine download, 0..99 while it runs (the course card shows it) */
-  return { summary, invalidate: (n: string) => cache.delete(n), dispose: off, installing: null as number | null };
+  /**
+   * R8: start the course's engine process ahead of a summary that certainly follows (the lesson's [STATUS]).
+   * Nothing is computed, sent or written; a failed start counts as the engine failure the summary's own start would hit.
+   */
+  function warm(n: string) {
+    if (!engineFor || Date.now() <= downUntil) return;
+    void engineFor(n).warm?.()?.catch((err: unknown) => {
+      downUntil = Date.now() + 10 * 60_000;
+      console.error("knowledge engine unavailable:", err instanceof Error ? err.message : err);
+    });
+  }
+
+  return { summary, warm, invalidate: (n: string) => cache.delete(n), dispose: off, installing: null as number | null };
 }
 export type KnowledgeService = ReturnType<typeof createKnowledge>;
 

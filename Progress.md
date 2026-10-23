@@ -389,6 +389,12 @@ One `teach_step` can carry `beats` (2–8): the card plays them locally. **Next*
 - test-host `?view=step&noanswer=1` (+ `window.__answer = true` to answer). Tests: `Step.test.tsx` (fake timers: note at 60 s, late answer, Back sends nothing, newer `since`, Continue drops it, beat slide: `beat` in the question, arrows ignored in the box, Back keeps the beat and the poll, unmount), e2e step (Back, note, late answer; screenshots `card-step-timeout-*`); slides e2e unchanged and passing.
 - The question pill tint went from `bg-primary/10` to `bg-primary/5`: on the light whiteboard it measured 4.48:1 (below 4.5) once axe checked it while shown.
 
+## M92 (R8): the lesson warms the knowledge engine
+- `EnginePool.warm(course)` starts the course's tutor-mcp process into a free slot only (never evicts; no-op when it runs or the pool is full; idles out like a used one); `Engine.warm?`.
+- `KnowledgeService.warm(n)`: process only (no compute, no engine tool call, no map.json write, `installing` untouched); skipped without an engine or during the 10-min backoff; a failed start sets the backoff like a failed summary.
+- `shalav_start_lesson` warms after the stage checks, before the material reads, so the first [STATUS] after the engine idled out keeps "The student's knowledge now" more often. On a machine without the engine the warm may start the one-time download (the lesson's own compute would a moment later; progress in the course card only). Course card, practice and Home do not warm (see DECISIONS).
+- Tests: knowledge.test (free slot only, failed start retried; warmed summary = unwarmed summary and engine calls; backoff; start_lesson warms once, first).
+
 ## Drawing roadmap M79–M83 (agreed with the user, 2026-10-23)
 Goal: slides can draw for any course, including unusual ones, in a professional look, with beats.
 
@@ -449,6 +455,10 @@ Goal: slides can draw for any course, including unusual ones, in a professional 
 - Moodle: Chromium download bar → login window → closes → Importing bar; only the course's own files (materials + exams).
 
 **Known limits / not done**
+- Knowledge engine: `syncEngine` assigns `m.sent` only after the whole replay loop, so a failure mid-replay (crash, eviction) resends the answers already sent after the backoff (duplicate `record_interaction`); fix = record each event id as it is sent.
+- Knowledge engine: `EnginePool` evicts the least-recently-used engine even mid-call; that compute fails and the global `downUntil` turns the engine off for every course for 10 min.
+- Knowledge cache: a compute that started before an event can still fill the cache after `onEvent` cleared it (stale until the post-event compute ends).
+- `shownStars` drops 0.5★ per compute when raw is more than 0.35★ below the shown stars, so the number of computes (timing) changes the shown stars.
 - Jobs, active lesson state and exercise runs are in memory (lost on server restart; saved lessons/practice resume via `.chat_history`).
 - Exercise ↔ solution link only within ~5 pages (6-page scan batches); a separate solutions file isn't linked.
 - Content generated before a language change stays in the old language until Translate or a rebuild.

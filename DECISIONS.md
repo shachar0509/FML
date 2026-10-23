@@ -384,3 +384,11 @@
 - Back keeps the beat on screen (M78); a later question sends the beat shown at its Send. The arrow keys keep M78's behaviour (ignored only in the question box), also under the pill and the pop-up. "Back to the step" (`step.back`) is its own key, not the beat's Back (`step.beatPrev`), with the same backward arrow.
 - Back then another click before Enter replaces the queued question (only the newest click reaches the model); the transcript still shows "Asked: …" for it. Accepted: same inbox rule as any card click. Revealing beats sends nothing and does not replace it.
 - Known limit: with one global `answer` and only a time stamp, an answer to an earlier question that arrives after a newer question was sent is shown under the newer one. Rare (Back + a second Send during a running turn); accepted.
+
+## M92 — Warming the knowledge engine (R8)
+- A warm starts only the engine process; it never computes a summary. A warm summary would change the number of computes, and the shown-stars hysteresis depends on that number; it would also replay unsent answers (and since M76 a re-seed or the high-stakes mark) earlier, and the engine stamps them on receipt.
+- Only `shalav_start_lesson` warms, where its [STATUS] certainly follows. The course card (lead time ms), practice (open calls no summary) and Home (several courses against a pool of 2: an eviction mid-call turns the engine off for all courses) do not.
+- A warm uses a free pool slot only and never evicts; with the pool full nothing changes.
+- A warm at lesson start may begin the one-time engine download (`bin()` → `ensureEngine`). On a machine without the engine the lesson's own compute (the `stage_started` compute or the [STATUS] summary) starts the same download in the same tool call anyway, and a fresh 30 s cache implies the engine was installed or is in its backoff; so the warm only moves the start earlier by the handler's own work. Its progress (`installing`) still shows only in the course card; the lesson shows none and drops the digest while it runs, as before. No "only if installed" guard.
+- A failed warm sets the 10-min backoff, so the summary does not try a second download or spawn (one attempt, as before).
+- The 5 s / 3 s waits are unchanged.

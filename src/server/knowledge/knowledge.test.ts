@@ -1,7 +1,10 @@
 // @vitest-environment node
+import { existsSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Client } from "@modelcontextprotocol/client";
+import { InMemoryTransport } from "@modelcontextprotocol/server";
 import { describe, expect, it } from "vitest";
 import * as z from "zod";
 import type { CourseJson, Event, PlanJson } from "@/core/domain/dataSchemas";
@@ -11,6 +14,7 @@ import { readJsonFile, writeJsonAtomic } from "@/core/lib/fs/atomicWrite";
 import { coursePaths } from "@/core/lib/fs/paths";
 import { useSettings } from "@/stores/settings";
 import { initNode } from "../platform";
+import { createServer } from "../server";
 import { EnginePool, type Engine } from "./engine";
 import { ENGINE_VERSION, engineAsset } from "./install";
 import { createKnowledge, digest, hotStages, interactions, knowledgeDir, shownLevel, studyFocus, watchList } from "./knowledge";
@@ -298,4 +302,109 @@ describe("knowledge service", () => {
     k.dispose();
     await pool.closeAll();
   }, 60_000);
+});
+
+describe("R8: warming the engine", () => {
+  const fakeEngine = (warm: () => Promise<void> | undefined = () => Promise.resolve()) => {
+    const log: string[] = [];
+    const calls: { name: string; args: Record<string, unknown> }[] = [];
+    const e: Engine = {
+      warm: () => (log.push("warm"), warm()),
+      call: async (name, args) => {
+        log.push(name);
+        calls.push({ name, args });
+        if (name === "init_domain") return { domain_id: "D1" };
+        if (name === "get_curriculum_snapshot") return { snapshot: { version: 1 } };
+        if (name === "get_olm_snapshot") return { mastery_stages: { "סדרה": { retention_estimate: 0.5 } }, focus_concept: "גבול" };
+        if (name === "get_misconceptions") return { misconceptions: [{ concept: "סדרה", misconception_type: "sign-flip", last_error_detail: "flips", count: 2, status: "active" }] };
+        return {};
+      },
+    };
+    return { e, log, calls };
+  };
+
+  it("the pool starts a process only into a free slot, once, and a failed start is retried later", async () => {
+    let spawns = 0;
+    const pool = new EnginePool(() => (spawns++, new Promise<string>(() => {})), () => "/nowhere"); // never comes up
+    expect(pool.warm("A")).toBeDefined();
+    expect(pool.warm("A")).toBeUndefined(); // already starting
+    expect(pool.warm("B")).toBeDefined();
+    expect(pool.warm("C")).toBeUndefined(); // pool full: never evicts A or B
+    expect(spawns).toBe(2);
+
+    let fails = 0;
+    const bad = new EnginePool(async () => (fails++, Promise.reject(new Error("no engine"))), () => "/nowhere");
+    await expect(bad.warm("A")).rejects.toThrow("no engine");
+    await expect(bad.warm("A")).rejects.toThrow("no engine"); // the failed slot was dropped
+    expect(fails).toBe(2);
+  });
+
+  it("warm starts the process only; the summary after it is the same as without a warm", async () => {
+    const run = async (warmFirst: boolean) => {
+      await setup();
+      await answer(seq, 1);
+      await answer(seq, 0.4);
+      const f = fakeEngine();
+      const k = createKnowledge(() => f.e);
+      if (warmFirst) {
+        k.warm(N);
+        expect(f.log).toEqual(["warm"]); // no engine tool call
+        expect(existsSync(join(knowledgeDir(N), "map.json"))).toBe(false); // nothing written
+        expect(k.installing).toBeNull(); // M76's download progress untouched
+      }
+      const s = await k.summary(N);
+      k.dispose();
+      return { f, s };
+    };
+    const a = await run(true);
+    const b = await run(false);
+    expect(a.f.calls).toEqual(b.f.calls); // same calls, same args, same order: no record_interaction twice
+    expect(a.f.calls.filter((c) => c.name === "record_interaction")).toHaveLength(2);
+    const view = (s: typeof a.s) => ({
+      stars: s.stars, raw: s.raw, examReady: s.examReady, focus: s.focus, misconceptions: s.misconceptions, engine: s.engine,
+      retention: [...s.retention], hot: hotStages(s), watch: watchList(s, [], "en"), level: shownLevel(s, course),
+      digest: digest(s, { custom: true, stageIds: ["S001"], target: 3, stars: shownLevel(s, course) }),
+    });
+    expect(view(a.s)).toEqual(view(b.s));
+  });
+
+  it("a failed warm turns the engine off for the backoff, like a failed summary; warming then does nothing", async () => {
+    await setup();
+    await answer(seq, 1);
+    const f = fakeEngine(() => Promise.reject(new Error("no engine")));
+    const k = createKnowledge(() => f.e);
+    k.warm(N);
+    await new Promise((r) => setTimeout(r, 0)); // let the rejection land
+    const s = await k.summary(N);
+    expect(s.engine).toBe(false);
+    expect(f.calls).toHaveLength(0); // the summary did not start the engine a second time
+    k.warm(N);
+    expect(f.log).toEqual(["warm"]); // backoff: no second warm
+    k.dispose();
+  });
+
+  it("without an engine warm is a no-op", () => {
+    const k = createKnowledge(null);
+    expect(() => k.warm(N)).not.toThrow();
+    k.dispose();
+  });
+
+  it("shalav_start_lesson warms the course's engine before its first call; one answer reaches it once", async () => {
+    await setup();
+    await answer(seq, 1);
+    const f = fakeEngine();
+    const courses: string[] = [];
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: "t", version: "0" });
+    const k = createKnowledge((n) => (courses.push(n), f.e));
+    await Promise.all([createServer(undefined, undefined, undefined, k).connect(a), client.connect(b)]);
+    const r = await client.callTool({ name: "shalav_start_lesson", arguments: { courseNumber: N } });
+    expect(JSON.stringify(r.content)).toContain("knowledge now");
+    expect(f.log[0]).toBe("warm");
+    expect(f.log.filter((x) => x === "warm")).toHaveLength(1);
+    expect(new Set(courses)).toEqual(new Set([N]));
+    expect(f.calls.filter((c) => c.name === "record_interaction")).toHaveLength(1);
+    await client.close();
+    k.dispose(); // else its onEvent listener computes (and writes map.json) on every later answer() in this file
+  });
 });

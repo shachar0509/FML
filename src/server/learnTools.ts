@@ -185,6 +185,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
       active = { n, stageId: stage.id, cid: saved?.id ?? null, at: saved?.updatedAt ?? null, title: `${stage.id} · ${s.tr(stage.title)}`, nodes: [] };
       if (!saved && (st === "completed" || st === "completed_override"))
         return out(`Stage ${stage.id} — ${stage.title} is already completed. The card shows a review with "Learn this stage again"; do not teach unless the student reopens it.`, lessonData(s, stage.id));
+      knowledge?.warm(s.course.courseNumber); // R8 (the key knowledgeDigest uses): both paths below end in status() → the digest; the material reads below cover the engine's start
       if (st === "available") {
         await appendEvent(n, { type: "stage_started", stageId: stage.id });
         // only the progress: s.events stays the snapshot from before this start (A8: [STATUS] idle minutes = time since the last activity before it)

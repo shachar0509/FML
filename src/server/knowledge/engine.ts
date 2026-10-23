@@ -1,8 +1,8 @@
 import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 
-/** One engine call: the tool's structured result. Throws on a tool error. */
-export type Engine = { call(name: string, args: Record<string, unknown>): Promise<Record<string, unknown>> };
+/** One engine call: the tool's structured result. Throws on a tool error. `warm` (R8): start the process ahead of the calls. */
+export type Engine = { call(name: string, args: Record<string, unknown>): Promise<Record<string, unknown>>; warm?(): Promise<void> | undefined };
 
 type Slot = { client: Promise<Client>; queue: Promise<unknown>; idle?: ReturnType<typeof setTimeout>; used: number };
 
@@ -38,7 +38,18 @@ export class EnginePool {
         s.queue = run.catch(() => undefined);
         return run.finally(() => this.touch(course));
       },
+      warm: () => this.warm(course),
     };
+  }
+
+  /**
+   * R8: start this course's process now, into a free slot only, so a warm never closes another course's engine.
+   * No-op when it already runs or the pool is full (then the first call starts it, as before).
+   * Resolves once it is up and rejects when the start fails.
+   */
+  warm(course: string): Promise<void> | undefined {
+    if (this.slots.has(course) || this.slots.size >= this.opts.max) return undefined;
+    return this.slot(course).client.then(() => this.touch(course)); // a warmed engine nobody calls still idles out
   }
 
   private slot(course: string): Slot {
