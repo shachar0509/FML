@@ -424,6 +424,10 @@ One `teach_step` can carry `beats` (2–8): the card plays them locally. **Next*
 - Shared event objects: audited at the plan's base (`eabd051`, incl. M73 facts, M75 control, M76/M77 `interactions()` / `syncEngine` / `missedEdges`): read-only everywhere; `interactions()`' `of()` and `mapEvents` hand out the cached event's own arrays, so an in-place edit there must copy first. At M97 the full suite under the freeze guard (after A8 and R8) found no mutating caller.
 - Tests: fs (hit + frozen, external append, same-length rewrite, partial line, truncation, two courses, schema, conflict copy), progress (own append seen), learnTools (golden [STATUS] / update_assessment / lesson_status / lesson card written on the code of the day (after A8 and R8, `Date` faked) before the change and checked against the old code; warm = cold parse).
 
+## M98 (U5): watch list chips show the stage title
+- Course card "Watch out for": each stage chip is `S002 · title` (id small, `dir="ltr"`; the title is the plan's own `tr` title from `data.units`, follows the card direction, truncated with the full title on hover). A stage no longer in the plan shows its id alone. Card-only: `CourseData.watch`, `watchList` and `shalav_course` are unchanged (same rows, order, counts, stage ids).
+- Test: e2e course (S002 chip has its title, S009 = not in the plan, id only). Fixture: watch row stages `["S002", "S009"]`.
+
 ## Drawing roadmap M79–M83 (agreed with the user, 2026-10-23)
 Goal: slides can draw for any course, including unusual ones, in a professional look, with beats.
 

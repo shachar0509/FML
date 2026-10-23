@@ -30,7 +30,7 @@ const st = (id: string, title: string, status: CourseData["units"][number]["stag
 const course: CourseData = {
   view: "course", language: lang, theme: "system", number: "01040195", name: home.courses[0]?.name ?? "Calculus", credits: 5.5, pct: 17, stagesDone: 1, stagesTotal: 3,
   current: "S002", hasPlan: true, build: null, custom: false, web: null, knowledge: { stars: 2.5, examReady: 40 }, engineInstall: q.get("engine") ? 42 : null, translate: { missing: q.get("tr") ? 12 : 0, running: false },
-  watch: [{ label: lang === "he" ? "שכחו את תנאי ההתכנסות" : "Forgot the convergence condition", count: 3, stageIds: ["S002"] }],
+  watch: [{ label: lang === "he" ? "שכחו את תנאי ההתכנסות" : "Forgot the convergence condition", count: 3, stageIds: ["S002", "S009"] }], // S009: a stage no longer in the plan (id only)
   units: [{ id: "U01", title: lang === "he" ? "סדרות" : "Sequences", stages: [st("S001", L("הגדרה", "Definition"), "completed", 90), st("S002", L("גבולות", "Limits"), "in_progress", 40), st("S003", L("כלל הסנדוויץ'", "Squeeze"), "locked", 0)] },
     // ?del=1: a second unit, so a whole unit can be deleted
     ...(q.get("del") ? [{ id: "U02", title: L("טורים", "Series"), stages: [st("S004", L("טור הנדסי", "Geometric series"), "locked", 0), st("S005", L("מבחן ההשוואה", "Comparison test"), "locked", 0)] }] : [])],

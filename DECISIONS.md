@@ -419,3 +419,6 @@
 - The plan suggested a stamp of file names + sizes + mtimes via a new `Fs.stat`. Keyed by the file text instead: the file is still read (cheap) but parsed only when its bytes changed, so a coarse mtime, a same-size rewrite by a sync tool or an append racing the stamp can never serve old events, and `Fs` needs no `stat`.
 - The reduction is not memoized: mistake weights decay continuously and are rounded to 3 decimals and sorted, so even a one-minute bucket could reorder the [STATUS] mistakes. Only `checkAdvanceCriteria` (provably `now`-independent: it reads stage mastery, never mistake weights) and the digest's `levelOf` (same graph as status()) are not recomputed.
 - The cached events are shared objects across calls; nothing mutates them, so production code neither copies nor freezes them. Under vitest they are deep-frozen, so a future in-place edit fails a test instead of silently changing [STATUS] or the engine evidence.
+
+## M98 — Watch-list stage titles come from the card's own plan data (U5)
+- The course card looks up watch-list stage titles in `data.units` (already translated with `tr`) instead of a new server field; a stage in no unit or deleted from the plan shows its id alone.

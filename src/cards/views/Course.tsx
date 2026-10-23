@@ -94,6 +94,7 @@ export function Course({
     </div>
   );
   const stageCount = data.units.reduce((n, u) => n + u.stages.length, 0);
+  const stageTitle = new Map(data.units.flatMap((u) => u.stages.map((s) => [s.id, s.title] as const))); // U5: watch chips show the stage title
   // muted until the row is hovered or focused; always shown on touch screens
   const trash = (label: string, on: () => void) =>
     !running && (
@@ -226,15 +227,26 @@ export function Course({
                 </span>
               </div>
               <div className="flex flex-wrap gap-1">
-                {m.stageIds.map((id) => (
-                  <span
-                    key={id}
-                    dir="ltr"
-                    className="rounded-full bg-border/70 px-2 py-0.5 text-xs"
-                  >
-                    {id}
-                  </span>
-                ))}
+                {m.stageIds.map((id) => {
+                  const title = stageTitle.get(id); // undefined: the stage left the plan, the id alone
+                  return (
+                    <span
+                      key={id}
+                      title={title}
+                      className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full bg-border/70 px-2 py-0.5 text-xs"
+                    >
+                      <span dir="ltr" className="shrink-0 font-mono text-[11px]">
+                        {id}
+                      </span>
+                      {title && (
+                        <>
+                          <span aria-hidden>·</span>
+                          <span className="min-w-0 truncate">{title}</span>
+                        </>
+                      )}
+                    </span>
+                  );
+                })}
               </div>
             </div>
           ))}

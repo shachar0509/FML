@@ -37,6 +37,12 @@ for (const lang of LANGS)
       await page.locator("ul button").first().click();
       await expect(page.getByRole("heading", { level: 1 })).toContainText(lang === "he" ? "חשבון" : "Infinitesimal");
       await expect(page.getByText(lang === "he" ? "שכחו את תנאי ההתכנסות" : "Forgot the convergence condition")).toBeVisible();
+      // U5: watch chips name the stage; a stage no longer in the plan keeps its id alone
+      const watch = page.getByRole("heading", { name: lang === "he" ? "שימו לב לטעויות האלה" : "Watch out for" }).locator("..");
+      const s2 = watch.getByText("S002", { exact: true }).locator("..");
+      await expect(s2).toContainText(lang === "he" ? "גבולות" : "Limits");
+      await expect(s2).toHaveAttribute("title", lang === "he" ? "גבולות" : "Limits");
+      await expect(watch.getByText("S009", { exact: true }).locator("..")).toHaveText("S009");
       // M65: the student's stars and exam readiness
       await expect(page.getByRole("img", { name: lang === "he" ? "2.5 מתוך 5 כוכבים" : "2.5 of 5 stars" })).toBeVisible();
       await expect(page.getByText(lang === "he" ? "מוכנות למבחן 40%" : "Exam-ready 40%")).toBeVisible();
