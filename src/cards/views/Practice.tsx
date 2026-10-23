@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { Check, ClipboardList, FileQuestion, Repeat, SlidersHorizontal, Timer, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/core/components/ui/button";
@@ -9,7 +9,8 @@ import { Exercise } from "./Exercise";
 import { Homework } from "./Homework";
 import { TestChooser } from "./TestPractice";
 import { ErrorNote } from "../errors";
-import { Board, Skeleton, Stars, chalkChoice, inkBox } from "../ui";
+import { Board, Skeleton, Stars, chalkChoice, inkBox, panel } from "../ui";
+import { grading, itemKey, unanswered } from "./practiceSkip";
 
 type Tool = (
   name: string,
@@ -41,6 +42,10 @@ export function Practice({
   // M64: a custom course has Normal and Customized (up to a unit) only
   const [kind, setKind] = useState<"homework" | "single" | "test" | "normal" | "custom" | null>(kindOf(data));
   const [unit, setUnit] = useState("");
+  // U6: "skip this unanswered item?" (card only): which button asked, on which item. Local state, so a poll (new `d`) keeps it.
+  const [ask, setAsk] = useState<{ key: string; what: "next" | "end" } | null>(null);
+  const row = useRef<HTMLDivElement>(null); // Next / End, to give focus back
+  const box = useRef<HTMLDivElement>(null); // the confirm
   const n = d.number;
   // The host renders the card from its stored result (e.g. back in this chat later): show the live state.
   useEffect(() => {
@@ -85,6 +90,12 @@ export function Practice({
     );
     return () => clearInterval(h);
   }, [d.loading, d.item?.kind, n, callTool]);
+  // U6: the confirm shows only on the item it was asked for, while that item is unanswered and nothing is loading
+  const itemId = itemKey(d.item);
+  const asking = ask !== null && ask.key === itemId && d.mode === "item" && !d.loading && !!d.item && unanswered(d.item);
+  useEffect(() => {
+    if (asking) box.current?.querySelector<HTMLButtonElement>("[data-keep]")?.focus(); // the safe choice gets focus
+  }, [asking, ask?.what]);
 
   const start = () => {
     const s: Scope =
@@ -98,6 +109,39 @@ export function Practice({
   };
   const list = scope === "unit" ? d.units : scope === "stage" ? d.stages : [];
   const mode = d.mode === "summary" && again ? "choose" : d.mode;
+  // U6: Next asks on any unanswered item; End asks only in test practice, where the question on the board is already used up.
+  const next = () => (setAsk(null), setText(""), void call("practice_next_request"));
+  const end = () => (setAsk(null), void call("practice_end"));
+  /** The item to judge: an exercise's grade reaches the Exercise card before this card's 2.5 s poll, so read it live. */
+  const live = async () => {
+    if (d.item?.kind !== "E") return d.item;
+    const r = await callTool("practice_state", { courseNumber: n });
+    const x = r.structuredContent as PracticeData | undefined;
+    if (r.isError || !x) return d.item;
+    setD(x);
+    return x.item;
+  };
+  const tryNext = async () => {
+    const it = await live();
+    if (it && unanswered(it)) setAsk({ key: itemKey(it), what: "next" });
+    else next();
+  };
+  const tryEnd = async () => {
+    const it = d.test.active ? await live() : null;
+    if (it && unanswered(it)) setAsk({ key: itemKey(it), what: "end" });
+    else end();
+  };
+  const keep = () => {
+    const what = ask?.what ?? "next";
+    setAsk(null);
+    row.current?.querySelector<HTMLButtonElement>(`[data-skip="${what}"]`)?.focus();
+  };
+  const skip = () => (ask?.what === "end" ? end() : next());
+  // A click outside the confirm and Next/End closes it (answering, Try again, Back, the exercise card's own buttons).
+  const closeOnOutside = (e: MouseEvent) => {
+    const el = e.target as HTMLElement;
+    if (ask && !box.current?.contains(el) && !el.closest("[data-skip]")) setAsk(null);
+  };
 
   if (d.hw || kind === "homework" || kind === "single")
     return (
@@ -209,7 +253,7 @@ export function Practice({
     );
 
   return (
-    <section className="flex flex-col gap-4" aria-label={t("nav.practice")}>
+    <section className="flex flex-col gap-4" aria-label={t("nav.practice")} onClickCapture={closeOnOutside}>
       {d.error && (
         <ErrorNote raw={d.error}>
           <Button variant="outline" onClick={() => void call("practice_next_request")}>
@@ -406,7 +450,7 @@ export function Practice({
               )}
             </div>
           )}
-          <div className="flex flex-wrap gap-3">
+          <div ref={row} className="flex flex-wrap gap-3">
             {d.item &&
               d.item.kind !== "E" &&
               (d.item.kind === "M" ? d.item.selected !== null : !!d.item.result) && (
@@ -414,23 +458,46 @@ export function Practice({
                   {t("practice.tryAgain")}
                 </Button>
               )}
-            <Button
-              disabled={d.loading}
-              onClick={() => (setText(""), void call("practice_next_request"))}
-            >
+            <Button data-skip="next" disabled={d.loading} onClick={() => void tryNext()}>
               {t("practice.next")}
             </Button>
-            <Button
-              variant="outline"
-              disabled={d.loading}
-              onClick={() => void call("practice_end")}
-            >
+            <Button data-skip="end" variant="outline" disabled={d.loading} onClick={() => void tryEnd()}>
               {t("practice.end")}
             </Button>
             <Button variant="ghost" onClick={() => (setKind(null), setPane("ask"))}>
               {t("homework.back")}
             </Button>
           </div>
+          {asking && ask && (
+            <div
+              ref={box}
+              role="alertdialog"
+              aria-labelledby="practice-skip-title"
+              aria-describedby="practice-skip-body"
+              className={`${panel} flex flex-col gap-2 border-warning/60 p-4`}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  e.stopPropagation();
+                  keep();
+                }
+              }}
+            >
+              <p id="practice-skip-title" className="font-medium">
+                {t(ask.what === "end" ? "practice.skip.endTitle" : "practice.skip.title")}
+              </p>
+              <p id="practice-skip-body" className="text-sm">
+                {t(grading(d.item) ? (ask.what === "end" ? "practice.skip.gradingEndBody" : "practice.skip.gradingBody") : ask.what === "end" ? "practice.skip.endBody" : d.test.active ? "practice.skip.testBody" : "practice.skip.body")}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="danger" onClick={skip}>
+                  {t(ask.what === "end" ? "practice.skip.endConfirm" : "practice.skip.confirm")}
+                </Button>
+                <Button data-keep variant="outline" onClick={keep}>
+                  {t("practice.skip.keep")}
+                </Button>
+              </div>
+            </div>
+          )}
         </>
       )}
 

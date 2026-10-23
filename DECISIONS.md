@@ -410,3 +410,7 @@
 - Upload key `number/name/id`, `id` a card nonce from `Date.now()` + `Math.random()` (`crypto.randomUUID` needs a secure context the card iframe may not have).
 - The shared reassembly drops the upload on an out-of-order chunk (`file_upload_chunk` used to keep it) and no longer recreates a vanished temp dir (that would reassemble a partial file). Idle uploads are swept after 10 minutes; no sweep at server start.
 - No new strings: the bar reuses `learn.uploading`, errors stay `exercise.failed`.
+
+## M96 (U6) — Skip confirm in Practice
+- Next asks on any unanswered practice item; End asks only in test practice, because there the question on the board was burned at serve time and ending loses it, while in normal practice nothing is used up (served list per session, no attempt event) and End is a deliberate action.
+- "Unanswered" is judged in the card (exercise: no grade and not perfect; MCQ: selected null; open: no result); for an exercise the card reads practice_state once first. It only gates the confirm; the server still scores from its own state. While an exercise answer is being graded, the confirm says so instead of 'not answered'.

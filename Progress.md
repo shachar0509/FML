@@ -413,6 +413,10 @@ One `teach_step` can carry `beats` (2–8): the card plays them locally. **Next*
 - Tests: exerciseTools (3-chunk JPEG = direct `saveAttachment` sha, 3-chunk 2-page PDF = direct `saveAnswerFile` shas in order, same-name parallel uploads, out of order, >12 pages → `grade.tooManyPages`, >15 chunks, temp dir empty), fileTools unchanged; e2e exercise, practice-modes, practice-test, course, lesson.
 - 🧪 Claude Desktop: a ~10-page phone PDF from an exercise card (bar, 10 chips, grading sees the pages); two photos at once; a 13-page PDF shows the error and frees the card; no `shalav-ans-*` left in `$TMPDIR`.
 
+## M96 (U6): confirm before skipping an unanswered practice item
+- Practice card: "Next question" on an unanswered item (exercise: no grade and not perfect; MCQ: nothing selected; open: no result) opens an inline confirm (alertdialog, focus on "Keep answering", Escape/Keep return focus to Next, a click elsewhere closes it). Test practice text: each question is served once, a skipped one won't come back. "End session" asks only in test practice (the shown question is already burned); in normal practice End never asks. Exercise items read `practice_state` once before deciding (the grade can be ahead of the 2.5 s poll). While an exercise answer is being graded, the confirm says so. Card-only: `practiceSkip.ts` (`unanswered`, `itemKey`); engine, events, server tools, scoring and evidence unchanged.
+- Tests: unit `practiceSkip.test.ts`; e2e practice (skip asks / Escape / Keep / keyboard skip, answered Next and normal End don't ask), practice-test (skip text, survives the poll, three skips, End asks).
+
 ## Drawing roadmap M79–M83 (agreed with the user, 2026-10-23)
 Goal: slides can draw for any course, including unusual ones, in a professional look, with beats.
 

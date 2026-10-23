@@ -258,6 +258,18 @@
     "end": "End session",
     "preparing": "Preparing your next question…",
     "tryAgain": "Try again",
+    "skip": {
+      "title": "Skip this question?",
+      "body": "You haven't answered it yet. A skipped question isn't graded and doesn't count in this session.",
+      "testBody": "You haven't answered it yet. In test practice each question is served once: a skipped question won't come back.",
+      "confirm": "Yes, skip",
+      "endTitle": "End the session?",
+      "endBody": "You haven't answered this question yet. In test practice each question is served once: if you end now, it won't come back.",
+      "endConfirm": "Yes, end",
+      "keep": "Keep answering",
+      "gradingBody": "Your answer is still being checked. If you skip now, it won't be scored.",
+      "gradingEndBody": "Your answer is still being checked. If you end now, it won't be scored."
+    },
     "next": "Next question",
     "submit": "Submit answer",
     "answerPlaceholder": "Write your answer here…",
