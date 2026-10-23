@@ -4,7 +4,7 @@
 Rules: work only on branch `dev`; one commit per step with tests; update this file after every step; record silent-spec choices in `DECISIONS.md`; stop after each step so the user can compact. Steps marked 🧪 need a manual Claude Desktop check by the user; list what to check.
 Environment: Node 22, pnpm, Playwright chromium. Never store keys in files.
 
-Status: plan v2 §9 (M0–M13) is done, plus follow-ups M14–M82. The v1 desktop app (Tauri, API key, Drive sync, Ask panel) is deleted; it lives in git tag `desktop-v1-final` (= `01640cb`).
+Status: plan v2 §9 (M0–M13) is done, plus follow-ups M14–M83. The v1 desktop app (Tauri, API key, Drive sync, Ask panel) is deleted; it lives in git tag `desktop-v1-final` (= `01640cb`).
 
 ---
 
@@ -334,7 +334,16 @@ One `teach_step` can carry `beats` (2–8): the card plays them locally. **Next*
 - **Open, the user decides:** move Verovio out of `server.mjs` (23.4 MB, most of the growth since M81). Cold start (spawn → listTools, packed server, this Mac): ~0.9 s first run, ~0.44 s after.
 - Screenshots of each M81/M82 tool: `e2e/tests_output/tools/` (light theme, last beat).
 
-**Handoff to M83 (2026-10-23).** M79–M82 are committed; e2e not run (the user runs it at the end of M83: `pnpm exec playwright test e2e/tests/slides.spec.ts`, plus `render.spec.ts` and `step.spec.ts`). Next: M83 (three.js bundled as a lazy chunk; no CDN, see DECISIONS M79). Pattern for a new kind: guide in `figureGuides.ts` (with an example that a test renders), a server renderer in `src/server/figures/` + `SERVER_KINDS` + card `REMOTE`, or a card component in `Figure.tsx` `F`; beats tag output groups after a single layout; colours via `markColors`/`themeColors`; a sample in `test-advanced.ts` + `slides.spec.ts` SAMPLES; a smoke call if server-side; DECISIONS + THIRD_PARTY_NOTICES.
+## M83: 3D scenes with three.js (2026-10-23)
+- **Kind `scene`** is drawn in the card (`figures/Scene.tsx`, `Figure.tsx` `F`; three.js is a lazy chunk). It takes declared JSON: objects (box, sphere, cylinder, cone, torus, plane, arrow, line, label) with `beat`/`until`, and camera `views` by beat. The schema `parseScene` is in `specs.ts`, so the server checks it in `badFigure`. The guide is in `figureGuides.ts`. The catalogue now has 21 kinds and is still under 1,600 characters.
+- **Card.** Lit, shaded materials. The frame is fixed (the bounds of all parts). The camera moves to each beat's view. The student can drag to turn the scene (no zoom or keys). Labels are HTML pills hidden by `showBeat`. The canvas renders only on change, and its WebGL context is freed on unmount.
+- **Sample:** beatsCube (diagonals of a cube: line, arrow, sphere, axes, a camera move at beat 3) in `slides.spec.ts` SAMPLES. The spec now waits for `:is(svg, canvas)` and checks `[data-beat]` anywhere in the figure. For the scene it checks that every beat's canvas frame is different, with the labels hidden during the grab, so the meshes really draw. The whole `slides.spec.ts` passes (49 tests). The full-screen test's `.pinned-figure svg` locator needed `.first()` (beatsCell has nested svg parts).
+- **Sizes:** `cards.html` grew from 4.4 to 5.2 MB. `server.mjs` is still 23.4 MB (three.js isn't in it).
+- **Tests:** `specs.test.ts` (the guide example parses, label/colour errors), `learnTools.test.ts` (an arrow without `from` gives a readable error; a scene beat beyond the slide's beats is refused).
+- **Not done:** 3Dmol.js for PDB proteins (optional, on the roadmap).
+- 🧪 **Desktop check.** Does WebGL run in Claude Desktop's card iframe? Does dragging the scene work there? (Without WebGL the figure shows its fallback.)
+
+**Handoff after M83 (2026-10-23).** The M79–M83 drawing roadmap is done and committed. Not yet done: `render.spec.ts` and `step.spec.ts` for the user's end-of-roadmap run, and the user's review of the screenshots in `e2e/tests_output/slides/`. The Verovio size decision is still open (see the M82 review fixes).
 
 ---
 

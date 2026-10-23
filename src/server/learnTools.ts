@@ -18,7 +18,7 @@ import { appendEvent } from "@/core/domain/progress/store";
 import { addEntry, checkpoint, createConv, listConvs, loadConv, transcript, type Entry } from "@/core/domain/history/history";
 import { resolveExercise, type Ex } from "@/core/domain/practice/exercises";
 import { materialsLang, pagesFor } from "@/core/domain/retrieval/retrieve";
-import { MAX_BEATS, parseGeometry, parsePlot } from "@/core/render/figures/specs";
+import { MAX_BEATS, parseGeometry, parsePlot, parseScene } from "@/core/render/figures/specs";
 import { FIGURE_KINDS } from "@/core/claude/prompts/figureGuides";
 import { gridImage } from "./figures/image";
 import { isServerKind, renderFigure } from "./figures/render";
@@ -266,6 +266,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     try {
       if (kind === "plot") parsePlot(source);
       else if (kind === "geometry") parseGeometry(source);
+      else if (kind === "scene") parseScene(source);
       else if (kind === "image" && !source) throw new Error("image figures need an open lesson (they show the lesson's course files)");
       else if (isServerKind(kind)) await renderFigure(kind, source);
       else if (kind === "abc") {

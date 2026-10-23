@@ -874,6 +874,33 @@ q2 -> q1 [label="a"]; q2 -> q0 [label="b"]; // @3
     figure: { kind: "smiles", source: JSON.stringify({ molecules: [{ smiles: "CCO", label: "אתנול", beat: 1 }, { smiles: "CC=O", label: "אצטאלדהיד", beat: 2 }, { smiles: "CC(=O)O", label: "חומצה אצטית", beat: 3 }] }), captionMd: "" },
     progress: null,
   },
+  // M83 scene (three.js in the card): the diagonals of a cube, one segment per beat, the camera turns at beat 3
+  beatsCube: {
+    titleMd: "האלכסון של קובייה",
+    bodyMd: "קובייה שאורך מקצועה $1$:",
+    beats: [
+      { md: String.raw`\blue{אלכסון הפאה}: $\sqrt{1^2+1^2}=\sqrt2$.` },
+      { md: String.raw`\green{המקצוע} העולה מקצה האלכסון: $1$.` },
+      { md: String.raw`\pink{האלכסון במרחב}: $\sqrt{2+1}=\sqrt3$.` },
+    ],
+    sideMd: null,
+    figure: {
+      kind: "scene",
+      source: JSON.stringify({
+        objects: [
+          { shape: "box", at: [0.5, 0.5, 0.5], size: 1, opacity: 0.22 },
+          { shape: "line", from: [0, 0, 0], to: [1, 0, 1], size: 0.025, color: "blue", label: "√2", beat: 1 },
+          { shape: "arrow", from: [1, 0, 1], to: [1, 1, 1], size: 0.025, color: "green", label: "1", beat: 2 },
+          { shape: "line", from: [0, 0, 0], to: [1, 1, 1], size: 0.03, color: "pink", label: "√3", beat: 3 },
+          { shape: "sphere", at: [0, 0, 0], size: 0.05, color: "pink", beat: 3 },
+        ],
+        views: [{ beat: 0, from: [2.4, 1.7, 2.8] }, { beat: 3, from: [2.9, 0.9, -1.4] }],
+        axes: true,
+      }),
+      captionMd: "",
+    },
+    progress: null,
+  },
   // M82 bio with OpenMoji pictograms, drawn-in arrows (class="draw") and a hand-drawn frame (class="sketch")
   beatsEconomy: {
     titleMd: "המעגל הכלכלי",

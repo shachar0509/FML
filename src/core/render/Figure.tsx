@@ -12,6 +12,7 @@ const F = {
   abc: lazy(() => import("./figures/Abc").then((m) => ({ default: m.Abc }))),
   chords: lazy(() => import("./figures/Chords").then((m) => ({ default: m.Chords }))),
   smiles: lazy(() => import("./figures/Smiles").then((m) => ({ default: m.Smiles }))),
+  scene: lazy(() => import("./figures/Scene").then((m) => ({ default: m.Scene }))),
 };
 /** M79: kinds drawn on the server (src/server/figures/render.ts SERVER_KINDS) */
 const REMOTE = new Set(["tikz", "bio", "graphviz", "vegalite", "map", "image", "pikchr", "bytefield", "score", "chess", "go", "tree", "sky"]);

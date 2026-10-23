@@ -22,8 +22,9 @@ const lowContrast = (page: Page) =>
 // place library parts (bio); beatsCircuitSvg is the hand-drawn svg kind.
 // M80: beatsAutomaton (Graphviz), beatsRegression (Vega-Lite) are server-drawn too; beatsFlow is Mermaid in the card (%% @n).
 // M81: beatsHeart (a page of the dev course with marks) and beatsMap (Natural Earth) are server-drawn; beatsScale (abcjs) and beatsChords (svguitar) are drawn in the card.
-const SAMPLES = { beatsFn: 7, beatsCircuit: 3, beatsPhoto: 5, beatsCell: 3, beatsCircuitSvg: 3, beatsIncline: 5, beatsMethane: 3, beatsAutomaton: 3, beatsFlow: 4, beatsRegression: 2, beatsHeart: 4, beatsMap: 3, beatsScale: 2, beatsChords: 2, beatsPipeline: 3, beatsChess: 3, beatsGo: 2, beatsTree: 3, beatsSky: 3, beatsMolecules: 3, beatsEconomy: 3 } as const;
+const SAMPLES = { beatsFn: 7, beatsCircuit: 3, beatsPhoto: 5, beatsCell: 3, beatsCircuitSvg: 3, beatsIncline: 5, beatsMethane: 3, beatsAutomaton: 3, beatsFlow: 4, beatsRegression: 2, beatsHeart: 4, beatsMap: 3, beatsScale: 2, beatsChords: 2, beatsPipeline: 3, beatsChess: 3, beatsGo: 2, beatsTree: 3, beatsSky: 3, beatsMolecules: 3, beatsEconomy: 3, beatsCube: 3 } as const;
 // M82: pikchr, chess, go, tree and sky are server-drawn; beatsMolecules (SmilesDrawer) is drawn in the card; beatsEconomy is bio with OpenMoji parts, draw and sketch.
+// M83: beatsCube is a three.js scene in the card (a canvas; its labels are HTML with data-beat).
 const SERVER = ["beatsCircuit", "beatsPhoto", "beatsCell", "beatsIncline", "beatsMethane", "beatsAutomaton", "beatsRegression", "beatsHeart", "beatsMap", "beatsPipeline", "beatsChess", "beatsGo", "beatsTree", "beatsSky", "beatsEconomy"];
 for (const [sample, of] of Object.entries(SAMPLES))
   for (const theme of ["light", "dark"] as const)
@@ -37,7 +38,7 @@ for (const [sample, of] of Object.entries(SAMPLES))
       const beatText = (n: number) => board.locator(`[data-beat-text="${n}"]`);
       await expect(beatText(1)).toBeVisible();
       // a server-drawn figure arrives from figure_render (the dev server's /__figure here) and replaces the placeholder
-      await expect(board.locator(".pinned-figure svg").first()).toBeVisible({ timeout: 20_000 });
+      await expect(board.locator(".pinned-figure :is(svg, canvas)").first()).toBeVisible({ timeout: 20_000 }); // M83: a scene is a WebGL canvas
       if (SERVER.includes(sample)) await expect(board.locator(".pinned-figure [role=alert]")).toHaveCount(0);
       if (["beatsPhoto", "beatsCell"].includes(sample)) await expect(board.locator(".fig-credit")).toHaveText(/Servier Medical Art \(CC BY 3\.0\)/);
       await page.waitForTimeout(500); // the figure finishes drawing
@@ -51,6 +52,7 @@ for (const [sample, of] of Object.entries(SAMPLES))
       // drawn lines and curves showing in the figure, per beat (JSXGraph hides a part with display: none)
       const drawn = () => board.locator(".pinned-figure svg :is(path, line, ellipse, circle)").evaluateAll((els) => els.filter((e) => { const c = getComputedStyle(e); return c.display !== "none" && c.visibility === "visible" && !e.closest("[style*='display: none']"); }).length);
       let before = sample === "beatsFn" ? await drawn() : 0;
+      const frames: string[] = [];
       for (let n = 1; n <= of; n++) {
         await expect(page.getByRole("status").filter({ hasText: `חלק ${n} מתוך ${of}` })).toBeVisible();
         for (let k = 1; k <= of; k++) {
@@ -70,7 +72,7 @@ for (const [sample, of] of Object.entries(SAMPLES))
           before = now;
         } else {
           // a part shows from its data-beat until its data-until (CO₂ and H₂O are gone once they have reacted)
-          const parts = await board.locator("svg :is([data-beat], [data-until])").evaluateAll((els) => els.map((e) => [Number((e as SVGElement).dataset.beat ?? 0), Number((e as SVGElement).dataset.until ?? 99), getComputedStyle(e).visibility === "visible"] as const));
+          const parts = await board.locator(".pinned-figure :is([data-beat], [data-until])").evaluateAll((els) => els.map((e) => [Number((e as SVGElement).dataset.beat ?? 0), Number((e as SVGElement).dataset.until ?? 99), getComputedStyle(e).visibility === "visible"] as const));
           expect(parts.length).toBeGreaterThan(0);
           for (const [b, u, on] of parts) expect(on).toBe(b <= n && n <= u);
         }
@@ -78,8 +80,16 @@ for (const [sample, of] of Object.entries(SAMPLES))
         expect(await lowContrast(page)).toEqual([]);
         await page.waitForTimeout(500); // fade-in
         await page.screenshot({ path: `e2e/tests_output/slides/${sample}-${theme}-${n}.png` });
+        if (sample === "beatsCube") {
+          // the canvas alone: the HTML labels over it are hidden for the grab (they differ per beat even with nothing drawn)
+          const labels = board.locator(".fig-scene-label");
+          await labels.evaluateAll((ls) => ls.forEach((l) => ((l as HTMLElement).style.visibility = "hidden")));
+          frames.push((await board.locator(".pinned-figure canvas").screenshot()).toString("base64"));
+          await labels.evaluateAll((ls) => ls.forEach((l) => ((l as HTMLElement).style.visibility = "")));
+        }
         if (n < of) await next.click();
       }
+      expect(new Set(frames).size).toBe(frames.length); // M83: the WebGL scene really draws, and each beat adds to it
       // no request to Claude while stepping, and the card never changed height
       expect(await lastReq(page)).toBe(reqs);
       expect(Math.abs((await box(board)).height - height)).toBeLessThanOrEqual(2);
@@ -138,7 +148,7 @@ for (const sample of ["beatsFn", "beatsCircuit", "beatsCell", "beatsIncline"])
 test("full screen only: the card opens in full screen, with no pin or inline option", async ({ page }) => {
   await page.setViewportSize({ width: 1500, height: 950 });
   await page.goto(`/src/cards/test-host.html?lang=he&theme=light&view=step&sample=beatsCell`);
-  await expect(page.locator(".pinned-figure svg")).toBeVisible();
+  await expect(page.locator(".pinned-figure svg").first()).toBeVisible();
   await expect(page.locator(".cards[data-mode=fullscreen]")).toBeVisible();
   await expect(page.getByRole("button", { name: /מסך מלא|הצמד|החזר לשיחה/ })).toHaveCount(0);
   await page.screenshot({ path: "e2e/tests_output/slides/fullscreen.png" });

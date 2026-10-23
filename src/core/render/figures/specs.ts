@@ -132,6 +132,42 @@ export function parseGeometry(src: string): GeometrySpec {
   return spec;
 }
 
+/** M83: a three.js scene, declared (no code from Claude): solids and arrows by beat, camera viewpoints by beat. y is up. */
+const v3 = z.tuple([z.number(), z.number(), z.number()]);
+const sceneSchema = z.object({
+  objects: z
+    .array(
+      z
+        .object({
+          shape: z.enum(["box", "sphere", "cylinder", "cone", "torus", "plane", "arrow", "line", "label"]),
+          at: v3.optional(),
+          size: z.union([z.number().positive(), z.array(z.number().positive()).min(2).max(3)]).optional(),
+          from: v3.optional(),
+          to: v3.optional(),
+          points: z.array(v3).min(2).max(200).optional(),
+          rotate: v3.optional(),
+          color: z.union([z.enum(COLORS), z.string().regex(/^#[0-9a-fA-F]{6}$/)]).optional(),
+          opacity: z.number().min(0.05).max(1).optional(),
+          label: z.string().max(40).optional(),
+          beat,
+          until: beat,
+        })
+        .refine((o) => !["arrow", "line"].includes(o.shape) || (o.from && o.to) || (o.shape === "line" && o.points), { message: 'arrow needs "from" and "to"; line needs "from" and "to" or "points"' })
+        .refine((o) => o.shape !== "label" || o.label, { message: 'a label needs "label" (its text)' }),
+    )
+    .min(1)
+    .max(200),
+  views: z.array(z.object({ beat: z.number().int().min(0).max(MAX_BEATS), from: v3, to: v3.optional() })).max(MAX_BEATS + 1).optional(),
+  axes: z.boolean().optional(),
+  grid: z.boolean().optional(),
+});
+export type SceneSpec = z.infer<typeof sceneSchema>;
+export function parseScene(src: string): SceneSpec {
+  const r = sceneSchema.safeParse(JSON.parse(src));
+  if (!r.success) throw new Error(z.prettifyError(r.error)); // readable for Claude: "✖ arrow needs … → at objects[0]"
+  return r.data;
+}
+
 const MAX_SVG = 50 * 1024;
 
 /** M81: a server drawing (`max` given) may hold its page image as a PNG/JPEG data URI on <image>; nothing else leaves the SVG. */

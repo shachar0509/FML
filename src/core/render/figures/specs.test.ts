@@ -1,4 +1,14 @@
-import { parseGeometry, parsePlot, sanitizeSvg } from "./specs";
+import { figureGuide } from "@/core/claude/prompts/figureGuides";
+import { parseGeometry, parsePlot, parseScene, sanitizeSvg } from "./specs";
+
+it("parseScene: the guide example parses; a label needs text; colours are theme names or hex", () => {
+  const s = parseScene(figureGuide("scene", []).split("\n").at(-1) ?? "");
+  expect(s.objects.map((o) => o.beat ?? 0)).toEqual([0, 1, 2]);
+  expect(s.views?.[1]).toMatchObject({ beat: 2 });
+  expect(() => parseScene('{"objects":[{"shape":"label","at":[0,0,0]}]}')).toThrow(/a label needs/);
+  expect(() => parseScene('{"objects":[{"shape":"box","color":"red"}]}')).toThrow();
+  expect(parseScene('{"objects":[{"shape":"line","points":[[0,0,0],[1,1,1]],"color":"#c08020"}]}').objects[0]?.color).toBe("#c08020");
+});
 
 describe("parsePlot", () => {
   it("accepts a valid spec", () => {

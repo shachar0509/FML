@@ -194,6 +194,14 @@ Example (Orion, then its two brightest stars):
 Example (ethanol oxidised to acetaldehyde):
 {"molecules":[{"smiles":"CCO","label":"אתנול","beat":1},{"smiles":"CC=O","label":"אצטאלדהיד","beat":2}]}`,
   },
+  scene: {
+    line: "3D: solids, vectors in space, molecules, structures",
+    guide: `scene: a 3D scene (three.js, drawn in the card; the student can drag to turn it). JSON {"objects": [...], "views": [{"beat": 0, "from": [x,y,z], "to": [x,y,z]}, …], "axes": true, "grid": true}. y is up.
+Objects: {"shape": "box|sphere|cylinder|cone|torus|plane|arrow|line|label", "at": [x,y,z], "size": …, "rotate": [degrees about x,y,z], "color": "blue|green|pink|orange" or "#rrggbb", "opacity": 0.3, "label": "…", "beat": n, "until": m}. size: box [w,h,d] or one number; sphere radius; cylinder/cone [radius, height]; torus [R, r]; plane [w,h]. arrow and line go "from" → "to" (line also "points": [[x,y,z], …]; size is the thickness); a cylinder with "from"/"to" is a rod (a bond). label is a text alone at "at"; any object's "label" sits on it (an arrow's at its tip), in Hebrew or English. Shapes are lit and shaded; a box shows its edges; opacity < 1 shows what is inside.
+Beats: each object shows from its beat until its until; views move the camera at their beat (the last view with beat ≤ the current one; beat 0 is the start). Without views the camera frames the whole scene.
+Example (the diagonals of a unit cube):
+{"objects":[{"shape":"box","at":[0.5,0.5,0.5],"size":1,"opacity":0.25},{"shape":"line","from":[0,0,0],"to":[1,0,1],"color":"blue","label":"√2","beat":1},{"shape":"line","from":[0,0,0],"to":[1,1,1],"color":"pink","label":"√3","beat":2}],"views":[{"beat":0,"from":[2.2,1.6,2.6]},{"beat":2,"from":[2.6,0.6,-1.2]}],"axes":true}`,
+  },
   svg: {
     line: "anything else, drawn by hand",
     guide: `svg: ${fmt("svg")}

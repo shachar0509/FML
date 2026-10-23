@@ -24,6 +24,7 @@ Shalav draws figures with these open-source projects and assets. Each is used un
 | Chessnut chess pieces (Alexis Luengas) | chess boards | Apache-2.0 |
 | d3-celestial data (Olaf Frohn; Hipparcos stars, IAU constellations) | star maps | BSD-3-Clause |
 | SmilesDrawer | molecules from SMILES | MIT |
+| three.js | 3D scenes | MIT |
 | rough.js | hand-drawn (sketch) figures | MIT |
 | OpenMoji pictograms (om-* parts) | scenes and pictograms | CC BY-SA 4.0, credit "OpenMoji" shown under the figure |
 | WaveDrom | timing diagrams | MIT |

@@ -287,6 +287,10 @@ body {
 .fig-svg [pathLength="1"] { stroke-dasharray: 1 1; stroke-dashoffset: 0; transition: stroke-dashoffset 1.4s ease-in-out, opacity 0.45s ease; }
 .fig-svg :is(.beat-off[pathLength="1"], .beat-off [pathLength="1"]) { stroke-dashoffset: 1; }
 @media (prefers-reduced-motion: reduce) { .fig-svg [pathLength="1"] { transition: none; } }
+/* M83: a three.js scene, 4:3; labels are HTML on a paper pill over the canvas */
+.fig-scene { position: relative; width: min(100%, 760px); }
+.fig-scene canvas { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; cursor: grab; touch-action: none; }
+.fig-scene-label { position: absolute; transform: translate(-50%, -50%); pointer-events: none; white-space: nowrap; padding: 0.05rem 0.4rem; border-radius: 0.6rem; background: var(--card); font-size: 0.95rem; }
 .fig-molecule { width: 12rem; margin: 0; text-align: center; }
 .fig-molecule svg { width: 100%; height: auto; }
 .fig-molecule figcaption { font-size: 0.9rem; }

@@ -95,6 +95,9 @@ it("runs a lesson: start, questions, events, status, completion, reopen + recap"
   expect(text(await call("show_figure", { kind: "abc", source: "X:1\nCDE" }))).toMatch(/K: \(key\) header/);
   expect(text(await call("show_figure", { kind: "chords", source: "{}" }))).toMatch(/Invalid chords figure: expected/);
   expect(text(await call("show_figure", { kind: "smiles", source: "C C O" }))).toMatch(/one SMILES string/);
+  // M83: a scene is checked on the server (arrows need both ends) and its beats count against the slide
+  expect(text(await call("show_figure", { kind: "scene", source: '{"objects":[{"shape":"arrow","to":[1,0,0]}]}' }))).toMatch(/Invalid scene figure: ✖ arrow needs .*at objects\[0\]/);
+  expect(text(await call("teach_step", { titleMd: "i", bodyMd: "", figure: { kind: "scene", source: '{"objects":[{"shape":"sphere","beat":3}]}' } }))).toMatch(/uses beat 3, but the slide has 0 beats/);
   expect(sc(await call("show_figure", { kind: "chess", source: '{"moves":[{"move":"e2e4"}]}' }))).toMatchObject({ kind: "chess" });
   expect(sc(await call("show_figure", { kind: "map", source: '{"layers":[{"countries":["Israel"],"beat":0}]}' }))).toMatchObject({ kind: "map" });
   expect(text(await call("course_page", { file: "x.pdf", page: 1 }))).toMatch(/No course file/);
