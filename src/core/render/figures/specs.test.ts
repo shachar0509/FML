@@ -40,3 +40,25 @@ describe("sanitizeSvg", () => {
     expect(() => sanitizeSvg(`<svg viewBox="0 0 1 1"><!--${"a".repeat(51200)}--></svg>`)).toThrow();
   });
 });
+
+describe("beats (M78)", () => {
+  it("geometry and plot parts take a beat and a colour", () => {
+    const g = parseGeometry('{"boundingBox":[-1,2,2,-1],"elements":[{"type":"point","id":"A","x":0,"y":0,"beat":1,"color":"blue"},{"type":"curve","fn":"x^2","domain":[-1,1],"beat":2}]}');
+    expect(g.elements.map((e) => e.beat)).toEqual([1, 2]);
+    expect(parsePlot('{"xDomain":[0,1],"data":[{"fn":"x","beat":2}],"annotations":[{"y":1,"beat":1}]}').data[0]).toMatchObject({ beat: 2 });
+    expect(() => parseGeometry('{"boundingBox":[-1,2,2,-1],"elements":[{"type":"point","id":"A","x":0,"y":0,"color":"red"}]}')).toThrow();
+  });
+  it("a part can't appear before the points it uses", () => {
+    expect(() => parseGeometry('{"boundingBox":[-1,2,2,-1],"elements":[{"type":"point","id":"A","x":0,"y":0,"beat":3},{"type":"point","id":"B","x":1,"y":1},{"type":"segment","from":"A","to":"B","beat":2}]}')).toThrow(/point A, which appears only at beat 3/);
+  });
+  it("svg keeps data-beat, data-focus, class and style, and drops SMIL", () => {
+    const out = sanitizeSvg(
+      '<svg viewBox="0 0 10 10"><g data-beat="2" data-focus="2" class="m-blue drift" style="--dx:5;--dy:0"><circle r="1" fill="currentColor"/></g><animate attributeName="x" to="5"/><set attributeName="x" to="5"/></svg>',
+    );
+    expect(out).toContain('data-beat="2"');
+    expect(out).toContain('data-focus="2"');
+    expect(out).toContain('class="m-blue drift"');
+    expect(out).toContain("--dx:5");
+    expect(out).not.toMatch(/<animate|<set/);
+  });
+});

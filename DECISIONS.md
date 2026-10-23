@@ -247,3 +247,12 @@
 - File disagreement: teacher's notes first, then a file that is clearly newer by a year or date in its name or text. Shalav has no edition date (addedAt is the upload time), so otherwise it is "conflict": no deduction.
 - Lessons: the tutor grades open answers itself (no server grader), so it gets the rule (check consult_materials before marking a course fact wrong) but not the automatic search.
 - Eval: the eval-only judge is gone; each case row is graded by `gradeAttempt` (new optional `answerText`) in a copy of the run's course (registry + scanned files). A key is met when every triggered convention it matches scores ≥ 0.75.
+
+## M78 — Interactive slides
+- **Beats build up, they don't replace.** Earlier beats stay on the board, muted, like a teacher writing on the board. Figure parts that have appeared also stay. Beats not reached yet are laid out but invisible, so the inline card (an auto-height iframe) never changes height on Next.
+- **One slide counts as one step.** A beat slide counts as one step for the quiz rhythm ("after every 2-3 steps").
+- **Caps.** Each beat is capped at `STEP_CHARS` (900). The whole slide is capped at 4 × 900. A figure that names a beat beyond the slide's beats is rejected, so Claude fixes it.
+- **No SMIL.** `<animate>`, `<set>` and their kin are in `FORBID_TAGS`. Motion comes only from fixed CSS classes (`flow`, `drift` with `--dx`/`--dy`, `pulse`), and `prefers-reduced-motion` turns them off.
+- **Colour.** SVG reuses the text's `m-*` classes; there is no separate set. Geometry reads `--m-*` from the card theme. `\blue{word}` outside math is now allowed in the prompt, but only to link a word to its drawn part. The renderer already supported it (`Markdown.tsx`).
+- **Alignment.** A rows derivation lines up within one beat, not across beats, because each beat is its own `<Markdown>`. Figures keep `dir="ltr"`. The prompt asks for Hebrew SVG labels centred with `text-anchor="middle"`.
+- **Inline size.** vh can't be used in an auto-height iframe, so figures are capped at `--fig-h` (560px). Full screen sets it to 72vh.

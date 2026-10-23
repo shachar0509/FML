@@ -4,7 +4,7 @@
 Rules: work only on branch `dev`; one commit per step with tests; update this file after every step; record silent-spec choices in `DECISIONS.md`; stop after each step so the user can compact. Steps marked 🧪 need a manual Claude Desktop check by the user; list what to check.
 Environment: Node 22, pnpm, Playwright chromium. Never store keys in files.
 
-Status: plan v2 §9 (M0–M13) is done, plus follow-ups M14–M77. The v1 desktop app (Tauri, API key, Drive sync, Ask panel) is deleted; it lives in git tag `desktop-v1-final` (= `01640cb`).
+Status: plan v2 §9 (M0–M13) is done, plus follow-ups M14–M78. The v1 desktop app (Tauri, API key, Drive sync, Ask panel) is deleted; it lives in git tag `desktop-v1-final` (= `01640cb`).
 
 ---
 
@@ -19,7 +19,7 @@ Status: plan v2 §9 (M0–M13) is done, plus follow-ups M14–M77. The v1 deskto
   - Headless real-model test: `claude mcp add shalav -e SHALAV_DATA_FOLDER=~/Documents/ShalavTest -- node build/mcpb/server/server.mjs`, then `claude -p "<prompt>" --allowedTools mcp__shalav`. Test data in `~/Documents/ShalavTest`, never the real folder.
 - **Tests**
   - `pnpm typecheck`, `pnpm lint`, `pnpm test` (vitest; server tests use the SDK in-memory transport + `@modelcontextprotocol/client`).
-  - e2e: one spec per card in `e2e/tests/` (`home`, `shell`, `course`, `lesson`, `step`, `exercise`, `practice`, `settings`, `render`). Run only what changed: `pnpm e2e:changed [ref]`, or `pnpm exec playwright test <spec>`. Screenshots go to `e2e/tests_output/<spec>/`; ask the user to check them, delete them on approval.
+  - e2e: one spec per card in `e2e/tests/` (`home`, `shell`, `course`, `lesson`, `step`, `slides`, `exercise`, `practice`, `settings`, `render`). Run only what changed: `pnpm e2e:changed [ref]`, or `pnpm exec playwright test <spec>`. Screenshots go to `e2e/tests_output/<spec>/`; ask the user to check them, delete them on approval.
   - Flakiness: the first e2e run after a code change can time out while Vite recompiles (rerun); kill an orphaned old `pnpm dev` before running.
 - **Gotchas**
   - Claude Desktop runs the server in an Electron utility process: `initNode` clears `process.type` so pdf.js works (M29). Claude.app has the RunAsNode fuse off: never spawn `process.execPath` / `ELECTRON_RUN_AS_NODE` (M39).
@@ -252,6 +252,24 @@ The approved plan was never committed; its final text (2026-10-22 14:47) was rec
 - **M76 (done):** engine gaps closed (`knowledge.ts`): academic courses `mark_domain_high_stakes` once (`highStakes` in map.json); a stage renumbered by Update plan keeps its engine concept, retention/focus/misconceptions only for nodes of the current graph (`publish_curriculum_revision` not used: DECISIONS "M76"); map.json `engine` version, a new release or an unknown domain → fresh domain re-seeded from the log once; the one-time engine download shows in the course card (`installing` → `CourseData.engineInstall`, he/en `stars.engineInstalling`). Tests: fake engine (high-stakes once, renumber keeps history, wiped DB and new release re-seed), real binary (academic, DB wiped → re-seeded), e2e `course.spec.ts` engine download.
 - **M77 (done; the last step of the plan):** the engine now gets the tutor's assessment gaps (failed `DIAGNOSTIC_ASSESSMENT`, knowledge gap), a check's mistake tag (`misconception_type`), and missed edge cases (`missedEdges` in `graph.ts`: the stage's edge nodes by label, score 0, also in `control.ts`; the grader copies the [edge] label). Web gathering names the engine focus + 5 weakest answered nodes (`studyFocus`). Rename / `part_of` dropped (DECISIONS "M77"). Real-binary test of the plan's checks (frontier focus, 2 misses after 8 good stay > 0.6, sustained misses < 0.3, a review due after 90 days by moving the engine DB's review dates). Run it with `TUTOR_MCP_BIN=~/Library/Application\ Support/il.shalav.app/engines/tutor-mcp-v0.6.1/tutor-mcp pnpm exec vitest run src/server/knowledge/knowledge.test.ts`.
   Also open from M76: prerequisite changes between existing concepts are not sent to the engine (DECISIONS "M76").
+
+## M78: Interactive slides (user's request, 2026-10-23)
+One `teach_step` can carry `beats` (2–8): the card plays them locally. **Next** (הלאה) reveals the next beat's text and the figure parts tagged with that beat, with no request to Claude. **Back** and the arrow keys move between beats (← is forward in Hebrew). On the last beat the main button is Continue again. A question sends `beat {n, of}`, so Claude knows which beat is on screen.
+- **Text.** Every beat is laid out from the start. Beats not reached yet are `visibility: hidden`, so the card's height never changes. Earlier beats are muted. Each beat is its own `<Markdown>`, so every rule in OUTPUT_ALIGN applies.
+- **Figures.**
+  - geometry: `beat` and `color` (blue/green/pink/orange) on each element. Elements are hidden and shown with JSXGraph `hideElement`/`showElement`, without a redraw.
+  - plot: `beat` on data and annotations. A beat change redraws the plot.
+  - svg: `data-beat`, `data-focus` and the classes `m-blue|green|pink|orange`, `flow`, `drift` (`--dx`/`--dy`) and `pulse` (`cards.css`). SMIL is stripped.
+  - `\blue{word}` in plain text colours the word to match its drawn part.
+- **Size.** A slide card is `max-w-5xl`. With a figure, the figure gets the larger column (1.3fr) once the card is ≥ 56rem (container query); narrower cards put it above the text. Figures fill their column (up to 560px tall inline). A full-screen button shows when the host offers it (`data-mode=fullscreen`: bigger text, figures up to 72vh). Plot and geometry redraw on resize.
+- **Server.** Each beat is capped at 900 chars and the whole slide at 3600. A figure beat beyond the slide's beats is rejected. The log holds every beat. The tutor prompt has an "Interactive slides (beats)" section. A beat slide counts as one step for the quiz rhythm.
+- **Tests.**
+  - `specs.test.ts`: beat and colour fields, a part before its points, the sanitizer keeping `data-*`/`class`/`style` and dropping `<animate>`.
+  - `learnTools.test.ts`: beats round-trip, caps, a figure beat out of range.
+  - `tutorMcp.test.ts`.
+  - e2e `slides.spec.ts`: the 4 samples `beatsFn|beatsCircuit|beatsPhoto|beatsCell` × light/dark, stepping through every beat (the beatsFn drawing grows at each beat), a 720px run (the figure above the text at the board's width) and full screen (bigger figure and text). Screenshots per beat are in `e2e/tests_output/slides/`.
+- 🧪 **Desktop check.** Does Claude Desktop offer `fullscreen`? How wide is the inline card (side-by-side or stacked)? Does Claude use beats on a function-investigation stage?
+- The "ResizeObserver loop completed" warning in the Vite log comes from geometry figures and predates M78. It is harmless and is not a page error.
 
 ---
 

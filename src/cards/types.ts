@@ -93,8 +93,8 @@ export type McqData = Base & { view: "mcq"; checkId: string; questionMd: string;
 export type OpenData = Base & { view: "open"; checkId: string; number: string; questionMd: string; /** M65: how hard this question is for the student (1-5 ★), frozen when served */ stars?: number };
 /** A drawing the tutor shows in the chat (show_figure). */
 export type FigureData = Base & { view: "figure"; kind: "plot" | "geometry" | "svg"; source: string; captionMd: string };
-/** One small lesson step (teach_step). */
-export type StepData = Base & { view: "step"; titleMd: string; bodyMd: string; figure: Omit<FigureData, keyof Base | "view"> | null; progress?: { n: number; of: number } | null; sideMd?: string | null };
+/** One small lesson step (teach_step). M78 `beats`: the slide's parts, revealed one at a time in the card (the figure's parts carry the beat that brings them in). */
+export type StepData = Base & { view: "step"; titleMd: string; bodyMd: string; figure: Omit<FigureData, keyof Base | "view"> | null; progress?: { n: number; of: number } | null; sideMd?: string | null; beats?: { md: string; sideMd?: string | null }[] | null };
 /** Exercise card (assign_exercise / app-only exercise_state). */
 export type ExerciseData = Base & {
   view: "exercise";
@@ -194,7 +194,7 @@ export type Req =
   | { kind: "learn" | "relearn"; stageId: string; title: string }
   | { kind: "answer"; text: string; number?: string; files?: string[] }
   | { kind: "step"; action: "next" | "again" }
-  | { kind: "step"; action: "question"; text: string }
+  | { kind: "step"; action: "question"; text: string; beat?: { n: number; of: number } }
   /** M60: continue a saved lesson */
   | { kind: "resume"; number: string; id: string };
 export type Go = (req?: Req) => Promise<void>;

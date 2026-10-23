@@ -249,3 +249,30 @@ body {
 .cards .sticky-note .katex {
   color: inherit;
 }
+
+/* M78 interactive slides: figure parts appear by beat, motion from a fixed set of classes (SMIL is stripped). */
+.fig-svg svg { max-height: var(--fig-h, 560px); }
+.fig-svg [data-beat] { transition: opacity 0.45s ease; }
+.fig-svg .beat-off { opacity: 0; visibility: hidden; }
+.fig-svg .beat-focus { filter: drop-shadow(0 0 3px currentColor); animation: fig-pulse 1.4s ease-in-out infinite; }
+.fig-svg .pulse { animation: fig-pulse 1.4s ease-in-out infinite; }
+/* style="--dx:60;--dy:0": the part travels by (dx, dy) in viewBox units, again and again (CO₂ in, O₂ out, ions, electrons). */
+.fig-svg .drift { animation: fig-drift 2.6s ease-in-out infinite; }
+/* a wire, a vessel, a signal: dashes run along the stroke */
+.fig-svg .flow { stroke-dasharray: 7 6; animation: fig-flow 0.9s linear infinite; }
+@keyframes fig-pulse { 50% { opacity: 0.55; } }
+@keyframes fig-drift {
+  0% { transform: translate(0, 0); opacity: 0; }
+  15%, 80% { opacity: 1; }
+  100% { transform: translate(calc(var(--dx, 0) * 1px), calc(var(--dy, 0) * 1px)); opacity: 0; }
+}
+@keyframes fig-flow { to { stroke-dashoffset: -13; } }
+@media (prefers-reduced-motion: reduce) {
+  .fig-svg .beat-focus, .fig-svg .pulse, .fig-svg .drift, .fig-svg .flow { animation: none; }
+}
+/* Beats not reached yet keep their room (the card's height never changes on Next) but are invisible to everyone. */
+.beat-later { visibility: hidden; }
+.beat-done { opacity: 0.6; transition: opacity 0.3s; }
+/* Full screen: the slide fills the window, bigger text and drawings. */
+.cards[data-mode="fullscreen"] { --fig-h: 72vh; }
+.cards[data-mode="fullscreen"] .board-surface { font-size: 1.15rem; }

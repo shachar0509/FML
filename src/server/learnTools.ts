@@ -296,20 +296,28 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     "teach_step",
     {
       title: "Lesson step",
-      description: `Show ONE small step of the lesson as a card: one idea (a definition, one property, one proof step, one example), at most about 120 words of Markdown with $math$, optionally one figure. All teaching goes here, not in the chat. The student then presses Continue, Explain differently, or asks a question.${hint}`,
-      inputSchema: z.object({ titleMd: z.string().max(120), bodyMd: z.string().max(6000), sideMd: z.string().max(1500).optional().describe("A short side remark written beside the board (an inclusion, a reminder, a warning), shown as a note next to the step."), figure: figure.optional(), progress: z.object({ n: z.number().int().min(1), of: z.number().int().min(1).max(30) }).optional().describe("This step's number within the current part of the stage and your estimate of its steps (shown as a progress bar).") }),
+      description: `Show ONE step of the lesson as a slide card: one idea (a definition, one property, one proof step, one example), at most about 120 words of Markdown with $math$, optionally one figure. When the idea develops in stages (a derivation, a function investigation, a calculation on a circuit, a process, the parts of a structure), give the stages as beats (2-8, each about 120 words at most): the student steps through them inside the card and the figure builds up with them (each figure part carries the beat that brings it in). All teaching goes here, not in the chat. The student then presses Continue, Explain differently, or asks a question.${hint}`,
+      inputSchema: z.object({ titleMd: z.string().max(120), bodyMd: z.string().max(6000).describe("The text shown from the start (with beats: a one-line intro, or empty)."), beats: z.array(z.object({ md: z.string().min(1).max(6000), sideMd: z.string().max(1500).optional() })).min(2).max(8).optional().describe("The slide's stages, shown one after another under bodyMd; earlier ones stay on the board. sideMd: a side note for that beat only."), sideMd: z.string().max(1500).optional().describe("A short side remark written beside the board (an inclusion, a reminder, a warning), shown as a note next to the step."), figure: figure.optional(), progress: z.object({ n: z.number().int().min(1), of: z.number().int().min(1).max(30) }).optional().describe("This step's number within the current part of the stage and your estimate of its steps (shown as a progress bar).") }),
       _meta: withCard,
     },
-    async ({ titleMd, bodyMd, sideMd, figure: f, progress }) => {
+    async ({ titleMd, bodyMd, beats, sideMd, figure: f, progress }) => {
       if (!active) return fail(NO_LESSON);
       // ponytail: length cap counts characters without LaTeX commands; tune STEP_CHARS if Hebrew steps feel cramped.
-      if ((bodyMd + (sideMd ?? "")).replace(/\\[a-zA-Z]+|[{}$]/g, "").length > STEP_CHARS) return fail(`This step is too long (${bodyMd.length + (sideMd?.length ?? 0)} characters). Teach less at once: split it into smaller steps and send only the first one.`);
+      const chars = (md: string) => md.replace(/\\[a-zA-Z]+|[{}$]/g, "").length;
+      if (chars(bodyMd + (sideMd ?? "")) > STEP_CHARS) return fail(`This step is too long (${bodyMd.length + (sideMd?.length ?? 0)} characters). Teach less at once: split it into smaller steps and send only the first one.`);
+      // M78: each beat is capped like a step, and the whole slide at 4 steps' worth.
+      const long = beats?.findIndex((b) => chars(b.md + (b.sideMd ?? "")) > STEP_CHARS) ?? -1;
+      if (long >= 0) return fail(`Beat ${long + 1} is too long. Split it into two beats, or teach less on this slide.`);
+      if (beats && chars(bodyMd + beats.map((b) => b.md).join("")) > STEP_CHARS * 4) return fail("This slide is too long. Keep it to one idea: move the later beats to the next teach_step.");
       const bad = f && badFigure(f.kind, f.source);
       if (bad) return fail(`${bad} Fix it and call teach_step again.`);
+      const beatOf = f && /"beat"\s*:\s*(\d+)|data-(?:beat|focus)="(\d+)"/g;
+      for (const m of beatOf ? f.source.matchAll(beatOf) : []) if (Number(m[1] ?? m[2]) > (beats?.length ?? 0)) return fail(`The figure uses beat ${m[1] ?? m[2]}, but the slide has ${beats?.length ?? 0} beats. Fix it and call teach_step again.`);
       reexplain = false;
       const { language, theme } = sets();
-      const data: StepData = { view: "step", language, theme, titleMd, bodyMd, figure: f ?? null, sideMd: sideMd?.trim() || null, progress: progress && { n: Math.min(progress.n, progress.of), of: progress.of } };
-      await log({ who: "tutor", kind: "step", text: `${titleMd}\n${bodyMd}${sideMd ? `\n(side) ${sideMd}` : ""}`, card: data });
+      const data: StepData = { view: "step", language, theme, titleMd, bodyMd, figure: f ?? null, sideMd: sideMd?.trim() || null, progress: progress && { n: Math.min(progress.n, progress.of), of: progress.of }, beats: beats?.map((b) => ({ md: b.md, sideMd: b.sideMd?.trim() || null })) ?? null };
+      const beatText = (beats ?? []).map((b, i) => `\n(${i + 1}) ${b.md}${b.sideMd ? `\n(side) ${b.sideMd}` : ""}`).join("");
+      await log({ who: "tutor", kind: "step", text: `${titleMd}\n${bodyMd}${beatText}${sideMd ? `\n(side) ${sideMd}` : ""}`, card: data });
       return out("Step shown. End your message now (no more text) and wait: the student continues, asks for another explanation, or asks a question.", data);
     },
   );

@@ -337,6 +337,8 @@
   },
   "mcp": {
     "pin": "Keep this card on screen",
+    "full": "Full screen",
+    "exitFull": "Exit full screen",
     "unpin": "Back into the chat",
     "waiting": "Waiting for Claude to work on it…",
     "nudgeBtn": "Nudge Claude",
@@ -362,7 +364,10 @@
     "send": "Send question",
     "progress": "Step {{n}} of {{of}}",
     "answer": "Answer to your question",
-    "close": "Close"
+    "close": "Close",
+    "beat": "Part {{n}} of {{of}}",
+    "beatNext": "Next",
+    "beatPrev": "Back"
   },
   "board": {
     "definition": "Definition",

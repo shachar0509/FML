@@ -116,7 +116,7 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
         z.object({ kind: z.literal("relearn"), stageId: z.string().regex(/^S\d{3}$/), title: z.string().max(200) }),
         // a written answer, or photos / a PDF of one solved on paper (attachment_upload of that course), or both
         z.object({ kind: z.literal("answer"), text: z.string().max(4000), number: z.string().regex(COURSE_ID_RE).optional(), files: z.array(z.string().regex(/^[0-9a-f]{64}$/)).max(12).optional() }),
-        z.object({ kind: z.literal("step"), action: z.enum(["next", "again", "question"]), text: z.string().max(4000).optional() }),
+        z.object({ kind: z.literal("step"), action: z.enum(["next", "again", "question"]), text: z.string().max(4000).optional(), beat: z.object({ n: z.number().int(), of: z.number().int() }).optional() }),
         // M60: continue a saved lesson
         z.object({ kind: z.literal("resume"), number: z.string().regex(COURSE_ID_RE), id: z.string().max(64) }),
         // the card moved to another screen: requests made on the old one (e.g. a lesson step) are void
@@ -145,7 +145,7 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
               ? "The student understood the last lesson step and pressed Continue. Teach the next small step with teach_step (or, after 2-3 steps, check with one quick question)."
               : r.action === "again"
                 ? "The student did not understand the last lesson step and pressed Explain differently. Call teach_step now for the SAME step, rewritten: same topic, simpler words, a different example or a figure. Do not ask a question, do not quiz, do not move on to the next idea."
-                : `The student asked about the lesson step on screen (the step card stays open):\n<question>\n${r.text ?? ""}\n</question>\nAnswer with answer_question: short and direct, about this step and the course material (consult_materials if the step does not cover it). Do not call teach_step and do not move on; then end your message and wait.`
+                : `The student asked about the lesson step on screen${r.beat ? ` while part ${r.beat.n} of ${r.beat.of} was shown` : ""} (the step card stays open):\n<question>\n${r.text ?? ""}\n</question>\nAnswer with answer_question: short and direct, about this step and the course material (consult_materials if the step does not cover it). Do not call teach_step and do not move on; then end your message and wait.`
             : r.kind === "resume"
               ? `The student wants to continue a saved lesson. Call shalav_start_lesson with courseNumber ${r.number} and resume "${r.id}", and continue from where it stopped.`
               : `The student wants to ${r.kind === "learn" ? "learn" : "learn again"} ${r.stageId} · ${r.title}. Call shalav_start_lesson with stageId ${r.stageId} and teach it.`,

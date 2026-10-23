@@ -18,5 +18,10 @@ it("MCP tutor prompt: show_figure formats, TA lesson flow, no fenced figures", (
   expect(s).toContain("```rows\nטבעיים | \\N = ");
   expect(s).toMatch(/\[!definition\]/);
   expect(s).toMatch(/sideMd/);
-  expect(s).toMatch(/work only inside math/);
+  expect(s).toMatch(/never put Hebrew or words inside math/);
+  // M78: interactive slides: beats, figure parts by beat, the word-to-drawing colour link
+  expect(s).toMatch(/Interactive slides \(beats\)/);
+  expect(s).toMatch(/data-beat="n"/);
+  expect(s).toMatch(/A worked example, a derivation or a process on one drawing is ONE teach_step with beats/);
+  expect(s).toMatch(/\\blue\{גרעין\} with the nucleus in m-blue/);
 });

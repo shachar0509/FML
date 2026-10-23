@@ -4,7 +4,7 @@ import type { StepData } from "./types";
  * Test-host samples (?view=step&sample=…): advanced Hebrew lesson steps, as the tutor writes them, from אינפי 2 and
  * electrical engineering courses: mixed Hebrew and math, heavy notation, graphs and drawn pictures.
  */
-type Sample = Pick<StepData, "titleMd" | "bodyMd" | "sideMd" | "figure" | "progress">;
+type Sample = Pick<StepData, "titleMd" | "bodyMd" | "sideMd" | "figure" | "progress"> & Partial<Pick<StepData, "beats">>;
 
 const plot = (o: object) => JSON.stringify(o);
 const fence = (tag: string, body: string) => "```" + tag + "\n" + body + "\n```";
@@ -90,6 +90,36 @@ const FLOORPLAN = `<svg viewBox="0 0 320 210" xmlns="http://www.w3.org/2000/svg"
 <path d="M 20 190 H 170 M 20 185 V 195 M 170 185 V 195" stroke-width="1"/><text x="95" y="205" fill="currentColor" stroke="none" text-anchor="middle">4.80</text>
 <path d="M 310 20 V 170 M 305 20 H 315 M 305 170 H 315" stroke-width="1"/><text x="300" y="98" fill="currentColor" stroke="none" text-anchor="end">3.60</text>
 <text x="300" y="14" fill="currentColor" stroke="none" text-anchor="end" font-size="11">1:100</text>
+</svg>`;
+
+/** M78 interactive slides: the figure's parts carry the beat that brings them in. */
+const PARALLEL = `<svg viewBox="0 0 360 220" xmlns="http://www.w3.org/2000/svg" font-family="serif" font-size="14" fill="none" stroke="currentColor" stroke-width="2">
+<circle cx="40" cy="110" r="20"/><text x="35" y="105" fill="currentColor" stroke="none" font-size="13">+</text><text x="36" y="124" fill="currentColor" stroke="none" font-size="13">−</text>
+<text x="4" y="150" fill="currentColor" stroke="none">12V</text>
+<path d="M 40 90 V 30 H 280 V 80 M 180 30 V 80 M 180 140 V 190 M 280 140 V 190 M 40 130 V 190 H 280"/>
+<g class="m-blue" data-focus="1"><path d="M 180 80 l 9 5 l -18 10 l 18 10 l -18 10 l 18 10 l -18 10 l 9 5"/><text x="196" y="104" fill="currentColor" stroke="none">R₁=4Ω</text></g>
+<g class="m-green" data-focus="1"><path d="M 280 80 l 9 5 l -18 10 l 18 10 l -18 10 l 18 10 l -18 10 l 9 5"/><text x="296" y="104" fill="currentColor" stroke="none">R₂=12Ω</text></g>
+<g data-beat="1" fill="currentColor" stroke="none" font-size="13"><text x="196" y="124">12V</text><text x="296" y="124">12V</text></g>
+<g data-beat="2" data-focus="2"><path class="flow" d="M 40 90 V 30 H 180"/><text x="70" y="22" fill="currentColor" stroke="none">I=4A</text></g>
+<g data-beat="3" class="m-blue"><path class="flow" d="M 180 30 V 80"/><text x="186" y="62" fill="currentColor" stroke="none" font-size="13">I₁=3A</text></g>
+<g data-beat="3" class="m-green"><path class="flow" d="M 180 30 H 280 V 80"/><text x="286" y="62" fill="currentColor" stroke="none" font-size="13">I₂=1A</text></g>
+</svg>`;
+
+const PHOTO = `<svg viewBox="0 0 360 230" xmlns="http://www.w3.org/2000/svg" font-family="serif" font-size="15" fill="none" stroke="currentColor" stroke-width="2">
+<rect x="110" y="50" width="140" height="120" rx="24"/>
+<g class="m-green"><ellipse cx="180" cy="110" rx="42" ry="22" fill="currentColor" fill-opacity="0.2"/><path d="M 150 110 h 60 M 158 102 h 44 M 158 118 h 44" stroke-width="1.5"/></g>
+<g data-beat="1" class="m-orange"><path class="pulse" d="M 150 4 l 12 34 M 180 2 v 36 M 210 4 l -12 34"/><text x="225" y="22" fill="currentColor" stroke="none">hν</text></g>
+<g data-beat="2" class="m-blue"><g class="drift" style="--dx:95;--dy:0"><text x="10" y="100" fill="currentColor" stroke="none">CO₂</text></g><path d="M 50 120 h 48 l -8 -5 m 8 5 l -8 5"/></g>
+<g data-beat="2"><g class="drift" style="--dx:0;--dy:-48"><text x="164" y="222" fill="currentColor" stroke="none">H₂O</text></g></g>
+<g data-beat="3" class="m-pink"><g class="drift" style="--dx:80;--dy:0"><text x="262" y="100" fill="currentColor" stroke="none">O₂</text></g><path d="M 262 120 h 48 l -8 -5 m 8 5 l -8 5"/></g>
+<g data-beat="3"><text x="180" y="155" fill="currentColor" stroke="none" font-size="12" text-anchor="middle">C₆H₁₂O₆</text></g>
+</svg>`;
+
+const CELL = `<svg viewBox="0 0 360 230" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif" font-size="14" fill="none" stroke="currentColor" stroke-width="2">
+<ellipse cx="160" cy="115" rx="140" ry="95"/><text x="320" y="30" fill="currentColor" stroke="none" text-anchor="middle">קרום</text><path d="M 300 38 L 272 58" stroke-width="1"/>
+<g data-beat="1" data-focus="1" class="m-blue"><circle cx="150" cy="110" r="34" fill="currentColor" fill-opacity="0.22"/><circle cx="158" cy="104" r="9" fill="currentColor" fill-opacity="0.5"/><text x="150" y="160" fill="currentColor" stroke="none" text-anchor="middle">גרעין</text></g>
+<g data-beat="2" data-focus="2" class="m-green"><g fill="currentColor" fill-opacity="0.2"><ellipse cx="240" cy="80" rx="26" ry="12" transform="rotate(-20 240 80)"/><ellipse cx="235" cy="150" rx="26" ry="12" transform="rotate(15 235 150)"/><ellipse cx="75" cy="150" rx="22" ry="10" transform="rotate(25 75 150)"/></g><path d="M 220 84 q 6 -10 12 0 t 12 0 t 12 0 M 216 148 q 6 -10 12 0 t 12 0 t 12 0" stroke-width="1.5"/><text x="240" y="122" fill="currentColor" stroke="none" text-anchor="middle">מיטוכונדריה</text></g>
+<g data-beat="3" data-focus="3" class="m-pink" fill="currentColor" stroke="none"><circle cx="95" cy="70" r="3"/><circle cx="108" cy="62" r="3"/><circle cx="85" cy="85" r="3"/><circle cx="205" cy="190" r="3"/><circle cx="190" cy="180" r="3"/><circle cx="220" cy="183" r="3"/><text x="88" y="52" text-anchor="middle">ריבוזומים</text></g>
 </svg>`;
 
 export const ADVANCED: Record<string, Sample> = {
@@ -494,5 +524,89 @@ $$`,
       captionMd: "דיאגרמת מומנטים: $M(x) = \\frac{w x (L-x)}{2}$",
     },
     progress: { n: 5, of: 5 },
+  },
+  // M78 interactive slides (beats): a function investigation built on a graph, step by step
+  beatsFn: {
+    titleMd: String.raw`חקירת $f(x) = x^2 - 2x + 1$`,
+    bodyMd: "נמצא את נקודת הקיצון, את כיוון הפתיחה ואת הסימטריה.",
+    beats: [
+      { md: String.raw`**נגזרת ראשונה:**
+$$
+f'(x) = 2x - 2 = 0 \;\Rightarrow\; x = 1
+$$
+ו-$f(1) = 0$, לכן נקודת הקיצון היא $\blue{(1,0)}$.` },
+      { md: String.raw`**כיוון הפתיחה:**
+` + fence("rows", String.raw`נגזרת שנייה | f''(x) = 2 > 0`) + String.raw`
+הפרבולה **פתוחה כלפי מעלה**, ולכן $(1,0)$ היא נקודת **מינימום**.`, sideMd: String.raw`$a = 1 > 0$ — אותה מסקנה ישר מהמקדם.` },
+      { md: String.raw`**סימטריה:** $f(0) = 1$, והגרף סימטרי סביב $x = 1$, לכן גם $f(2) = 1$:
+$$
+f(x) = (x-1)^2 \ge 0
+$$` },
+    ],
+    sideMd: null,
+    figure: {
+      kind: "geometry",
+      source: plot({ boundingBox: [-1.5, 4.5, 3.5, -1], axis: true, elements: [
+        { type: "point", id: "V", x: 1, y: 0, label: "(1,0)", beat: 1, color: "blue" },
+        { type: "curve", fn: "x^2-2*x+1", domain: [-1, 3], beat: 2 },
+        { type: "point", id: "P", x: 0, y: 1, label: "(0,1)", beat: 3 },
+        { type: "point", id: "Q", x: 2, y: 1, label: "(2,1)", beat: 3 },
+        { type: "segment", from: "P", to: "Q", dashed: true, beat: 3, color: "orange" },
+      ] }),
+      captionMd: "",
+    },
+    progress: { n: 3, of: 6 },
+  },
+  // a parallel circuit: the same voltage on both branches, then the equivalent resistance, then the split of the current
+  beatsCircuit: {
+    titleMd: "מעגל מקבילי: מתח וזרם בכל ענף",
+    bodyMd: String.raw`מקור של $12\,\text{V}$ ושני נגדים במקביל: $\blue{R_1} = 4\,\Omega$, $\green{R_2} = 12\,\Omega$.`,
+    beats: [
+      { md: String.raw`**מתח:** הנגדים מחוברים במקביל, ולכן על כל אחד מהם אותו מתח:
+$$
+V_1 = V_2 = V = 12\,\text{V}
+$$` },
+      { md: String.raw`**התנגדות שקולה:**
+$$
+\frac{1}{R_{eq}} = \frac{1}{\blue{R_1}} + \frac{1}{\green{R_2}} = \frac{1}{4} + \frac{1}{12} = \frac{1}{3}
+$$
+לכן $R_{eq} = 3\,\Omega$ והזרם הכולל $I = \frac{V}{R_{eq}} = 4\,\text{A}$.` },
+      { md: String.raw`**פיצול הזרם:**
+` + fence("rows", String.raw`ענף 1 | \blue{I_1} = \frac{V}{R_1} = \frac{12}{4} = 3\,\text{A}
+ענף 2 | \green{I_2} = \frac{V}{R_2} = \frac{12}{12} = 1\,\text{A}`) + String.raw`
+בדיקה: $I_1 + I_2 = 4\,\text{A} = I$.`, sideMd: "חוק הצמתים של קירכהוף: מה שנכנס לצומת יוצא ממנו." },
+    ],
+    sideMd: null,
+    figure: { kind: "svg", source: PARALLEL, captionMd: "" },
+    progress: null,
+  },
+  // photosynthesis: light, CO₂ and water in, O₂ out
+  beatsPhoto: {
+    titleMd: "פוטוסינתזה",
+    bodyMd: String.raw`בתא העלה, בתוך ה\green{כלורופלסט}:`,
+    beats: [
+      { md: String.raw`**אור** נקלט בכלורופיל ומספק את האנרגיה לתהליך.` },
+      { md: String.raw`\blue{CO₂} מהאוויר ומים ($\ce{H2O}$) מהשורשים נכנסים לתא.` },
+      { md: String.raw`נוצרים סוכר ו\pink{חמצן}, והחמצן יוצא מהתא:
+$$
+\ce{6CO2 + 6H2O ->[h\nu] C6H12O6 + 6O2}
+$$` },
+    ],
+    sideMd: null,
+    figure: { kind: "svg", source: PHOTO, captionMd: "" },
+    progress: null,
+  },
+  // the parts of a cell: each part is drawn and coloured with its word
+  beatsCell: {
+    titleMd: "מבנה התא",
+    bodyMd: "התא מוקף בקרום. בפנים:",
+    beats: [
+      { md: String.raw`ה\blue{גרעין} מכיל את ה-DNA ושולט בפעילות התא.` },
+      { md: String.raw`ה\green{מיטוכונדריה} מייצרת אנרגיה (ATP) בנשימה התאית.` },
+      { md: String.raw`ה\pink{ריבוזומים} מייצרים חלבונים לפי ה-mRNA.` },
+    ],
+    sideMd: null,
+    figure: { kind: "svg", source: CELL, captionMd: "" },
+    progress: null,
   },
 };

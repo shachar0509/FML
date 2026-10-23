@@ -130,6 +130,14 @@ A ```` ```rows ```` block holds one line per row: `name | formula`. It comes fro
 - **Re-fitting.** It measures again on `ResizeObserver`, on `document.fonts` `loadingdone` (KaTeX fonts load lazily) and on `fonts.ready`.
 - **Figures.** An svg figure keeps `dir="ltr"`, so its coordinates and `text-anchor` don't flip in a Hebrew card.
 
+### 5. Slides with beats (M78)
+
+A `teach_step` with `beats` renders the intro and then each beat as its own `<Markdown>`, so each beat goes through the whole pipeline above.
+- A beat not reached yet is `visibility: hidden` (`.beat-later`). It keeps its room and its formulas, and `useFitFormulas` fits it once, at mount.
+- A rows block lines up at its relation within one beat. Two beats are two grids.
+- `\blue{word}` in plain text becomes a coloured span (HTML pass, step 5), the same colour as an SVG part with `class="m-blue"`.
+- The figure keeps `dir="ltr"`. Hebrew SVG labels are centred (`text-anchor="middle"`), so they stay where the author put them.
+
 ## Checks
 
 - **Unit tests:** `src/core/render/Markdown.test.tsx`. It covers currency, tables, edge tokens, arrows, `\ce`, units, labels, display fences and parentheses in notes.
@@ -141,4 +149,5 @@ A ```` ```rows ```` block holds one line per row: `name | formula`. It comes fro
   - `e2e/tests_output/render-infi2-electrical/`: אינפי 2 and electrical engineering;
   - `e2e/tests_output/render-law-bio-chem-finance-arch/`: law, biology, chemistry, finance, architecture;
   - `e2e/tests_output/render-display-fences/`: the `$$\begin` / `\end$$` case (`fences-he-*.png`).
+- **Slides:** `e2e/tests/slides.spec.ts` steps through the beat samples (`beats*` in `test-advanced.ts`) and writes screenshots to `e2e/tests_output/slides/`.
 - **Adding a case:** add a sample to `ADVANCED` and its name to a list in `e2e/tests/render.spec.ts`.

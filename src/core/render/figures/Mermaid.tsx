@@ -3,7 +3,7 @@ import { boxClass, useDraw } from "./useDraw";
 let seq = 0;
 let queue: Promise<unknown> = Promise.resolve();
 
-export function Mermaid({ source, dark }: { source: string; dark: boolean }) {
+export function Mermaid({ source, dark }: { source: string; dark: boolean; beat?: number }) {
   const ref = useDraw(
     async (el) => {
       const { default: mermaid } = await import("mermaid");

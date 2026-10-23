@@ -39,13 +39,14 @@ class Boundary extends Component<{ source: string; children: ReactNode }, { fail
   }
 }
 
-export function Figure({ tag, source }: { tag: keyof typeof F; source: string }) {
+/** `beat` (M78): the slide's current beat; parts tagged with a later beat stay hidden. Undefined shows every part. */
+export function Figure({ tag, source, beat }: { tag: keyof typeof F; source: string; beat?: number }) {
   const dark = useDark();
   const C = F[tag];
   return (
     <Boundary source={source}>
       <Suspense fallback={<div className="my-3 h-24 animate-pulse rounded-lg bg-card" />}>
-        <C source={source} dark={dark} />
+        <C source={source} dark={dark} beat={beat} />
       </Suspense>
     </Boundary>
   );

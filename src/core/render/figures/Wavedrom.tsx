@@ -2,7 +2,7 @@ import { boxClass, useDraw } from "./useDraw";
 
 let seq = 0;
 
-export function Wavedrom({ source, dark }: { source: string; dark: boolean }) {
+export function Wavedrom({ source, dark }: { source: string; dark: boolean; beat?: number }) {
   const ref = useDraw(
     async (el) => {
       const [{ default: wd }, { default: skin }] = await Promise.all([

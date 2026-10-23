@@ -66,6 +66,13 @@ it("runs a lesson: start, questions, events, status, completion, reopen + recap"
   expect(sc(await call("teach_step", { titleMd: "x", bodyMd: "b", progress: { n: 7, of: 5 } }))).toMatchObject({ progress: { n: 5, of: 5 } });
   expect(sc(await call("teach_step", { titleMd: "x", bodyMd: "b", sideMd: "$\\N \\subset \\Z$" }))).toMatchObject({ sideMd: "$\\N \\subset \\Z$" });
   expect(text(await call("teach_step", { titleMd: "x", bodyMd: "word ".repeat(150), sideMd: "note ".repeat(100) }))).toMatch(/too long/); // the side note counts too
+  // M78: beats travel to the card; each beat is capped like a step; the figure can't use a beat the slide doesn't have
+  const geo = (b: number) => JSON.stringify({ boundingBox: [-1, 3, 3, -1], axis: true, elements: [{ type: "point", id: "V", x: 1, y: 0, label: "(1,0)", beat: 1, color: "blue" }, { type: "curve", fn: "x^2-2x+1", domain: [-1, 3], beat: b }] });
+  expect(sc(await call("teach_step", { titleMd: "f", bodyMd: "", beats: [{ md: "$f'(x)=0$" }, { md: "$f''>0$", sideMd: "opens up" }], figure: { kind: "geometry", source: geo(2) } }))).toMatchObject({ beats: [{ md: "$f'(x)=0$", sideMd: null }, { md: "$f''>0$", sideMd: "opens up" }] });
+  expect(text(await call("teach_step", { titleMd: "f", bodyMd: "", beats: [{ md: "a" }, { md: "b" }], figure: { kind: "geometry", source: geo(3) } }))).toMatch(/beat 3, but the slide has 2 beats/);
+  expect(text(await call("teach_step", { titleMd: "f", bodyMd: "", beats: [{ md: "a" }, { md: "word ".repeat(200) }] }))).toMatch(/Beat 2 is too long/);
+  expect(text(await call("teach_step", { titleMd: "f", bodyMd: "", beats: Array.from({ length: 5 }, () => ({ md: "word ".repeat(170) })) }))).toMatch(/slide is too long/);
+  expect(text(await call("teach_step", { titleMd: "f", bodyMd: "", beats: [{ md: "a" }, { md: "b" }], figure: { kind: "svg", source: '<svg viewBox="0 0 1 1"><g data-beat="4"/></svg>' } }))).toMatch(/beat 4/);
   // a question about the step: answered in a pop-up over the step card, which polls for answers newer than its question
   const asked = Date.now();
   expect(sc(await call("step_answer", { since: asked }))).toEqual({ answerMd: null });
