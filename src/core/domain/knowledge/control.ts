@@ -1,6 +1,6 @@
 import type { CourseJson, Event } from "@/core/domain/dataSchemas";
 import { isCustom } from "@/core/universities";
-import { type Graph, nodesOfStages } from "./graph";
+import { type Graph, missedEdges, nodesOfStages } from "./graph";
 
 /**
  * The gentle layer (M61): how much the student *controls* each graph node, from Shalav's own event log.
@@ -45,8 +45,11 @@ export function evidenceByNode(g: Graph, events: Event[]): Map<string, Evidence[
         const v = s - 0.1 * e.hintsUsed;
         return e.solutionRevealedBefore ? Math.min(v, 0.6) : v;
       };
-      if (e.nodes?.length) e.nodes.forEach((n) => add(n.id, adj(n.score), 1));
-      else spread(e.stageIds, adj(e.score / 100), 0.5);
+      const edges = new Set(missedEdges(g, e.stageIds, e.edgeCasesMissed)); // M77: a missed edge case is a miss on its node
+      if (e.nodes?.length) {
+        e.nodes.forEach((n) => add(n.id, edges.has(n.id) ? 0 : adj(n.score), 1));
+        edges.forEach((id) => e.nodes?.some((n) => n.id === id) || add(id, 0, 1));
+      } else nodesOfStages(g, e.stageIds).forEach((n) => (edges.has(n.id) ? add(n.id, 0, 1) : add(n.id, adj(e.score / 100), 0.5)));
     } else if (e.type === "node_observed") add(e.nodeId, e.score, e.context === "teacher" ? 2 : 1); // M71: the teacher's own marks weigh twice an AI grade
     else if (e.type === "assessment_updated") spread([e.stageId], e.mastery, 0.2); // the lesson's checks already count; the tutor's guess only nudges
   }

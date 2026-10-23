@@ -107,6 +107,17 @@ describe("control: gentle, but honest", () => {
     expect(knowledgeOf(g, answers(s1, [1]), 0.1).control.get(s1)).toBeGreaterThan(k.control.get(s1) as number);
   });
 
+  it("M77: a missed edge case is a miss on its edge node, tagged answer or stage-level", () => {
+    const g = planGraph(plan);
+    const s1 = nodeId("S001", "concept", "סדרה");
+    const edge = nodeId("S001", "edge", "סדרה קבועה");
+    const att = (nodes?: { id: string; score: number }[]): Event => ({ ...base, id: "a", type: "attempt_graded", attemptId: "a", exercise: { source: "generated", id: "x" }, stageIds: ["S001"], verdict: "correct", score: 90, mistakes: [], missingForFullCredit: 0, edgeCasesMissed: ["לא בדק סדרה קבועה"], attachmentHashes: [], difficulty: 3, hasEdgeCaseFocus: true, hintsUsed: 0, solutionRevealedBefore: false, nodes });
+    for (const k of [knowledgeOf(g, [att([{ id: s1, score: 0.9 }])], 0.1), knowledgeOf(g, [att()], 0.1)]) {
+      expect(k.control.get(edge)).toBeLessThan(0.1);
+      expect(k.control.get(s1)).toBeGreaterThan(0.1);
+    }
+  });
+
   it("forgetting (engine retention) lowers the stars", () => {
     const g = planGraph(plan);
     const all = g.nodes.flatMap((n) => answers(n.id, seq([[10, 1]])));

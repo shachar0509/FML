@@ -9,7 +9,7 @@ const progress = { stages: { S001: sp("completed", 0.9), S002: sp("completed", 0
 const ex = (id: string, req: string[], over: Partial<IndexedExercise> = {}) =>
   ({ id, requiredStageIds: req, primaryStageId: req[0], difficulty: 3, type: "proof", ...over }) as unknown as IndexedExercise;
 const att = (id: string, ts: string, score: number, context = "practice") =>
-  ({ type: "attempt_graded", exercise: { source: "index", id }, ts, score, context, verdict: "correct" }) as unknown as Event;
+  ({ type: "attempt_graded", exercise: { source: "index", id }, ts, score, context, verdict: "correct", edgeCasesMissed: [] }) as unknown as Event;
 const now = "2026-01-30T00:00:00Z";
 const base = { plan, progress, events: [] as Event[], scope: { kind: "all" } as const, servedIds: [] as string[], now };
 

@@ -3,7 +3,7 @@ import * as z from "zod";
 import type { CourseJson, Event, PlanJson, ProgressJson } from "@/core/domain/dataSchemas";
 import { isCustom } from "@/core/universities";
 import { priorOf, knowledgeOf, rawStars, shownStars, effective, type Knowledge } from "@/core/domain/knowledge/control";
-import { engineNames, graphOf, nodesOfStages, type Graph } from "@/core/domain/knowledge/graph";
+import { engineNames, graphOf, missedEdges, namesNode, nodesOfStages, normLabel, type Graph, type GraphNode } from "@/core/domain/knowledge/graph";
 import { loadCtx } from "@/core/domain/practice/exercises";
 import { mapEvents, normalizeTag } from "@/core/domain/progress/reduce";
 import { onEvent } from "@/core/domain/progress/store";
@@ -74,10 +74,17 @@ export function interactions(e: Event, g: Graph, names: Record<string, string>):
   const of = (nodes: { id: string; score: number }[] | undefined, stageIds: string[], score: number) =>
     nodes?.length ? nodes : nodesOfStages(g, stageIds).map((n) => ({ id: n.id, score }));
   if (e.type === "check_answered") {
-    for (const n of of(e.nodes, [e.stageId], e.score / 100)) push(n.id, n.score, e.kind === "mcq" ? "RECALL_EXERCISE" : "FEYNMAN_PROMPT");
+    const tag = e.mistakeTags[0];
+    for (const n of of(e.nodes, [e.stageId], e.score / 100)) {
+      push(n.id, n.score, e.kind === "mcq" ? "RECALL_EXERCISE" : "FEYNMAN_PROMPT", n.score < 0.7 && tag ? { error_type: "LOGIC_ERROR", misconception_type: tag } : {});
+    }
   } else if (e.type === "attempt_graded" && e.verdict !== "unreadable") {
     const tag = e.mistakes[0];
-    for (const n of of(e.nodes, e.stageIds, e.score / 100)) {
+    // M77: a missed edge case is a miss on its edge node (tested or not)
+    const edges = missedEdges(g, e.stageIds, e.edgeCasesMissed);
+    const tested = of(e.nodes, e.stageIds, e.score / 100);
+    const all = [...tested, ...edges.filter((id) => !tested.some((n) => n.id === id)).map((id) => ({ id, score: 0 }))];
+    for (const n of all.map((x) => (edges.includes(x.id) ? { id: x.id, score: 0 } : x))) {
       const s = Math.max(0, e.solutionRevealedBefore ? Math.min(n.score - 0.1 * e.hintsUsed, 0.6) : n.score - 0.1 * e.hintsUsed);
       push(n.id, s, "PRACTICE", {
         hints_requested: e.hintsUsed,
@@ -86,6 +93,17 @@ export function interactions(e: Event, g: Graph, names: Record<string, string>):
       });
     }
   } else if (e.type === "node_observed") push(e.nodeId, e.score, "PRACTICE", { notes: e.why });
+  else if (e.type === "assessment_updated") {
+    // M77: only the tutor's gaps reach the engine (its mastery guess doesn't: the lesson's checks already count). A gap is free text:
+    // it is a miss on the stage node it names, else on the stage's first node. A knowledge gap, not a misconception (no watch-list rows).
+    const own = nodesOfStages(g, [e.stageId]);
+    const hit = new Set<string>(); // one miss per node per assessment
+    for (const gap of e.gaps) {
+      const n = own.find((o) => namesNode(gap, o.label)) ?? own[0];
+      if (n && !hit.has(n.id)) push(n.id, 0, "DIAGNOSTIC_ASSESSMENT", { notes: gap.slice(0, 300) });
+      if (n) hit.add(n.id);
+    }
+  }
   return out;
 }
 
@@ -135,9 +153,16 @@ export function createKnowledge(engineFor: ((course: string) => Engine) | null) 
     if (relNodes.length) await e.call("set_goal_relevance", { domain_id: m.domainId, relevance: Object.fromEntries(relNodes.map((x) => [names[x.id], rel(x.id)])) });
     m.names = names;
     const sent = new Set(m.sent);
+    const gaps = new Map<string, Set<string>>(); // M77: the tutor repeats a stage's current gaps on every update: a gap is sent when it (re)appears
     for (const ev of events) {
+      let x = ev;
+      if (ev.type === "assessment_updated") {
+        const before = gaps.get(ev.stageId) ?? new Set();
+        gaps.set(ev.stageId, new Set(ev.gaps.map(normLabel)));
+        x = { ...ev, gaps: ev.gaps.filter((t) => !before.has(normLabel(t))) };
+      }
       if (sent.has(ev.id)) continue;
-      for (const args of interactions(ev, g, names)) await e.call("record_interaction", { domain_id: m.domainId, ...args });
+      for (const args of interactions(x, g, names)) await e.call("record_interaction", { domain_id: m.domainId, ...args });
       sent.add(ev.id);
     }
     m.sent = [...sent];
@@ -230,22 +255,32 @@ export function hotStages(s: Summary): string[] {
 /** Nodes the student controlled that the engine's forgetting model says need a review now. */
 const dueNodes = (s: Summary) => [...s.retention].filter(([id, r]) => r < 0.7 && (s.k.control.get(id) ?? 0) >= 0.6).map(([id]) => id);
 
+/** The 5 weakest nodes `keep` allows that are below 90% after forgetting, weakest first. */
+const weakest = (s: Summary, keep: (n: GraphNode) => boolean) =>
+  s.graph.nodes
+    .filter((n) => keep(n) && effective(s.k, n.id, s.retention) < 0.9)
+    .sort((a, b) => effective(s.k, a.id, s.retention) - effective(s.k, b.id, s.retention))
+    .slice(0, 5);
+
+/** M77: what web gathering should favor: the engine's focus, then the weakest nodes the student has answered on (none before any answer). */
+export const studyFocus = (s: Summary | null): string[] => {
+  if (!s || ![...s.k.seen.values()].some(Boolean)) return [];
+  const label = new Map(s.graph.nodes.map((n) => [n.id, n.label]));
+  return [...new Set([...(s.focus ? [label.get(s.focus) ?? s.focus] : []), ...weakest(s, (n) => (s.k.seen.get(n.id) ?? 0) > 0).map((n) => n.label)])];
+};
+
 /** M64: the tutor's view of the student's graph: level, weakest nodes of what is learned, misconceptions, reviews due, the target. */
 export function digest(s: Summary, o: { custom: boolean; stageIds: string[]; target: number; /** the stars the student sees (shownLevel) */ stars?: number }): string {
   const want = new Set(o.stageIds);
   const label = new Map(s.graph.nodes.map((n) => [n.id, n.label]));
   const pct = (id: string) => `${Math.round(effective(s.k, id, s.retention) * 100)}%`;
-  const weakest = s.graph.nodes
-    .filter((n) => !n.stageIds.length || n.stageIds.some((x) => want.has(x)))
-    .filter((n) => effective(s.k, n.id, s.retention) < 0.9)
-    .sort((a, b) => effective(s.k, a.id, s.retention) - effective(s.k, b.id, s.retention))
-    .slice(0, 5);
+  const weak = weakest(s, (n) => !n.stageIds.length || n.stageIds.some((x) => want.has(x)));
   const items = (a: string[]) => (a.length ? a.join("; ") : "none");
   return [
     o.custom
       ? `- Level: the student is now at ${o.stars ?? s.stars}★ of 5 in this course (from their self-rated level up). Goal: 5★.`
       : `- Level: ${s.stars}★ of 5 of the whole course; exam-ready ${Math.round(s.examReady * 100)}% (core/common nodes at ≥ 90%). Goal: 100%.`,
-    `- Weakest nodes of what was learned: ${items(weakest.map((n) => `${n.label} (${pct(n.id)})`))}`,
+    `- Weakest nodes of what was learned: ${items(weak.map((n) => `${n.label} (${pct(n.id)})`))}`,
     `- Active misconceptions: ${items(s.misconceptions.slice(0, 4).map((m) => `${m.label}: ${m.type}${m.detail ? ` — ${m.detail}` : ""} (×${m.count})`))}`,
     `- Reviews due (known, now fading): ${items(dueNodes(s).slice(0, 4).map((id) => label.get(id) ?? id))}`,
     ...(s.focus ? [`- Suggested focus: ${label.get(s.focus) ?? s.focus}`] : []),

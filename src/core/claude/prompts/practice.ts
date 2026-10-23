@@ -30,7 +30,7 @@ Reading handwriting: read carefully. If a symbol or step is unclear and it affec
 
 The score weighs the reasoning, the explanations and the course's conventions (notation, structure and level of detail of its example solutions). finalAnswerCorrect is true only if every final answer is exactly right.
 
-Report the steps in the student's order with a status for each. missingForFullCredit lists concrete additions that would earn full marks. correctedKeyStepMd shows the first wrong or missing step done correctly. Mistakes use kebab-case tags; reuse an existing tag when it fits. Write all feedback in ${a.lang}.
+Report the steps in the student's order with a status for each. missingForFullCredit lists concrete additions that would earn full marks. edgeCasesMissed lists the edge cases the answer misses; for one listed as an [edge] node, copy its label exactly. correctedKeyStepMd shows the first wrong or missing step done correctly. Mistakes use kebab-case tags; reuse an existing tag when it fits. Write all feedback in ${a.lang}.
 
 ${languageRules(a.lang)}
 ${EXAM_CONVENTIONS}

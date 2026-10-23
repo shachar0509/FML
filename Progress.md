@@ -4,7 +4,7 @@
 Rules: work only on branch `dev`; one commit per step with tests; update this file after every step; record silent-spec choices in `DECISIONS.md`; stop after each step so the user can compact. Steps marked 🧪 need a manual Claude Desktop check by the user; list what to check.
 Environment: Node 22, pnpm, Playwright chromium. Never store keys in files.
 
-Status: plan v2 §9 (M0–M13) is done, plus follow-ups M14–M60. The v1 desktop app (Tauri, API key, Drive sync, Ask panel) is deleted; it lives in git tag `desktop-v1-final` (= `01640cb`).
+Status: plan v2 §9 (M0–M13) is done, plus follow-ups M14–M77. The v1 desktop app (Tauri, API key, Drive sync, Ask panel) is deleted; it lives in git tag `desktop-v1-final` (= `01640cb`).
 
 ---
 
@@ -250,13 +250,7 @@ Kept: the teacher's notes (M70 folder + zone, M71 analysis, evidence weight 2, m
 The approved plan was never committed; its final text (2026-10-22 14:47) was recovered from the session transcript. An audit against the code found: control failing the plan's required behaviour (tests loosened), no high-stakes mark, no install progress, no engine re-seed after a reset/upgrade, plan revisions not published, missing evidence (assessment gaps, missed edge cases, check mistake tags), web topics not weighted to the student's weak concepts, no rename / part_of in update_knowledge_graph, a thin real-binary test, and 5 unrecorded deviations.
 - **M75 (done):** two-speed control (`control.ts`: long memory 36, slump ≥5 of last 10 → also a short memory 6, take the lower; prior fades at 12); tests at the plan's exact thresholds + stars never drop after 1-2 misses on one node; DECISIONS.md "M61 — Deviations" and "M75".
 - **M76 (done):** engine gaps closed (`knowledge.ts`): academic courses `mark_domain_high_stakes` once (`highStakes` in map.json); a stage renumbered by Update plan keeps its engine concept, retention/focus/misconceptions only for nodes of the current graph (`publish_curriculum_revision` not used: DECISIONS "M76"); map.json `engine` version, a new release or an unknown domain → fresh domain re-seeded from the log once; the one-time engine download shows in the course card (`installing` → `CourseData.engineInstall`, he/en `stars.engineInstalling`). Tests: fake engine (high-stakes once, renumber keeps history, wiped DB and new release re-seed), real binary (academic, DB wiped → re-seeded), e2e `course.spec.ts` engine download.
-- **M77 (next; the last step of the knowledge-graph plan, `archive/KNOWLEDGE_GRAPH_PLAN.md` §2b, §3, §5, §9, Verification). Gaps found by the audit, with the smallest change for each:**
-  1. `assessment_updated` gaps never reach the engine: in `interactions()` (`src/server/knowledge/knowledge.ts`) send each gap as a failed interaction with a misconception detail.
-  2. `attempt_graded.edgeCasesMissed` is only displayed (`grade.ts`): match each missed edge case to the stage's edge nodes (normalized label) and score them 0.
-  3. `check_answered.mistakeTags` never become `misconception_type` (only `attempt_graded` sends it): add it in `interactions()`.
-  4. Web gathering spreads topics by how much material each unit has (`shares` in `ingest/web.ts`), not by the student: add the 5 weakest nodes + the engine focus to the `gatherWeb` prompt (`quickSummary` is available in `courseTools.ts`).
-  5. `update_knowledge_graph` (`learnTools.ts`) has no rename and no `part_of` link (`rel` is only requires / misconception_of, `dataSchemas.ts`): add both, or record in DECISIONS that they are dropped.
-  6. The real-binary test (`src/server/knowledge/knowledge.test.ts`, `TUTOR_MCP_BIN=~/Library/Application Support/il.shalav.app/engines/tutor-mcp-v0.6.1/tutor-mcp`) misses the plan's checks: 2 misses after 8 good stays high, sustained misses drop it, FSRS makes a review due, the focus is a frontier concept.
+- **M77 (done; the last step of the plan):** the engine now gets the tutor's assessment gaps (failed `DIAGNOSTIC_ASSESSMENT`, knowledge gap), a check's mistake tag (`misconception_type`), and missed edge cases (`missedEdges` in `graph.ts`: the stage's edge nodes by label, score 0, also in `control.ts`; the grader copies the [edge] label). Web gathering names the engine focus + 5 weakest answered nodes (`studyFocus`). Rename / `part_of` dropped (DECISIONS "M77"). Real-binary test of the plan's checks (frontier focus, 2 misses after 8 good stay > 0.6, sustained misses < 0.3, a review due after 90 days by moving the engine DB's review dates). Run it with `TUTOR_MCP_BIN=~/Library/Application\ Support/il.shalav.app/engines/tutor-mcp-v0.6.1/tutor-mcp pnpm exec vitest run src/server/knowledge/knowledge.test.ts`.
   Also open from M76: prerequisite changes between existing concepts are not sent to the engine (DECISIONS "M76").
 
 ---

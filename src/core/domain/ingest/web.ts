@@ -85,7 +85,7 @@ const ROUNDS = 3; // the first answer plus two asks for what was missing or dupl
  * already used); missing ones are asked for again. They land as .md files, so the card lists them at once (not scanned until the next Build / Update plan).
  */
 /** `level` (M65): the student's level now (1-5; their knowledge graph, never below the self-rated level). */
-export async function gatherWeb(gw: ClaudeGateway, course: CourseJson, lang: "he" | "en", count: number, signal?: AbortSignal, level = course.level ?? 1) {
+export async function gatherWeb(gw: ClaudeGateway, course: CourseJson, lang: "he" | "en", count: number, signal?: AbortSignal, level = course.level ?? 1, focus: string[] = []) {
   level = Math.min(5, Math.max(1, Math.round(level)));
   const next = Math.min(5, level + 1);
   const p = coursePaths(useSettings.getState().settings.dataRoot, course.courseNumber);
@@ -101,6 +101,8 @@ ${course.goal ? `What the student wants to achieve: ${course.goal}\n` : ""}Curre
 ${units.length ? `
 The course has a study plan. Spread the documents over its units as follows, so every unit ends up with a fair share of material (a unit with little material gets more):
 ${units.map((u) => `- ${u.id} ${u.title} (${u.have} scanned pages/exercises now): ${u.docs} document(s), about: ${u.stages.map((id) => byId.get(id)?.title).filter(Boolean).slice(0, 12).join("; ")}`).join("\n")}
+` : ""}${focus.length ? `
+The student is weakest at these topics now; give them extra weight (within the units above): ${focus.slice(0, 6).join("; ")}.
 ` : ""}
 The course folders already hold these files; do not return them again or the same content under another name:
 ${list(have.names)}

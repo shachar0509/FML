@@ -60,6 +60,10 @@ it("asks for full, elaborated solutions, not summaries (the student learns to wr
   expect(ask).toMatch(/Current level: 3\/5[^]*other half one level up, 4\/5/);
   await expect(gatherWeb(gw, course, "he", 3, undefined, 5)).rejects.toThrow("stop");
   expect(ask).toMatch(/Current level: 5\/5[^]*top level/);
+  expect(ask).not.toMatch(/weakest/);
+  // M77: the student's weak topics get extra weight
+  await expect(gatherWeb(gw, course, "he", 3, undefined, 2, ["גבול", "טור"])).rejects.toThrow("stop");
+  expect(ask).toMatch(/weakest at these topics now[^\n]*גבול; טור/);
 });
 
 it("M70: every file it writes is recorded (by content) as Shalav's own before it lands", async () => {

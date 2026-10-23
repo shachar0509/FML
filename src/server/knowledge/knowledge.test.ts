@@ -13,7 +13,7 @@ import { useSettings } from "@/stores/settings";
 import { initNode } from "../platform";
 import { EnginePool, type Engine } from "./engine";
 import { ENGINE_VERSION, engineAsset } from "./install";
-import { createKnowledge, digest, hotStages, interactions, knowledgeDir, shownLevel, watchList } from "./knowledge";
+import { createKnowledge, digest, hotStages, interactions, knowledgeDir, shownLevel, studyFocus, watchList } from "./knowledge";
 
 const stage = (id: string, order: number, x: Partial<PlanJson["stages"][number]> = {}) => ({
   id, unitId: "U01", order, title: `t${id}`, summary: "s", kind: "concept" as const, objectives: [], newConcepts: [], theorems: [], techniques: [], prerequisites: [], edgeCases: [], examRelevance: "core" as const, estimatedMinutes: 30, ...x,
@@ -49,6 +49,19 @@ describe("evidence → engine calls", () => {
     const legacy = { ...base, type: "check_answered", stageId: "S001", checkId: "c", kind: "mcq", context: "learn", correct: false, score: 0, mistakeTags: [] } as Event;
     expect(interactions(legacy, g, names).map((x) => [x.concept, x.activity_type, x.success])).toEqual([["סדרה", "RECALL_EXERCISE", false], ["גבול", "RECALL_EXERCISE", false]]);
   });
+
+  it("M77: a check's mistake tag is a misconception, a missed edge case fails its edge node, the tutor's gaps are knowledge gaps", () => {
+    const pl = { ...plan, stages: [stage("S001", 1, { newConcepts: ["סדרה", "גבול"], edgeCases: ["Empty domain"] }), plan.stages[1] as PlanJson["stages"][number]] };
+    const g = planGraph(pl);
+    const names = Object.fromEntries(g.nodes.map((n) => [n.id, n.label]));
+    const base = { id: "e", ts: "t", deviceId: "d", courseNumber: N };
+    const check = { ...base, type: "check_answered", stageId: "S001", checkId: "c", kind: "open", context: "learn", correct: false, score: 30, mistakeTags: ["sign-flip"], nodes: [{ id: seq, score: 0.3 }] } as Event;
+    expect(interactions(check, g, names)).toEqual([expect.objectContaining({ concept: "סדרה", success: false, error_type: "LOGIC_ERROR", misconception_type: "sign-flip" })]);
+    const graded = { ...base, type: "attempt_graded", attemptId: "a", exercise: { source: "generated", id: "x" }, stageIds: ["S001"], context: "practice", verdict: "partially_correct", score: 80, mistakes: [], missingForFullCredit: 0, edgeCasesMissed: ["the empty domain  "], attachmentHashes: [], difficulty: 3, hasEdgeCaseFocus: true, hintsUsed: 0, solutionRevealedBefore: false, nodes: [{ id: seq, score: 0.9 }] } as unknown as Event;
+    expect(interactions(graded, g, names).map((x) => [x.concept, x.success])).toEqual([["סדרה", true], ["Empty domain", false]]);
+    const assess = { ...base, type: "assessment_updated", stageId: "S001", mastery: 0.6, coveredObjectives: [], gaps: ["מתבלבל בהגדרת גבול", "something else"], reviewTopics: [], readyToAdvance: false, rationale: "" } as Event;
+    expect(interactions(assess, g, names).map((x) => [x.concept, x.success, x.error_type, x.misconception_type])).toEqual([["גבול", false, "KNOWLEDGE_GAP", undefined], ["סדרה", false, "KNOWLEDGE_GAP", undefined]]);
+  });
 });
 
 describe("knowledge service", () => {
@@ -62,6 +75,32 @@ describe("knowledge service", () => {
     for (let i = 0; i < 12; i++) await answer(seq, 1);
     k.invalidate(N);
     expect((await k.summary(N)).k.control.get(seq)).toBeGreaterThan(0.8);
+    k.dispose();
+  });
+
+  it("M77: the tutor's repeated gaps reach the engine once; a new gap is sent; one miss per node per assessment", async () => {
+    await setup();
+    const sent: Record<string, unknown>[] = [];
+    const fake: Engine = {
+      call: async (name, args) => {
+        if (name === "record_interaction") sent.push(args);
+        return name === "init_domain" ? { domain_id: "D1" } : name === "get_curriculum_snapshot" ? { snapshot: { version: 1 } } : {};
+      },
+    };
+    const assess = (gaps: string[]) => appendEvent(N, { type: "assessment_updated", stageId: "S001", mastery: 0.5, coveredObjectives: [], gaps, reviewTopics: [], readyToAdvance: false, rationale: "" });
+    const k = createKnowledge(() => fake);
+    const run = async () => {
+      await new Promise((r) => setTimeout(r, 50));
+      k.invalidate(N);
+      await k.summary(N);
+      return sent.splice(0).map((x) => [x.concept, x.notes]);
+    };
+    await assess(["גבול של סדרה", "Gap X", "Gap Y"]); // the last two fall back to the stage's first node: one miss
+    expect(await run()).toEqual([["סדרה", "גבול של סדרה"]]);
+    await assess(["גבול של סדרה ", "Gap X", "Gap Y"]);
+    expect(await run()).toEqual([]);
+    await assess(["גבול של סדרה", "Gap X", "Gap Y", "טעות בגבול"]);
+    expect(await run()).toEqual([["גבול", "טעות בגבול"]]);
     k.dispose();
   });
 
@@ -98,6 +137,9 @@ describe("knowledge service", () => {
     expect(d).toContain("Suggested focus: גבול");
     expect(d).toContain("difficulty 3/5");
     expect(d).not.toContain("טור"); // S002 is not learned
+    // M77: web gathering favors the engine's focus, then weak nodes the student answered on (nothing unanswered, nothing before any answer)
+    expect(studyFocus(s)).toEqual(["גבול", "סדרה"]);
+    expect(studyFocus(null)).toEqual([]);
     // M67: the course card watches the engine's active misconceptions, labelled like the course's mistake tags
     const tag = { tag: "sign-flip", labelHe: "היפוך סימן", labelEn: "Sign flip", description: "", count: 5, weight: 5, lastSeenAt: "t", stageIds: ["S002"], resolved: false, recentExamples: [] };
     expect(watchList(s, [tag], "he")).toEqual([{ label: "היפוך סימן", count: 2, stageIds: ["S001"] }]);
@@ -214,6 +256,45 @@ describe("knowledge service", () => {
     const again = await k.summary(N);
     expect(again.engine).toBe(true);
     expect(again.retention.size).toBeGreaterThan(0);
+    k.dispose();
+    await pool.closeAll();
+  }, 60_000);
+
+  // M77: the plan's integration checks (archive/KNOWLEDGE_GRAPH_PLAN.md, Verification)
+  it.skipIf(!process.env.TUTOR_MCP_BIN || !engineAsset())("real tutor-mcp: misses after a good run, sustained misses, a review comes due, the focus is a frontier concept", async () => {
+    await setup({ ...course, type: "academic" });
+    const root = useSettings.getState().settings.dataRoot;
+    const dir = (n: string) => join(coursePaths(root, n).shalav, "knowledge", "engine-test");
+    const pool = new EnginePool(async () => process.env.TUTOR_MCP_BIN as string, dir);
+    const k = createKnowledge((n) => pool.get(n));
+    const lim = nodeId("S001", "concept", "גבול");
+    const now = async () => {
+      await new Promise((r) => setTimeout(r, 100));
+      k.invalidate(N);
+      return k.summary(N);
+    };
+    for (let i = 0; i < 8; i++) await answer(seq, 1);
+    const s0 = await now();
+    expect(s0.engine).toBe(true);
+    expect(s0.k.control.get(seq)).toBeGreaterThan(0.8);
+    expect(s0.focus).toBe(lim); // the frontier: S001's other concept, never S002's "טור" (it needs S001)
+    for (let i = 0; i < 2; i++) await answer(seq, 0);
+    const s1 = await now();
+    expect(s1.k.control.get(seq)).toBeGreaterThan(0.6); // 2 misses after 8 good: still high (the engine's own BKT falls to ~0.3)
+    expect(s1.stars).toBeGreaterThanOrEqual(s0.stars);
+    for (let i = 0; i < 8; i++) await answer(seq, 0);
+    expect((await now()).k.control.get(seq)).toBeLessThan(0.3); // sustained misses: it drops
+    // FSRS: one good answer on גבול, then 90 days pass (the engine has no clock to set: its review dates are moved back)
+    await answer(lim, 1);
+    expect((await now()).retention.get(lim)).toBeGreaterThan(0.95);
+    await pool.closeAll();
+    const { DatabaseSync } = await import("node:sqlite");
+    const db = new DatabaseSync(join(dir(N), "runtime.db"));
+    const ago = new Date(Date.now() - 90 * 86400_000).toISOString();
+    const go = `${ago.slice(0, 10)} ${ago.slice(11, 23)}000 +0000 UTC`; // Go's time.String()
+    db.prepare("update concept_states set last_review = ?, next_review = ? where concept = ?").run(go, go, "גבול");
+    db.close();
+    expect((await now()).retention.get(lim)).toBeLessThan(0.7); // retention falls below the review line (dueNodes also needs control ≥ 0.6)
     k.dispose();
     await pool.closeAll();
   }, 60_000);

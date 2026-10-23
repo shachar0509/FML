@@ -9,7 +9,7 @@ import { newStageIds, refinePlan } from "@/core/domain/plan/refine";
 import { removeFromPlan } from "@/core/domain/plan/remove";
 import { gatherWeb } from "@/core/domain/ingest/web";
 import type { CourseJson } from "@/core/domain/dataSchemas";
-import { quickSummary, shownLevel, watchList, type KnowledgeService } from "./knowledge/knowledge";
+import { quickSummary, shownLevel, studyFocus, watchList, type KnowledgeService } from "./knowledge/knowledge";
 import { localize, translateCourse } from "@/core/domain/plan/translate";
 import { claude, setClaude } from "@/core/claude/runtime";
 import { useSettings } from "@/stores/settings";
@@ -261,7 +261,10 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, fi
     gathering.add(number);
     bridge.run(
       `Finding study materials online for "${c.course.nameHe}"`,
-      async (signal) => gatherWeb(claude(), c.course, look().language, count, signal, Math.round((await level(number, c.course, !!c.plan)).kn?.stars ?? c.course.level ?? 1)).finally(() => gathering.delete(number)),
+      async (signal) => {
+        const { sum, kn } = await level(number, c.course, !!c.plan);
+        return gatherWeb(claude(), c.course, look().language, count, signal, Math.round(kn?.stars ?? c.course.level ?? 1), studyFocus(sum)).finally(() => gathering.delete(number));
+      },
       ({ saved, skipped }) => [{ type: "text", text: `${saved.length} of ${count} requested file(s) were added to the course: ${saved.join(", ") || "none"}${skipped ? ` (${skipped} found document(s) were already in the course and were not added)` : ""}. Tell the student in one short sentence that they are in the course files and that Build plan (or Update plan) reads them.` }],
       "study",
       `web:${number}`,

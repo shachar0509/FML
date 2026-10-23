@@ -81,6 +81,15 @@ export const nodesOfStages = (g: Graph, stageIds: string[]) => {
   return g.nodes.filter((n) => n.stageIds.some((s) => want.has(s)));
 };
 
+/** M77: free text names a node when, normalized, one contains the other (a short one, under 4 characters, only when equal). */
+export const namesNode = (text: string, label: string) => {
+  const [a, b] = [normLabel(text), normLabel(label)];
+  return !!a && !!b && (a === b || (Math.min(a.length, b.length) >= 4 && (a.includes(b) || b.includes(a))));
+};
+/** M77: the stages' edge nodes a grader listed as missed (`edgeCasesMissed`). */
+export const missedEdges = (g: Graph, stageIds: string[], missed: string[]): string[] =>
+  missed.length ? nodesOfStages(g, stageIds).filter((n) => n.kind === "edge" && missed.some((x) => namesNode(x, n.label))).map((n) => n.id) : [];
+
 /**
  * The engine names a concept by its display label, so labels must be unique: a repeated label gets its stage title.
  * `taken` keeps the names already given (map.json), so a name never changes once the engine has it.
