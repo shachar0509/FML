@@ -36,7 +36,7 @@ it("tikz: the document is built around the picture; errors say what to fix", asy
 });
 
 it("theme colours and own ids", () => {
-  expect(themeColors('<svg><path fill="#1f5fbe" stroke="#000"/><path fill="#fff"/></svg>')).toBe('<svg fill="currentColor"><path fill="currentColor" class="m-blue" stroke="currentColor"/><path fill="#fff" class="fig-paper-fill"/></svg>');
+  expect(themeColors('<svg><path fill="#1f5fbe" stroke="#000"/><path class="x" fill="#fff"/></svg>')).toBe('<svg fill="currentColor"><path class="m-blue" fill="currentColor" stroke="currentColor"/><path class="x fig-paper-fill" fill="#fff"/></svg>');
   const a = ownIds('<svg><radialGradient id="pgfsh2"/><circle style="fill:url(#pgfsh2)"/><use href="#lib-x"/><path fill="url(#shade-blue)"/></svg>', "a");
   expect(a).toMatch(/id="(f\w+-)pgfsh2"[\s\S]*url\(#\1pgfsh2\)[\s\S]*href="#\1lib-x"/);
   expect(a).toContain("url(#shade-blue)");
@@ -51,4 +51,39 @@ it("bio: each placement becomes the part in a nested svg (the card drops <use>),
   expect(svg).toContain('data-credit="Servier Medical Art (CC BY 3.0)"');
   expect(() => withLibrary('<svg viewBox="0 0 9 9"><use href="#nucleous"/></svg>')).toThrow(/Unknown library part nucleous; parts: .*nucleus/);
   expect(() => withLibrary('<svg viewBox="0 0 9 9"><circle r="2"/></svg>')).toThrow(/at least one library part/);
+});
+
+/** The guide's own example of a kind (after its "Example (…):" line). */
+const example = async (kind: "graphviz" | "vegalite" | "tikz") => {
+  const { GUIDES } = await import("@/core/claude/prompts/figureGuides");
+  const g = GUIDES[kind].guide;
+  const from = g.indexOf("\n", g.indexOf("Example ("));
+  const next = g.indexOf("\nExample (", from);
+  return g.slice(from + 1, next < 0 ? undefined : next);
+};
+
+it("graphviz: the guide's DFA lays out once; marked nodes and edges get their beats; theme colours", async () => {
+  const svg = await renderFigure("graphviz", await example("graphviz"));
+  expect(svg).toMatch(/^<svg/);
+  expect(svg).toMatch(/class="edge" data-beat="1">\s*<title>q0&#45;&gt;q1<\/title>/);
+  expect(svg).toMatch(/class="node" data-beat="2">\s*<title>q2<\/title>/);
+  expect((svg.match(/data-beat="3"/g) ?? []).length).toBe(4);
+  expect(svg).toMatch(/class="m-green"/);
+  expect(svg).not.toMatch(/(fill|stroke)="black"/);
+  await expect(renderFigure("graphviz", "digraph { a -> }")).rejects.toThrow(/syntax error/i);
+});
+
+it("vegalite: layers keep their beats; ink follows the board", async () => {
+  const svg = await renderFigure("vegalite", await example("vegalite"));
+  expect(svg).toMatch(/<g class="mark-line role-mark beat1_marks" data-beat="2"/);
+  expect(svg).toContain("m-blue");
+  expect(svg).toContain("m-orange");
+  expect(svg).not.toMatch(/(fill|stroke)="#000"/);
+  await expect(renderFigure("vegalite", '{"mark":"bar","encoding":{"x":{"field":"a","type":"bogus"}}}')).rejects.toThrow(/Vega-Lite|Invalid|type/);
+});
+
+it("tikz: the guide's examples render", async () => {
+  const { GUIDES } = await import("@/core/claude/prompts/figureGuides");
+  const g = GUIDES.tikz.guide;
+  for (const m of g.matchAll(/\n(\\begin\{(circuitikz|tikzpicture)\}[\s\S]*?\\end\{\2\})/g)) expect(await renderFigure("tikz", m[1] ?? "")).toMatch(/data-beat/);
 });

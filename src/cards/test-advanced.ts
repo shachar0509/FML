@@ -701,4 +701,56 @@ $$` },
     figure: { kind: "tikz", source: METHANE, captionMd: "" },
     progress: null,
   },
+  // M80 Graphviz: a DFA for the words that end in ab, built transition by transition
+  beatsAutomaton: {
+    titleMd: "אוטומט למילים שמסתיימות ב-ab",
+    bodyMd: String.raw`מעל $\Sigma = \{a, b\}$:`,
+    beats: [
+      { md: String.raw`מ-$q_0$, קריאת $a$ מעבירה ל-$q_1$: ייתכן שזו תחילת הסיומת.` },
+      { md: String.raw`מ-$q_1$, קריאת $b$ מסיימת את $ab$: $\green{q_2}$ מקבל.` },
+      { md: "שאר המעברים: חזרה למצב שמתאים לסיפא שנקראה עד עכשיו." },
+    ],
+    sideMd: null,
+    figure: { kind: "graphviz", source: String.raw`digraph { rankdir=LR; node [shape=circle];
+start [shape=point]; start -> q0;
+q0 -> q1 [label="a"]; // @1
+q1 -> q2 [label="b"]; // @2
+q2 [shape=doublecircle, color="m-green", fontcolor="m-green"]; // @2
+q0 -> q0 [label="b"]; q1 -> q1 [label="a"]; // @3
+q2 -> q1 [label="a"]; q2 -> q0 [label="b"]; // @3
+}`, captionMd: "" },
+    progress: null,
+  },
+  // M80 Mermaid: an algorithm as a flowchart with Hebrew labels, one block per beat
+  beatsFlow: {
+    titleMd: "חצייה חוזרת",
+    bodyMd: "כמה פעמים אפשר לחצות את n עד שמגיעים ל-1?",
+    beats: [
+      { md: "קולטים את n." },
+      { md: String.raw`בודקים את התנאי $n > 1$.` },
+      { md: String.raw`כל עוד הוא מתקיים: $n \leftarrow n/2$ וחוזרים לבדיקה.` },
+      { md: String.raw`כשהתנאי נכשל, מסיימים: מספר הסיבובים הוא $\lceil \log_2 n \rceil$.` },
+    ],
+    sideMd: null,
+    figure: { kind: "mermaid", source: `flowchart TD
+  S([התחלה]) --> R[/קלוט n/]
+  R --> C{"n > 1?"} %% @2
+  C -->|כן| D[n ← n/2] %% @3
+  D --> C %% @3
+  C -->|לא| E([סוף]) %% @4
+  class C m-blue`, captionMd: "" },
+    progress: null,
+  },
+  // M80 Vega-Lite: data, then the regression line
+  beatsRegression: {
+    titleMd: "רגרסיה לינארית",
+    bodyMd: "חמש מדידות של y מול x:",
+    beats: [
+      { md: String.raw`ה\blue{נקודות} נראות כמעט על קו ישר.` },
+      { md: String.raw`ה\orange{קו} שממזער את סכום ריבועי השאריות: $\hat y = 2x$ בקירוב.` },
+    ],
+    sideMd: null,
+    figure: { kind: "vegalite", source: JSON.stringify({ width: 520, height: 320, data: { values: [{ x: 1, y: 2.1 }, { x: 2, y: 3.9 }, { x: 3, y: 6.2 }, { x: 4, y: 7.8 }, { x: 5, y: 10.1 }] }, layer: [{ mark: { type: "point", filled: true, size: 80, color: "m-blue" }, encoding: { x: { field: "x", type: "quantitative" }, y: { field: "y", type: "quantitative" } } }, { beat: 2, mark: { type: "line", color: "m-orange", strokeWidth: 3 }, transform: [{ regression: "y", on: "x" }], encoding: { x: { field: "x", type: "quantitative" }, y: { field: "y", type: "quantitative" } } }] }), captionMd: "" },
+    progress: null,
+  },
 };

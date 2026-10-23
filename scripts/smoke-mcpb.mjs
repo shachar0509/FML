@@ -25,6 +25,11 @@ ok(settings.structuredContent?.dataRoot === join(dir, "data"), "data folder from
 const tikz = await client.callTool({ name: "figure_render", arguments: { kind: "tikz", source: "\\begin{circuitikz}\n\\draw (0,0) to[R, l=$R_1$] (2,0); % @1\n\\end{circuitikz}" } });
 ok(!tikz.isError && /data-beat="1"/.test(tikz.structuredContent?.svg ?? ""), `tikz render: ${JSON.stringify(tikz).slice(0, 600)}`);
 const bio = await client.callTool({ name: "figure_render", arguments: { kind: "bio", source: '<svg viewBox="0 0 9 9"><use href="#nucleus" width="9" height="9"/></svg>' } });
-ok(!bio.isError && bio.structuredContent?.svg.includes("lib-nucleus"), "bio render");
+ok(!bio.isError && bio.structuredContent?.svg.includes('data-part="nucleus"'), "bio render");
+// M80: Graphviz (WebAssembly inside the bundle) and Vega-Lite
+const gv = await client.callTool({ name: "figure_render", arguments: { kind: "graphviz", source: "digraph {\n a -> b; // @1\n}" } });
+ok(!gv.isError && /class="edge" data-beat="1"/.test(gv.structuredContent?.svg ?? ""), `graphviz render: ${JSON.stringify(gv).slice(0, 300)}`);
+const vlt = await client.callTool({ name: "figure_render", arguments: { kind: "vegalite", source: JSON.stringify({ data: { values: [{ x: 1 }] }, mark: "point", encoding: { x: { field: "x", type: "quantitative" } } }) } });
+ok(!vlt.isError && vlt.structuredContent?.svg.startsWith("<svg"), `vega-lite render: ${JSON.stringify(vlt).slice(0, 300)}`);
 await client.close();
 console.log(`smoke ok (${tools.length} tools)`);

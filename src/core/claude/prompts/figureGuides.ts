@@ -51,6 +51,44 @@ Beats: data-beat="n" / data-until="m" / data-focus="n" on a <use> or a <g> (as i
 Labels: short, one language each, font-size about 4% of the width; centre Hebrew labels with text-anchor="middle"; molecules as text (CO₂, O₂, H₂O, C₆H₁₂O₆).
 Example (photosynthesis): <svg viewBox="0 0 800 480"><use href="#leaf" x="160" y="90" width="480" height="290"/><use href="#chloroplast" x="330" y="190" width="150" height="80" class="shadow" data-beat="2"/><use href="#sun" x="20" y="10" width="120" height="120" data-beat="1"/><g class="m-blue" data-beat="3" data-until="5"><text x="110" y="300" fill="currentColor" font-size="30">CO₂</text><path class="flow" d="M180 290 L330 240" stroke="currentColor" stroke-width="4"/></g> … <g class="m-green drift" style="--dx:120;--dy:0" data-beat="6"><text x="560" y="250" fill="currentColor" font-size="30">O₂</text></g></svg>`,
   },
+  graphviz: {
+    line: "graphs, automata (DFA/NFA), trees, data structures, state machines, ER diagrams, dependency graphs (Graphviz DOT, automatic layout)",
+    guide: `graphviz: Graphviz DOT source (digraph { … } or graph { … }); Shalav lays it out on its server. rankdir=LR for automata; shape=circle / doublecircle (accepting states), an invisible start node (start [shape=point]) with an arrow into the start state; shape=record or shape=plain with HTML-like labels for data structures; nodes in a tree in order.
+Beats: end a node's or an edge's own line with // @n (from beat n) or // @n-m (until beat m): "q1 -> q2 [label="b"]; // @2". A chain a -> b -> c on a marked line marks both edges. A node shows from the start unless its own line is marked. The layout is computed for the final graph, so nothing moves when a part appears.
+Colours: color="m-blue", fontcolor="m-blue", fillcolor="m-green" (with style=filled) follow the card's theme; black (the default) is the board's ink. Labels: short; Hebrew works in labels ("גרעין") but keep them a word or two.
+Example (a DFA for strings ending in ab, 3 beats):
+digraph { rankdir=LR; node [shape=circle];
+start [shape=point]; start -> q0;
+q0 -> q1 [label="a"]; // @1
+q1 -> q2 [label="b"]; // @2
+q2 [shape=doublecircle, color="m-green"]; // @2
+q0 -> q0 [label="b"]; q1 -> q1 [label="a"]; // @3
+q2 -> q1 [label="a"]; q2 -> q0 [label="b"]; // @3
+}`,
+  },
+  mermaid: {
+    line: "flowcharts, algorithms, sequence diagrams, state diagrams, mind maps, timelines, Gantt charts, class diagrams (Mermaid; Hebrew labels work)",
+    guide: `mermaid: Mermaid source (flowchart TD|LR, sequenceDiagram, stateDiagram-v2, classDiagram, mindmap, timeline, gantt, journey, pie, quadrantChart). Drawn in the card with the board's theme. Hebrew labels work: A[קלט] --> B{"האם x>0?"}. Quote a label with special characters: A["f(x) = x²"].
+Beats (flowchart and stateDiagram-v2): end a line with %% @n (from beat n) or %% @n-m; that line's edges and the nodes it names first appear at beat n. Name each node first on the line that should bring it in. Other diagram types show whole.
+Colours: class A,B m-blue (also m-green, m-pink, m-orange) outlines nodes in the theme colour that the text links with \\blue{…}. No style/classDef colours: they don't follow the dark board.
+Example (an algorithm in 4 beats):
+flowchart TD
+  S([התחלה]) --> R[/קלוט n/]
+  R --> C{"n > 1?"} %% @2
+  C -->|כן| D[n ← n/2] %% @3
+  D --> C %% @3
+  C -->|לא| E([סוף]) %% @4
+  class C m-blue`,
+  },
+  vegalite: {
+    line: "statistics, data charts, distributions, regression, economics and finance charts (Vega-Lite JSON)",
+    guide: `vegalite: a Vega-Lite JSON spec (data inline in "data": {"values": [...]}; no URLs), drawn on Shalav's server. Use "layer": [...] to build a chart up: each layer may carry "beat": n and "until": m (scales are computed from every layer, so axes never move). Width and height about 520 × 320.
+Colours: "color": "m-blue" (also m-green, m-pink, m-orange) in a mark or in a scale range follows the card's theme; axes and labels are drawn in the board's ink. Axis titles: short; Hebrew works.
+Example (a scatter, then its regression line, then the residual of one point):
+{"width":520,"height":320,"data":{"values":[{"x":1,"y":2.1},{"x":2,"y":3.9},{"x":3,"y":6.2},{"x":4,"y":7.8},{"x":5,"y":10.1}]},
+"layer":[{"mark":{"type":"point","filled":true,"size":80,"color":"m-blue"},"encoding":{"x":{"field":"x","type":"quantitative"},"y":{"field":"y","type":"quantitative"}}},
+{"beat":2,"mark":{"type":"line","color":"m-orange"},"transform":[{"regression":"y","on":"x"}],"encoding":{"x":{"field":"x","type":"quantitative"},"y":{"field":"y","type":"quantitative"}}}]}`,
+  },
   svg: {
     line: "anything else, drawn by hand (schematics, processes, timelines, simple diagrams)",
     guide: `svg: ${fmt("svg")}

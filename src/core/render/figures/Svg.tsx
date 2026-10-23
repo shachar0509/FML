@@ -4,7 +4,7 @@ import { sanitizeSvg } from "./specs";
 import { boxClass, useDraw } from "./useDraw";
 
 /** M78: parts with data-beat="n" appear at beat n and stay (until data-until="m": gone after beat m); data-focus="n" is stressed only during beat n. */
-function showBeat(el: HTMLElement, beat: number | undefined) {
+export function showBeat(el: HTMLElement, beat: number | undefined) {
   for (const n of el.querySelectorAll<SVGElement>("[data-beat], [data-until]")) n.classList.toggle("beat-off", beat !== undefined && (Number(n.dataset.beat ?? 0) > beat || Number(n.dataset.until ?? Infinity) < beat));
   for (const n of el.querySelectorAll<SVGElement>("[data-focus]")) n.classList.toggle("beat-focus", beat !== undefined && Number(n.dataset.focus) === beat);
 }

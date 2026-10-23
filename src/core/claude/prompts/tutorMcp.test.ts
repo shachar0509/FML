@@ -9,7 +9,7 @@ it("MCP tutor prompt: show_figure formats, TA lesson flow, no fenced figures", (
   for (const k of ["plot", "geometry", "tikz", "bio", "svg"]) expect(s).toMatch(new RegExp(`^- ${k}: `, "m"));
   expect(s).toMatch(/call figure_guide with that kind/);
   expect(s).not.toMatch(/"boundingBox"/); // the formats themselves are not in the prompt
-  expect(s).not.toMatch(/mermaid/);
+  expect(s).not.toMatch(/```mermaid/); // M80: Mermaid is a figure kind (figure_guide), never a fenced block
   expect(s).toMatch(/notebook \(paper or tablet\)/);
   expect(s).toMatch(/like a TA checking homework/);
   expect(s).toMatch(/Teach first, quiz second/);

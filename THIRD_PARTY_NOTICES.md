@@ -12,6 +12,8 @@ Shalav draws figures with these open-source projects and assets. Each is used un
 | JSXGraph | geometry figures | LGPL-3.0 / MIT |
 | function-plot | plot figures | MIT |
 | Mermaid | diagrams | MIT |
+| @viz-js/viz (Graphviz) | graph and automaton figures | MIT (wrapper); Graphviz EPL-1.0 |
+| Vega, Vega-Lite | data charts | BSD-3-Clause |
 | WaveDrom | timing diagrams | MIT |
 | DOMPurify | SVG sanitizing | MPL-2.0 / Apache-2.0 |
 | KaTeX | math | MIT |

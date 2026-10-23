@@ -11,7 +11,7 @@ const F = {
   svg: lazy(() => import("./figures/Svg").then((m) => ({ default: m.Svg }))),
 };
 /** M79: kinds drawn on the server (src/server/figures/render.ts SERVER_KINDS) */
-const REMOTE = new Set(["tikz", "bio"]);
+const REMOTE = new Set(["tikz", "bio", "graphviz", "vegalite"]);
 export const FIGURE_TAGS = Object.keys(F);
 export const isFigureTag = (lang: string): lang is keyof typeof F => Object.hasOwn(F, lang);
 export { setFigureRenderer } from "./figures/Remote";

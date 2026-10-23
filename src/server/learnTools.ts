@@ -266,6 +266,9 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
       if (kind === "plot") parsePlot(source);
       else if (kind === "geometry") parseGeometry(source);
       else if (isServerKind(kind)) await renderFigure(kind, source);
+      else if (kind === "mermaid") {
+        if (!/^\s*(flowchart|graph|sequenceDiagram|stateDiagram|classDiagram|erDiagram|mindmap|timeline|gantt|journey|pie|quadrantChart|gitGraph|sankey|xychart|block)/m.test(source)) throw new Error("start with the diagram type (flowchart TD, sequenceDiagram, stateDiagram-v2, …)");
+      }
       else if (!/^\s*<svg[\s>]/i.test(source)) throw new Error("source must be one <svg> element");
       return null;
     } catch (e) {

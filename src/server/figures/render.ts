@@ -1,34 +1,37 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { BEAT_MARK, beatAttrs, MARK, markColors } from "@/core/render/figures/beats";
+import { graphvizToSvg, vegaLiteToSvg } from "./graphs";
 import { tikzToSvg, textToPaths } from "./tikz";
 
 /**
  * M79: figure kinds drawn on the server (heavy engines stay out of the card). The card asks for the SVG with the app-only tool
  * figure_render, so the drawing never enters the model's context; the card then shows it like an `svg` figure (beats, colours).
  */
-export const SERVER_KINDS = ["tikz", "bio"] as const;
+export const SERVER_KINDS = ["tikz", "bio", "graphviz", "vegalite"] as const;
 export type ServerKind = (typeof SERVER_KINDS)[number];
 export const isServerKind = (k: string): k is ServerKind => (SERVER_KINDS as readonly string[]).includes(k);
 
-/** A source line ending with `@n` or `@n-m` in a comment (`% @2`, `# @2-3`, `// @4`) is shown from beat n (until beat m). */
-export const BEAT_MARK = /(?:%|#|\/\/)\s*@(\d+)(?:-(\d+))?\s*$/;
-export const beatAttrs = (b: string, u?: string) => `data-beat="${Number(b)}"${u ? ` data-until="${Number(u)}"` : ""}`;
 
-/** The theme colours as TikZ colours. Their exact values are recognized in the output and become the card's --m-* colours. */
-const MARK = { blue: "1f5fbe", green: "1e7b3d", pink: "c42b2c", orange: "a24d01" } as const;
 
 /** Black and white become the board's ink and paper; the four theme colours follow the card's light/dark values. */
 export function themeColors(svg: string): string {
   const paint = /\b(fill|stroke)="(#[0-9a-f]{3,6}|black|white)"/gi;
+  // per tag, so the classes added join a class the tag already has (Vega marks carry one)
   return svg
-    .replace(paint, (m, attr: string, c: string) => {
-      const v = c.toLowerCase();
-      if (["#000", "#000000", "black"].includes(v)) return `${attr}="currentColor"`;
-      // classes, not style: an element may carry both a fill and a stroke (cards.css: .fig-paper-fill etc.)
-      if (["#fff", "#ffffff", "white"].includes(v)) return `${attr}="#fff" class="fig-paper-${attr}"`;
-      const name = Object.entries(MARK).find(([, hex]) => v === `#${hex}`)?.[0];
-      return name ? `${attr}="currentColor" class="m-${name}"` : m;
+    .replace(/<[a-zA-Z][^<>]*>/g, (tag) => {
+      const add: string[] = [];
+      const out = tag.replace(paint, (m, attr: string, c: string) => {
+        const v = c.toLowerCase();
+        if (["#000", "#000000", "black"].includes(v)) return `${attr}="currentColor"`;
+        // classes, not style: an element may carry both a fill and a stroke (cards.css: .fig-paper-fill etc.)
+        if (["#fff", "#ffffff", "white"].includes(v)) return add.push(`fig-paper-${attr}`), m;
+        const name = Object.entries(MARK).find(([, hex]) => v === `#${hex}`)?.[0];
+        return name ? (add.push(`m-${name}`), `${attr}="currentColor"`) : m;
+      });
+      if (!add.length) return out;
+      return /\bclass="/.test(out) ? out.replace(/\bclass="([^"]*)"/, (_, c: string) => `class="${c} ${add.join(" ")}"`) : out.replace(/^<[a-zA-Z][\w:-]*/, (n) => `${n} class="${add.join(" ")}"`);
     })
     .replace(/<svg\b/, '<svg fill="currentColor"');
 }
@@ -92,6 +95,8 @@ export function renderFigure(kind: ServerKind, source: string): Promise<string> 
     hit = (async () => {
       if (kind === "tikz") return ownIds(themeColors(textToPaths(await tikzToSvg(tikzDocument(source)))), key);
       if (kind === "bio") return ownIds(withLibrary(source), key);
+      if (kind === "graphviz") return ownIds(themeColors(await graphvizToSvg(markColors(source))), key);
+      if (kind === "vegalite") return ownIds(themeColors(await vegaLiteToSvg(markColors(source))), key);
       throw new Error(`Unknown figure kind ${kind as string}`);
     })();
     cache.set(key, hit);

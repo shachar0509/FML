@@ -4,7 +4,7 @@
 Rules: work only on branch `dev`; one commit per step with tests; update this file after every step; record silent-spec choices in `DECISIONS.md`; stop after each step so the user can compact. Steps marked 🧪 need a manual Claude Desktop check by the user; list what to check.
 Environment: Node 22, pnpm, Playwright chromium. Never store keys in files.
 
-Status: plan v2 §9 (M0–M13) is done, plus follow-ups M14–M79. The v1 desktop app (Tauri, API key, Drive sync, Ask panel) is deleted; it lives in git tag `desktop-v1-final` (= `01640cb`).
+Status: plan v2 §9 (M0–M13) is done, plus follow-ups M14–M80. The v1 desktop app (Tauri, API key, Drive sync, Ask panel) is deleted; it lives in git tag `desktop-v1-final` (= `01640cb`).
 
 ---
 
@@ -287,6 +287,14 @@ One `teach_step` can carry `beats` (2–8): the card plays them locally. **Next*
 - **Samples** (`test-advanced.ts`): beatsCircuit (TikZ), beatsIncline (TikZ, 5 beats), beatsMethane (TikZ ball-and-stick, 3 beats), beatsPhoto and beatsCell (bio), beatsCircuitSvg (the hand-drawn svg). `slides.spec.ts` covers all 7 (not run yet: e2e at the end of M83).
 - **Tests.** `render.test.ts` (beat groups, paths, colours, balanced groups, ids, package/TeX errors, library parts and credit), `learnTools.test.ts` (tikz in teach_step, `@n` beyond the slide, errors, figure_guide, figure_render), `tutorMcp.test.ts`.
 - 🧪 **Desktop check.** Does the TeX engine (WebAssembly) run in Claude Desktop's Electron utility process (cold render ~0.5 s)? Does Claude call figure_guide before a new kind?
+
+## M80: Graphviz, Mermaid with beats, Vega-Lite (2026-10-23)
+- **Kinds.** `graphviz` and `vegalite` are server kinds (`src/server/figures/graphs.ts`; `render.ts` `SERVER_KINDS`, card `Figure.tsx` `REMOTE`). `mermaid` is a figure kind again, drawn in the card (`figures/Mermaid.tsx`: `mermaidBeats` + `showBeat`, `.fig-mermaid` CSS for `class A m-blue`). Guides in `figureGuides.ts` (each guide's example is rendered by `render.test.ts`).
+- **Shared:** `src/core/render/figures/beats.ts` (`BEAT_MARK` now also `%%`, `beatAttrs`, `MARK`, `markColors`). `themeColors` works per tag.
+- **Samples:** beatsAutomaton (Graphviz DFA, 3 beats), beatsFlow (Mermaid flowchart with Hebrew labels, 4), beatsRegression (Vega-Lite, 2), added to `slides.spec.ts` (not run yet). A quick dev-server check of all three passed (beats toggle, no errors); the Mermaid `>` label needed quotes (guide says so).
+- **Tests:** `render.test.ts` (Graphviz/Vega beats, colours, errors; the guide examples of tikz/graphviz/vegalite render), `mermaid.test.ts`, `tutorMcp.test.ts`. `smoke:mcpb` renders Graphviz and Vega-Lite in the packed server.
+
+**Handoff to M81 (state at compaction, 2026-10-23).** M79 and M80 are committed; e2e not run (the user runs it at the end of M83 to review screenshots: `pnpm exec playwright test e2e/tests/slides.spec.ts`, plus `render.spec.ts` and `step.spec.ts` because figures changed). Next per the roadmap below: M81 annotated course images (crops from the student's PDFs with arrows/circles/labels by beat), abcjs + svguitar (card-side, lazy chunk), d3-geo + Natural Earth maps (server). Then M82, M83 (three.js bundled as a lazy chunk; no CDN, see DECISIONS M79). Pattern for a new kind: guide in `figureGuides.ts` (with an example that a test renders), a server renderer in `src/server/figures/` + `SERVER_KINDS` + card `REMOTE`, or a card component in `Figure.tsx` `F`; beats tag output groups after a single layout; colours via `markColors`/`themeColors`; a sample in `test-advanced.ts` + `slides.spec.ts` SAMPLES; a smoke call if server-side; DECISIONS + THIRD_PARTY_NOTICES.
 
 ---
 

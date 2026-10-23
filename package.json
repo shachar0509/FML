@@ -30,6 +30,7 @@
     "@napi-rs/canvas": "1.0.10",
     "@prinsss/dvi2html": "^0.0.1",
     "@radix-ui/react-slot": "^1.5.0",
+    "@viz-js/viz": "3.31.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dompurify": "^3.4.17",
@@ -53,6 +54,8 @@
     "shiki": "^4.5.0",
     "tailwind-merge": "^3.7.0",
     "ulid": "^3.0.2",
+    "vega": "6.4.0",
+    "vega-lite": "6.5.0",
     "wavedrom": "^3.7.0",
     "zod": "^4.6.7",
     "zustand": "^5.0.15"
