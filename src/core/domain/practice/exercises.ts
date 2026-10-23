@@ -1,6 +1,6 @@
 import {
-  ConventionsFileSchema, CourseJsonSchema, EventSchema, GeneratedFileSchema, PlanJsonSchema,
-  type Convention, type CourseJson, type Event, type ExerciseRef, type GeneratedExercise, type GeneratedFile, type IndexedExercise, type PlanJson, type ProgressJson,
+  CourseJsonSchema, EventSchema, GeneratedFileSchema, PlanJsonSchema,
+  type CourseJson, type Event, type ExerciseRef, type GeneratedExercise, type GeneratedFile, type IndexedExercise, type PlanJson, type ProgressJson,
 } from "@/core/domain/dataSchemas";
 import { listFileIndexes } from "@/core/domain/ingest/indexStore";
 import { reduceProgress } from "@/core/domain/progress/reduce";
@@ -16,17 +16,13 @@ import { useSettings } from "@/stores/settings";
 export const paths = (n: string) => coursePaths(useSettings.getState().settings.dataRoot, n);
 
 /** Everything a grading/hint/generation call needs about the course right now. */
-export type Ctx = {
-  course: CourseJson; plan: PlanJson; events: Event[]; progress: ProgressJson;
-  /** M73: the course conventions registry (all of it; candidatesFor picks per answer). Absent = none. */
-  conventions?: Convention[];
-};
+export type Ctx = { course: CourseJson; plan: PlanJson; events: Event[]; progress: ProgressJson };
 export async function loadCtx(courseNumber: string): Promise<Ctx> {
   const p = paths(courseNumber);
   const [course, plan] = await Promise.all([readJsonFile(p.courseJson, CourseJsonSchema), readJsonFile(p.planJson, PlanJsonSchema)]);
   if (!course || !plan) throw new Error("course not found");
-  const [events, reg] = await Promise.all([readJsonlDir(p.events, EventSchema), readJsonFile(p.conventions, ConventionsFileSchema)]);
-  return { course, plan, events, progress: reduceProgress(plan, events, nowIso()), conventions: reg?.conventions ?? [] };
+  const events = await readJsonlDir(p.events, EventSchema);
+  return { course, plan, events, progress: reduceProgress(plan, events, nowIso()) };
 }
 
 /** What the grading/hint pipeline needs about one exercise, whatever its origin. */

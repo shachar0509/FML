@@ -97,31 +97,6 @@ describe("indexing", () => {
     expect(out.exercises[2]?.requiredStageIds).toEqual(["S003"]);
     expect(out.exercises[2]?.primaryStageId).toBe("S003");
   });
-
-  it("M70: keeps each part's question, part and answer forms, and the printed solutions' practices with their own situations (overlap deduped)", async () => {
-    const occ = (label: string, practice: string) => ({ label, useCase: `in ${label}, the answer bases liability on a statute`, practice });
-    let system = "";
-    const gw = {
-      async send(r: ClaudeRequest) {
-        system = r.system;
-        const first = pagesIn(r)[0] === 1;
-        return { usage: {} as never, model: "m", ...toolCall("submit_exercises", {
-          exercises: first ? [ex("2a", { question: "2", part: "a", answerForms: ["graph", "written"], referenceSolutionMd: "s" })] : [],
-          occurrences: first ? [occ("2a", "cites the statute and section")] : [occ("2a", "cites the statute and section"), occ("3", "cites the statute and section")],
-          absences: first ? [] : [{ label: "4", useCase: "the answer only mentions a statute as background", practice: "cites the statute and section" }],
-        }) } as never;
-      },
-    };
-    const out = await indexExercises(opts(gw as never, src(11), rec({ role: "exercises" })));
-    expect(out.exercises[0]).toMatchObject({ question: "2", part: "a", answerForms: ["graph", "written"] });
-    expect(out.patterns?.occurrences).toEqual([
-      { id: "abcdef01-o1", ...occ("2a", "cites the statute and section") },
-      { id: "abcdef01-o2", ...occ("3", "cites the statute and section") },
-    ]);
-    expect(out.patterns?.absences).toHaveLength(1);
-    expect(system).toMatch(/Every computed final result[^\n]*always record its form[^\n]*decimal places printed; significant figures only when the solution itself says so[^\n]*units/); // reconcile can compare the forms of two files' results
-    expect(system).toMatch(/layout of a whole multi-part answer is also a practice[^\n]*once per question/); // number-parts is learnable
-  });
 });
 
 describe("queue", () => {

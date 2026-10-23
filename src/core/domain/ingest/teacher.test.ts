@@ -54,7 +54,7 @@ beforeEach(() => {
   useSettings.setState({ settings: { ...useSettings.getState().settings, dataRoot: "/r" } });
 });
 
-it("M71 indexTeacher: stores only the teacher's writing, no exercises or patterns, node numbers from one shared list", async () => {
+it("M71 indexTeacher: stores only the teacher's writing, no exercises, node numbers from one shared list", async () => {
   const gw = new FakeClaudeGateway([reply, reply]);
   const out = await indexTeacher({ gw, source: src(8), rec: rec(), plan, course, lang: "en" });
   expect(gw.calls.map((c) => c.tools?.[0]?.name)).toEqual(["submit_teacher_notes", "submit_teacher_notes"]);
@@ -62,7 +62,6 @@ it("M71 indexTeacher: stores only the teacher's writing, no exercises or pattern
   expect(gw.calls[0]?.system).toBe(gw.calls[1]?.system); // the same numbered node list in every batch
   expect(gw.calls[0]?.system).toContain("2. [concept] c2");
   expect(out.exercises).toEqual([]);
-  expect(out.patterns).toBeUndefined();
   expect(out.materialPages).toHaveLength(8);
   expect(JSON.stringify(out)).not.toContain("tangent is horizontal");
   expect(out.materialPages[0]).toMatchObject({ text: "teacher p1: the result is 5", stageIds: ["S002"], kind: "graded_work" });

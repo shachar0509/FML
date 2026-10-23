@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "eval:conventions": "vitest run -c vitest.eval.config.ts",
+    "eval:teacher": "vitest run -c vitest.eval.config.ts",
     "e2e": "playwright test",
     "e2e:changed": "node e2e/changed.mjs",
     "build:cards": "vite build -c vite.cards.config.ts",

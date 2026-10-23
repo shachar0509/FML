@@ -41,7 +41,7 @@ export function mapEvents(events: Event[]): Event[] {
       const from = node(e.from);
       const to = node(e.to);
       if (from !== null && to !== null) out.push({ ...e, from, to });
-    } else if (e.type === "node_observed" || e.type === "node_retired") {
+    } else if (e.type === "node_observed") {
       const id = node(e.nodeId);
       if (id !== null) out.push({ ...e, nodeId: id });
     } else if ("stageId" in e) {
@@ -177,7 +177,7 @@ export function reduceProgress(plan: PlanJson, rawEvents: Event[], now: string):
     const prac = ema(st.items.filter((i) => i.ctx === "practice"));
     sp.practiceMastery = prac === null ? null : r2(prac);
     const old = sp.tutorMastery === null ? (item ?? 0) : item === null ? sp.tutorMastery : 0.4 * sp.tutorMastery + 0.6 * item;
-    const nodes = nodesOfStages(graph, [s.id]).filter((n) => !know.dormant.has(n.id)); // M72: scanning never lowers mastery
+    const nodes = nodesOfStages(graph, [s.id]);
     const ctl = nodes.length ? nodes.reduce((a, n) => a + (know.control.get(n.id) ?? 0), 0) / nodes.length : 0;
     sp.mastery = r2(Math.max(old, ctl));
     if (st.assess) {

@@ -165,7 +165,7 @@ export function createKnowledge(engineFor: ((course: string) => Engine) | null) 
         if (id && label.has(id) && typeof st.retention_estimate === "number") retention.set(id, st.retention_estimate); // a node gone from the plan stays in the engine
       }
       const f = byName.get(String(olm.focus_concept ?? ""));
-      focus = f && label.has(f) ? f : null; // the engine never forgets a node: a retired convention is not in the graph
+      focus = f && label.has(f) ? f : null; // the engine never forgets a node: one the graph no longer has never shows
       const mis = (await e.call("get_misconceptions", { domain_id: m.domainId })).misconceptions as { concept: string; misconception_type: string; last_error_detail?: string; count: number; status: string }[] | undefined;
       misconceptions = (mis ?? []).filter((x) => x.status === "active").flatMap((x) => {
         const id = byName.get(x.concept);
@@ -195,7 +195,7 @@ export function createKnowledge(engineFor: ((course: string) => Engine) | null) 
     const rel = relevanceOf(ctx.plan, g);
     const raw = rawStars(g, k, retention, rel);
     const stars = shownStars(m.stars, raw);
-    const exam = g.nodes.filter((x) => rel(x.id) >= 0.7 && !k.dormant.has(x.id));
+    const exam = g.nodes.filter((x) => rel(x.id) >= 0.7);
     const examReady = exam.length ? exam.filter((x) => effective(k, x.id, retention) >= 0.9).length / exam.length : 0;
     await writeJsonAtomic(mapPath(n), { ...m, stars }); // also keeps what reached the engine before a failure (no answer is sent twice)
     return { graph: g, k, prior, retention, stars, raw, examReady, focus, misconceptions, engine };
@@ -237,7 +237,7 @@ export function digest(s: Summary, o: { custom: boolean; stageIds: string[]; tar
   const pct = (id: string) => `${Math.round(effective(s.k, id, s.retention) * 100)}%`;
   const weakest = s.graph.nodes
     .filter((n) => !n.stageIds.length || n.stageIds.some((x) => want.has(x)))
-    .filter((n) => !s.k.dormant.has(n.id) && effective(s.k, n.id, s.retention) < 0.9)
+    .filter((n) => effective(s.k, n.id, s.retention) < 0.9)
     .sort((a, b) => effective(s.k, a.id, s.retention) - effective(s.k, b.id, s.retention))
     .slice(0, 5);
   const items = (a: string[]) => (a.length ? a.join("; ") : "none");

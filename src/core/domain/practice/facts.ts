@@ -1,4 +1,4 @@
-import { factCheckPrompt } from "@/core/claude/prompts/conventions";
+import { factCheckPrompt } from "@/core/claude/prompts/facts";
 import { submitFactCheck } from "@/core/claude/practiceTools";
 import { callStructured } from "@/core/claude/structured";
 import { listFileIndexes } from "@/core/domain/ingest/indexStore";

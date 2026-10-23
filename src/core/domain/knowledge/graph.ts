@@ -68,13 +68,6 @@ export function graphOf(plan: PlanJson, events: Event[]): Graph {
       g.nodes.push({ id: e.nodeId, kind: e.kind, label: e.label, stageIds: e.stageIds.filter((s) => stages.has(s)), origin: e.origin, why: e.why });
       const r = e.requires.filter((x) => ids.has(x));
       if (r.length) g.requires[e.nodeId] = r;
-    } else if (e.type === "node_retired") {
-      // M72: only a convention retires; ids.delete lets a later node_added bring it back
-      const i = g.nodes.findIndex((n) => n.id === e.nodeId && n.kind === "convention");
-      if (i < 0) continue;
-      g.nodes.splice(i, 1);
-      ids.delete(e.nodeId);
-      g.requires = Object.fromEntries(Object.entries(g.requires).filter(([k]) => k !== e.nodeId).map(([k, l]) => [k, l.filter((x) => x !== e.nodeId)]));
     } else if (e.type === "node_linked" && ids.has(e.from) && ids.has(e.to) && e.from !== e.to) {
       g.requires[e.from] = [...new Set([...(g.requires[e.from] ?? []), e.to])];
     }

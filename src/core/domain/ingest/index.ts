@@ -70,16 +70,13 @@ export const finish = (o: IndexOpts, model: string, patch: Partial<FileIndex>): 
 });
 
 /** 5.6 on the given pages. Returns exercises with ids, stage ids validated and figures cropped. */
-async function extract(o: IndexOpts, pages: number[], tick: () => void): Promise<{ exercises: IndexedExercise[]; model: string | null; patterns?: FileIndex["patterns"] }> {
+async function extract(o: IndexOpts, pages: number[], tick: () => void): Promise<{ exercises: IndexedExercise[]; model: string | null }> {
   const { gw, source, rec, plan, course } = o;
   const order = new Map(plan.stages.map((s) => [s.id, s.order]));
   const last = plan.stages[plan.stages.length - 1]?.id as string;
   const paths = coursePaths(useSettings.getState().settings.dataRoot, course.courseNumber);
   const seen = new Set<string>();
   const out: IndexedExercise[] = [];
-  const occurrences: NonNullable<FileIndex["patterns"]>["occurrences"] = [];
-  const absences: NonNullable<FileIndex["patterns"]>["absences"] = [];
-  const seenPat = new Set<string>();
   let model: string | null = null;
 
   // The AI calls run in parallel; dedupe across the 1-page overlap, ids and crops then go in page order (same output as serial).
@@ -119,24 +116,10 @@ async function extract(o: IndexOpts, pages: number[], tick: () => void): Promise
         id, label: e.label, pages: e.pages, statementMd: e.statementMd, figureCrops, referenceSolutionMd: e.referenceSolutionMd,
         requiredStageIds: req, primaryStageId, difficulty: e.difficulty as IndexedExercise["difficulty"], type: e.type,
         estimatedMinutes: e.estimatedMinutes, edgeCaseFocus: e.edgeCaseFocus, keyPoints: e.keyPoints, gist: e.gist,
-        answerForms: e.answerForms, question: e.question, part: e.part,
       });
     }
-    // M70: practices of the printed solutions, deduped across the 1-page overlap (generalized later, across files)
-    for (const x of value.occurrences) {
-      const k = `${x.label}|${x.practice}`;
-      if (seenPat.has(k)) continue;
-      seenPat.add(k);
-      occurrences.push({ id: `${rec.sha256.slice(0, 8)}-o${occurrences.length + 1}`, ...x });
-    }
-    for (const x of value.absences) {
-      const k = `!${x.label}|${x.practice}`;
-      if (seenPat.has(k)) continue;
-      seenPat.add(k);
-      absences.push(x);
-    }
   }
-  return { exercises: out, model, patterns: occurrences.length || absences.length ? { occurrences, absences } : undefined };
+  return { exercises: out, model };
 }
 
 export const range = (n: number) => Array.from({ length: n }, (_, i) => i + 1);
@@ -146,8 +129,8 @@ export async function indexExercises(o: IndexOpts): Promise<FileIndex> {
   const pages = range(o.source.pageCount);
   const total = slices(pages, EXERCISE_BATCH, EXERCISE_BATCH - 1).length;
   let done = 0;
-  const { exercises, model, patterns } = await extract(o, pages, () => o.onProgress?.(++done, total));
-  return finish(o, model ?? "", { exercises, materialPages: [], patterns });
+  const { exercises, model } = await extract(o, pages, () => o.onProgress?.(++done, total));
+  return finish(o, model ?? "", { exercises, materialPages: [] });
 }
 
 /** 5.5: role `material`, then 5.6 on pages flagged hasExercises. */
@@ -186,13 +169,11 @@ export async function indexMaterial(o: IndexOpts): Promise<FileIndex> {
   }
 
   let exercises: IndexedExercise[] = [];
-  let patterns: FileIndex["patterns"];
   if (withExercises.length) {
     total += slices(withExercises, EXERCISE_BATCH, EXERCISE_BATCH - 1).length;
     const r = await extract(o, withExercises, () => o.onProgress?.(++done, total));
     exercises = r.exercises;
-    patterns = r.patterns;
     model = r.model ?? model;
   }
-  return finish(o, model, { materialPages, exercises, patterns });
+  return finish(o, model, { materialPages, exercises });
 }

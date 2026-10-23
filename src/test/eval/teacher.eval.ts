@@ -69,7 +69,6 @@ it("no student text in any stored page, quote, rule or situation", () => {
     const stored = [...r.materialPages.map((p) => p.text), ...(r.teacherItems ?? []).flatMap((t) => [t.quote, t.rule, t.when])].join("\n").toLowerCase();
     for (const c of CANARIES) expect(stored, `${r.fileName}: ${c}`).not.toContain(c);
     expect(r.exercises).toEqual([]);
-    expect(r.patterns).toBeUndefined();
   }
 });
 

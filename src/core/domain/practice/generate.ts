@@ -8,7 +8,6 @@ import { newId } from "@/core/lib/ids";
 import { nowIso } from "@/core/lib/time";
 import { addGenerated, type Ctx } from "./exercises";
 import { boundaryFor, langName, stageList, type Env } from "./grade";
-import { candidatesFor, conventionsText } from "@/core/domain/knowledge/conventions";
 import { candidates, listText } from "@/core/domain/knowledge/tag";
 import { completedIds, focusStage, levelOf, requiredSet, targetDifficulty, type Scope } from "./select";
 
@@ -34,8 +33,7 @@ async function digest(env: Env, ctx: Ctx, stageId: string) {
 function nodeList(ctx: Ctx, focus: Focus) {
   const lv = levelOf(ctx);
   const cands = candidates(lv.g, [focus.stageId, ...focus.required.filter((s) => s !== focus.stageId)]);
-  const conv = conventionsText(candidatesFor(ctx.conventions ?? [], { stageIds: [focus.stageId, ...focus.required] }), lv.k.control);
-  return { text: listText(cands, lv.k.control), conv, ids: (ns: number[]) => [...new Set(ns.flatMap((x) => cands[x - 1]?.id ?? []))] };
+  return { text: listText(cands, lv.k.control), ids: (ns: number[]) => [...new Set(ns.flatMap((x) => cands[x - 1]?.id ?? []))] };
 }
 
 const words = (s: string) => new Set(s.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? []);
@@ -61,7 +59,7 @@ export async function generateExercise(env: Env, ctx: Ctx, focus: Focus, test?: 
   const type = ctx.course.courseKind === "proof-based" ? "proof" : ctx.course.courseKind === "programming" ? "coding" : "computation";
   const tags = nodeList(ctx, focus);
   const common = {
-    nodes: tags.text, conventions: tags.conv,
+    nodes: tags.text,
     course: ctx.course, lang: langName(), type, difficulty: targetDifficulty(ctx, [focus.stageId]), requiredStages: stageList(ctx, focus.required),
     focusJson: focusJson(ctx, focus.stageId), styleRefs, digest: await digest(env, ctx, focus.stageId), boundary, mistakes: mistakesText(ctx, focus.required),
     ...(test ? { difficulty: Math.max(4, test.like?.difficulty ?? 4) } : {}),
@@ -73,7 +71,7 @@ export async function generateExercise(env: Env, ctx: Ctx, focus: Focus, test?: 
     });
     if (!g.requiredStageIds.every((s) => done.has(s))) { issues = [`requiredStageIds must be among: ${[...done].join(", ")}`]; continue; }
     const { value: v } = await callStructured(env.gw, submitVerification, {
-      task: "grading", courseNumber: n, system: verificationPrompt(stageList(ctx, g.requiredStageIds), boundary, tags.conv),
+      task: "grading", courseNumber: n, system: verificationPrompt(stageList(ctx, g.requiredStageIds), boundary),
       messages: [{ role: "user", content: `<exercise>${g.statementMd}</exercise>\nReference solution:\n${g.referenceSolutionMd}\nGrading notes: ${g.gradingNotes}` }], signal: env.signal,
     });
     if (v.wellPosed && v.solvable && v.matchesReference && !v.requiresStagesBeyond.length) {
@@ -99,7 +97,7 @@ export async function generateChecks(env: Env, ctx: Ctx, focus: Focus): Promise<
     task: "generation", courseNumber: ctx.course.courseNumber,
     system: checksPrompt({
       lang: langName(), requiredStages: stageList(ctx, focus.required), focusJson: focusJson(ctx, focus.stageId),
-      boundary: boundaryFor(ctx), digest: await digest(env, ctx, focus.stageId), mistakes: mistakesText(ctx, focus.required), nodes: tags.text, conventions: tags.conv,
+      boundary: boundaryFor(ctx), digest: await digest(env, ctx, focus.stageId), mistakes: mistakesText(ctx, focus.required), nodes: tags.text,
     }),
     messages: [{ role: "user", content: "Create the questions." }], signal: env.signal,
   });

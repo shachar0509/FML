@@ -197,10 +197,14 @@
 ## M66 — Replay check on a synthetic history
 - Both real data roots have empty event logs, so the M63 acceptance replay used a seeded synthetic history instead (kept as a test). Stage status cannot change by construction (it comes from events, not mastery); the diff confirmed it and that mastery only rises.
 
+## Conventions revert (2026-10-23) — learned answer-writing conventions removed
+- The user removed the conventions feature (M70 solution practices, M72 reconcile, M73 applying, M74 card): it could not be made accurate enough. Two paid eval rounds (~$30) left all 6 hard fixtures failing, and every prompt fix brought new regressions. The M72 and M73 entries below are history only, except M73's course-facts bullets, which are still in force.
+- Kept on purpose: teacher's notes (they are extra material, and the teacher's marks and repeated mistakes tell the knowledge graph what the student finds hard), the course-facts check, the web-file marker it relies on, the eval CliGateway and the teacher eval.
+- The real data root had no conventions data (no `.shalav/conventions.json`, no `node_retired` events), and the event reader skips lines that no longer parse, so the schemas were removed outright.
+
 ## M70 — Teacher's notes are a folder role; web files are marked by content
 - Teacher notes are a third role folder ("הערות המרצה"), like the other two, so the folder scan, deletion and rename handling work unchanged; Moodle never imports into it.
 - A web-gathered file is recognized by its content sha, written to `.shalav/web-files.json` before the file lands (the folder scan may pick it up at once). Its solutions are Shalav's own and never teach conventions.
-- Solution practices are recorded per occurrence with that solution's own situation; generalizing into conventions happens only across files, in reconcile (M72).
 
 ## M71 — Teacher evidence is written once per file content
 - Graded-work evidence carries the file sha as `refId`; a sha already in the log is never written again (re-scan, plan replace). An edited file is a new sha and writes new evidence; the old file's events stay, because the event log is append-only.
@@ -208,7 +212,7 @@
 - A teacher file's stored page text is the model's transcription of the teacher's writing only; the raw page (which holds the student's answer) is never stored.
 - Teacher files of one course are scanned one at a time (the tag list and the repeat count read the log), so a waiting teacher file holds one of the course's two queue slots; material and exercise files are unaffected.
 
-## M72 — Conventions reconcile (server choices the plan left open)
+## M72 — Conventions reconcile (REMOVED in the conventions revert; history only)
 - The model only proposes; `judgeUseCase` decides. Ids outside the use case or of the wrong kind are ignored. An absence no draft claims counts as unexplained against every draft of its use case. An explained absence whose notWhen number is out of range counts as unexplained. The boundary 1 in 4 is allowed (3 followed + 1 unexplained passes).
 - Absences have no stored id; reconcile names them `<sha8>-a<n>` by their index in the file's patterns (old indexes work unchanged).
 - Convention id = nodeId(single stage | G, "convention", rule); taken → rule + " | " + trigger; taken twice → the draft merges its sources into that convention (never overwrites it). Retired ids are not "taken": a convention that qualifies again comes back under its id, with a new node_added.
@@ -224,7 +228,7 @@
 - The semantic eval's "every row passes, 3 stable runs" gate is moved from the end of M72 to after M73 (one combined tuning loop with the real grader), to save the user's subscription usage. Before M73 only the law fixture (the lifecycle rules M73 builds on) is run once.
 - Eval-only: the judge never sees a convention's conflicts; teacher superiority (`winner` rows) is checked on the registry: each losing convention must have a conflict naming a winner convention.
 
-## M73 — Applying the conventions, and the course-facts check
+## M73 — Course facts (in force) and applying the conventions (REMOVED in the conventions revert)
 - `candidatesFor`: active only, teacher first; stage filter (a course-wide convention always passes); a part-level use drops whole-level ones; no stageIds (homework, test questions without a stage, the eval rows) = every convention. Over 12, the coarse hints only reorder which 12 are kept; the teacher's order is kept. No caller passes `level` or hints yet: the grader judges part/whole itself from the level line.
 - Registry conventions (graph nodes of kind convention with origin index/teacher) are left out of the plain node list (`candidates`), and any plain node score on one (e.g. a grader's newNodes with the same label) is dropped. Only the grader's or tutor's per-convention verdict writes evidence on them, and only when triggered (met 0..1 as given).
 - The tutor's [STATUS] numbers the stage's conventions C1…; record_check_result answers by those numbers (the list is recomputed per call; the registry only changes in a build).

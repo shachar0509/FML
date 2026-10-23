@@ -1,16 +1,16 @@
 import { z } from "zod";
-import { conventionFields } from "@/core/domain/knowledge/conventions";
 import { nodeFields } from "@/core/domain/knowledge/tag";
 import { defineTool } from "./tools";
 
-// 7.5-7.7. Tool schemas for grading, hints, solving, generation and verification.
-const severity = z.enum(["minor", "major", "critical"]);
 /** M73: course facts the grader doubts only from its own knowledge; Shalav checks them against the course files (no deduction yet). */
 const disputeFields = {
   disputed: z.array(z.object({
     claim: z.string(), believed: z.string(), points: z.number().min(0).max(100), finalAnswer: z.boolean(), queries: z.array(z.string()).max(6),
   })).max(3).default([]),
 };
+
+// 7.5-7.7. Tool schemas for grading, hints, solving, generation and verification.
+const severity = z.enum(["minor", "major", "critical"]);
 const mistakeFull = z.object({ tag: z.string(), labelHe: z.string(), labelEn: z.string(), description: z.string() });
 
 export const submitGrade = defineTool(
@@ -34,7 +34,6 @@ export const submitGrade = defineTool(
     usesMaterialBeyondCompleted: z.array(z.string()),
     stageIds: z.array(z.string()),
     ...nodeFields,
-    ...conventionFields,
     ...disputeFields,
   }),
 );
@@ -43,7 +42,7 @@ export type Grade = z.infer<typeof submitGrade.schema>;
 export const submitCheckGrade = defineTool(
   "submit_check_grade",
   "Submit the grade of the student's short answer.",
-  z.object({ correct: z.boolean(), score: z.number().min(0).max(100), feedbackMd: z.string(), mistakes: z.array(mistakeFull), ...nodeFields, ...conventionFields, ...disputeFields }),
+  z.object({ correct: z.boolean(), score: z.number().min(0).max(100), feedbackMd: z.string(), mistakes: z.array(mistakeFull), ...nodeFields, ...disputeFields }),
 );
 export type CheckGrade = z.infer<typeof submitCheckGrade.schema>;
 

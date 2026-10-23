@@ -1,11 +1,9 @@
 import { z } from "zod";
-import { conventionFollowRules } from "@/core/claude/prompts/conventions";
 import { LEVELS } from "@/core/claude/prompts/plan";
 import { callStructured } from "@/core/claude/structured";
 import { defineTool } from "@/core/claude/tools";
 import type { ClaudeGateway, Message } from "@/core/claude/types";
-import { ConventionsFileSchema, PlanJsonSchema, type CourseJson, type PlanJson } from "@/core/domain/dataSchemas";
-import { candidatesFor, conventionsText } from "@/core/domain/knowledge/conventions";
+import { PlanJsonSchema, type CourseJson, type PlanJson } from "@/core/domain/dataSchemas";
 import { readJsonFile, writeJsonAtomic, writeTextAtomic } from "@/core/lib/fs/atomicWrite";
 import { sha256Hex } from "@/core/lib/hash";
 import { listFileIndexes } from "./indexStore";
@@ -92,8 +90,7 @@ export async function gatherWeb(gw: ClaudeGateway, course: CourseJson, lang: "he
   const next = Math.min(5, level + 1);
   const p = coursePaths(useSettings.getState().settings.dataRoot, course.courseNumber);
   const have = await existing([p.materials, p.exercises]);
-  const [plan, reg] = await Promise.all([readJsonFile(p.planJson, PlanJsonSchema), readJsonFile(p.conventions, ConventionsFileSchema)]);
-  const conv = conventionFollowRules(conventionsText(candidatesFor(reg?.conventions ?? [], { stageIds: [] })), "worked solutions"); // M73: once the course has conventions
+  const plan = await readJsonFile(p.planJson, PlanJsonSchema);
   const byId = new Map(plan?.stages.map((s) => [s.id, s]) ?? []);
   const units = await shares(course.courseNumber, plan, count);
   const list = (xs: Iterable<string>) => [...xs].map((x) => `- ${x}`).join("\n") || "(none)";
@@ -112,7 +109,7 @@ ${list(have.used)}
 
 Use web search. Prefer open university courses and lecture notes, official documentation, textbooks and reputable educational sites; never forums or unsourced blogs.
 Each document stands on its own: write it in your own words (do not copy pages), keep formulas, code and examples exact, and end it with its source URLs. Study texts may summarize and explain.
-Solutions are never summarized: write every solution in full, as the model answer a student should hand in for full credit. Every step is shown and justified (the definition, theorem or rule it uses), with the intermediate calculations and the final answer stated clearly; never skip a step, never write just the result or "similarly". The student learns to write complete answers from them.${conv} Each title is distinct. Write in ${lang === "he" ? "Hebrew" : "English"}.
+Solutions are never summarized: write every solution in full, as the model answer a student should hand in for full credit. Every step is shown and justified (the definition, theorem or rule it uses), with the intermediate calculations and the final answer stated clearly; never skip a step, never write just the result or "similarly". The student learns to write complete answers from them. Each title is distinct. Write in ${lang === "he" ? "Hebrew" : "English"}.
 Call submit_web_materials with the documents.`;
 
   let messages: Message[] = [{ role: "user", content: ask }];

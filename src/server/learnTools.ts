@@ -6,11 +6,10 @@ import type { FigureData, LessonData, McqData, OpenData, StepData } from "@/card
 import { statusBlock, tutorSystem } from "@/core/claude/prompts/tutor";
 import { askOpenQuestion, assignExercise, consultMaterials, presentMcq, recordCheckResult, updateAssessment, updateKnowledgeGraph } from "@/core/claude/tutorTools";
 import { knowledgeOf, priorOf } from "@/core/domain/knowledge/control";
-import { candidatesFor, conventionsText, withConventions } from "@/core/domain/knowledge/conventions";
 import { applyNodes, candidates, courseGraph, listText } from "@/core/domain/knowledge/tag";
 import { buildKnowledgeBoundary } from "@/core/domain/boundary/boundary";
 import { localize } from "@/core/domain/plan/translate";
-import { ConventionsFileSchema, CourseJsonSchema, EventSchema, PlanJsonSchema } from "@/core/domain/dataSchemas";
+import { CourseJsonSchema, EventSchema, PlanJsonSchema } from "@/core/domain/dataSchemas";
 import { listFileIndexes } from "@/core/domain/ingest/indexStore";
 import { buildRecap } from "@/core/domain/learn/recap";
 import { checkAdvanceCriteria } from "@/core/domain/progress/criteria";
@@ -63,9 +62,9 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     const p = coursePaths(sets().dataRoot, n);
     const [course, plan] = await Promise.all([readJsonFile(p.courseJson, CourseJsonSchema), readJsonFile(p.planJson, PlanJsonSchema)]);
     if (!course || !plan) return null;
-    const [events, reg] = await Promise.all([readJsonlDir(p.events, EventSchema), readJsonFile(p.conventions, ConventionsFileSchema)]);
+    const events = await readJsonlDir(p.events, EventSchema);
     const { tr } = await localize(course, plan, sets().language); // card titles in the settings language (M48)
-    return { course, plan, events, progress: reduceProgress(plan, events, nowIso()), tr, conventions: reg?.conventions ?? [] };
+    return { course, plan, events, progress: reduceProgress(plan, events, nowIso()), tr };
   }
   type S = NonNullable<Awaited<ReturnType<typeof load>>>;
   const criteria = (s: S, stageId: string) =>
@@ -97,9 +96,6 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     return { g, list: ids.flatMap((id) => byId.get(id) ?? []) };
   }
 
-  /** M73: the stage's conventions, numbered C1… in [STATUS] and in record_check_result (the registry rarely changes mid-lesson). */
-  const lessonConventions = (s: S, stageId: string) => candidatesFor(s.conventions, { stageIds: [stageId] });
-
   /** M64: the engine's view for [STATUS]; a slow or failing engine never holds the lesson up (then no digest). */
   async function knowledgeDigest(s: S, stageId: string) {
     const sum = await quickSummary(knowledge, s.course.courseNumber);
@@ -116,7 +112,6 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     const lang = sets().language;
     return statusBlock({
       nodes: listText(list, k.control),
-      conventions: conventionsText(lessonConventions(s, stageId), k.control),
       digest: await knowledgeDigest(s, stageId),
       completed: s.progress.totals.stagesCompleted,
       total: s.progress.totals.stagesTotal,
@@ -395,7 +390,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     if (!c) return fail(NO_LESSON);
     const tags = await defineTags(c.n, c.s.events, i.mistakes);
     const { g, list } = lessonNodes(c.s, c.stageId);
-    const nodes = withConventions(await applyNodes(c.n, c.s.plan, g, list, i, i.checkToolUseId, "tutor"), c.s.conventions, lessonConventions(c.s, c.stageId), i.conventions);
+    const nodes = await applyNodes(c.n, c.s.plan, g, list, i, i.checkToolUseId, "tutor");
     if (k?.kind === "mcq") {
       // the card already recorded the choice: the misconception and per-node scores come as observations
       for (const tag of tags) await appendEvent(c.n, { type: "mistake_observed", tag, stageIds: [c.stageId], refId: i.checkToolUseId, context: "learn" });

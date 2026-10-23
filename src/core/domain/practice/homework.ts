@@ -11,7 +11,7 @@ import { nowIso } from "@/core/lib/time";
 import { isCustom } from "@/core/universities";
 import { digest, examples } from "./assist";
 import { figureImages, loadCtx, paths, type Ex } from "./exercises";
-import { conventionsFor, imageBlocks, langName, type Attachment, type Env } from "./grade";
+import { imageBlocks, langName, type Attachment, type Env } from "./grade";
 import { emptyRun, type RunState } from "./run";
 
 /** M57: one question of the student's own homework; `accepted` = the pages of their perfect solution (their handwriting), in order. */
@@ -91,7 +91,7 @@ export async function solveHomework(env: Env, n: string, id: string) {
       ...figs.map((f): Block => ({ type: "image", source: { type: "base64", media_type: f.mediaType, data: f.base64 } })),
     ];
     const { value } = await callStructured(env.gw, submitSolution, {
-      task: "grading", courseNumber: n, system: solvePrompt(langName(), "", "", await digest(env, ctx, ex), isCustom(ctx.course), await examples(ctx, ex), conventionsFor(ctx, ex.stageIds).text),
+      task: "grading", courseNumber: n, system: solvePrompt(langName(), "", "", await digest(env, ctx, ex), isCustom(ctx.course), await examples(ctx, ex)),
       messages: [{ role: "user", content }], signal: env.signal,
     });
     const now = await loadHomework(n);

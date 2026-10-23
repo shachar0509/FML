@@ -5,7 +5,6 @@ import { callStructured } from "@/core/claude/structured";
 import type { Block, ClaudeGateway } from "@/core/claude/types";
 import { buildKnowledgeBoundary } from "@/core/domain/boundary/boundary";
 import type { StoredBlock } from "@/core/domain/dataSchemas";
-import { candidatesFor, conventionsText, withConventions } from "@/core/domain/knowledge/conventions";
 import { applyNodes, candidates, courseGraph, listText } from "@/core/domain/knowledge/tag";
 import { normalizeTag } from "@/core/domain/progress/reduce";
 import { appendEvent } from "@/core/domain/progress/store";
@@ -68,15 +67,9 @@ export async function defineTags(courseNumber: string, ctx: Ctx, tags: { tag: st
   return out;
 }
 
-/** M73: the course conventions an answer on these stages may meet (none: every course-wide one, e.g. homework), and their prompt text. */
-export function conventionsFor(ctx: Ctx, stageIds: string[]) {
-  const list = candidatesFor(ctx.conventions ?? [], { stageIds });
-  return { list, text: conventionsText(list) };
-}
-
 export type GradeOpts = {
   hintsUsed: number; solutionRevealed: boolean; context: Context; completedTitles?: string; /** M56 loop: the course's conventions to grade by */ examples?: string; digest?: string;
-  /** a typed answer instead of (or next to) the pages (the conventions eval grades text case rows) */
+  /** a typed answer instead of (or next to) the pages */
   answerText?: string;
 };
 
@@ -86,13 +79,12 @@ export async function gradeAttempt(env: Env, ctx: Ctx, ex: Ex, files: Attachment
   const n = ctx.course.courseNumber;
   const gr = courseGraph(ctx.plan, ctx.events);
   const cands = o.context === "homework" ? [] : candidates(gr, ex.stageIds);
-  const conv = conventionsFor(ctx, ex.stageIds);
   const done = ctx.plan.stages.filter((s) => ["completed", "completed_override"].includes(ctx.progress.stages[s.id]?.status ?? ""));
   const system = gradingPrompt({
     course: ctx.course, lang: langName(), statement: ex.statementMd, reference: ex.referenceSolutionMd, gradingNotes: ex.gradingNotes,
     requiredStages: stageList(ctx, ex.requiredStageIds), completedTitles: done.map((s) => `${s.id} ${s.title}`).join("\n") || "(none)",
     mistakeTags: mistakeTagList(ctx, ex.requiredStageIds), boundary: boundaryOf(ctx, ex), examples: o.examples, digest: o.digest,
-    nodes: o.context === "homework" ? undefined : listText(cands), conventions: conv.text,
+    nodes: o.context === "homework" ? undefined : listText(cands),
   });
   const figs = (await figureImages(n, ex)).flatMap((f): Block[] => [{ type: "image", source: { type: "base64", media_type: f.mediaType, data: f.base64 } }]);
   const content: Block[] = [
@@ -113,7 +105,7 @@ export async function gradeAttempt(env: Env, ctx: Ctx, ex: Ex, files: Attachment
   const attemptId = newId();
   if (o.context === "homework") return { grade: g, attemptId }; // not a plan exercise: no progress events
   const tags = await defineTags(n, ctx, g.mistakes);
-  const nodes = withConventions(await applyNodes(n, ctx.plan, gr, cands, g, attemptId, "grader"), ctx.conventions ?? [], conv.list, g.conventions);
+  const nodes = await applyNodes(n, ctx.plan, gr, cands, g, attemptId, "grader");
   const valid = g.stageIds.filter((s) => ex.stageIds.includes(s));
   await appendEvent(n, {
     type: "attempt_graded", attemptId, exercise: ex.ref, stageIds: valid.length ? valid : ex.stageIds, context: o.context,
@@ -134,17 +126,16 @@ export async function gradeCheck(
   const n = ctx.course.courseNumber;
   const g = courseGraph(ctx.plan, ctx.events);
   const cands = candidates(g, q.stageIds);
-  const conv = conventionsFor(ctx, q.stageIds);
   const { value: v } = await callStructured(env.gw, submitCheckGrade, {
     task: "grading", courseNumber: n,
-    system: checkGradingPrompt({ course: ctx.course, lang: langName(), question: q.questionMd, expectedPoints: q.expectedPoints, mistakeTags: mistakeTagList(ctx, q.stageIds), boundary: boundaryFor(ctx), nodes: listText(cands), conventions: conv.text }),
+    system: checkGradingPrompt({ course: ctx.course, lang: langName(), question: q.questionMd, expectedPoints: q.expectedPoints, mistakeTags: mistakeTagList(ctx, q.stageIds), boundary: boundaryFor(ctx), nodes: listText(cands) }),
     messages: [{ role: "user", content: [{ type: "text", text: `<student_answer>${answerText || "(see images)"}</student_answer>` }, ...(await imageBlocks(env, files))] }],
     signal: env.signal,
   });
   const f = await settleDisputes(env, ctx, q.stageIds, v.disputed, [q.expectedPoints.join("\n")]);
   const value: CheckGrade = !f.deduct && !f.notes.length ? v : { ...v, score: Math.max(0, v.score - f.deduct), feedbackMd: [v.feedbackMd, ...f.notes].join("\n\n") };
   const tags = await defineTags(n, ctx, value.mistakes);
-  const nodes = withConventions(await applyNodes(n, ctx.plan, g, cands, value, q.id, "grader"), ctx.conventions ?? [], conv.list, value.conventions);
+  const nodes = await applyNodes(n, ctx.plan, g, cands, value, q.id, "grader");
   await appendEvent(n, {
     type: "check_answered", stageId: q.stageIds[0] as string, checkId: q.id, kind: "open", context, correct: value.correct, score: value.score, mistakeTags: tags, nodes,
   });

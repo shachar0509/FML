@@ -26,8 +26,6 @@ export const coursePaths = (root: string, courseNumber: string) => {
     teacher: join(c, TEACHER_DIR),
     /** M70: shas of the files "Find materials online" wrote (their solutions are Shalav's own, never course conventions) */
     webFiles: join(s, "web-files.json"),
-    /** M72: the course conventions registry (ConventionsFileSchema) */
-    conventions: join(s, "conventions.json"),
     shalav: s,
     events: join(s, "events"),
     eventsFile: (deviceId: string) => join(s, "events", `${deviceId}.jsonl`),

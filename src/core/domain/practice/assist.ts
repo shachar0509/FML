@@ -7,7 +7,7 @@ import { appendEvent } from "@/core/domain/progress/store";
 import { getLessonBrief } from "@/core/domain/retrieval/retrieve";
 import { cachedSolution, saveSolution, type Ctx, type Ex } from "./exercises";
 import { nearestExercises, refsText } from "./generate";
-import { boundaryFor, boundaryOf, conventionsFor, imageBlocks, langName, stageList, type Attachment, type Context, type Env } from "./grade";
+import { boundaryFor, boundaryOf, imageBlocks, langName, stageList, type Attachment, type Context, type Env } from "./grade";
 
 /** Material digest for the exercise's focus stage (cached lesson brief, 7.7/9.9); "" if unavailable. Without a stage (homework) the host's digest ranks all materials by the statement. */
 export async function digest(env: Env, ctx: Ctx, ex: Ex): Promise<string> {
@@ -29,7 +29,7 @@ export async function getHint(env: Env, ctx: Ctx, ex: Ex, level: number, previou
     task: "hint", courseNumber: ctx.course.courseNumber,
     system: hintPrompt({
       lang: langName(), level, statement: ex.statementMd, reference: ex.referenceSolutionMd, previous, boundary: boundaryFor(ctx),
-      requiredStages: stageList(ctx, ex.requiredStageIds), digest: await digest(env, ctx, ex), conventions: conventionsFor(ctx, ex.stageIds).text,
+      requiredStages: stageList(ctx, ex.requiredStageIds), digest: await digest(env, ctx, ex),
     }),
     messages: [{ role: "user", content }], signal: env.signal,
   });
@@ -44,7 +44,7 @@ export async function getSolution(env: Env, ctx: Ctx, ex: Ex, context: Context):
   if (!md) {
     const { value } = await callStructured(env.gw, submitSolution, {
       task: "grading", courseNumber: n,
-      system: solvePrompt(langName(), stageList(ctx, ex.requiredStageIds), boundaryOf(ctx, ex), await digest(env, ctx, ex), isCustom(ctx.course), await examples(ctx, ex), conventionsFor(ctx, ex.stageIds).text),
+      system: solvePrompt(langName(), stageList(ctx, ex.requiredStageIds), boundaryOf(ctx, ex), await digest(env, ctx, ex), isCustom(ctx.course), await examples(ctx, ex)),
       messages: [{ role: "user", content: `<exercise>${ex.statementMd}</exercise>` }], signal: env.signal,
     });
     md = value.solutionMd;
@@ -62,7 +62,6 @@ async function clueArgs(env: Env, ctx: Ctx, ex: Ex) {
   return {
     lang: langName(), statement: ex.statementMd, reference: ex.referenceSolutionMd, boundary: boundaryOf(ctx, ex), // homework and exams follow the course's own schedule, not Shalav progress
     requiredStages: stageList(ctx, ex.requiredStageIds), digest: await digest(env, ctx, ex), examples: await examples(ctx, ex),
-    conventions: conventionsFor(ctx, ex.stageIds).text,
   };
 }
 

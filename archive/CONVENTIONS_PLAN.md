@@ -1,3 +1,4 @@
+<!-- ABANDONED 2026-10-23: the conventions feature was removed (see DECISIONS.md "Conventions revert"). Only the teacher's notes (M70 folder/zone, M71 analysis + evidence) and the course-facts check were kept. -->
 # Course conventions: learned from example solutions and the teacher's notes
 
 ## Context

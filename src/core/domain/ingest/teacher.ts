@@ -13,7 +13,7 @@ import { finish, type IndexOpts, PARALLEL, pageBlocks, planCompact, pool, range,
 
 /**
  * M71: teacher's notes (graded work, rubrics, remarks). Graded pages show the STUDENT's answers, which are never truth:
- * no exercise extraction, no solution patterns, and the stored page text is only what the teacher wrote (the model's
+ * no exercise extraction, and the stored page text is only what the teacher wrote (the model's
  * `text`, never the raw page), so lessons, graders, generation and the exam pool never see the student's work.
  */
 const TEACHER_BATCH = 6;
@@ -60,7 +60,7 @@ export async function indexTeacher(o: IndexOpts): Promise<FileIndex> {
       });
     }
   }
-  return finish(o, model, { materialPages, exercises: [], patterns: undefined, teacherItems });
+  return finish(o, model, { materialPages, exercises: [], teacherItems });
 }
 
 /**
