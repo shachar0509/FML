@@ -325,6 +325,28 @@ One `teach_step` can carry `beats` (2–8): the card plays them locally. **Next*
 - **Tests:** `render.test.ts` (each guide example: Pikchr beats, bytefield/Verovio, chess moves/castling, Go capture, tree subtrees, sky names and errors), `music.test.ts` (parseSmiles), `learnTools.test.ts` (smiles/chess checks), `tutorMcp.test.ts` (catalogue size).
 - 🧪 **Desktop check.** Verovio and Pikchr WebAssembly in Claude Desktop's utility process. The size of `server.mjs` and the time to load it.
 
+**⚠️ NEXT STEP: fix these M82 review findings BEFORE starting M83 (found 2026-10-23, not fixed yet).**
+1. **SMILES contrast fails in the light theme. This will fail `slides.spec.ts` beatsMolecules (light) at every beat.**
+   - Two causes:
+     - (a) SmilesDrawer puts a white copy of each atom label (`<text fill="#ffffff">HO</text>`) inside a `<mask>`. The spec's `lowContrast` helper (`e2e/tests/slides.spec.ts`) counts it as visible text (ratio 1.00).
+     - (b) The labels it actually shows use its default theme colours, which are under 4.5:1 on white: O `#e74c3c` (~3.8:1), N `#3498db`, S `#f1c40f`, F `#27ae60`, and so on. Dark mode passed.
+   - Fix (a): skip text inside `mask, clipPath, defs` in the spec's `lowContrast` filter (next to `!e.closest("[data-own-bg]")`) and in `ensureContrast` (`src/core/render/figures/contrast.ts`), which would otherwise recolour mask text and break the mask.
+   - Fix (b): pass `themes: { light: {...}, dark: {...} }` to `new SmilesDrawer.SvgDrawer(...)` in `src/core/render/figures/Smiles.tsx`. Every atom colour must be ≥ 4.5:1 on the card's board in that theme. Keep the atoms coloured: don't make them all ink.
+     - SmilesDrawer's theme keys: FOREGROUND, BACKGROUND, C, O, N, F, CL, BR, I, P, S, B, SI, H.
+     - Its defaults, for reference, are in `node_modules/smiles-drawer/dist/smiles-drawer.min.mjs` (`light:{…}`).
+   - Re-check: the check below found every other new sample (M81 + M82, both themes, every beat) passing, with the right parts visible at every beat. Also look at the molecules after `compactDrawing: false` (acetic acid had been drawn as the text "COOHCH3") and the score after `adjustPageWidth: true`. Neither has been re-shot since the change.
+   - How the check was run: the dev server plus a scratch Playwright script that copied `lowContrast` and the parts-visibility loop from `slides.spec.ts`, over SAMPLES beatsHeart, beatsMap, beatsScale, beatsChords, beatsPipeline, beatsChess, beatsGo, beatsTree, beatsSky, beatsMolecules and beatsEconomy.
+2. **teach_step's beat-range check misses implicit beats** (`src/server/learnTools.ts`, the `beatOf` regex after `badFigure`).
+   - Chess and Go moves default to their order (`beat ?? i + 1`). So 6 moves on a 3-beat slide leave moves 4–6 never shown, with no error.
+   - Tree `Label@n` isn't matched either.
+   - Fix: for `chess`/`go`, take the largest `beat ?? i + 1` over `moves`. For `tree`, match `@(\d+)(?:-(\d+))?` in labels. Add a case to `learnTools.test.ts`.
+3. **`smoke:mcpb` doesn't render `bytefield` or `go`.** bytefield is a compiled ClojureScript interpreter inside esbuild's output, and only `node_modules` has been tested. Add both to the M82 loop in `scripts/smoke-mcpb.mjs`.
+4. **Decide with the user (don't change it unasked): move Verovio out of `server.mjs`.**
+   - esbuild inlined it, which is most of the growth from 12.5 to 23.4 MB.
+   - A separate file next to `server.mjs`, staged like `pdf.worker.mjs`, keeps the LGPL library replaceable and saves parsing ~7 MB on every server start.
+   - First measure cold start (spawn → `listTools`) and give the user the number.
+5. Then amend or commit, update this file, and **stop and ask the user before M83**. M83 starts with its own spike: WebGL in Claude Desktop, and card size or loading.
+
 **Handoff to M83 (2026-10-23).** M79–M82 are committed; e2e not run (the user runs it at the end of M83: `pnpm exec playwright test e2e/tests/slides.spec.ts`, plus `render.spec.ts` and `step.spec.ts`). Next: M83 (three.js bundled as a lazy chunk; no CDN, see DECISIONS M79). Pattern for a new kind: guide in `figureGuides.ts` (with an example that a test renders), a server renderer in `src/server/figures/` + `SERVER_KINDS` + card `REMOTE`, or a card component in `Figure.tsx` `F`; beats tag output groups after a single layout; colours via `markColors`/`themeColors`; a sample in `test-advanced.ts` + `slides.spec.ts` SAMPLES; a smoke call if server-side; DECISIONS + THIRD_PARTY_NOTICES.
 
 ---
