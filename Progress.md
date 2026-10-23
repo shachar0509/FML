@@ -280,6 +280,51 @@ One `teach_step` can carry `beats` (2–8): the card plays them locally. **Next*
 
 ---
 
+## Drawing roadmap M79–M83 (agreed with the user, 2026-10-23)
+Goal: slides can draw for any course, including unusual ones, in a professional look, with beats.
+
+**Architecture (M79):**
+- **Rendering.** Heavy kinds render on the server to SVG: Node/WebAssembly (TikZ, Graphviz, Vega, Pikchr, bytefield, d3-geo) or the server's own Chromium (Mermaid, Verovio, SmilesDrawer, d3-celestial, snapshots). The card stays one small file.
+- **Generic beats.** A source line ending with a marker `@n` (in the language's comment syntax) is drawn from beat n; `@n-m` means from beat n until beat m. The server renders one SVG per beat on a fixed canvas, and the card swaps them.
+- **Context budget.** The lesson instructions carry only a short catalogue: one line per kind, filtered by course type. A new tool, `figure_guide({ kind })`, returns that kind's conventions and one example when Claude decides to use it. Today's figure formats move into it as well. Render errors list the exact problem and the valid names.
+- **CDN check.** A spike tests whether a CDN declared in the card resource's CSP (`resourceDomains`, MCP Apps SDK) loads in Claude Desktop. If it does, big libraries can load in the card only when used (three.js, abcjs).
+- **Hebrew.** TikZ, Graphviz and Pikchr labels are Latin/math only; the Hebrew stays in the slide text. Chromium-rendered kinds support Hebrew and get e2e checks for it.
+- **Dark mode.** Black in rendered SVG becomes the theme's text colour. The contrast guard (`figures/contrast.ts`) catches the rest.
+
+**Steps (1 commit each, stop after each):**
+- **M79:** server rendering pipe + `@n` beat markers + `figure_guide` + course-filtered catalogue + CDN/CSP spike.
+  - Biology library: Servier Medical Art (CC BY 4.0, visible credit) + a shading kit (gradients, shadows, textures injected by the card).
+  - **TikZ** via node-tikzjax (LPPL-1.3c; circuitikz, pgfplots, tikz-3dplot, chemfig): circuits, physics, mechanics, optics, chemistry, architecture.
+  - Redo the photosynthesis and cell samples from library parts; add circuit, inclined-plane and molecule samples.
+- **M80:** **Graphviz** (EPL; graphs, automata, trees, data structures, ER) · **Mermaid** (MIT; flowcharts, sequence, state, Gantt, mind maps, timelines, Sankey, git) · **Vega-Lite** (BSD; statistics, economics, finance).
+- **M81:**
+  - **Annotated course images:** figure crops from the student's PDFs, with arrows, circles and labels by beat (art history, microscopy, historical maps, machines).
+  - **abcjs** (MIT; music, with sound) and **svguitar** (MIT; chord charts).
+  - **d3-geo** + Natural Earth (public domain; maps for geography, history, politics).
+- **M82:**
+  - **Pikchr** (public domain).
+  - **bytefield-svg** (EPL; packet formats).
+  - **d3-celestial** (BSD; star maps).
+  - Chess/Go boards from FEN/SGF (own small code).
+  - Linguistics syntax trees from brackets.
+  - **SmilesDrawer** (MIT; molecules from SMILES).
+  - **Verovio** (LGPL; classical scores).
+  - Lucide icons (have) / **OpenMoji** (CC BY-SA, credit) pictograms.
+  - **Vivus** (MIT; strokes drawn as a beat appears) / **rough.js** (MIT; sketch look).
+  - Optional **bpmn-js** (its bpmn.io logo must stay visible); Mermaid covers most of the same need.
+- **M83:** **three.js** (MIT): declarative scene JSON (no Claude-written code), with objects and camera viewpoints by beat. Labels are HTML over the canvas, so Hebrew works.
+  - Spike first: card size or CDN loading, and WebGL in Claude Desktop.
+  - Replaces 3Dmol.js and JSCAD. 3Dmol.js stays an option only for PDB proteins.
+- **Later, if wanted:** a sandboxed simulation frame (Matter.js, p5.js) with no access to Shalav's tools.
+
+**Licenses:**
+- All of them are free, including for commercial use.
+- Visible credit: Servier and OpenMoji. Visible logo: bpmn-js.
+- All others need only a third-party licenses file in the `.mcpb`, generated at build time.
+- Record each license in `DECISIONS.md` when the tool is added.
+
+---
+
 ## Open items
 
 **🧪 Manual checks in Claude Desktop (user only; see also `ACCEPTANCE.md`)**
