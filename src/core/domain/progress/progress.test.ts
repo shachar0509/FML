@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Event, MistakeSummary, PlanJson, StageProgress } from "@/core/domain/dataSchemas";
+import { idleMinutes } from "@/core/domain/learn/recap";
 import { SettingsSchema } from "@/core/domain/schemas";
 import { setDeviceId } from "@/core/lib/device";
 import { setFs } from "@/core/lib/fs/fs";
@@ -188,5 +189,32 @@ describe("render + store", () => {
     await vi.advanceTimersByTimeAsync(10);
     expect(mem.files.has(p.progressJson)).toBe(true);
     vi.useRealTimers();
+  });
+});
+
+describe("idleMinutes (A8)", () => {
+  const T = "2026-02-01T10:00:00.000Z";
+  it("0 with nothing yet", () => expect(idleMinutes([], null, T)).toBe(0));
+  it("whole minutes since the newest studying event, floored", () => {
+    const e = [ev({ type: "stage_started", stageId: "S001" }, "2026-02-01T07:00:00.000Z"), ev({ type: "check_answered", stageId: "S001", checkId: "c", kind: "mcq", context: "learn", correct: true, score: 100, mistakeTags: [] }, "2026-02-01T07:54:30.000Z")];
+    expect(idleMinutes(e, null, T)).toBe(125); // 2 h 5 min 30 s
+  });
+  it("scan, plan and graph events are not activity", () => {
+    const e = [
+      ev({ type: "stage_started", stageId: "S001" }, "2026-01-30T10:00:00.000Z"),
+      ev({ type: "node_observed", nodeId: "S001/concept/x", score: 0, why: "graded by the teacher", context: "teacher", refId: "sha" }, "2026-02-01T09:59:00.000Z"),
+      ev({ type: "mistake_tag_defined", tag: "t", labelHe: "t", labelEn: "t", description: "" }, "2026-02-01T09:59:00.000Z"),
+      ev({ type: "plan_replaced", fromVersion: 1, toVersion: 2, idMap: {} }, "2026-02-01T09:59:30.000Z"),
+    ];
+    expect(idleMinutes(e, null, T)).toBe(2 * 24 * 60);
+  });
+  it("the lesson's last saved action when it is later, else the event", () => {
+    const e = [ev({ type: "stage_started", stageId: "S001" }, "2026-02-01T08:00:00.000Z")];
+    expect(idleMinutes(e, "2026-02-01T09:00:00.000Z", T)).toBe(60);
+    expect(idleMinutes(e, "2026-02-01T07:00:00.000Z", T)).toBe(120);
+    expect(idleMinutes([], "2026-02-01T09:30:00.000Z", T)).toBe(30);
+  });
+  it("never negative (another device's clock ahead)", () => {
+    expect(idleMinutes([ev({ type: "stage_started", stageId: "S001" }, "2026-02-01T10:05:00.000Z")], null, T)).toBe(0);
   });
 });

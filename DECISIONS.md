@@ -366,3 +366,9 @@
 ## M88 — Build summary counts newly read files (U8)
 - The number in the build summary is the files this build read successfully (failed and removed ones not counted), not the course's indexed total. Fresh builds keep "from N course file(s)"; updates say "from N newly read course file(s)" ("newly read" also fits re-scanned and retried files, "new" would not); an update that read nothing but still refined says "(no course file was newly read)".
 - Refine (and enrich inside it) still runs whenever the course has any indexed file, even when this build read none: a re-run can add stages and is the only way to redo enrich after a failure. Skipping it at zero new files was considered and not done.
+
+## M89 (A8) — [STATUS] idle minutes
+- "Minutes since last activity" = floor((now − last) / 60 000), clamped at ≥ 0. `last` = the later of the course's newest studying event (`stage_started`, `stage_completed`, `stage_reopened`, `check_answered`, `attempt_graded`, `hint_requested`, `solution_revealed`, `assessment_updated`) and the open lesson's last saved action. It is 0 when neither exists, and there is no cap. This replaces "(idle minutes = 0)" in the M7 entry above.
+- Teacher-file evidence, plan changes and graph edits are written by scans and builds, not by the student, so they never count. Per-stage `lastActivityAt` is not used: it is per stage and teacher `mistake_observed` touches it.
+- The lesson's last action is kept in memory (`active.at`, set by every `log()`) rather than read from `.chat_history` on each status; on resume it starts from the saved conversation's `updatedAt`. A new lesson does not read older conversations: a slides-only session with no check is not seen.
+- No prompt rule uses the number (v2 rule 10 recaps from the RECAP block). It is context for the tutor, as in v1 §6.3/§10.2; dropping the line was the alternative, rejected because the resume path has no other gap signal.

@@ -21,3 +21,16 @@ export function buildRecap(plan: PlanJson, rawEvents: Event[], stageId: string):
   if (graded.length) lines.push(`- Graded exercises: ${graded.map((e) => (e.type === "attempt_graded" ? e.score : 0)).join(", ")} (scores)`);
   return lines.join("\n");
 }
+
+/** Event types that studying writes. A file scan's teacher evidence, plan changes and graph edits are not the student's activity. */
+const ACTIVITY = new Set<Event["type"]>(["stage_started", "stage_completed", "stage_reopened", "check_answered", "attempt_graded", "hint_requested", "solution_revealed", "assessment_updated"]);
+
+/**
+ * A8: [STATUS] "Minutes since last activity". Whole minutes (floored) since the later of the course's newest studying event
+ * and `lastAction` (the open lesson's last saved action). 0 when there is none; never negative (a synced device's clock may run ahead).
+ * `events` sorted by ts (readJsonlDir does that).
+ */
+export function idleMinutes(events: Event[], lastAction: string | null | undefined, now: string): number {
+  const last = Math.max(...[events.findLast((e) => ACTIVITY.has(e.type))?.ts, lastAction].map((t) => (t ? Date.parse(t) : NaN)).filter(Number.isFinite));
+  return Number.isFinite(last) ? Math.max(0, Math.floor((Date.parse(now) - last) / 60_000)) : 0;
+}

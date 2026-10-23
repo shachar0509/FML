@@ -374,6 +374,11 @@ One `teach_step` can carry `beats` (2–8): the card plays them locally. **Next*
 - The build summary says `built from N course file(s)` / `updated from N newly read course file(s)` / `updated (no course file was newly read)` when refine ran with nothing new; "it already covered every topic" stays gated on `indexed`. The refine condition line is unchanged.
 - Tests: `fileTools.test.ts` U8 (2 read → 1 more read with 2 indexed → nothing new still refines → a password-protected file fails and is not counted); L86 regex wording.
 
+## M89 (A8): real idle minutes in [STATUS]
+- `[STATUS]` "Minutes since last activity" was always 0. Now `idleMinutes(events, active.at, now)` (`learn/recap.ts`): whole minutes (floored, ≥ 0) since the later of the course's newest studying event (stage started/completed/reopened, check, graded attempt, hint, solution, assessment; scan, plan and graph events don't count) and the open lesson's last saved action (`active.at`, set by every `log()`; the saved conversation's `updatedAt` on resume). 0 when there is none. No cap.
+- Fresh start: the time since the last activity before this lesson (`s.events` is the snapshot from before `stage_started`). Resume: `[STATUS]` is computed before the "came back" entry. `update_assessment` is 0 (it just wrote). Every other `[STATUS]` line is unchanged; no prompt text changed.
+- Tests: progress.test `idleMinutes` (nothing yet, floor, non-studying events ignored, lesson action vs event, clock ahead); tutor.test (only the idle line varies); learnTools.test with `Date` faked (fresh course 0, resume 60 from the saved lesson, lesson_status 0 with the other lines identical, new lesson 90 from the MCQ event).
+
 ## Drawing roadmap M79–M83 (agreed with the user, 2026-10-23)
 Goal: slides can draw for any course, including unusual ones, in a professional look, with beats.
 

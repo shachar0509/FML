@@ -38,4 +38,11 @@ describe("tutorSystem", () => {
     expect(b).toContain("Stages completed: 1 of 5");
     expect(b).not.toContain("{{");
   });
+  it("idle minutes change only their own line (A8)", () => {
+    const args = { completed: 1, total: 5, mastery: 0.5, covered: [0], gaps: [], reviewTopics: [], missing: ["m"], overriddenPrereqs: [], mistakes: ["x"], nodes: "1. [concept] n — control 10%", digest: "- Level: 1★" };
+    const [a, b] = [0, 4321].map((idleMinutes) => statusBlock({ ...args, idleMinutes })) as [string, string];
+    expect(b).toContain("\n- Minutes since last activity: 4321\n");
+    const drop = (x: string) => x.replace(/^- Minutes since last activity: \d+$/m, "");
+    expect(drop(b)).toBe(drop(a));
+  });
 });

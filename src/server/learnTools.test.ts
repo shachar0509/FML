@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/client";
 import { InMemoryTransport } from "@modelcontextprotocol/server";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import type { LessonData, McqData } from "@/cards/types";
 import { FakeClaudeGateway, toolCall } from "@/core/claude/fake";
 import { setClaude } from "@/core/claude/runtime";
@@ -26,6 +26,8 @@ const details = (req: { messages: { content: unknown }[] }) =>
   });
 const sc = <T,>(r: { structuredContent?: unknown }) => r.structuredContent as T;
 const text = (r: { content?: unknown }) => JSON.stringify(r.content);
+const block = (r: { content?: unknown }) => /^\[STATUS\]$[^]*?^\[\/STATUS\]$/m.exec((r.content as { text: string }[])[0]?.text ?? "")?.[0] ?? "";
+const dropIdle = (x: string) => x.replace(/^- Minutes since last activity: \d+$/m, "");
 
 it("runs a lesson: start, questions, events, status, completion, reopen + recap", async () => {
   const d = await mkdtemp(join(tmpdir(), "shalav-"));
@@ -58,6 +60,7 @@ it("runs a lesson: start, questions, events, status, completion, reopen + recap"
   expect((await call("teach_step", { titleMd: "t", bodyMd: "b" })).isError).toBe(true); // no lesson yet
   const start = await call("shalav_start_lesson", { courseNumber: n });
   expect(text(start)).toContain("[STATUS]");
+  expect(block(start)).toContain("\n- Minutes since last activity: 0\n"); // A8: no activity yet
   expect(text(start)).toContain("teach_step");
   // lesson steps: small, rendered by the card; a too long step is sent back to be split
   const step = await call("teach_step", { titleMd: "Fields", bodyMd: "A **field** is $F$ with $+$ and $\\cdot$.", figure: { kind: "svg", source: "<svg viewBox='0 0 1 1'></svg>" } });
@@ -209,7 +212,12 @@ it("runs a lesson: start, questions, events, status, completion, reopen + recap"
   await call("shalav_request", { kind: "step", action: "next" });
   await call("teach_step", { titleMd: "Epsilon", bodyMd: "second slide" });
   const last = sc<McqData>(await call("present_mcq", { stageId: "S002", questionMd: "Which?", options: ["x", "y"], correctIndex: 1, explanationMd: "since y", conceptTags: [] }));
-  await call("check_answer", { checkId: last.checkId, selectedIndex: 1 }); // answered before leaving
+  const t0 = Date.now();
+  vi.useFakeTimers({ toFake: ["Date"], now: t0 }); // A8: only Date (the transport and debounces keep real timers)
+  await call("check_answer", { checkId: last.checkId, selectedIndex: 1 }); // answered before leaving: the newest event, at t0
+  vi.setSystemTime(t0 + 30 * 60_000);
+  await call("answer_question", { answerMd: "y, because of the definition." }); // a saved action with no event, 30 min later
+  vi.setSystemTime(t0 + 90 * 60_000);
   const answered = (await events()).filter((e) => e.type === "check_answered").length;
   const lessons = sc<{ items: { id: string; title: string; stageId: string }[] }>(await call("history_list", { number: n, kind: "lesson" })).items;
   expect(lessons[0]).toMatchObject({ stageId: "S002", title: expect.stringMatching(/^S002 · /) });
@@ -225,6 +233,10 @@ it("runs a lesson: start, questions, events, status, completion, reopen + recap"
   expect(text(back)).toContain("THE LESSON SO FAR");
   for (const x of ["Limits", "Epsilon", "Pressed Continue", "Which?"]) expect(text(back)).toContain(x);
   expect(sc<McqData & { history: { id: string; count: number } }>(back)).toMatchObject({ view: "mcq", checkId: last.checkId, questionMd: "Which?", history: { id: lessons[0]?.id, count: 2 } });
+  expect(block(back)).toContain("\n- Minutes since last activity: 60\n"); // A8: the saved lesson's last action (t0+30), not the MCQ event (t0), not the "came back" entry
+  const fresh = await call2("shalav_lesson_status");
+  expect(block(fresh)).toContain("\n- Minutes since last activity: 0\n"); // the "came back" entry is now the last action
+  expect(dropIdle(block(fresh))).toBe(dropIdle(block(back))); // every other [STATUS] line byte-identical
   // the key came back with it, and the answer given before leaving: not recorded again
   expect(sc<{ correct: boolean; selectedIndex: number }>(await call2("check_answer", { checkId: last.checkId, selectedIndex: 0 }))).toMatchObject({ correct: true, selectedIndex: 1 });
   expect((await events()).filter((e) => e.type === "check_answered")).toHaveLength(answered);
@@ -236,4 +248,6 @@ it("runs a lesson: start, questions, events, status, completion, reopen + recap"
   // delete
   const left = sc<{ items: unknown[] }>(await call2("history_delete", { number: n, kind: "lesson", ids: [lessons[0]?.id] })).items;
   expect(left).toHaveLength(lessons.length - 1);
+  expect(block(await call2("shalav_start_lesson", { courseNumber: n, stageId: "S002" }))).toContain("\n- Minutes since last activity: 90\n"); // A8: no resume: the MCQ event at t0
+  vi.useRealTimers();
 });

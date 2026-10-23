@@ -11,7 +11,7 @@ import { buildKnowledgeBoundary } from "@/core/domain/boundary/boundary";
 import { localize } from "@/core/domain/plan/translate";
 import { CourseJsonSchema, EventSchema, PlanJsonSchema } from "@/core/domain/dataSchemas";
 import { listFileIndexes } from "@/core/domain/ingest/indexStore";
-import { buildRecap } from "@/core/domain/learn/recap";
+import { buildRecap, idleMinutes } from "@/core/domain/learn/recap";
 import { checkAdvanceCriteria } from "@/core/domain/progress/criteria";
 import { mapEvents, normalizeTag, reduceProgress } from "@/core/domain/progress/reduce";
 import { appendEvent } from "@/core/domain/progress/store";
@@ -46,11 +46,12 @@ type Check = { kind: "mcq" | "open"; n: string; stageId: string; correctIndex?: 
 /** Learn (plan v2 §6.3): the host chat is the lesson; the tutor tools record the v1 events and return cards. */
 export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exercises: ReturnType<typeof registerExerciseTools>, knowledge?: KnowledgeService) {
   /** The lesson the student is in; the tutor tools carry a stageId but no course number. `cid`: its saved conversation (M60), made on its first entry. */
-  let active: { n: string; stageId: string; cid: string | null; title: string; /** M62: the lesson's numbered graph nodes ([STATUS] numbers stay put; new nodes are appended) */ nodes: string[] } | null = null;
+  let active: { n: string; stageId: string; cid: string | null; title: string; /** A8: the time of the lesson's last saved action (a slide, a question, a click, a graded exercise); the saved conversation's updatedAt on resume */ at: string | null; /** M62: the lesson's numbered graph nodes ([STATUS] numbers stay put; new nodes are appended) */ nodes: string[] } | null = null;
   /** M60: every card and student action of the lesson goes to its saved conversation (a failed write never breaks the lesson). */
   async function log(e: Omit<Entry, "at">) {
     const a = active;
     if (!a) return;
+    a.at = nowIso(); // A8: the student's last action in this lesson, saved or not
     try {
       if (!a.cid) a.cid = (await createConv(a.n, { kind: "lesson", type: "lesson", title: a.title, stageId: a.stageId })).id;
       await addEntry(a.n, a.cid, e);
@@ -125,7 +126,8 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
       missing: criteria(s, stageId).missing,
       overriddenPrereqs: (stage?.prerequisites ?? []).filter((p) => s.progress.stages[p]?.status === "completed_override"),
       mistakes: s.progress.mistakes.filter((m) => !m.resolved && m.stageIds.includes(stageId)).slice(0, 8).map((m) => `${m.tag} — ${lang === "he" ? m.labelHe : m.labelEn}`),
-      idleMinutes: 0,
+      // ponytail: a new lesson does not read older conversations (slides-only sessions); the tutor's checks every 2-3 steps write events
+      idleMinutes: idleMinutes(s.events, active?.at, nowIso()),
     });
   }
 
@@ -180,11 +182,12 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
       if (!stage) return fail(`No stage ${stageId}.`);
       const st = s.progress.stages[stage.id]?.status;
       if (st === "locked") return fail(`Stage ${stage.id} is locked: finish its prerequisites (${stage.prerequisites.join(", ")}) first.`);
-      active = { n, stageId: stage.id, cid: saved?.id ?? null, title: `${stage.id} · ${s.tr(stage.title)}`, nodes: [] };
+      active = { n, stageId: stage.id, cid: saved?.id ?? null, at: saved?.updatedAt ?? null, title: `${stage.id} · ${s.tr(stage.title)}`, nodes: [] };
       if (!saved && (st === "completed" || st === "completed_override"))
         return out(`Stage ${stage.id} — ${stage.title} is already completed. The card shows a review with "Learn this stage again"; do not teach unless the student reopens it.`, lessonData(s, stage.id));
       if (st === "available") {
         await appendEvent(n, { type: "stage_started", stageId: stage.id });
+        // only the progress: s.events stays the snapshot from before this start (A8: [STATUS] idle minutes = time since the last activity before it)
         s.progress = (await load(n))?.progress ?? s.progress;
       }
       const lang = sets().language === "he" ? "Hebrew" : "English";
@@ -205,10 +208,11 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
       });
       const recap = buildRecap(s.plan, s.events, stage.id);
       if (saved) {
+        const st = await status(s, stage.id); // A8: before the entry below moves the lesson's last action to now
         await log({ who: "student", kind: "request", text: "Came back to this lesson." });
         return out([
           system,
-          await status(s, stage.id),
+          st,
           `THE LESSON SO FAR (saved; the student left and came back):\n${transcript(saved)}`,
           "The student is back at the last checkpoint, shown in the card. Continue the lesson from exactly there: one short welcome-back sentence, then the next move (if the card is a question, wait for the answer). Do not re-teach what is above.",
         ].join("\n\n"), await resumed(n, saved));
