@@ -33,13 +33,15 @@ const vlt = await client.callTool({ name: "figure_render", arguments: { kind: "v
 ok(!vlt.isError && vlt.structuredContent?.svg.startsWith("<svg"), `vega-lite render: ${JSON.stringify(vlt).slice(0, 300)}`);
 const map = await client.callTool({ name: "figure_render", arguments: { kind: "map", source: '{"region":[[33,29],[37,34]],"layers":[{"countries":["Israel"],"beat":1}]}' } });
 ok(!map.isError && /data-beat="1"/.test(map.structuredContent?.svg ?? ""), `map render: ${JSON.stringify(map).slice(0, 300)}`);
-// M82: the WebAssembly engines (Pikchr, Verovio) and the assets next to server.mjs (chess pieces) load in the packed server
+// M82: the WebAssembly engines (Pikchr, Verovio), the ClojureScript bytefield and the assets next to server.mjs (chess pieces) load in the packed server
 for (const [kind, source, want] of [
   ["pikchr", 'box "A"; arrow # @1', /data-beat="1"/],
   ["score", "X:1\nK:C\nCDEF|", /class="staff"/],
   ["chess", '{"moves":[{"move":"e2e4"}]}', /data-beat="1"/],
   ["sky", '{"layers":[{"constellation":"Ori","beat":1}]}', /data-beat="1"/],
   ["tree", "[S [NP@1 x] y]", /data-beat="1"/],
+  ["bytefield", '(draw-column-headers)\n(draw-box "Version" {:span 4})\n(draw-box "IHL" {:span 4})', /<svg/],
+  ["go", '{"size":9,"black":["cc"],"moves":[{"white":"gg"}]}', /data-beat="1"/],
 ]) {
   const r = await client.callTool({ name: "figure_render", arguments: { kind, source } });
   ok(!r.isError && want.test(r.structuredContent?.svg ?? ""), `${kind} render: ${JSON.stringify(r).slice(0, 300)}`);

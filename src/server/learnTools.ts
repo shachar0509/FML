@@ -346,6 +346,15 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
         const n = Math.max(...[m[1], m[2], m[3], m[4]].filter(Boolean).map(Number));
         if (n > (beats?.length ?? 0)) return fail(`The figure uses beat ${n}, but the slide has ${beats?.length ?? 0} beats. Fix it and call teach_step again.`);
       }
+      // M82: implicit beats: board moves default to their order, tree labels end with @n / @n-m
+      const implicit =
+        f?.kind === "chess" || f?.kind === "go"
+          ? ((JSON.parse(f.source) as { moves?: { beat?: number }[] }).moves ?? []).map((m, i) => m.beat ?? i + 1)
+          : f?.kind === "tree"
+            ? [...f.source.matchAll(/@(\d+)(?:-(\d+))?(?=[\s\]"]|$)/g)].map((m) => Math.max(Number(m[1]), Number(m[2] ?? 0)))
+            : [];
+      const most = Math.max(0, ...implicit);
+      if (most > (beats?.length ?? 0)) return fail(`The figure uses beat ${most} (a move without "beat" is shown at its order), but the slide has ${beats?.length ?? 0} beats. Fix it and call teach_step again.`);
       reexplain = false;
       const { language, theme } = sets();
       const data: StepData = { view: "step", language, theme, titleMd, bodyMd, figure: f ?? null, sideMd: sideMd?.trim() || null, progress: progress && { n: Math.min(progress.n, progress.of), of: progress.of }, beats: beats?.map((b) => ({ md: b.md, sideMd: b.sideMd?.trim() || null })) ?? null };

@@ -9,8 +9,8 @@ const lowContrast = (page: Page) =>
     const rgb = (c: string) => (c.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
     const lum = (c: string) => rgb(c).map((v) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)).reduce((a, v, i) => a + v * ([0.2126, 0.7152, 0.0722][i] ?? 0), 0);
     const bg = lum(getComputedStyle(fig).backgroundColor);
-    return [...fig.querySelectorAll<HTMLElement | SVGElement>("svg text, div, span")]
-      .filter((e) => e.textContent?.trim() && !e.closest("[data-own-bg]") && e.getClientRects().length && getComputedStyle(e).visibility === "visible" && (e instanceof SVGElement || [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent?.trim())))
+    return [...fig.querySelectorAll<HTMLElement | SVGElement>("svg text, svg tspan, div, span")]
+      .filter((e) => e.textContent?.trim() && !e.closest("[data-own-bg], mask, clipPath, defs") && e.getClientRects().length && getComputedStyle(e).visibility === "visible" && [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent?.trim())) // the element that holds the glyphs (a <text> of coloured <tspan>s isn't)
       .map((e) => {
         const l = lum(getComputedStyle(e)[e instanceof SVGElement ? "fill" : "color"]);
         return [e.textContent?.trim(), (Math.max(l, bg) + 0.05) / (Math.min(l, bg) + 0.05)] as const;

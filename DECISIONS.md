@@ -329,3 +329,4 @@
 - **bpmn-js is skipped.** Mermaid covers flowcharts, and bpmn-js would require its logo to stay visible.
 - **Catalogue.** The one-line kind list stays under 1,600 characters (about 400 tokens) with 20 kinds, because every line was shortened. There is still no subject filter (see M79).
 - **Card size.** SmilesDrawer and rough.js took `cards.html` from 4.1 to 4.4 MB.
+- **M82 review fixes.** SMILES atoms use Shalav's own palette per theme (each ≥ 4.5:1 on the card and the board; SmilesDrawer's own red/blue/yellow were ~3.8:1 on white). The contrast checks (card guard and e2e) judge the element that holds the glyphs, so a `<text>` of coloured `<tspan>`s is checked per tspan, and text in `mask`/`clipPath`/`defs` is skipped. Vega-Lite renders with `aria: false` (its `aria-label` on plain paths failed axe); the slide's text describes the chart. Chess/Go moves without `beat` and tree `Label@n` count in teach_step's beat-range check.

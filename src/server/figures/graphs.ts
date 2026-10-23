@@ -60,7 +60,7 @@ export async function vegaLiteToSvg(source: string): Promise<string> {
   }
   const ink = { labelColor: "#000", titleColor: "#000" };
   const config = { background: "transparent", font: "Helvetica", axis: { ...ink, domainColor: "#000", tickColor: "#000", gridColor: "#888", gridOpacity: 0.35 }, legend: ink, title: { color: "#000" }, header: ink, view: { stroke: null } };
-  spec.config = { ...config, ...(spec.config as object | undefined) };
+  spec.config = { ...config, ...(spec.config as object | undefined), aria: false }; // no aria-label on plain paths (axe: aria-prohibited-attr); the slide text says what the chart shows
   let vgSpec: vega.Spec;
   try {
     vgSpec = vl.compile(spec as unknown as vl.TopLevelSpec).spec;

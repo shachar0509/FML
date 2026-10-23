@@ -80,6 +80,11 @@ it("runs a lesson: start, questions, events, status, completion, reopen + recap"
 \end{tikzpicture}`;
   expect(sc(await call("teach_step", { titleMd: "t", bodyMd: "", beats: [{ md: "a" }, { md: "b" }], figure: { kind: "tikz", source: tikz(2) } }))).toMatchObject({ figure: { kind: "tikz" } });
   expect(text(await call("teach_step", { titleMd: "t", bodyMd: "", beats: [{ md: "a" }, { md: "b" }], figure: { kind: "tikz", source: tikz(3) } }))).toMatch(/beat 3, but the slide has 2 beats/);
+  // M82: implicit beats: chess moves default to their order, tree labels carry @n
+  const ab = [{ md: "a" }, { md: "b" }];
+  expect(text(await call("teach_step", { titleMd: "c", bodyMd: "", beats: ab, figure: { kind: "chess", source: '{"moves":[{"move":"e2e4"},{"move":"e7e5"},{"move":"g1f3"}]}' } }))).toMatch(/beat 3 \(a move without/);
+  expect(sc(await call("teach_step", { titleMd: "c", bodyMd: "", beats: ab, figure: { kind: "chess", source: '{"moves":[{"move":"e2e4"},{"move":"e7e5"},{"move":"g1f3","beat":2}]}' } }))).toMatchObject({ figure: { kind: "chess" } });
+  expect(text(await call("teach_step", { titleMd: "t", bodyMd: "", beats: ab, figure: { kind: "tree", source: "[S [NP@1 she] [VP@3 runs]]" } }))).toMatch(/beat 3/);
   expect(text(await call("teach_step", { titleMd: "t", bodyMd: "", figure: { kind: "tikz", source: String.raw`\begin{tikzpicture}\nodee{x}\end{tikzpicture}` } }))).toMatch(/Invalid tikz figure: .*Undefined control sequence/);
   expect(text(await call("show_figure", { kind: "bio", source: '<svg viewBox="0 0 9 9"><use href="#nucleous"/></svg>' }))).toMatch(/Unknown library part nucleous/);
   expect(text(await call("figure_guide", { kind: "bio" }))).toMatch(/Parts: .*mitochondrion/);
