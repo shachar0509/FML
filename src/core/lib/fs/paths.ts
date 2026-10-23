@@ -7,7 +7,7 @@ export const dirname = (p: string): string => p.slice(0, Math.max(0, p.lastIndex
 
 export const shalavJsonPath = (root: string) => join(root, "shalav.json");
 export const coursesDir = (root: string) => join(root, "courses");
-/** M60: saved lessons and practice sessions, `<id>.json` per course folder */
+/** M60: saved lessons and practice sessions, `<id>.json` per course folder (R7: + `<id>.jsonl`, the entries added since R7) */
 export const chatHistory = (root: string) => join(root, ".chat_history");
 
 // Spec §3.2 course tree. `c` is the course folder.

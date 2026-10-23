@@ -348,3 +348,11 @@
 ## M85 (R3) — BM25 token cache
 - `rank` reuses a page's tokens only when the page id and its exact text (`text + " " + summary`) match the cached entry. Page text is not fixed per sha (teacher pages are re-transcribed on re-scan, summaries change), so neither the sha nor a summary hash alone is trusted.
 - The cache is a 5000-page LRU in process memory, never saved. A course with more candidate pages than that gets no speed-up but the same results.
+
+## M86 — R7: lesson entries in an append-only <id>.jsonl
+- The header keeps the M60 schema as is (schema 1, `entries` present, no marker field): a pre-R7 Shalav must still list and open every conversation, and zod strips unknown keys anyway. New conversations have `entries: []` in the header.
+- No migration: entries saved before R7 stay inside `<id>.json` forever and the jsonl continues them, so no conversation is ever rewritten in bulk; loading is header entries ++ jsonl lines, by file position (no ids, no sort, no mergeById).
+- `updatedAt` stays in the header, rewritten on every action (append first, then header), so the saved-sessions list reads headers only and sorts as before.
+- An older Shalav on a newer folder: practice sessions complete; lessons created after R7 show title and date with no history (resume opens the stage card). Accepted: a downgrade degrades without crash or corruption; writing entries into both files would cancel the change.
+- A crash mid-append loses that line (and the next, appended onto it); the same risk the event log already has. A schema-invalid jsonl line is skipped, while a bad entry in the header still makes the conversation unreadable, as before.
+- `loadConv` runs in the write queue of its id, so readers never see a half-appended line (the atomic rename gave that before).

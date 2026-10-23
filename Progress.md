@@ -356,6 +356,14 @@ One `teach_step` can carry `beats` (2–8): the card plays them locally. **Next*
 - `retrieval/bm25.ts`: `rank` gets each doc's tokens from `tokenCache` (key = doc id, in pagesFor `sha:page`), reused only when the stored text is the exact same `text + " " + summary` string; a re-scan (new summary, new teacher transcription) re-tokenizes. LRU by entries, `TOKEN_CACHE_MAX` 5000, process memory only. df/idf/avg/tf stay per call (they depend on the candidate set). Scores, order and ties are bit-identical.
 - Tests: `retrieval.test.ts` "bm25 token cache (R3)": warm == cold (toStrictEqual) and tokens reused, re-scanned summary reorders pagesFor exactly as uncached, 200 random Hebrew/niqqud/Greek/math docs, LRU eviction.
 
+## M86 (R7): append-only lesson history (`.chat_history/<course>/<id>.jsonl`)
+- A lesson action no longer rewrites the whole saved lesson. `<id>.json` is now the header (title, type, stage, last-action time, practice state, and the entries saved before this step); new entries are appended to `<id>.jsonl`, one per line. `loadConv` = header entries, then the jsonl lines. The header is rewritten on every action (a few hundred bytes for a lesson) so the list order is unchanged.
+- No migration: an old `<id>.json` loads as before, and its entries stay inside it; new entries go to the jsonl.
+- `listConvs` reads headers only (no full lesson parse per row). `loadConv` waits behind pending writes, so a resume never sees a half-written line. `createConv` drops a stale `<id>.jsonl`; `deleteConvs` removes both files; `addEntry` after delete still writes nothing.
+- An older Shalav on the same folder sees practice sessions fully, old lessons up to this step, and newer lessons without their history (title and date only).
+- A crash in the middle of an append loses that entry (and the next one, if it is appended onto the partial line); a sync conflict copy `<id> (1).jsonl` is ignored and reported in Settings.
+- Tests: history.test.ts: old layout loads and appends without moving entries; same transcript/checkpoint/MCQ key/graded-exercise entry in both layouts; concurrent appends in order; nothing written after delete; list order; both files deleted; jsonl conflict copy ignored; stale log dropped on create; partial and CRLF lines.
+
 ## Drawing roadmap M79–M83 (agreed with the user, 2026-10-23)
 Goal: slides can draw for any course, including unusual ones, in a professional look, with beats.
 
