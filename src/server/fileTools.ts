@@ -126,9 +126,11 @@ export function registerFileTools(server: McpServer, o: { openFolder?: (p: strin
   }
   const release = (number: string) => void builds.delete(number);
 
-  /** Index every pending/failed file the build claimed against the current plan (part of "Build plan"); returns how many files are indexed after it.
+  /** Index every pending/failed file the build claimed against the current plan (part of "Build plan").
+   *  Returns `indexed`: how many files of the course are indexed after it (all of them, as before), and
+   *  `read`: how many of THIS build's files it read successfully (failed and removed ones not counted).
    *  `on` gets the build's files (materials and exercises together) by state, like the file lists: scanned, scanning, not scanned (waiting or failed). */
-  async function indexPending(number: string, on: (c: FileCounts) => void = () => undefined) {
+  async function indexPending(number: string, on: (c: FileCounts) => void = () => undefined): Promise<{ indexed: number; read: number }> {
     const mine = builds.get(number);
     const todo = (await listFileIndexes(number)).filter((r) => (r.status === "pending" || r.status === "failed") && (!mine || mine.has(r.sha256)));
     const state = new Map(todo.map((r) => [r.sha256, "pending" as string]));
@@ -150,7 +152,8 @@ export function registerFileTools(server: McpServer, o: { openFolder?: (p: strin
     } finally {
       off?.();
     }
-    return (await listFileIndexes(number)).filter((r) => r.status === "indexed").length;
+    const done = (await listFileIndexes(number)).filter((r) => r.status === "indexed");
+    return { indexed: done.length, read: done.filter((r) => state.has(r.sha256)).length }; // state: this build's files minus removed ones
   }
 
   registerAppTool(server, "file_open", { title: "Open a file", description: "Card-only: open a course file in the system's default app.", inputSchema: z.object({ number: num, sha: z.string() }), _meta: appOnly }, async ({ number, sha }) => {

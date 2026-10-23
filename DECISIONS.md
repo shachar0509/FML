@@ -362,3 +362,7 @@
 - A file changed within the last 3 s is parsed but not kept (git's racy-clean rule: FAT keeps mtime in 2 s steps, Linux ctime is coarse).
 - Callers get a structural copy (new objects, shared strings) instead of the cached objects: scanCourse mutates records in place, and freezing would turn an unaudited mutation into a crash.
 - Conflict copies in the index folder are still listed as before (no new filtering); a null parse is never cached; `readFileIndex` stays uncached.
+
+## M88 — Build summary counts newly read files (U8)
+- The number in the build summary is the files this build read successfully (failed and removed ones not counted), not the course's indexed total. Fresh builds keep "from N course file(s)"; updates say "from N newly read course file(s)" ("newly read" also fits re-scanned and retried files, "new" would not); an update that read nothing but still refined says "(no course file was newly read)".
+- Refine (and enrich inside it) still runs whenever the course has any indexed file, even when this build read none: a re-run can add stages and is the only way to redo enrich after a failure. Skipping it at zero new files was considered and not done.

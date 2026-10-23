@@ -25,7 +25,7 @@ type Build = { state: "running" | "done" | "failed"; progress: { step: "plan" | 
 const out = (text: string, structuredContent: object) => ({ content: [{ type: "text" as const, text }], structuredContent: structuredContent as Record<string, unknown> });
 
 /** Courses and plan (plan v2 §6.2): lookup, create/retry as bridge operations, status polling, Course Home data. */
-type Files = { indexPending: (n: string, on: (c: FileCounts) => void) => Promise<number>; claim: (n: string) => Promise<void>; release: (n: string) => void };
+type Files = { indexPending: (n: string, on: (c: FileCounts) => void) => Promise<{ indexed: number; read: number }>; claim: (n: string) => Promise<void>; release: (n: string) => void };
 export function registerCourseTools(server: McpServer, bridge: BridgeGateway, files: Files, source?: CatalogSource, knowledge?: KnowledgeService) {
   /** M65: the stars the student sees (null without a plan or when the knowledge is slow) */
   const level = async (n: string, course: CourseJson, hasPlan: boolean) => {
@@ -60,7 +60,8 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, fi
             if (r.planError) throw new Error(r.planError);
             had = (await loadCourse(n))?.plan ?? null;
           }
-          const indexed = await files.indexPending(n, (files) => (b.progress = { step: "index", files: files.total ? files : undefined }));
+          // `indexed` = every indexed file of the course (gates refine, as before); `read` = the files THIS build read (the summary's count)
+          const { indexed, read } = await files.indexPending(n, (files) => (b.progress = { step: "index", files: files.total ? files : undefined }));
           if (signal.aborted) throw new Error(STOPPED); // cancelled while reading the files: not "done"
           let added = 0;
           // Serial by design: refine starts only after every file of this course is read (indexPending waits for them), and one build per course runs at a time.
@@ -70,7 +71,7 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, fi
             added = newStageIds(had, await refinePlan({ gw: claude(), course: c.course, lang: look().language })).size;
           }
           b.state = "done";
-          return { fresh, indexed, added };
+          return { fresh, indexed, read, added };
         } catch (e) {
           b.state = "failed";
           b.error = e instanceof Error ? e.message : String(e);
@@ -79,7 +80,12 @@ export function registerCourseTools(server: McpServer, bridge: BridgeGateway, fi
           files.release(n);
         }
       },
-      (r) => [{ type: "text", text: `The study plan for ${n} is ${r.fresh ? "built" : "updated"}${r.indexed ? ` from ${r.indexed} course file(s)` : ""}${r.added ? `; ${r.added} stage(s) were added so every topic in the files is covered` : r.indexed ? "; it already covered every topic in the files" : ""}. Tell the student in one sentence; the card shows the plan.` }],
+      (r) => {
+        // U8: the count is the files this build read; "already covered" stays gated on `indexed`, i.e. on refine having run
+        const from = r.read ? ` from ${r.read} ${r.fresh ? "" : "newly read "}course file(s)` : !r.fresh && r.indexed ? " (no course file was newly read)" : "";
+        const cover = r.added ? `; ${r.added} stage(s) were added so every topic in the files is covered` : r.indexed ? "; it already covered every topic in the files" : "";
+        return [{ type: "text", text: `The study plan for ${n} is ${r.fresh ? "built" : "updated"}${from}${cover}. Tell the student in one sentence; the card shows the plan.` }];
+      },
       "build",
       `build:${n}`,
     ).done.catch(() => undefined); // errors are reported to the model by the bridge and to the card by status

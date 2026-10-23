@@ -369,6 +369,11 @@ One `teach_step` can carry `beats` (2–8): the card plays them locally. **Next*
 - Files card poll, practice, hints and consult now stat unchanged index files instead of re-parsing them; results are identical.
 - Tests: indexStore (fresh-parse equality after write / dropIndex / same-length external overwrite / invalid then fixed; no reads when unchanged; copies; stat failure; two courses; new fs), import (rename keeps the record = fresh parse), node (stat; real disk inside and after the 3 s window).
 
+## M88 (U8): build summary counts newly read files
+- `fileTools.indexPending` returns `{ indexed, read }`: `indexed` = every indexed file of the course (unchanged; still gates refine/enrich in `build()`), `read` = this build's files indexed at the end (membership from the `state` map, so removed/edited-away files drop out; status from disk, so failed ones are not counted).
+- The build summary says `built from N course file(s)` / `updated from N newly read course file(s)` / `updated (no course file was newly read)` when refine ran with nothing new; "it already covered every topic" stays gated on `indexed`. The refine condition line is unchanged.
+- Tests: `fileTools.test.ts` U8 (2 read → 1 more read with 2 indexed → nothing new still refines → a password-protected file fails and is not counted); L86 regex wording.
+
 ## Drawing roadmap M79–M83 (agreed with the user, 2026-10-23)
 Goal: slides can draw for any course, including unusual ones, in a professional look, with beats.
 
