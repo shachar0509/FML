@@ -6,7 +6,11 @@ import type { StepData } from "./types";
  */
 type Sample = Pick<StepData, "titleMd" | "bodyMd" | "sideMd" | "figure" | "progress"> & Partial<Pick<StepData, "beats">>;
 
+import { GUIDES } from "@/core/claude/prompts/figureGuides";
+
 const plot = (o: object) => JSON.stringify(o);
+/** M82: the score guide's own MusicXML example */
+const GUIDE_SCORE = GUIDES.score.guide.slice(GUIDES.score.guide.indexOf("<score-partwise"));
 const fence = (tag: string, body: string) => "```" + tag + "\n" + body + "\n```";
 
 /** A series RLC circuit driven by a voltage source (a schematic, as the tutor draws one in svg). */
@@ -802,6 +806,100 @@ q2 -> q1 [label="a"]; q2 -> q0 [label="b"]; // @3
     ],
     sideMd: null,
     figure: { kind: "chords", source: JSON.stringify({ chords: [{ title: "Am", fingers: [[2, 1, "1"], [3, 2, "3"], [4, 2, "2"], [1, 0], [5, 0], [6, "x"]], beat: 1 }, { title: "E", fingers: [[3, 1, "1"], [4, 2, "3"], [5, 2, "2"], [1, 0], [2, 0], [6, 0]], color: "m-blue", beat: 2 }] }), captionMd: "" },
+    progress: null,
+  },
+  // M82 pikchr: a pipeline described in words, a stage per beat
+  beatsPipeline: {
+    titleMd: "שלבי מהדר",
+    bodyMd: "קוד המקור עובר שלושה שלבים:",
+    beats: [
+      { md: String.raw`ה\blue{מנתח הלקסיקלי} מפרק את הטקסט לאסימונים.` },
+      { md: String.raw`ה\green{מנתח התחבירי} בונה עץ גזירה.` },
+      { md: String.raw`\orange{מחולל הקוד} מתרגם את העץ לשפת מכונה.` },
+    ],
+    sideMd: null,
+    figure: { kind: "pikchr", source: 'box "Source" fit\narrow right 120%\nbox "Lexer" fit color m-blue # @1\narrow right 120% # @2\nbox "Parser" fit color m-green # @2\narrow right 120% # @3\nbox "Code" "generator" fit fill m-orange # @3', captionMd: "" },
+    progress: null,
+  },
+  // M82 chess: moves and arrows by beat
+  beatsChess: {
+    titleMd: "איום המט של הרועה",
+    bodyMd: "אחרי שני הצעדים הראשונים, e4 ו-e5:",
+    beats: [
+      { md: "הרץ הלבן יוצא ל-c4 ומכוון אל f7." },
+      { md: "השחור מפתח פרש ל-c6." },
+      { md: String.raw`המלכה ל-h5: שני כלים \pink{תוקפים} את f7, המוגן רק על ידי המלך.` },
+    ],
+    sideMd: null,
+    figure: { kind: "chess", source: JSON.stringify({ fen: "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR", moves: [{ move: "f1c4", beat: 1 }, { move: "b8c6", beat: 2 }, { move: "d1h5", beat: 3 }], arrows: [{ from: "h5", to: "f7", color: "m-pink", beat: 3 }, { from: "c4", to: "f7", color: "m-pink", beat: 3 }] }), captionMd: "" },
+    progress: null,
+  },
+  // M82 go: atari, then the capture
+  beatsGo: {
+    titleMd: "לכידה בפינה",
+    bodyMd: "לאבן הלבנה נשארה חירות אחת:",
+    beats: [{ md: String.raw`ה\pink{חירות} האחרונה מסומנת במשולש.` }, { md: "השחור משחק בה, והאבן הלבנה נלכדת ויורדת מהלוח." }],
+    sideMd: null,
+    figure: { kind: "go", source: JSON.stringify({ size: 9, region: ["aa", "ee"], black: ["bb", "ac"], white: ["ab", "cb"], marks: [{ at: "aa", type: "triangle", color: "m-pink", beat: 1, until: 1 }], moves: [{ black: "aa", beat: 2, label: "1" }] }), captionMd: "" },
+    progress: null,
+  },
+  // M82 tree: a syntax tree from brackets, a constituent per beat
+  beatsTree: {
+    titleMd: "עץ תחבירי",
+    bodyMd: "The cat sat on the mat:",
+    beats: [{ md: "צירוף שמני: הנושא." }, { md: "צירוף פועלי: הנשוא." }, { md: "צירוף יחס בתוך הנשוא." }],
+    sideMd: null,
+    figure: { kind: "tree", source: "[S [NP@1 [D the] [N cat]] [VP@2 [V sat] [PP@3 [P on] [NP [D the] [N mat]]]]]", captionMd: "" },
+    progress: null,
+  },
+  // M82 sky: Orion, then its brightest stars
+  beatsSky: {
+    titleMd: "קבוצת אוריון",
+    bodyMd: "בשמי החורף, מעל האופק הדרומי:",
+    beats: [
+      { md: String.raw`ה\blue{קווים} של אוריון: כתפיים, חגורה ורגליים.` },
+      { md: String.raw`\orange{ביטלג'וז}: ענק אדום בכתף.` },
+      { md: String.raw`\blue{ריגל}: ענק כחול ברגל.` },
+    ],
+    sideMd: null,
+    figure: { kind: "sky", source: JSON.stringify({ center: [5.6, 3], fov: 50, layers: [{ constellation: "Ori", color: "m-blue", beat: 1 }, { star: "Betelgeuse", color: "m-orange", beat: 2 }, { star: "Rigel", color: "m-blue", beat: 3 }] }), captionMd: "" },
+    progress: null,
+  },
+  // M82 smiles: molecules side by side, one per beat
+  beatsMolecules: {
+    titleMd: "חמצון של אתנול",
+    bodyMd: "כוהל ראשוני מתחמצן בשני שלבים:",
+    beats: [{ md: "אתנול." }, { md: "אצטאלדהיד: הכוהל הפך לאלדהיד." }, { md: "חומצה אצטית: האלדהיד הפך לחומצה קרבוקסילית." }],
+    sideMd: null,
+    figure: { kind: "smiles", source: JSON.stringify({ molecules: [{ smiles: "CCO", label: "אתנול", beat: 1 }, { smiles: "CC=O", label: "אצטאלדהיד", beat: 2 }, { smiles: "CC(=O)O", label: "חומצה אצטית", beat: 3 }] }), captionMd: "" },
+    progress: null,
+  },
+  // M82 bio with OpenMoji pictograms, drawn-in arrows (class="draw") and a hand-drawn frame (class="sketch")
+  beatsEconomy: {
+    titleMd: "המעגל הכלכלי",
+    bodyMd: "משקי בית ופירמות:",
+    beats: [
+      { md: String.raw`\blue{משקי הבית} מספקים עבודה לפירמות.` },
+      { md: String.raw`\green{הפירמות} מייצרות מוצרים ומשלמות שכר.` },
+      { md: String.raw`ה\orange{כסף} זורם בכיוון ההפוך לסחורות.` },
+    ],
+    sideMd: null,
+    figure: { kind: "bio", source: '<svg viewBox="0 0 800 420"><g class="sketch"><rect x="20" y="20" width="760" height="380" rx="20" fill="none" stroke="currentColor" stroke-width="2"/></g><use href="#om-family" x="60" y="130" width="160" height="160" data-beat="1"/><use href="#om-factory" x="580" y="130" width="160" height="160" data-beat="2"/><g class="m-blue draw" data-beat="1"><path d="M230 170 C 380 90, 430 90, 570 170" fill="none" stroke="currentColor" stroke-width="5"/><text x="400" y="95" text-anchor="middle" fill="currentColor" font-size="26">עבודה</text></g><g class="m-green draw" data-beat="2"><path d="M570 250 C 430 330, 380 330, 230 250" fill="none" stroke="currentColor" stroke-width="5"/><text x="400" y="345" text-anchor="middle" fill="currentColor" font-size="26">מוצרים</text></g><use href="#om-money" x="365" y="175" width="70" height="70" data-beat="3" class="drift" style="--dx:-60;--dy:0"/></svg>', captionMd: "" },
+    progress: null,
+  },
+  // M82 score (Verovio) and bytefield: shown whole (render.spec)
+  scoreCadence: {
+    titleMd: "קדנצה מלאה",
+    bodyMd: "דומיננטה ($V$) שנפתרת לטוניקה ($I$):",
+    sideMd: null,
+    figure: { kind: "score", source: GUIDE_SCORE, captionMd: "" },
+    progress: null,
+  },
+  ipv4: {
+    titleMd: "כותרת IPv4",
+    bodyMd: "המילה הראשונה בכותרת, $32$ סיביות:",
+    sideMd: null,
+    figure: { kind: "bytefield", source: '(def boxes-per-row 32)\n(draw-column-headers {:labels (map str (range 32))})\n(draw-box "Version" {:span 4 :fill "m-blue"})\n(draw-box "IHL" {:span 4})\n(draw-box "DSCP" {:span 6})\n(draw-box "ECN" {:span 2})\n(draw-box "Total Length" {:span 16 :fill "m-green"})', captionMd: "" },
     progress: null,
   },
 };

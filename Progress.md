@@ -4,7 +4,7 @@
 Rules: work only on branch `dev`; one commit per step with tests; update this file after every step; record silent-spec choices in `DECISIONS.md`; stop after each step so the user can compact. Steps marked 🧪 need a manual Claude Desktop check by the user; list what to check.
 Environment: Node 22, pnpm, Playwright chromium. Never store keys in files.
 
-Status: plan v2 §9 (M0–M13) is done, plus follow-ups M14–M81. The v1 desktop app (Tauri, API key, Drive sync, Ask panel) is deleted; it lives in git tag `desktop-v1-final` (= `01640cb`).
+Status: plan v2 §9 (M0–M13) is done, plus follow-ups M14–M82. The v1 desktop app (Tauri, API key, Drive sync, Ask panel) is deleted; it lives in git tag `desktop-v1-final` (= `01640cb`).
 
 ---
 
@@ -309,7 +309,23 @@ One `teach_step` can carry `beats` (2–8): the card plays them locally. **Next*
 - **Tests:** `render.test.ts` (map, image, grid), `music.test.ts` (abcBeats, parseChords), `specs.test.ts` (data URI only on server `<image>`), `learnTools.test.ts` (image course, abc/chords checks, course_page).
 - 🧪 **Desktop check.** Does Claude call course_page before an image figure, and are its marks on target? Does Play sound in Claude Desktop's card (WebAudio after a click)?
 
-**Handoff to M82 (2026-10-23).** M79–M81 are committed; e2e not run (the user runs it at the end of M83: `pnpm exec playwright test e2e/tests/slides.spec.ts`, plus `render.spec.ts` and `step.spec.ts`). Next: M82, then M83 (three.js bundled as a lazy chunk; no CDN, see DECISIONS M79). Pattern for a new kind: guide in `figureGuides.ts` (with an example that a test renders), a server renderer in `src/server/figures/` + `SERVER_KINDS` + card `REMOTE`, or a card component in `Figure.tsx` `F`; beats tag output groups after a single layout; colours via `markColors`/`themeColors`; a sample in `test-advanced.ts` + `slides.spec.ts` SAMPLES; a smoke call if server-side; DECISIONS + THIRD_PARTY_NOTICES.
+## M82: Pikchr, bytefield, Verovio, chess, Go, syntax trees, star maps, SMILES, OpenMoji, draw-in, sketch (2026-10-23)
+- **Server kinds:** `pikchr`, `bytefield`, `score` (Verovio), `tree` in `src/server/figures/diagrams.ts`; `chess`, `go` in `boards.ts` (pieces from `assets/chess`, staged to `dist/chess`); `sky` in `sky.ts` (data in `assets/sky`).
+  - Pikchr beats: a colour per marked line, tagged after one layout.
+  - bytefield and score are shown whole.
+- **Card kinds:** `smiles` (`figures/Smiles.tsx`). In `svg`/`bio` figures, `class="draw"` (strokes drawn in at their beat, CSS) and `class="sketch"` (rough.js, loaded only when used) are new.
+- **OpenMoji:** 100 `om-*` pictograms in the part library (`assets/biolib`, credit shown).
+- **`data-own-bg`:** text inside it is skipped by the contrast guard and the e2e contrast check (Go, the night sky).
+- **Catalogue lines shortened:** 20 kinds, under 1,600 characters.
+- **Samples:**
+  - In `slides.spec.ts` SAMPLES: beatsPipeline, beatsChess, beatsGo, beatsTree, beatsSky, beatsMolecules, beatsEconomy (bio with OpenMoji, draw and sketch).
+  - In `render.spec.ts` WHOLE: scoreCadence, ipv4.
+  - Not run in e2e yet. A dev-server check passed in both themes: no errors.
+- **Sizes:** `cards.html` 4.4 MB, `server.mjs` 23.4 MB, `shalav.mcpb` 60 MB. `smoke:mcpb` renders pikchr, score, chess, sky and tree (75 tools).
+- **Tests:** `render.test.ts` (each guide example: Pikchr beats, bytefield/Verovio, chess moves/castling, Go capture, tree subtrees, sky names and errors), `music.test.ts` (parseSmiles), `learnTools.test.ts` (smiles/chess checks), `tutorMcp.test.ts` (catalogue size).
+- 🧪 **Desktop check.** Verovio and Pikchr WebAssembly in Claude Desktop's utility process. The size of `server.mjs` and the time to load it.
+
+**Handoff to M83 (2026-10-23).** M79–M82 are committed; e2e not run (the user runs it at the end of M83: `pnpm exec playwright test e2e/tests/slides.spec.ts`, plus `render.spec.ts` and `step.spec.ts`). Next: M83 (three.js bundled as a lazy chunk; no CDN, see DECISIONS M79). Pattern for a new kind: guide in `figureGuides.ts` (with an example that a test renders), a server renderer in `src/server/figures/` + `SERVER_KINDS` + card `REMOTE`, or a card component in `Figure.tsx` `F`; beats tag output groups after a single layout; colours via `markColors`/`themeColors`; a sample in `test-advanced.ts` + `slides.spec.ts` SAMPLES; a smoke call if server-side; DECISIONS + THIRD_PARTY_NOTICES.
 
 ---
 

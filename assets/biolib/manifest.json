@@ -194,5 +194,405 @@
  "virus": {
   "license": "cc-by-3.0",
   "author": "Servier"
+ },
+ "om-person": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-teacher": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-scientist": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-farmer": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-factory-worker": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-doctor": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-judge": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-family": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-baby": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-old-man": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-house": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-factory": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-school": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-hospital": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-bank": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-classical-building": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-castle": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-church": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-mosque": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-synagogue": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-tent": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-city": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-car": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-bus": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-train": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-ship": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-sailboat": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-airplane": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-bicycle": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-rocket": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-satellite": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-sun": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-cloud": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-rain": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-lightning": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-snowflake": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-fire": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-water-drop": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-wave": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-volcano": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-mountain": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-tree": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-palm": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-globe": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-earth-americas": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-cow": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-sheep": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-horse": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-dog": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-cat": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-bird": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-fish": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-bee": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-wheat": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-apple": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-bread": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-money": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-coin": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-banknote": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-chart-up": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-chart-down": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-scales": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-briefcase": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-shopping-cart": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-handshake": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-book": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-scroll": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-newspaper": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-envelope": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-phone": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-computer": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-light-bulb": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-battery": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-magnet": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-gear": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-hammer": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-microscope": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-telescope": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-test-tube": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-alembic": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-atom": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-dna": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-pill": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-syringe": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-crown": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-sword": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-flag": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-clock": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-hourglass": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-thermometer": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-warning": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-check": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-cross": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-question": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-idea": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-heart": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-brain": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-eye": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-ear": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
+ },
+ "om-hand": {
+  "license": "cc-by-sa-4.0",
+  "author": "OpenMoji"
  }
 }

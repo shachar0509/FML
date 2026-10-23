@@ -307,3 +307,25 @@
   - A chord's beat goes on its chart's SVG parts, and the chart keeps its room while hidden.
 - **Card size.** abcjs and svguitar are lazy chunks, but vite-plugin-singlefile inlines them: `cards.html` grew from 3.2 MB to 4.1 MB.
 - **Dev fixture.** In the test host, `/__figure` creates course 999 for `image` figures (`e2e/fixtures/devCourse.ts`): a generated textbook page with the library's heart section.
+
+## M82 — Pikchr, bytefield, Verovio, chess, Go, syntax trees, star maps, SMILES, OpenMoji, draw-in, sketch
+- **Where each one runs.** Each library was first rendered in Node. Those that worked are server kinds: Pikchr (pikchr-wasm, MIT; Pikchr 0BSD), bytefield-svg (EPL-2.0), Verovio (LGPL-3.0, WebAssembly), and rough.js (works without a DOM, but it is used in the card; see below). SmilesDrawer (MIT) needs a DOM, so it is a card kind (~200 KB).
+- **Pikchr beats.** Pikchr's SVG has no groups or ids. Each marked line therefore gets its own colour (`rgb(1,k,7)`), and after the single layout every element in that colour gets the line's beat and its `m-*` class, then turns back into ink. `invis` was not used: it changes the drawing's bounding box, which would shift the layout.
+  - Fills become translucent (`fill-opacity` 0.22), so ink text on a filled box reads on both boards.
+- **bytefield and Verovio are shown whole.** bytefield's DSL has no comment marker for beats. Verovio's ABC import lays out only one voice, so several staves come from MusicXML. Step-by-step music stays with `abc`.
+  - Verovio's glyphs (`<use>` of `<defs>` paths) are inlined because the card drops `<use>`. Its log is switched off.
+  - `server.mjs` grew from 12.5 to 23.4 MB (Verovio ~7 MB, bytefield's SCI interpreter, Pikchr). `shalav.mcpb` grew from 57 to 60 MB.
+- **Chess.** Own code with Chessnut pieces (Apache-2.0; lichess lists cburnett as GPLv2+, so it was not used).
+  - A piece is one element per stay on a square, from its beat until the move that takes it away, so the board never redraws. Captures, castling, en passant and promotion are handled.
+  - The board keeps its own wood colours in both themes. Coordinates sit outside the board in ink.
+- **Go.** Own code. The stones are shaded with radial gradients, and captures are found by liberty search when a move is played. Text on the wood and on the stones uses fixed colours inside `data-own-bg`.
+- **`data-own-bg`.** The contrast guard and the e2e contrast check now skip text inside an element with `data-own-bg`, meaning a drawing with its own backdrop (Go wood and stones, the night sky). Elsewhere text still follows the board.
+- **Syntax trees** are brackets turned into DOT and laid out by Graphviz (`ordering=out`). `Label@n` marks a subtree, so no new layout code was needed.
+- **Star maps.** d3-celestial's data only (BSD-3, Olaf Frohn; stars to magnitude 6, IAU lines, names including Hebrew), reduced to 180 KB in `assets/sky/` and drawn with d3-geo. The d3-celestial library itself needs a DOM and canvas.
+  - The sky is drawn as seen from Earth (east to the left), on its own night background, with the bright `--m-*` values.
+- **OpenMoji** (CC BY-SA 4.0). 100 curated pictograms are added to the part library as `om-*`, with the credit line "OpenMoji (CC BY-SA 4.0)". The `bio` kind places them like the biology parts.
+- **Vivus → CSS.** `class="draw"` sets `pathLength="1"`, and a stroke-dashoffset transition draws the stroke in when its beat comes. No library is needed.
+- **rough.js in the card.** `class="sketch"` redraws a group's shapes by hand with a fixed seed (the same sketch every time). It is loaded only when a figure uses it (~30 KB).
+- **bpmn-js is skipped.** Mermaid covers flowcharts, and bpmn-js would require its logo to stay visible.
+- **Catalogue.** The one-line kind list stays under 1,600 characters (about 400 tokens) with 20 kinds, because every line was shortened. There is still no subject filter (see M79).
+- **Card size.** SmilesDrawer and rough.js took `cards.html` from 4.1 to 4.4 MB.

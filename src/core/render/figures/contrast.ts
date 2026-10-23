@@ -30,6 +30,7 @@ export function ensureContrast(root: HTMLElement) {
   const bg = backdrop(root);
   const fg = getComputedStyle(root).color;
   for (const el of root.querySelectorAll<HTMLElement | SVGElement>("text, tspan, div, span")) {
+    if (el.closest("[data-own-bg]")) continue; // M82: text on a drawn backdrop of its own (a Go stone, the wood), in fixed colours
     const svg = el instanceof SVGElement;
     if (!svg && ![...el.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim())) continue;
     const c = getComputedStyle(el)[svg ? "fill" : "color"];

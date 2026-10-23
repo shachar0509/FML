@@ -10,7 +10,7 @@ const lowContrast = (page: Page) =>
     const lum = (c: string) => rgb(c).map((v) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)).reduce((a, v, i) => a + v * ([0.2126, 0.7152, 0.0722][i] ?? 0), 0);
     const bg = lum(getComputedStyle(fig).backgroundColor);
     return [...fig.querySelectorAll<HTMLElement | SVGElement>("svg text, div, span")]
-      .filter((e) => e.textContent?.trim() && e.getClientRects().length && getComputedStyle(e).visibility === "visible" && (e instanceof SVGElement || [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent?.trim())))
+      .filter((e) => e.textContent?.trim() && !e.closest("[data-own-bg]") && e.getClientRects().length && getComputedStyle(e).visibility === "visible" && (e instanceof SVGElement || [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent?.trim())))
       .map((e) => {
         const l = lum(getComputedStyle(e)[e instanceof SVGElement ? "fill" : "color"]);
         return [e.textContent?.trim(), (Math.max(l, bg) + 0.05) / (Math.min(l, bg) + 0.05)] as const;
@@ -22,8 +22,9 @@ const lowContrast = (page: Page) =>
 // place library parts (bio); beatsCircuitSvg is the hand-drawn svg kind.
 // M80: beatsAutomaton (Graphviz), beatsRegression (Vega-Lite) are server-drawn too; beatsFlow is Mermaid in the card (%% @n).
 // M81: beatsHeart (a page of the dev course with marks) and beatsMap (Natural Earth) are server-drawn; beatsScale (abcjs) and beatsChords (svguitar) are drawn in the card.
-const SAMPLES = { beatsFn: 7, beatsCircuit: 3, beatsPhoto: 5, beatsCell: 3, beatsCircuitSvg: 3, beatsIncline: 5, beatsMethane: 3, beatsAutomaton: 3, beatsFlow: 4, beatsRegression: 2, beatsHeart: 4, beatsMap: 3, beatsScale: 2, beatsChords: 2 } as const;
-const SERVER = ["beatsCircuit", "beatsPhoto", "beatsCell", "beatsIncline", "beatsMethane", "beatsAutomaton", "beatsRegression", "beatsHeart", "beatsMap"];
+const SAMPLES = { beatsFn: 7, beatsCircuit: 3, beatsPhoto: 5, beatsCell: 3, beatsCircuitSvg: 3, beatsIncline: 5, beatsMethane: 3, beatsAutomaton: 3, beatsFlow: 4, beatsRegression: 2, beatsHeart: 4, beatsMap: 3, beatsScale: 2, beatsChords: 2, beatsPipeline: 3, beatsChess: 3, beatsGo: 2, beatsTree: 3, beatsSky: 3, beatsMolecules: 3, beatsEconomy: 3 } as const;
+// M82: pikchr, chess, go, tree and sky are server-drawn; beatsMolecules (SmilesDrawer) is drawn in the card; beatsEconomy is bio with OpenMoji parts, draw and sketch.
+const SERVER = ["beatsCircuit", "beatsPhoto", "beatsCell", "beatsIncline", "beatsMethane", "beatsAutomaton", "beatsRegression", "beatsHeart", "beatsMap", "beatsPipeline", "beatsChess", "beatsGo", "beatsTree", "beatsSky", "beatsEconomy"];
 for (const [sample, of] of Object.entries(SAMPLES))
   for (const theme of ["light", "dark"] as const)
     test(`slide ${sample} (${theme})`, async ({ page }) => {

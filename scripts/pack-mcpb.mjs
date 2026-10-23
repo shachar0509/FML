@@ -17,7 +17,7 @@ await cp("THIRD_PARTY_NOTICES.md", join(out, "THIRD_PARTY_NOTICES.md"));
 for (const f of ["server.mjs", "cards.html", "pdf.worker.mjs"]) await cp(join("dist", f), join(out, "server", f));
 
 await cp("dist/standard_fonts", join(out, "server/standard_fonts"), { recursive: true });
-for (const d of ["tikz", "biolib"]) await cp(join("dist", d), join(out, "server", d), { recursive: true });
+for (const d of ["tikz", "biolib", "chess"]) await cp(join("dist", d), join(out, "server", d), { recursive: true });
 
 // @napi-rs/canvas is external: ship the loader plus the macOS and Windows binaries (installed via supportedArchitectures).
 const { version } = JSON.parse(await (await import("node:fs/promises")).readFile("node_modules/@napi-rs/canvas/package.json", "utf8"));

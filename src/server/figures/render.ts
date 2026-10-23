@@ -2,16 +2,19 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { BEAT_MARK, beatAttrs, MARK, markColors } from "@/core/render/figures/beats";
+import { chessToSvg, goToSvg } from "./boards";
+import { bytefieldToSvg, pikchrToSvg, scoreToSvg, treeToSvg } from "./diagrams";
 import { graphvizToSvg, vegaLiteToSvg } from "./graphs";
 import { imageToSvg } from "./image";
 import { mapToSvg } from "./map";
+import { skyToSvg } from "./sky";
 import { tikzToSvg, textToPaths } from "./tikz";
 
 /**
  * M79: figure kinds drawn on the server (heavy engines stay out of the card). The card asks for the SVG with the app-only tool
  * figure_render, so the drawing never enters the model's context; the card then shows it like an `svg` figure (beats, colours).
  */
-export const SERVER_KINDS = ["tikz", "bio", "graphviz", "vegalite", "map", "image"] as const;
+export const SERVER_KINDS = ["tikz", "bio", "graphviz", "vegalite", "map", "image", "pikchr", "bytefield", "score", "chess", "go", "tree", "sky"] as const;
 export type ServerKind = (typeof SERVER_KINDS)[number];
 export const isServerKind = (k: string): k is ServerKind => (SERVER_KINDS as readonly string[]).includes(k);
 
@@ -99,6 +102,13 @@ export function renderFigure(kind: ServerKind, source: string): Promise<string> 
       if (kind === "vegalite") return ownIds(themeColors(await vegaLiteToSvg(markColors(source))), key);
       if (kind === "map") return mapToSvg(source);
       if (kind === "image") return imageToSvg(source);
+      if (kind === "pikchr") return ownIds(await pikchrToSvg(source), key);
+      if (kind === "bytefield") return ownIds(themeColors(await bytefieldToSvg(markColors(source))), key);
+      if (kind === "score") return ownIds(themeColors(await scoreToSvg(source)), key);
+      if (kind === "chess") return ownIds(chessToSvg(source), key);
+      if (kind === "go") return ownIds(goToSvg(source), key);
+      if (kind === "tree") return ownIds(themeColors(await treeToSvg(source)), key);
+      if (kind === "sky") return ownIds(skyToSvg(source), key);
       throw new Error(`Unknown figure kind ${kind as string}`);
     })();
     cache.set(key, hit);
@@ -129,7 +139,7 @@ export function withLibrary(source: string): string {
   const lib = used.filter((n) => all[n] && !ownIds.has(n));
   if (!lib.length) throw new Error(`Place at least one library part with <use href="#name" x y width height/>; parts: ${Object.keys(all).join(", ")}`);
   const files = new Map(lib.map((n) => [n, readFileSync(join(LIB, `${n}.svg`), "utf8")]));
-  const credits = [...new Set(lib.map((n) => all[n] ?? { license: "own", author: "" }).filter((p) => p.license !== "own" && p.license !== "cc-0").map((p) => (p.author === "Servier" ? "Servier Medical Art (CC BY 3.0)" : `${p.author} (${p.license.toUpperCase().replace("CC-BY-", "CC BY ")})`)))];
+  const credits = [...new Set(lib.map((n) => all[n] ?? { license: "own", author: "" }).filter((p) => p.license !== "own" && p.license !== "cc-0").map((p) => (p.author === "Servier" ? "Servier Medical Art (CC BY 3.0)" : p.author === "OpenMoji" ? "OpenMoji (CC BY-SA 4.0)" : `${p.author} (${p.license.toUpperCase().replace("CC-BY-", "CC BY ")})`)))];
   let k = 0;
   // the card's sanitizer drops <use> and <symbol>, so each placement becomes the part itself in a nested <svg> (ids made unique per copy)
   return source

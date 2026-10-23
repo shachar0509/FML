@@ -6,7 +6,8 @@ import { expect, test } from "@playwright/test";
 const SAMPLES = ["taylor", "series", "gradient", "double", "green", "rlc", "fourier", "bode", "maxwell"].map((s) => [s, "render-infi2-electrical"] as const);
 const OTHER = ["law", "biology", "chemistry", "finance", "architecture"].map((s) => [s, "render-law-bio-chem-finance-arch"] as const);
 const FIXES = [["fences", "render-display-fences"]] as const; // "$$" on the \\begin / \\end line
-for (const [sample, dir] of [...SAMPLES, ...OTHER, ...FIXES])
+const WHOLE = ["scoreCadence", "ipv4"].map((s) => [s, "render-whole-figures"] as const); // M82: Verovio and bytefield, shown whole
+for (const [sample, dir] of [...SAMPLES, ...OTHER, ...FIXES, ...WHOLE])
   for (const theme of ["light", "dark"] as const)
     test(`advanced step ${sample} (${theme})`, async ({ page }) => {
       const errors: string[] = [];

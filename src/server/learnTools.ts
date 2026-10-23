@@ -273,6 +273,10 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
       } else if (kind === "chords") {
         const c = (JSON.parse(source) as { chords?: unknown }).chords;
         if (!Array.isArray(c) || !c.length) throw new Error('expected {"chords": [{"title", "fingers": [[string, fret], …]}, …]}');
+      } else if (kind === "smiles") {
+        const t = source.trim();
+        const ok = t.startsWith("{") ? (JSON.parse(t) as { molecules?: unknown[] }).molecules?.length : /^\S+$/.test(t);
+        if (!ok) throw new Error('one SMILES string, or {"molecules": [{"smiles", "label", "beat"}, …]}');
       } else if (kind === "mermaid") {
         if (!/^\s*(flowchart|graph|sequenceDiagram|stateDiagram|classDiagram|erDiagram|mindmap|timeline|gantt|journey|pie|quadrantChart|gitGraph|sankey|xychart|block)/m.test(source)) throw new Error("start with the diagram type (flowchart TD, sequenceDiagram, stateDiagram-v2, …)");
       }

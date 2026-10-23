@@ -54,7 +54,7 @@ it("bio: each placement becomes the part in a nested svg (the card drops <use>),
 });
 
 /** The guide's own example of a kind (after its "Example (…):" line). */
-const example = async (kind: "graphviz" | "vegalite" | "tikz" | "map" | "image") => {
+const example = async (kind: "graphviz" | "vegalite" | "tikz" | "map" | "image" | "pikchr" | "bytefield" | "score" | "chess" | "go" | "tree" | "sky") => {
   const { GUIDES } = await import("@/core/claude/prompts/figureGuides");
   const g = GUIDES[kind].guide;
   const from = g.indexOf("\n", g.indexOf("Example ("));
@@ -129,4 +129,56 @@ it("image: a page of a course file with marks by beat; the crop is the viewBox; 
   await expect(renderFigure("image", JSON.stringify({ ...src, marks: [{ type: "label", at: [0.5, 0.5], text: "a" }, { type: "arrow", from: [0.95, 0.5], to: [0.5, 0.5] }] }))).rejects.toThrow(/Mark 2 \(arrow\) reaches \[0.95, 0.5\], outside the crop/);
   const { gridImage } = await import("./image");
   expect((await gridImage("999", "cell.png", 1)).length).toBeGreaterThan(1000);
+});
+
+it("pikchr: one layout; a marked line's elements get its beat and colour; errors come back", async () => {
+  const svg = await renderFigure("pikchr", await example("pikchr"));
+  expect(svg).toMatch(/data-beat="1" class="m-blue"/);
+  expect((svg.match(/data-beat="2"/g) ?? []).length).toBeGreaterThanOrEqual(3); // the arrow (line + head) and the Parser box and its text
+  expect(svg).toContain("fill-opacity:0.22");
+  expect(svg).not.toMatch(/rgb\(0,0,0\)|rgb\(1,\d+,7\)/);
+  await expect(renderFigure("pikchr", "box \"A\" frobnicate")).rejects.toThrow(/frobnicate|syntax/i);
+});
+
+it("bytefield and score (Verovio) draw their examples in the board's ink; Verovio's glyphs are inlined", async () => {
+  expect(await renderFigure("bytefield", await example("bytefield"))).toMatch(/^<svg[^>]*fill="currentColor"[\s\S]*Total Length/);
+  const score = await renderFigure("score", await example("score"));
+  expect(score).toMatch(/^<svg[^>]*viewBox="0 0 /);
+  expect(score).not.toMatch(/<use\b|<defs>/);
+  expect((score.match(/class="staff"/g) ?? []).length).toBe(4); // 2 bars × 2 staves
+  await expect(renderFigure("score", "not music")).rejects.toThrow(/Verovio/);
+});
+
+it("chess: moves by beat (captures, castling), arrows; bad moves are named", async () => {
+  const svg = await renderFigure("chess", await example("chess"));
+  expect((svg.match(/<svg x=/g) ?? []).length).toBe(32 + 3); // 32 pieces, each moved piece has a second stay
+  expect(svg).toMatch(/data-beat="0" data-until="0"[^>]*>.*?<\/svg>/); // the bishop leaves f1 at beat 1
+  expect(svg).toMatch(/class="m-pink" opacity="0.85" data-beat="3"/);
+  const castle = await renderFigure("chess", '{"fen":"4k3/8/8/8/8/8/8/4K2R","moves":[{"move":"e1g1"}]}');
+  expect((castle.match(/data-beat="1"/g) ?? []).length).toBe(2 + 2); // king and rook arrive; the move's two squares are tinted
+  await expect(renderFigure("chess", '{"moves":[{"move":"e3e4"}]}')).rejects.toThrow(/no piece on e3/);
+});
+
+it("go: a stone without liberties leaves at the capturing move; region crops the board", async () => {
+  const svg = await renderFigure("go", await example("go"));
+  expect(svg).toMatch(/<g data-beat="0" data-until="1"><circle[^>]*url\(#[^)]*w\)/); // the white stone on ab, captured at beat 2
+  expect(svg).toMatch(/viewBox="16 16 /);
+  await expect(renderFigure("go", '{"size":9,"black":["jj"]}')).rejects.toThrow(/off a 9×9 board/);
+});
+
+it("tree: brackets become a Graphviz tree; Label@n shows the subtree from beat n", async () => {
+  const svg = await renderFigure("tree", await example("tree"));
+  expect((svg.match(/class="node" data-beat="2"/g) ?? []).length).toBe(3); // VP, V, sat
+  expect((svg.match(/class="node" data-beat="3"/g) ?? []).length).toBe(8); // PP and its subtree
+  expect(svg).toContain("m-blue");
+  await expect(renderFigure("tree", "[S [NP")).rejects.toThrow(/not closed/);
+});
+
+it("sky: stars, constellation lines and Hebrew names; layers by beat; unknown names are explained", async () => {
+  const svg = await renderFigure("sky", await example("sky"));
+  expect(svg).toMatch(/data-own-bg/);
+  expect(svg).toMatch(/<g data-beat="2">.*ביטלג'וז/); // the star's Hebrew name by default
+  expect(svg).toContain("אוריון");
+  await expect(renderFigure("sky", '{"layers":[{"constellation":"Orionis"}]}')).rejects.toThrow(/Unknown constellation/);
+  await expect(renderFigure("sky", '{"layers":[{"star":"Krypton"}]}')).rejects.toThrow(/Unknown star/);
 });

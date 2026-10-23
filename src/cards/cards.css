@@ -283,6 +283,13 @@ body {
 .fig-svg .glow { filter: drop-shadow(0 0 6px currentColor); }
 .fig-svg { flex-direction: column; align-items: center; }
 .fig-svg .fig-credit { margin: 0.25rem 0 0; font-size: 0.7rem; color: var(--muted, currentColor); opacity: 0.8; }
+/* M82: a `draw` stroke is drawn in when its beat comes (pathLength="1" set by Svg.tsx) */
+.fig-svg [pathLength="1"] { stroke-dasharray: 1 1; stroke-dashoffset: 0; transition: stroke-dashoffset 1.4s ease-in-out, opacity 0.45s ease; }
+.fig-svg :is(.beat-off[pathLength="1"], .beat-off [pathLength="1"]) { stroke-dashoffset: 1; }
+@media (prefers-reduced-motion: reduce) { .fig-svg [pathLength="1"] { transition: none; } }
+.fig-molecule { width: 12rem; margin: 0; text-align: center; }
+.fig-molecule svg { width: 100%; height: auto; }
+.fig-molecule figcaption { font-size: 0.9rem; }
 /* M81: chord charts side by side; abcjs draws in currentColor */
 .fig-svg.fig-chords { flex-direction: row; align-items: flex-start; }
 .fig-chord { width: 12rem; }

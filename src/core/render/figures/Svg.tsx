@@ -18,12 +18,48 @@ const SHADE_DEFS = `<defs>${Object.entries(SHADES)
   })
   .join("")}</defs>`;
 
+const SHAPES = "path, line, polyline, polygon, circle, ellipse, rect";
+
+/** Each shape under `.sketch` becomes rough.js paths with the shape's own stroke, fill, class and beat (a fixed seed: the same sketch every time). */
+async function sketch(svg: SVGElement) {
+  const { default: rough } = await import("roughjs");
+  const gen = rough.generator();
+  const n = (e: Element, a: string) => Number(e.getAttribute(a) ?? 0);
+  for (const e of svg.querySelectorAll(SHAPES.split(", ").map((t) => `.sketch ${t}, ${t}.sketch`).join(", "))) {
+    if (e.closest("defs, clipPath, mask")) continue;
+    const cs = getComputedStyle(e);
+    const fill = e.getAttribute("fill") ?? (cs.fill === "none" ? undefined : cs.fill);
+    const o = { seed: 7, roughness: 1.3, bowing: 1, stroke: e.getAttribute("stroke") ?? "currentColor", strokeWidth: Number.parseFloat(cs.strokeWidth) || 1.5, fill: fill && fill !== "none" ? fill : undefined, fillStyle: fill?.startsWith("url(") ? "solid" : "hachure", hachureGap: 6 };
+    const pts = () => (e.getAttribute("points") ?? "").trim().split(/[\s,]+/).map(Number).reduce<[number, number][]>((a, v, i, all) => (i % 2 ? a : [...a, [v, all[i + 1] ?? 0]]), []);
+    const tag = e.localName;
+    const d =
+      tag === "rect" ? gen.rectangle(n(e, "x"), n(e, "y"), n(e, "width"), n(e, "height"), o)
+      : tag === "circle" ? gen.circle(n(e, "cx"), n(e, "cy"), 2 * n(e, "r"), o)
+      : tag === "ellipse" ? gen.ellipse(n(e, "cx"), n(e, "cy"), 2 * n(e, "rx"), 2 * n(e, "ry"), o)
+      : tag === "line" ? gen.line(n(e, "x1"), n(e, "y1"), n(e, "x2"), n(e, "y2"), o)
+      : tag === "polygon" ? gen.polygon(pts(), o)
+      : tag === "polyline" ? gen.linearPath(pts(), o)
+      : gen.path(e.getAttribute("d") ?? "", o);
+    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    for (const a of [...e.attributes]) if (/^(class|data-|style|transform|opacity)/.test(a.name)) g.setAttribute(a.name, a.value);
+    for (const p of gen.toPaths(d)) {
+      const q = g.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "path"));
+      q.setAttribute("d", p.d);
+      q.setAttribute("stroke", p.stroke);
+      q.setAttribute("stroke-width", String(p.strokeWidth));
+      q.setAttribute("fill", p.fill ?? "none");
+      if (e.hasAttribute("pathLength")) q.setAttribute("pathLength", "1");
+    }
+    e.replaceWith(g);
+  }
+}
+
 /** `max`: a size cap above the default 50 KB, for drawings that come from Shalav's server (library parts, TeX output). */
 export function Svg({ source, dark, beat, max }: { source: string; dark: boolean; beat?: number; max?: number }) {
   // The draw is async and runs after the effects below, so it reads the beat set there.
   const at = useRef(beat);
   const ref = useDraw(
-    (el) => {
+    async (el) => {
       el.innerHTML = sanitizeSvg(source, max);
       const svg = el.firstElementChild as SVGElement;
       if (source.includes("url(#shade-")) svg.insertAdjacentHTML("afterbegin", SHADE_DEFS);
@@ -34,6 +70,9 @@ export function Svg({ source, dark, beat, max }: { source: string; dark: boolean
         p.textContent = svg.dataset.credit;
         el.append(p);
       }
+      // M82: `draw` strokes are drawn in when their beat comes (cards.css); `sketch` redraws shapes by hand (rough.js, loaded only then)
+      for (const e of svg.querySelectorAll(SHAPES.split(", ").map((t) => `.draw ${t}, ${t}.draw`).join(", "))) e.setAttribute("pathLength", "1");
+      if (svg.querySelector(".sketch")) await sketch(svg);
       svg.style.width = "100%";
       svg.style.height = "auto";
       svg.style.color = "currentColor";

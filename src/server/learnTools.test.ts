@@ -89,6 +89,8 @@ it("runs a lesson: start, questions, events, status, completion, reopen + recap"
   expect(text(await call("teach_step", { titleMd: "i", bodyMd: "", figure: { kind: "image", source: '{"file":"x.pdf","course":"other"}' } }))).toMatch(/No course file .*x\.pdf.*no scanned files/);
   expect(text(await call("show_figure", { kind: "abc", source: "X:1\nCDE" }))).toMatch(/K: \(key\) header/);
   expect(text(await call("show_figure", { kind: "chords", source: "{}" }))).toMatch(/Invalid chords figure: expected/);
+  expect(text(await call("show_figure", { kind: "smiles", source: "C C O" }))).toMatch(/one SMILES string/);
+  expect(sc(await call("show_figure", { kind: "chess", source: '{"moves":[{"move":"e2e4"}]}' }))).toMatchObject({ kind: "chess" });
   expect(sc(await call("show_figure", { kind: "map", source: '{"layers":[{"countries":["Israel"],"beat":0}]}' }))).toMatchObject({ kind: "map" });
   expect(text(await call("course_page", { file: "x.pdf", page: 1 }))).toMatch(/No course file/);
   // a question about the step: answered in a pop-up over the step card, which polls for answers newer than its question

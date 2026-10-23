@@ -21,3 +21,4 @@ await copyFile("node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs", "dist/pdf.
 await cp("node_modules/node-tikzjax/tex", "dist/tikz/tex", { recursive: true, dereference: true });
 await cp("node_modules/node-tikzjax/css/bakoma/ttf", "dist/tikz/ttf", { recursive: true, dereference: true });
 await cp("assets/biolib", "dist/biolib", { recursive: true });
+await cp("assets/chess", "dist/chess", { recursive: true });
