@@ -105,22 +105,69 @@ const PARALLEL = `<svg viewBox="0 0 360 220" xmlns="http://www.w3.org/2000/svg" 
 <g data-beat="3" class="m-green"><path class="flow" d="M 180 30 H 280 V 80"/><text x="286" y="62" fill="currentColor" stroke="none" font-size="13">I₂=1A</text></g>
 </svg>`;
 
-const PHOTO = `<svg viewBox="0 0 360 230" xmlns="http://www.w3.org/2000/svg" font-family="serif" font-size="15" fill="none" stroke="currentColor" stroke-width="2">
-<rect x="110" y="50" width="140" height="120" rx="24"/>
-<g class="m-green"><ellipse cx="180" cy="110" rx="42" ry="22" fill="currentColor" fill-opacity="0.2"/><path d="M 150 110 h 60 M 158 102 h 44 M 158 118 h 44" stroke-width="1.5"/></g>
-<g data-beat="1" class="m-orange"><path class="pulse" d="M 150 4 l 12 34 M 180 2 v 36 M 210 4 l -12 34"/><text x="225" y="22" fill="currentColor" stroke="none">hν</text></g>
-<g data-beat="2" data-until="3" class="m-blue"><g class="drift" style="--dx:95;--dy:0"><text x="10" y="100" fill="currentColor" stroke="none">CO₂</text></g><path d="M 50 120 h 48 l -8 -5 m 8 5 l -8 5"/></g>
-<g data-beat="3" data-until="3"><g class="drift" style="--dx:0;--dy:-48"><text x="164" y="222" fill="currentColor" stroke="none">H₂O</text></g></g>
-<g data-beat="5" class="m-pink"><g class="drift" style="--dx:80;--dy:0"><text x="262" y="100" fill="currentColor" stroke="none">O₂</text></g><path d="M 262 120 h 48 l -8 -5 m 8 5 l -8 5"/></g>
-<g data-beat="4"><text x="180" y="155" fill="currentColor" stroke="none" font-size="12" text-anchor="middle">C₆H₁₂O₆</text></g>
+// M79: biology from the library (Servier Medical Art parts placed with <use href="#…">), drawn on the server (figure_render)
+const PHOTO = `<svg viewBox="0 0 900 560" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif" font-size="32" fill="none" stroke="currentColor" stroke-width="3">
+<use href="#leaf" x="190" y="130" width="520" height="312" class="shadow"/>
+<use href="#chloroplast" x="380" y="245" width="170" height="90" class="shadow"/>
+<g class="m-green"><ellipse cx="465" cy="290" rx="98" ry="58" stroke-width="4"/></g>
+<g data-beat="1" class="m-orange"><use href="#sun" x="10" y="0" width="140" height="140"/><path class="flow" d="M 140 110 L 380 260 M 160 70 L 420 245" stroke-width="4"/><text x="250" y="130" fill="currentColor" stroke="none">hν</text></g>
+<g data-beat="2" data-until="4" class="m-blue"><g class="drift" style="--dx:150;--dy:-20"><text x="20" y="330" fill="currentColor" stroke="none">CO₂</text></g><path d="M 100 330 L 350 300" stroke-width="4"/><path d="M 335 290 L 352 300 L 336 312" stroke-width="4"/></g>
+<g data-beat="3" data-until="4" class="m-blue"><g class="drift" style="--dx:0;--dy:-60"><text x="220" y="535" fill="currentColor" stroke="none">H₂O</text></g><path d="M 290 500 L 420 345" stroke-width="4"/></g>
+<g data-beat="4" class="m-green"><text x="465" y="520" fill="currentColor" stroke="none" text-anchor="middle">C₆H₁₂O₆</text><path d="M 465 350 L 465 485" stroke-width="4"/></g>
+<g data-beat="5" class="m-pink"><g class="drift" style="--dx:90;--dy:0"><text x="730" y="230" fill="currentColor" stroke="none">O₂</text></g><path d="M 560 280 L 720 230" stroke-width="4"/></g>
 </svg>`;
 
-const CELL = `<svg viewBox="0 0 360 230" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif" font-size="14" fill="none" stroke="currentColor" stroke-width="2">
-<ellipse cx="160" cy="115" rx="140" ry="95"/><text x="320" y="30" fill="currentColor" stroke="none" text-anchor="middle">קרום</text><path d="M 300 38 L 272 58" stroke-width="1"/>
-<g data-beat="1" data-focus="1" class="m-blue"><circle cx="150" cy="110" r="34" fill="currentColor" fill-opacity="0.22"/><circle cx="158" cy="104" r="9" fill="currentColor" fill-opacity="0.5"/><text x="150" y="160" fill="currentColor" stroke="none" text-anchor="middle">גרעין</text></g>
-<g data-beat="2" data-focus="2" class="m-green"><g fill="currentColor" fill-opacity="0.2"><ellipse cx="240" cy="80" rx="26" ry="12" transform="rotate(-20 240 80)"/><ellipse cx="235" cy="150" rx="26" ry="12" transform="rotate(15 235 150)"/><ellipse cx="75" cy="150" rx="22" ry="10" transform="rotate(25 75 150)"/></g><path d="M 220 84 q 6 -10 12 0 t 12 0 t 12 0 M 216 148 q 6 -10 12 0 t 12 0 t 12 0" stroke-width="1.5"/><text x="240" y="122" fill="currentColor" stroke="none" text-anchor="middle">מיטוכונדריה</text></g>
-<g data-beat="3" data-focus="3" class="m-pink" fill="currentColor" stroke="none"><circle cx="95" cy="70" r="3"/><circle cx="108" cy="62" r="3"/><circle cx="85" cy="85" r="3"/><circle cx="205" cy="190" r="3"/><circle cx="190" cy="180" r="3"/><circle cx="220" cy="183" r="3"/><text x="88" y="52" text-anchor="middle">ריבוזומים</text></g>
+const CELL = `<svg viewBox="0 0 900 560" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif" font-size="30" fill="none" stroke="currentColor" stroke-width="2.5">
+<use href="#cell-oval" x="150" y="80" width="600" height="368" class="shadow"/>
+<use href="#er-rough" x="225" y="170" width="150" height="75"/>
+<use href="#mitochondrion" x="560" y="170" width="120" height="61" transform="rotate(-18 620 200)"/>
+<use href="#mitochondrion" x="300" y="320" width="110" height="56" transform="rotate(14 355 348)"/>
+<use href="#nucleus" x="390" y="170" width="140" height="150"/>
+<text x="90" y="60" fill="currentColor" stroke="none" text-anchor="middle">קרום</text><path d="M 110 70 L 205 120" stroke-width="2"/>
+<g data-beat="1" data-focus="1" class="m-blue"><ellipse cx="460" cy="245" rx="86" ry="90" stroke-width="5"/><text x="820" y="130" fill="currentColor" stroke="none" text-anchor="middle">גרעין</text><path d="M 780 140 L 540 210"/></g>
+<g data-beat="2" data-focus="2" class="m-green"><ellipse cx="620" cy="200" rx="72" ry="45" stroke-width="5" transform="rotate(-18 620 200)"/><ellipse cx="355" cy="348" rx="66" ry="42" stroke-width="5" transform="rotate(14 355 348)"/><text x="790" y="520" fill="currentColor" stroke="none" text-anchor="middle">מיטוכונדריה</text><path d="M 760 490 L 660 240 M 720 500 L 420 370"/></g>
+<g data-beat="3" data-focus="3" class="m-pink"><ellipse cx="300" cy="207" rx="88" ry="50" stroke-width="5"/><text x="110" y="520" fill="currentColor" stroke="none" text-anchor="middle">ריבוזומים</text><path d="M 130 490 L 255 250"/></g>
 </svg>`;
+
+// M79: TikZ, drawn by TeX on the server; a line ending with % @n appears at beat n
+const CIRCUIT_TIKZ = String.raw`\begin{circuitikz}[scale=1.25, transform shape, line width=0.9pt]
+\draw (0,0) to[battery1, l=$12\,\mathrm{V}$] (0,3.2) -- (6,3.2) (0,0) -- (6,0);
+\draw[m-blue] (2.5,3.2) to[R, l_=$R_1{=}4\,\Omega$] (2.5,0);
+\draw[m-green] (6,3.2) to[R, l_=$R_2{=}12\,\Omega$] (6,0);
+\draw[m-orange, {Stealth}-{Stealth}] (3.4,2.4) -- (3.4,0.8) node[midway, right] {$V_1$}; % @1
+\draw[m-orange, {Stealth}-{Stealth}] (6.9,2.4) -- (6.9,0.8) node[midway, right] {$V_2$}; % @1
+\draw[-{Stealth}, thick] (0.4,3.5) -- (1.8,3.5) node[midway, above] {$I = 4\,\mathrm{A}$}; % @2
+\draw[m-blue, -{Stealth}, thick] (2.75,3.0) -- (2.75,2.3) node[midway, right] {$I_1$}; % @3
+\draw[m-green, -{Stealth}, thick] (6.25,3.0) -- (6.25,2.3) node[midway, right] {$I_2$}; % @3
+\end{circuitikz}`;
+
+const INCLINE = String.raw`\begin{tikzpicture}[scale=1.4, line width=0.9pt]
+\fill[gray, fill opacity=0.25] (0,0) -- (6,0) -- (6,3.46) -- cycle;
+\draw (0,0) -- (6,0) -- (6,3.46) -- cycle;
+\draw (1.2,0) arc (0:30:1.2) node[midway, right] {$\theta$};
+\begin{scope}[rotate around={30:(0,0)}]
+\shade[top color=orange!60, bottom color=orange!90!black, draw=black] (3.2,0) rectangle (4.4,0.8);
+\draw[m-blue, -{Stealth}, very thick] (3.8,0.4) -- ++(-120:1.9) node[below left] {$mg$}; % @2
+\draw[m-green, -{Stealth}, very thick] (3.8,0.8) -- ++(0,1.5) node[above] {$N$}; % @3
+\draw[m-orange, dashed, -{Stealth}] (3.8,0.4) -- ++(0,-1.65) node[below right] {$mg\cos\theta$}; % @4
+\draw[m-orange, dashed, -{Stealth}] (3.8,0.4) -- ++(-0.95,0) node[above left] {$mg\sin\theta$}; % @4
+\draw[m-pink, -{Stealth}, very thick] (4.4,0.2) -- ++(1.1,0) node[above] {$f$}; % @5
+\end{scope}
+\end{tikzpicture}`;
+
+const METHANE = String.raw`\begin{tikzpicture}[scale=1.6]
+\draw[line width=5pt, gray!70] (0,0) -- (0,1.9); % @2
+\draw[line width=5pt, gray!70] (0,0) -- (-1.6,-0.8); % @2
+\draw[line width=5pt, gray!70] (0,0) -- (1.5,-0.9); % @2
+\draw[line width=5pt, gray!70, dashed] (0,0) -- (0.5,-0.2); % @2
+\shade[ball color=gray!60!black] (0,0) circle (0.55) node[text=m-white] {\Large C}; % @1
+\shade[ball color=white] (0,1.9) circle (0.35) node[text=m-black] {H}; % @2
+\shade[ball color=white] (-1.6,-0.8) circle (0.35) node[text=m-black] {H}; % @2
+\shade[ball color=white] (1.5,-0.9) circle (0.35) node[text=m-black] {H}; % @2
+\shade[ball color=white!80!gray] (0.75,0.35) circle (0.3) node[text=m-black] {H}; % @2
+\draw[m-orange, thick] (0,0.7) arc (90:207:0.7); % @3
+\node[m-orange] at (-1.15,0.75) {$109.5^\circ$}; % @3
+\end{tikzpicture}`;
 
 export const ADVANCED: Record<string, Sample> = {
   // אינפי 2 — Taylor: the polynomial and its remainder, approximations on a graph
@@ -576,7 +623,7 @@ $$
 בדיקה: $I_1 + I_2 = 4\,\text{A} = I$.`, sideMd: "חוק הצמתים של קירכהוף: מה שנכנס לצומת יוצא ממנו." },
     ],
     sideMd: null,
-    figure: { kind: "svg", source: PARALLEL, captionMd: "" },
+    figure: { kind: "tikz", source: CIRCUIT_TIKZ, captionMd: "" },
     progress: null,
   },
   // photosynthesis: light, CO₂ and water in, O₂ out
@@ -594,7 +641,7 @@ $$` },
       { md: String.raw`ה\pink{חמצן} שנוצר יוצא מהתא.` },
     ],
     sideMd: null,
-    figure: { kind: "svg", source: PHOTO, captionMd: "" },
+    figure: { kind: "bio", source: PHOTO, captionMd: "" },
     progress: null,
   },
   // the parts of a cell: each part is drawn and coloured with its word
@@ -607,7 +654,51 @@ $$` },
       { md: String.raw`ה\pink{ריבוזומים} מייצרים חלבונים לפי ה-mRNA.` },
     ],
     sideMd: null,
-    figure: { kind: "svg", source: CELL, captionMd: "" },
+    figure: { kind: "bio", source: CELL, captionMd: "" },
+    progress: null,
+  },
+  // the same circuit drawn by hand in plain svg (the svg kind keeps working)
+  beatsCircuitSvg: {
+    titleMd: "מעגל מקבילי (שרטוט ידני)",
+    bodyMd: String.raw`מקור של $12\,\text{V}$ ושני נגדים במקביל: $\blue{R_1} = 4\,\Omega$, $\green{R_2} = 12\,\Omega$.`,
+    beats: [
+      { md: String.raw`**מתח:** על כל נגד אותו מתח, $V = 12\,\text{V}$.` },
+      { md: String.raw`**התנגדות שקולה:** $R_{eq} = 3\,\Omega$, ולכן $I = 4\,\text{A}$.` },
+      { md: String.raw`**פיצול:** $\blue{I_1} = 3\,\text{A}$, $\green{I_2} = 1\,\text{A}$.` },
+    ],
+    sideMd: null,
+    figure: { kind: "svg", source: PARALLEL, captionMd: "" },
+    progress: null,
+  },
+  // M79 TikZ: forces on an inclined plane, one force per beat
+  beatsIncline: {
+    titleMd: "גוף על מישור משופע",
+    bodyMd: String.raw`תיבה במנוחה על מישור בזווית $\theta$.`,
+    beats: [
+      { md: "נסמן את הכוחות הפועלים על התיבה, אחד אחד." },
+      { md: String.raw`ה\blue{כובד} $\blue{mg}$ פונה אנכית למטה.` },
+      { md: String.raw`הכוח ה\green{נורמלי} $\green{N}$ ניצב למישור.` },
+      { md: String.raw`נפרק את הכובד לרכיבים: $\orange{mg\sin\theta}$ לאורך המישור ו-$\orange{mg\cos\theta}$ ניצב לו.` },
+      { md: String.raw`ה\pink{חיכוך} $\pink{f}$ מאזן את $mg\sin\theta$:
+$$
+f = mg\sin\theta
+$$` },
+    ],
+    sideMd: null,
+    figure: { kind: "tikz", source: INCLINE, captionMd: "" },
+    progress: null,
+  },
+  // M79 TikZ: a shaded ball-and-stick molecule
+  beatsMethane: {
+    titleMd: "מבנה המתאן",
+    bodyMd: String.raw`מולקולת מתאן, $\ce{CH4}$:`,
+    beats: [
+      { md: "במרכז אטום פחמן עם ארבעה אלקטרונים ערכיים." },
+      { md: "ארבעה אטומי מימן נקשרים אליו בקשרים קוולנטיים." },
+      { md: String.raw`הקשרים מתרחקים זה מזה ככל האפשר: מבנה טטרהדרי, זווית של $\orange{109.5^\circ}$.` },
+    ],
+    sideMd: null,
+    figure: { kind: "tikz", source: METHANE, captionMd: "" },
     progress: null,
   },
 };

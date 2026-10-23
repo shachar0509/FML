@@ -142,8 +142,8 @@ function stripExternalHrefs(node: Element) {
   }
 }
 
-export function sanitizeSvg(src: string): string {
-  if (src.length > MAX_SVG) throw new Error("SVG is larger than 50 KB");
+export function sanitizeSvg(src: string, max = MAX_SVG): string {
+  if (src.length > max) throw new Error(`SVG is larger than ${Math.round(max / 1024)} KB`);
   DOMPurify.addHook("afterSanitizeAttributes", stripExternalHrefs);
   let clean: string;
   try {

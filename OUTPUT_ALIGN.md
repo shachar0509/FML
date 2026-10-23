@@ -137,6 +137,7 @@ A `teach_step` with `beats` renders the intro and then each beat as its own `<Ma
 - A rows block lines up at its relation within one beat. Two beats are two grids.
 - `\blue{word}` in plain text becomes a coloured span (HTML pass, step 5), the same colour as an SVG part with `class="m-blue"`.
 - The figure keeps `dir="ltr"`. Hebrew SVG labels are centred (`text-anchor="middle"`), so they stay where the author put them.
+- Server-drawn figures (M79: `tikz`, `bio`) come back as SVG and follow the same rules. TikZ labels are math and Latin only (no Hebrew TeX font), so the Hebrew stays in the beat text. A `% @n` line marker becomes a `data-beat` group.
 
 ## Checks
 

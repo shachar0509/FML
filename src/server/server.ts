@@ -18,6 +18,7 @@ import { registerFileTools } from "./fileTools";
 import { registerExerciseTools } from "./exerciseTools";
 import { registerLearnTools } from "./learnTools";
 import { registerHistoryTools } from "./historyTools";
+import { registerFigureTools } from "./figureTools";
 import { registerPracticeTools } from "./practiceTools";
 import { registerSettingsTools } from "./settingsTools";
 import { INSTRUCTIONS } from "./instructions";
@@ -99,6 +100,7 @@ export function createServer(bridge = new BridgeGateway(), catalog?: CatalogSour
   const builds = registerCourseTools(server, bridge, files, catalog, knowledge);
   const exercises = registerExerciseTools(server, bridge);
   const learn = registerLearnTools(server, bridge, exercises, knowledge);
+  registerFigureTools(server);
   registerHistoryTools(server, registerPracticeTools(server, bridge, exercises, knowledge).forget);
   registerSettingsTools(server);
 

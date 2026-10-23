@@ -276,3 +276,10 @@ body {
 /* Full screen: the slide fills the window, bigger text and drawings. */
 .cards[data-mode="fullscreen"] { --fig-h: 72vh; }
 .cards[data-mode="fullscreen"] .board-surface { font-size: 1.15rem; }
+/* M79: white in a server-drawn figure is the board's paper (dark in dark mode) */
+.fig-svg .fig-paper-fill { fill: var(--card); }
+.fig-svg .fig-paper-stroke { stroke: var(--card); }
+.fig-svg .shadow { filter: drop-shadow(0 3px 4px rgb(0 0 0 / 0.35)); }
+.fig-svg .glow { filter: drop-shadow(0 0 6px currentColor); }
+.fig-svg { flex-direction: column; align-items: center; }
+.fig-svg .fig-credit { margin: 0.25rem 0 0; font-size: 0.7rem; color: var(--muted, currentColor); opacity: 0.8; }

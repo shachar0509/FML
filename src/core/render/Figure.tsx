@@ -1,6 +1,7 @@
 import { Component, lazy, Suspense, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useDark } from "./useDark";
+import { Remote } from "./figures/Remote";
 
 const F = {
   mermaid: lazy(() => import("./figures/Mermaid").then((m) => ({ default: m.Mermaid }))),
@@ -9,8 +10,11 @@ const F = {
   wavedrom: lazy(() => import("./figures/Wavedrom").then((m) => ({ default: m.Wavedrom }))),
   svg: lazy(() => import("./figures/Svg").then((m) => ({ default: m.Svg }))),
 };
+/** M79: kinds drawn on the server (src/server/figures/render.ts SERVER_KINDS) */
+const REMOTE = new Set(["tikz", "bio"]);
 export const FIGURE_TAGS = Object.keys(F);
 export const isFigureTag = (lang: string): lang is keyof typeof F => Object.hasOwn(F, lang);
+export { setFigureRenderer } from "./figures/Remote";
 
 function Fallback({ source }: { source: string }) {
   const { t } = useTranslation();
@@ -40,13 +44,13 @@ class Boundary extends Component<{ source: string; children: ReactNode }, { fail
 }
 
 /** `beat` (M78): the slide's current beat; parts tagged with a later beat stay hidden. Undefined shows every part. */
-export function Figure({ tag, source, beat }: { tag: keyof typeof F; source: string; beat?: number }) {
+export function Figure({ tag, source, beat }: { tag: string; source: string; beat?: number }) {
   const dark = useDark();
-  const C = F[tag];
+  const C = F[tag as keyof typeof F];
   return (
     <Boundary source={source}>
       <Suspense fallback={<div className="my-3 h-24 animate-pulse rounded-lg bg-card" />}>
-        <C source={source} dark={dark} beat={beat} />
+        {REMOTE.has(tag) ? <Remote kind={tag} source={source} dark={dark} beat={beat} /> : C ? <C source={source} dark={dark} beat={beat} /> : <Fallback source={source} />}
       </Suspense>
     </Boundary>
   );

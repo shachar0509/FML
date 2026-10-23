@@ -4,7 +4,7 @@
 Rules: work only on branch `dev`; one commit per step with tests; update this file after every step; record silent-spec choices in `DECISIONS.md`; stop after each step so the user can compact. Steps marked 🧪 need a manual Claude Desktop check by the user; list what to check.
 Environment: Node 22, pnpm, Playwright chromium. Never store keys in files.
 
-Status: plan v2 §9 (M0–M13) is done, plus follow-ups M14–M78. The v1 desktop app (Tauri, API key, Drive sync, Ask panel) is deleted; it lives in git tag `desktop-v1-final` (= `01640cb`).
+Status: plan v2 §9 (M0–M13) is done, plus follow-ups M14–M79. The v1 desktop app (Tauri, API key, Drive sync, Ask panel) is deleted; it lives in git tag `desktop-v1-final` (= `01640cb`).
 
 ---
 
@@ -278,6 +278,16 @@ One `teach_step` can carry `beats` (2–8): the card plays them locally. **Next*
   - The e2e test checks the contrast of figure text at every beat. Slide screenshots are viewport shots, so the sticky header no longer lands in the middle.
 - The "ResizeObserver loop completed" warning in the Vite log comes from geometry figures and predates M78. It is harmless and is not a page error.
 
+## M79: server-drawn figures, figure_guide, TikZ, the biology library (2026-10-23)
+- **Pipe.** `src/server/figures/render.ts`: `SERVER_KINDS` (tikz, bio), `renderFigure(kind, source)` (cached), `BEAT_MARK` (`@n` / `@n-m` at a line's end, in `%`, `#` or `//` comments), `themeColors`, `ownIds`. The app-only tool `figure_render` gives the card the SVG (never the model's context). teach_step / show_figure render server kinds when sent, so an error reaches Claude. `figure_guide({kind})` (`src/server/figureTools.ts`) returns a kind's conventions from `src/core/claude/prompts/figureGuides.ts`.
+- **Card.** `figures/Remote.tsx` fetches through `setFigureRenderer` (set in `Cards.tsx` from `callTool`) and shows the result with `Svg` (beats, colours, contrast guard; 4 MB cap). `Svg` adds the shading kit (`shade-*` gradients) and the credit line (`data-credit` → `.fig-credit`). `cards.css`: `fig-paper-*`, `shadow`, `glow`.
+- **TikZ** (`src/server/figures/tikz.ts`): node-tikzjax's WebAssembly TeX engine; text → paths with opentype.js and the BaKoMa fonts; one render at a time; the TeX error line goes back to Claude. Packages: circuitikz, chemfig, pgfplots, tikz-3dplot, tikz-cd, amsmath, amssymb. Build: `build-server.mjs` stages `dist/tikz/{tex,ttf}` and `dist/biolib`; `pack-mcpb.mjs` copies them, plus `THIRD_PARTY_NOTICES.md`. `smoke:mcpb` renders TikZ and a library figure over stdio.
+- **bio:** 49 parts in `assets/biolib/` (manifest with license and author per part). See DECISIONS M79.
+- **Prompt.** One line per kind (`CATALOGUE`) plus "call figure_guide before the first figure of a kind"; the general beat and colour-link rules stay.
+- **Samples** (`test-advanced.ts`): beatsCircuit (TikZ), beatsIncline (TikZ, 5 beats), beatsMethane (TikZ ball-and-stick, 3 beats), beatsPhoto and beatsCell (bio), beatsCircuitSvg (the hand-drawn svg). `slides.spec.ts` covers all 7 (not run yet: e2e at the end of M83).
+- **Tests.** `render.test.ts` (beat groups, paths, colours, balanced groups, ids, package/TeX errors, library parts and credit), `learnTools.test.ts` (tikz in teach_step, `@n` beyond the slide, errors, figure_guide, figure_render), `tutorMcp.test.ts`.
+- 🧪 **Desktop check.** Does the TeX engine (WebAssembly) run in Claude Desktop's Electron utility process (cold render ~0.5 s)? Does Claude call figure_guide before a new kind?
+
 ---
 
 ## Drawing roadmap M79–M83 (agreed with the user, 2026-10-23)
@@ -317,35 +327,8 @@ Goal: slides can draw for any course, including unusual ones, in a professional 
   - Replaces 3Dmol.js and JSCAD. 3Dmol.js stays an option only for PDB proteins.
 - **Later, if wanted:** a sandboxed simulation frame (Matter.js, p5.js) with no access to Shalav's tools.
 
-**M79 handoff (state at compaction, 2026-10-23):**
-- **Where it stopped.** M79 has not started in code. The only finding so far: `npm view node-tikzjax` gives v1.0.5, LPPL-1.3c, 8.4 MB unpacked.
-  - Its dependencies are `@prinsss/dvi2html`, jsdom, memfs, svgo and tar-fs.
-  - The README says: never run two instances at once (so renders go through a queue), the source needs `\documentclass{standalone}` … `\begin{document}` … `\end{document}`, and `tex2svg(src, { tikzLibraries, addToPreamble, disableOptimize })` can be split into `load()` / `tex()` / `dvi2svg()`.
-  - The fallback is `isomorphic-tikzjax`.
-  - **To check:** WebAssembly inside Claude Desktop's Electron utility process (see gotcha M29, `initNode`), time per render (target a few seconds), whether the SVG keeps groups (`\special{dvisvgm:raw …}` or scopes) so beats can toggle groups instead of rendering one SVG per beat, and the black → `currentColor` rewrite for dark mode.
-- **User's approvals.**
-  - The Servier CC BY credit is OK.
-  - The first drawing scope is biology plus circuits and physics; more complex cases go through TikZ and the rest of the roadmap.
-  - All tools on the roadmap are approved, three.js included (after the 2D ones).
-- **User's requirements for every drawing.**
-  - Text always contrasts with what it sits on.
-  - A graph never shifts between beats.
-  - Parts that are used up leave (`until`).
-  - Beats are tiny steps (the student sets the pace).
-  - Drawings look professional and realistic, not like plain vector line art. The beatsPhoto/beatsCell look was rejected.
-- **`figure_guide` design.**
-  - The catalogue is about 400 tokens. A guide is 300–800 tokens and is fetched once per kind per lesson.
-  - A guide teaches only Shalav's conventions (beat markers, `m-*` colours, Hebrew labels, dark mode, library part names) plus one example. Claude already knows the languages.
-  - The course type filters the catalogue (biology → library, Mermaid, course images, Vega; music → abcjs, svguitar). Other kinds are still reachable via `figure_guide`.
-- **three.js scene JSON (M83).**
-  - Objects: sphere, box, cylinder, cone, plane, arrow, line, surface z=f(x,y), point, label. Each has a position, an `m-*` colour, `beat` and `until`.
-  - A camera viewpoint can be set per beat.
-  - Rotation by mouse and arrow keys; reduced motion turns off automatic rotation.
-- **Loading routes for big card-side libraries:**
-  - Bundled into the single file. It costs size on every card.
-  - A CDN declared in the card resource's CSP `resourceDomains` (`@modelcontextprotocol/ext-apps` 2.0.3, `registerAppResource` in `server.ts`). Shalav declares none today. Pin exact versions, and verify that Claude Desktop honours it.
-  - Server Chromium snapshots. They work but are static.
-- **M78 screenshots** after the review fixes (`e2e/tests_output/slides/`) still await the user's approval. Delete them once approved.
+**Requirements for every drawing (user, 2026-10-23):** text always contrasts with what it sits on; a graph never shifts between beats; used-up parts leave (`until`); beats are tiny steps; drawings look professional and realistic, not plain line art (the old hand-drawn beatsPhoto/beatsCell look was rejected). All tools on the roadmap are approved (three.js after the 2D ones); the Servier credit is OK.
+**Run (user, 2026-10-23):** M79–M83 in one go, a commit per step, e2e only at the end for the user to review the screenshots.
 
 **Licenses:**
 - All of them are free, including for commercial use.

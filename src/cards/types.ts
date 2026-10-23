@@ -1,3 +1,4 @@
+import type { FigureKind } from "@/core/claude/prompts/figureGuides";
 import type { Grade } from "@/core/claude/practiceTools";
 /** What the server puts in `structuredContent`; `view` picks the card view (plan v2 §8). */
 export type HomeData = {
@@ -92,7 +93,7 @@ export type LessonData = Base & {
 export type McqData = Base & { view: "mcq"; checkId: string; questionMd: string; options: string[]; /** M65: how hard this question is for the student (1-5 ★), frozen when served */ stars?: number };
 export type OpenData = Base & { view: "open"; checkId: string; number: string; questionMd: string; /** M65: how hard this question is for the student (1-5 ★), frozen when served */ stars?: number };
 /** A drawing the tutor shows in the chat (show_figure). */
-export type FigureData = Base & { view: "figure"; kind: "plot" | "geometry" | "svg"; source: string; captionMd: string };
+export type FigureData = Base & { view: "figure"; kind: FigureKind; source: string; captionMd: string };
 /** One small lesson step (teach_step). M78 `beats`: the slide's parts, revealed one at a time in the card (the figure's parts carry the beat that brings them in). */
 export type StepData = Base & { view: "step"; titleMd: string; bodyMd: string; figure: Omit<FigureData, keyof Base | "view"> | null; progress?: { n: number; of: number } | null; sideMd?: string | null; beats?: { md: string; sideMd?: string | null }[] | null };
 /** Exercise card (assign_exercise / app-only exercise_state). */

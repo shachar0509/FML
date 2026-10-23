@@ -17,3 +17,7 @@ await build({
 await cp("node_modules/pdfjs-dist/standard_fonts", "dist/standard_fonts", { recursive: true });
 // pdfjs (legacy build) imports its worker next to the file that bundles it.
 await copyFile("node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs", "dist/pdf.worker.mjs");
+// M79: the TeX engine's files and the BaKoMa fonts (TikZ text becomes paths), and the biology library (src/server/figures)
+await cp("node_modules/node-tikzjax/tex", "dist/tikz/tex", { recursive: true, dereference: true });
+await cp("node_modules/node-tikzjax/css/bakoma/ttf", "dist/tikz/ttf", { recursive: true, dereference: true });
+await cp("assets/biolib", "dist/biolib", { recursive: true });

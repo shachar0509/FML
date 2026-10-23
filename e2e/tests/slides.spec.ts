@@ -18,7 +18,10 @@ const lowContrast = (page: Page) =>
       .filter(([, k]) => k < 4.5)
       .map(([t, k]) => `${t}: ${k.toFixed(2)}`);
   });
-const SAMPLES = { beatsFn: 7, beatsCircuit: 3, beatsPhoto: 5, beatsCell: 3 } as const;
+// M79: beatsCircuit, beatsIncline and beatsMethane are TikZ (drawn by TeX on the server, % @n markers); beatsPhoto and beatsCell
+// place library parts (bio); beatsCircuitSvg is the hand-drawn svg kind.
+const SAMPLES = { beatsFn: 7, beatsCircuit: 3, beatsPhoto: 5, beatsCell: 3, beatsCircuitSvg: 3, beatsIncline: 5, beatsMethane: 3 } as const;
+const SERVER = ["beatsCircuit", "beatsPhoto", "beatsCell", "beatsIncline", "beatsMethane"];
 for (const [sample, of] of Object.entries(SAMPLES))
   for (const theme of ["light", "dark"] as const)
     test(`slide ${sample} (${theme})`, async ({ page }) => {
@@ -30,6 +33,10 @@ for (const [sample, of] of Object.entries(SAMPLES))
       const next = page.getByRole("button", { name: "הלאה", exact: true });
       const beatText = (n: number) => board.locator(`[data-beat-text="${n}"]`);
       await expect(beatText(1)).toBeVisible();
+      // a server-drawn figure arrives from figure_render (the dev server's /__figure here) and replaces the placeholder
+      await expect(board.locator(".pinned-figure svg").first()).toBeVisible({ timeout: 20_000 });
+      if (SERVER.includes(sample)) await expect(board.locator(".pinned-figure [role=alert]")).toHaveCount(0);
+      if (["beatsPhoto", "beatsCell"].includes(sample)) await expect(board.locator(".fig-credit")).toHaveText(/Servier Medical Art \(CC BY 3\.0\)/);
       await page.waitForTimeout(500); // the figure finishes drawing
       const height = (await box(board)).height;
       const reqs = await lastReq(page);
@@ -107,12 +114,13 @@ for (const [sample, of] of Object.entries(SAMPLES))
     });
 
 // The inline card in a chat is narrower: the figure goes above the text, at the board's width.
-for (const sample of ["beatsFn", "beatsCircuit", "beatsCell"])
+for (const sample of ["beatsFn", "beatsCircuit", "beatsCell", "beatsIncline"])
   test(`narrow slide ${sample}`, async ({ page }) => {
     await page.setViewportSize({ width: 720, height: 900 });
     await page.goto(`/src/cards/test-host.html?lang=he&theme=light&view=step&sample=${sample}`);
     const board = page.locator("article.board");
     await expect(board.locator('[data-beat-text="1"]')).toBeVisible();
+    await expect(board.locator(".pinned-figure svg").first()).toBeVisible({ timeout: 20_000 });
     await page.waitForTimeout(500);
     const [fig, text, b] = await Promise.all([board.locator(".pinned-figure"), board.locator('[data-beat-text="1"]'), board].map(box));
     expect(fig.y + fig.height).toBeLessThanOrEqual(text.y);

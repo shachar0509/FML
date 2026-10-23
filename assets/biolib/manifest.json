@@ -1,0 +1,198 @@
+{
+ "atp": {
+  "license": "cc-0",
+  "author": "Simon Dürr"
+ },
+ "bacterium": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "bacterium-interior": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "beaker": {
+  "license": "cc-0",
+  "author": "nUll"
+ },
+ "brain": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "capillary": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "carrier": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "cell": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "cell-oval": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "channel": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "chloroplast": {
+  "license": "own",
+  "author": "Shalav"
+ },
+ "dna": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "dna-ribbon": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "earth": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "enzyme": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "er-rough": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "er-smooth": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "erythrocyte": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "eye": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "flask": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "golgi": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "heart": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "heart-section": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "kidney": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "leaf": {
+  "license": "own",
+  "author": "Shalav"
+ },
+ "liver": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "lung": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "lymphocyte": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "membrane": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "membrane-3d": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "microscope": {
+  "license": "cc-0",
+  "author": "Derek Croote"
+ },
+ "mitochondrion": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "mitochondrion-green": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "mouse": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "muscle-fiber": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "nucleus": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "oocyte": {
+  "license": "cc-0",
+  "author": "Xi Chen"
+ },
+ "phage": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "plant-cell": {
+  "license": "own",
+  "author": "Shalav"
+ },
+ "protein": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "receptor": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "rna": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "roots": {
+  "license": "cc-0",
+  "author": "James Lloyd"
+ },
+ "skin": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "stomach": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "sun": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "vacuole": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "vesicle": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ },
+ "virus": {
+  "license": "cc-by-3.0",
+  "author": "Servier"
+ }
+}

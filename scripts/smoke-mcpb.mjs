@@ -21,5 +21,10 @@ const card = await client.readResource({ uri: "ui://shalav/cards.html" });
 ok(card.contents[0].text.includes("<html"), "cards.html resource");
 const settings = await client.callTool({ name: "shalav_settings", arguments: {} });
 ok(settings.structuredContent?.dataRoot === join(dir, "data"), "data folder from env");
+// M79: TikZ is drawn by the bundled TeX engine (its files staged next to server.mjs), and the biology library resolves
+const tikz = await client.callTool({ name: "figure_render", arguments: { kind: "tikz", source: "\\begin{circuitikz}\n\\draw (0,0) to[R, l=$R_1$] (2,0); % @1\n\\end{circuitikz}" } });
+ok(!tikz.isError && /data-beat="1"/.test(tikz.structuredContent?.svg ?? ""), `tikz render: ${JSON.stringify(tikz).slice(0, 600)}`);
+const bio = await client.callTool({ name: "figure_render", arguments: { kind: "bio", source: '<svg viewBox="0 0 9 9"><use href="#nucleus" width="9" height="9"/></svg>' } });
+ok(!bio.isError && bio.structuredContent?.svg.includes("lib-nucleus"), "bio render");
 await client.close();
 console.log(`smoke ok (${tools.length} tools)`);

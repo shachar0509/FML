@@ -1,0 +1,17 @@
+# Third-party notices (figures)
+
+Shalav draws figures with these open-source projects and assets. Each is used under its license; the full license texts ship in their packages.
+
+| Project | Use | License |
+|---|---|---|
+| node-tikzjax (TeX engine, TeX Live files, BaKoMa fonts) | TikZ figures | LPPL-1.3c; TeX files under their own (LPPL / GPL with font exception); BaKoMa fonts: free license |
+| @prinsss/dvi2html | TikZ output to SVG | MIT |
+| opentype.js | TeX text to paths | MIT |
+| bioicons: Servier Medical Art parts | biology figures | CC BY 3.0, credit "Servier Medical Art" shown under the figure |
+| bioicons: CC0 parts (Simon Dürr, nUll, Derek Croote, Xi Chen, James Lloyd) | biology figures | CC0 |
+| JSXGraph | geometry figures | LGPL-3.0 / MIT |
+| function-plot | plot figures | MIT |
+| Mermaid | diagrams | MIT |
+| WaveDrom | timing diagrams | MIT |
+| DOMPurify | SVG sanitizing | MPL-2.0 / Apache-2.0 |
+| KaTeX | math | MIT |

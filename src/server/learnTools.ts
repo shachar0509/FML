@@ -19,6 +19,8 @@ import { addEntry, checkpoint, createConv, listConvs, loadConv, transcript, type
 import { resolveExercise, type Ex } from "@/core/domain/practice/exercises";
 import { materialsLang, pagesFor } from "@/core/domain/retrieval/retrieve";
 import { MAX_BEATS, parseGeometry, parsePlot } from "@/core/render/figures/specs";
+import { FIGURE_KINDS } from "@/core/claude/prompts/figureGuides";
+import { isServerKind, renderFigure } from "./figures/render";
 import { readJsonFile } from "@/core/lib/fs/atomicWrite";
 import { readJsonlDir } from "@/core/lib/fs/jsonl";
 import { coursePaths } from "@/core/lib/fs/paths";
@@ -258,18 +260,19 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
     return out(`Question shown (check id ${checkId}). The student's answer arrives as their next message, typed or as page images of a solution written on paper (read those as the answer); evaluate it, then call record_check_result with checkToolUseId "${checkId}".`, data);
   });
 
-  /** Checks a figure source; returns the error text or null. */
-  const badFigure = (kind: string, source: string) => {
+  /** Checks a figure source (server kinds are drawn now: the error reaches Claude, the drawing is cached for the card); returns the error text or null. */
+  const badFigure = async (kind: string, source: string) => {
     try {
       if (kind === "plot") parsePlot(source);
       else if (kind === "geometry") parseGeometry(source);
+      else if (isServerKind(kind)) await renderFigure(kind, source);
       else if (!/^\s*<svg[\s>]/i.test(source)) throw new Error("source must be one <svg> element");
       return null;
     } catch (e) {
       return `Invalid ${kind} figure: ${e instanceof Error ? e.message : String(e)}.`;
     }
   };
-  const figure = z.object({ kind: z.enum(["plot", "geometry", "svg"]), source: z.string().max(50_000), captionMd: z.string().max(500).default("") });
+  const figure = z.object({ kind: z.enum(FIGURE_KINDS).describe("Before the first figure of a kind in this lesson, call figure_guide for it."), source: z.string().max(50_000), captionMd: z.string().max(500).default("") });
 
   registerAppTool(
     server,
@@ -282,7 +285,7 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
       _meta: withCard,
     },
     async ({ kind, source, captionMd }) => {
-      const bad = badFigure(kind, source);
+      const bad = await badFigure(kind, source);
       if (bad) return fail(`${bad} Fix it and call show_figure again.`);
       const { language, theme } = sets();
       const data: FigureData = { view: "figure", language, theme, kind, source, captionMd };
@@ -309,10 +312,14 @@ export function registerLearnTools(server: McpServer, bridge: BridgeGateway, exe
       const long = beats?.findIndex((b) => chars(b.md + (b.sideMd ?? "")) > STEP_CHARS) ?? -1;
       if (long >= 0) return fail(`Beat ${long + 1} is too long. Split it into two beats, or teach less on this slide.`);
       if (beats && chars(bodyMd + beats.map((b) => b.md).join("")) > STEP_CHARS * 4) return fail("This slide is too long. Keep it to one idea: move the later beats to the next teach_step.");
-      const bad = f && badFigure(f.kind, f.source);
+      const bad = f && (await badFigure(f.kind, f.source));
       if (bad) return fail(`${bad} Fix it and call teach_step again.`);
-      const beatOf = f && /"(?:beat|until)"\s*:\s*(\d+)|data-(?:beat|focus|until)="(\d+)"/g;
-      for (const m of beatOf ? f.source.matchAll(beatOf) : []) if (Number(m[1] ?? m[2]) > (beats?.length ?? 0)) return fail(`The figure uses beat ${m[1] ?? m[2]}, but the slide has ${beats?.length ?? 0} beats. Fix it and call teach_step again.`);
+      // M79: `@n` / `@n-m` line markers too
+      const beatOf = f && /"(?:beat|until)"\s*:\s*(\d+)|data-(?:beat|focus|until)="(\d+)"|(?:%|#|\/\/)\s*@(\d+)(?:-(\d+))?\s*$/gm;
+      for (const m of beatOf ? f.source.matchAll(beatOf) : []) {
+        const n = Math.max(...[m[1], m[2], m[3], m[4]].filter(Boolean).map(Number));
+        if (n > (beats?.length ?? 0)) return fail(`The figure uses beat ${n}, but the slide has ${beats?.length ?? 0} beats. Fix it and call teach_step again.`);
+      }
       reexplain = false;
       const { language, theme } = sets();
       const data: StepData = { view: "step", language, theme, titleMd, bodyMd, figure: f ?? null, sideMd: sideMd?.trim() || null, progress: progress && { n: Math.min(progress.n, progress.of), of: progress.of }, beats: beats?.map((b) => ({ md: b.md, sideMd: b.sideMd?.trim() || null })) ?? null };

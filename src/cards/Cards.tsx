@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, CornerDownLeft, GraduationCap, Maximize2, Minimize2, Pin, PinOff, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { applyLanguage, applyTheme } from "@/core/lib/dom";
+import { setFigureRenderer } from "@/core/render/Figure";
 import { AddCourse } from "./views/AddCourse";
 import { Course } from "./views/Course";
 import { CustomCourse } from "./views/CustomCourse";
@@ -20,6 +21,7 @@ import { useShalav } from "./useShalav";
 
 export function Cards({ host }: { host: Host }) {
   const { data, stale, ctx, callTool, go: ask, asked, clearAsked, displayMode } = useShalav(host);
+  setFigureRenderer((kind, source) => callTool("figure_render", { kind, source })); // M79: server-drawn figures (set before any figure mounts)
   const { t, i18n } = useTranslation();
   const [mode, setMode] = useState(ctx.displayMode ?? "inline");
   const canPin = !!ctx.availableDisplayModes?.includes("pip");

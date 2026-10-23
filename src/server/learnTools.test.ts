@@ -73,6 +73,18 @@ it("runs a lesson: start, questions, events, status, completion, reopen + recap"
   expect(text(await call("teach_step", { titleMd: "f", bodyMd: "", beats: [{ md: "a" }, { md: "word ".repeat(200) }] }))).toMatch(/Beat 2 is too long/);
   expect(text(await call("teach_step", { titleMd: "f", bodyMd: "", beats: Array.from({ length: 5 }, () => ({ md: "word ".repeat(170) })) }))).toMatch(/slide is too long/);
   expect(text(await call("teach_step", { titleMd: "f", bodyMd: "", beats: [{ md: "a" }, { md: "b" }], figure: { kind: "svg", source: '<svg viewBox="0 0 1 1"><g data-beat="4"/></svg>' } }))).toMatch(/beat 4/);
+  // M79: server kinds are drawn when sent (the error reaches Claude); `% @n` markers count as beats; the guide tool answers per kind
+  const tikz = (n: number) => String.raw`\begin{tikzpicture}
+\draw (0,0) -- (1,0); % @1
+\draw[m-blue] (1,0) -- (1,1); % @${n}
+\end{tikzpicture}`;
+  expect(sc(await call("teach_step", { titleMd: "t", bodyMd: "", beats: [{ md: "a" }, { md: "b" }], figure: { kind: "tikz", source: tikz(2) } }))).toMatchObject({ figure: { kind: "tikz" } });
+  expect(text(await call("teach_step", { titleMd: "t", bodyMd: "", beats: [{ md: "a" }, { md: "b" }], figure: { kind: "tikz", source: tikz(3) } }))).toMatch(/beat 3, but the slide has 2 beats/);
+  expect(text(await call("teach_step", { titleMd: "t", bodyMd: "", figure: { kind: "tikz", source: String.raw`\begin{tikzpicture}\nodee{x}\end{tikzpicture}` } }))).toMatch(/Invalid tikz figure: .*Undefined control sequence/);
+  expect(text(await call("show_figure", { kind: "bio", source: '<svg viewBox="0 0 9 9"><use href="#nucleous"/></svg>' }))).toMatch(/Unknown library part nucleous/);
+  expect(text(await call("figure_guide", { kind: "bio" }))).toMatch(/Parts: .*mitochondrion/);
+  const drawn = sc<{ svg: string }>(await call("figure_render", { kind: "tikz", source: tikz(2) }));
+  expect(drawn.svg).toContain('data-beat="2"');
   // a question about the step: answered in a pop-up over the step card, which polls for answers newer than its question
   const asked = Date.now();
   expect(sc(await call("step_answer", { since: asked }))).toEqual({ answerMd: null });
