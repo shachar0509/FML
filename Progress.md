@@ -4,7 +4,7 @@
 Rules: work only on branch `dev`; one commit per step with tests; update this file after every step; record silent-spec choices in `DECISIONS.md`; stop after each step so the user can compact. Steps marked 🧪 need a manual Claude Desktop check by the user; list what to check.
 Environment: Node 22, pnpm, Playwright chromium. Never store keys in files.
 
-Status: plan v2 §9 (M0–M13) is done, plus follow-ups M14–M83. The v1 desktop app (Tauri, API key, Drive sync, Ask panel) is deleted; it lives in git tag `desktop-v1-final` (= `01640cb`).
+Status: plan v2 §9 (M0–M13) is done, plus follow-ups M14–M83 and the refactor steps M84–M99 (`refactor/`, 2026-10-23). The v1 desktop app (Tauri, API key, Drive sync, Ask panel) is deleted; it lives in git tag `desktop-v1-final` (= `01640cb`).
 
 ---
 
